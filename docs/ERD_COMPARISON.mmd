@@ -1,0 +1,209 @@
+erDiagram
+    PROFILES {
+        uuid id PK
+        text email
+        text display_name
+        uuid default_farm_id FK
+        timestamptz created_at
+    }
+    FARMS {
+        uuid id PK
+        text name
+        uuid owner_user_id FK
+        timestamptz created_at
+    }
+    FARM_MEMBERS {
+        uuid id PK
+        uuid farm_id FK
+        uuid user_id FK
+        text role
+        timestamptz created_at
+    }
+    BATCHES {
+        uuid id PK
+        uuid farm_id FK
+        text batch_no
+        text breed_name
+        integer female_count
+        integer male_count
+        text age_label
+        integer isolated_count
+        integer killed_count
+        text color_name
+        text color_hex
+        timestamptz created_at
+        timestamptz updated_at
+    }
+    EGG_BATCHES {
+        uuid id PK
+        uuid farm_id FK
+        text batch_no
+        integer egg_qty
+        integer line_no
+        text age_unit
+        integer hatched_qty
+        integer damaged_qty
+        integer unhatched_qty
+        text color_name
+        text color_hex
+        text origin
+        timestamptz created_at
+        timestamptz updated_at
+    }
+    INVENTORY_ITEMS {
+        uuid id PK
+        uuid farm_id FK
+        text item_type
+        text item_name
+        numeric qty
+        text unit
+        numeric price
+        integer status_percent
+        date purchased_date
+        date delivered_date
+        timestamptz created_at
+        timestamptz updated_at
+    }
+    HEALTH_LOGS {
+        uuid id PK
+        uuid farm_id FK
+        uuid disease_id FK
+        text photo_uri
+        text detected_illness
+        text[] behavior_ids
+        text result_summary
+        text recommendation_text
+        text action_status
+        text duration_value
+        text detection_source
+        numeric confidence
+        timestamptz saved_at
+        timestamptz created_at
+        timestamptz updated_at
+    }
+    SCAN_RECORDS {
+        uuid id PK
+        uuid farm_id FK
+        uuid disease_id FK
+        text scan_type
+        text image_uri
+        text breed_name
+        text detected_illness
+        jsonb raw_result
+        numeric confidence
+        timestamptz created_at
+        timestamptz updated_at
+    }
+    SCHEDULE_TASKS {
+        uuid id PK
+        uuid farm_id FK
+        text title
+        time task_time
+        text category
+        text repeat_type
+        text[] custom_repeat_days
+        date start_date
+        timestamptz created_at
+        timestamptz updated_at
+    }
+    DISEASES {
+        uuid id PK
+        text slug
+        text name
+        text short_label
+        text summary
+        text severity
+        text reference_source
+        boolean is_active
+        timestamptz created_at
+        timestamptz updated_at
+    }
+    DISEASE_ALIASES {
+        uuid id PK
+        uuid disease_id FK
+        text alias
+        text alias_type
+        timestamptz created_at
+    }
+    SYMPTOMS {
+        uuid id PK
+        text code
+        text label
+        text description
+        text severity
+        boolean is_active
+        timestamptz created_at
+    }
+    DISEASE_SYMPTOMS {
+        uuid id PK
+        uuid disease_id FK
+        uuid symptom_id FK
+        numeric weight
+        boolean is_primary
+        timestamptz created_at
+    }
+    MEDICATIONS {
+        uuid id PK
+        text name
+        text medication_type
+        text notes
+        boolean is_active
+        timestamptz created_at
+    }
+    VITAMINS {
+        uuid id PK
+        text name
+        text vitamin_type
+        text notes
+        boolean is_active
+        timestamptz created_at
+    }
+    DISEASE_TREATMENTS {
+        uuid id PK
+        uuid disease_id FK
+        text title
+        text treatment_text
+        uuid medication_id FK
+        uuid vitamin_id FK
+        integer sort_order
+        timestamptz created_at
+    }
+    DISEASE_REFERENCE_IMAGES {
+        uuid id PK
+        uuid disease_id FK
+        text image_path
+        text image_caption
+        text body_region
+        text example_type
+        timestamptz created_at
+    }
+    DISEASE_DETECTION_RULES {
+        uuid id PK
+        uuid disease_id FK
+        text rule_name
+        text[] required_symptom_codes
+        text[] optional_symptom_codes
+        text[] blocked_symptom_codes
+        numeric min_score
+        timestamptz created_at
+    }
+
+    PROFILES ||--o{ FARMS : "owner_user_id"
+    PROFILES ||--o{ FARM_MEMBERS : "user_id"
+    FARMS ||--o{ FARM_MEMBERS : "farm_id"
+    FARMS ||--o{ BATCHES : "farm_id"
+    FARMS ||--o{ EGG_BATCHES : "farm_id"
+    FARMS ||--o{ INVENTORY_ITEMS : "farm_id"
+    FARMS ||--o{ HEALTH_LOGS : "farm_id"
+    FARMS ||--o{ SCAN_RECORDS : "farm_id"
+    FARMS ||--o{ SCHEDULE_TASKS : "farm_id"
+    DISEASES ||--o{ DISEASE_ALIASES : "disease_id"
+    DISEASES ||--o{ DISEASE_SYMPTOMS : "disease_id"
+    SYMPTOMS ||--o{ DISEASE_SYMPTOMS : "symptom_id"
+    DISEASES ||--o{ DISEASE_TREATMENTS : "disease_id"
+    MEDICATIONS ||--o{ DISEASE_TREATMENTS : "medication_id"
+    VITAMINS ||--o{ DISEASE_TREATMENTS : "vitamin_id"
+    DISEASES ||--o{ DISEASE_REFERENCE_IMAGES : "disease_id"
+    DISEASES ||--o{ DISEASE_DETECTION_RULES : "disease_id"
+    DISEASES ||--o{ HEALTH_LOGS : "disease_id"
+    DISEASES ||--o{ SCAN_RECORDS : "disease_id"

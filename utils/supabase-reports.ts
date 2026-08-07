@@ -1,0 +1,500 @@
+import { supabase } from "@/lib/supabase";
+
+export type ReportOverview = "Weekly" | "Monthly" | "Annually";
+export type ReportProductionType = "Eggs" | "Chickens";
+export type ReportSupplyType = "Vitamins & Meds" | "Feeds";
+
+export type ReportDonutSlice = {
+    label: string;
+    count: number;
+    color: string;
+    displayPercent: string;
+};
+
+export type ReportBarPoint = {
+    key: string;
+    label: string;
+    value: number;
+    highlight?: boolean;
+};
+
+export type FarmReportSnapshot = {
+    production: {
+        title: string;
+        total: number;
+        slices: ReportDonutSlice[];
+        analyticsText: string;
+    };
+    supply: {
+        title: string;
+        bars: ReportBarPoint[];
+        maxY: number;
+        analyticsText: string;
+    };
+};
+
+export type EggFertilityReportSnapshot = {
+    title: string;
+    totalOutcomes: number;
+    totalEggs: number;
+    fertileCount: number;
+    unhatchedCount: number;
+    damagedCount: number;
+    fertilityRate: number;
+    productionRate: number;
+    slices: ReportDonutSlice[];
+    analyticsText: string;
+};
+
+type EggBatchReportRow = {
+    egg_qty: number;
+    hatched_qty: number;
+    damaged_qty: number;
+    unhatched_qty: number;
+    color_name?: string | null;
+    origin?: string | null;
+    created_at: string;
+};
+
+type BatchReportRow = {
+    female_count: number;
+    male_count: number;
+    isolated_count: number;
+    killed_count: number;
+    created_at: string;
+};
+
+type InventoryReportRow = {
+    item_type: string;
+    qty: number;
+    created_at: string;
+};
+
+const DONUT_COLORS = ["#323330", "#438b7b", "#9cd5c9"];
+
+function startOfDay(date: Date) {
+    const next = new Date(date);
+    next.setHours(0, 0, 0, 0);
+    return next;
+}
+
+function addDays(date: Date, amount: number) {
+    const next = new Date(date);
+    next.setDate(next.getDate() + amount);
+    return next;
+}
+
+function addMonths(date: Date, amount: number) {
+    const next = new Date(date);
+    next.setMonth(next.getMonth() + amount);
+    return next;
+}
+
+function startOfMonth(date: Date) {
+    const next = new Date(date);
+    next.setDate(1);
+    next.setHours(0, 0, 0, 0);
+    return next;
+}
+
+function clampToNonNegative(value: number) {
+    return value > 0 ? value : 0;
+}
+
+function toDisplayPercent(value: number, total: number) {
+    if (total <= 0) return "0%";
+    return `${Math.round((value / total) * 100)}%`;
+}
+
+function toNiceAxisMax(maxValue: number) {
+    if (maxValue <= 0) return 10;
+    if (maxValue <= 10) return 10;
+    return Math.ceil(maxValue / 10) * 10;
+}
+
+function formatOverviewWindow(overview: ReportOverview) {
+    if (overview === "Weekly") return "the last 7 days";
+    if (overview === "Monthly") return "the current month";
+    return "the last 12 months";
+}
+
+function getProductionWindowStart(overview: ReportOverview, now: Date) {
+    if (overview === "Weekly") {
+        return startOfDay(addDays(now, -6));
+    }
+
+    if (overview === "Monthly") {
+        return startOfMonth(now);
+    }
+
+    return startOfDay(addMonths(now, -11));
+}
+
+function isWithinWindow(dateValue: string, startInclusive: Date, endInclusive: Date) {
+    const value = new Date(dateValue);
+    return value >= startInclusive && value <= endInclusive;
+}
+
+function buildEggProductionSnapshot(rows: EggBatchReportRow[], overview: ReportOverview) {
+    const hatched = rows.reduce((sum, row) => sum + Number(row.hatched_qty), 0);
+    const unhatched = rows.reduce((sum, row) => sum + Number(row.unhatched_qty), 0);
+    const damaged = rows.reduce((sum, row) => sum + Number(row.damaged_qty), 0);
+    const total = hatched + unhatched + damaged;
+
+    const slices: ReportDonutSlice[] = [
+        {
+            label: "hatched",
+            count: hatched,
+            color: DONUT_COLORS[0],
+            displayPercent: toDisplayPercent(hatched, total),
+        },
+        {
+            label: "unhatched",
+            count: unhatched,
+            color: DONUT_COLORS[1],
+            displayPercent: toDisplayPercent(unhatched, total),
+        },
+        {
+            label: "damaged",
+            count: damaged,
+            color: DONUT_COLORS[2],
+            displayPercent: toDisplayPercent(damaged, total),
+        },
+    ];
+
+    const analyticsText =
+        total === 0
+            ? `No egg production records were found for ${formatOverviewWindow(overview)}.`
+            : `For ${formatOverviewWindow(overview)}, ${slices[0].displayPercent} of recorded egg outcomes hatched, ${slices[1].displayPercent} remained unhatched, and ${slices[2].displayPercent} were marked damaged.`;
+
+    return {
+        title: "Egg Production Overview",
+        total,
+        slices,
+        analyticsText,
+    };
+}
+
+function normalizeScopeValue(value: string) {
+    return value.trim().toLowerCase();
+}
+
+function rowMatchesEggScope(row: EggBatchReportRow, scope?: string) {
+    if (!scope?.trim()) {
+        return true;
+    }
+
+    const normalizedScope = normalizeScopeValue(scope);
+    return (
+        normalizeScopeValue(row.color_name ?? "") === normalizedScope ||
+        normalizeScopeValue(row.origin ?? "") === normalizedScope
+    );
+}
+
+function buildEggFertilitySnapshot(
+    rows: EggBatchReportRow[],
+    overview: ReportOverview,
+) {
+    const fertileCount = rows.reduce((sum, row) => sum + Number(row.hatched_qty), 0);
+    const unhatchedCount = rows.reduce(
+        (sum, row) => sum + Number(row.unhatched_qty),
+        0,
+    );
+    const damagedCount = rows.reduce((sum, row) => sum + Number(row.damaged_qty), 0);
+    const totalEggs = rows.reduce((sum, row) => sum + Number(row.egg_qty), 0);
+    const totalOutcomes = fertileCount + unhatchedCount + damagedCount;
+    const fertilityRate =
+        totalEggs > 0 ? Math.round((fertileCount / totalEggs) * 100) : 0;
+    const productionRate =
+        totalOutcomes > 0 ? Math.round((fertileCount / totalOutcomes) * 100) : 0;
+
+    const slices: ReportDonutSlice[] = [
+        {
+            label: "fertile",
+            count: fertileCount,
+            color: DONUT_COLORS[0],
+            displayPercent: toDisplayPercent(fertileCount, totalOutcomes),
+        },
+        {
+            label: "unhatched",
+            count: unhatchedCount,
+            color: DONUT_COLORS[1],
+            displayPercent: toDisplayPercent(unhatchedCount, totalOutcomes),
+        },
+        {
+            label: "damaged",
+            count: damagedCount,
+            color: DONUT_COLORS[2],
+            displayPercent: toDisplayPercent(damagedCount, totalOutcomes),
+        },
+    ];
+
+    const analyticsText =
+        totalEggs === 0
+            ? `No egg fertility records were found for ${formatOverviewWindow(overview)}.`
+            : `For ${formatOverviewWindow(overview)}, fertility rate reached ${fertilityRate}% from ${fertileCount} fertile eggs out of ${totalEggs} recorded eggs. Production rate across recorded outcomes was ${productionRate}%, with ${unhatchedCount} unhatched and ${damagedCount} damaged eggs.`;
+
+    return {
+        title: "Egg Fertility Rate Overview",
+        totalOutcomes,
+        totalEggs,
+        fertileCount,
+        unhatchedCount,
+        damagedCount,
+        fertilityRate,
+        productionRate,
+        slices,
+        analyticsText,
+    } satisfies EggFertilityReportSnapshot;
+}
+
+function buildChickenProductionSnapshot(
+    rows: BatchReportRow[],
+    overview: ReportOverview,
+) {
+    const active = rows.reduce((sum, row) => {
+        const totalBirds = Number(row.female_count) + Number(row.male_count);
+        return (
+            sum +
+            clampToNonNegative(
+                totalBirds - Number(row.isolated_count) - Number(row.killed_count),
+            )
+        );
+    }, 0);
+    const isolated = rows.reduce((sum, row) => sum + Number(row.isolated_count), 0);
+    const lost = rows.reduce((sum, row) => sum + Number(row.killed_count), 0);
+    const total = active + isolated + lost;
+
+    const slices: ReportDonutSlice[] = [
+        {
+            label: "active",
+            count: active,
+            color: DONUT_COLORS[0],
+            displayPercent: toDisplayPercent(active, total),
+        },
+        {
+            label: "isolated",
+            count: isolated,
+            color: DONUT_COLORS[1],
+            displayPercent: toDisplayPercent(isolated, total),
+        },
+        {
+            label: "lost",
+            count: lost,
+            color: DONUT_COLORS[2],
+            displayPercent: toDisplayPercent(lost, total),
+        },
+    ];
+
+    const analyticsText =
+        total === 0
+            ? `No chicken batch records were found for ${formatOverviewWindow(overview)}.`
+            : `For ${formatOverviewWindow(overview)}, ${slices[0].displayPercent} of recorded birds remained active, while ${slices[1].displayPercent} were isolated and ${slices[2].displayPercent} were lost.`;
+
+    return {
+        title: "Chicken Batch Overview",
+        total,
+        slices,
+        analyticsText,
+    };
+}
+
+function isFeedInventory(itemType: string) {
+    return itemType.trim().toLowerCase().includes("feed");
+}
+
+function isVitaminOrMedInventory(itemType: string) {
+    const normalized = itemType.trim().toLowerCase();
+    return (
+        normalized.includes("vitamin") ||
+        normalized.includes("med") ||
+        normalized.includes("medicine")
+    );
+}
+
+function formatBarLabel(date: Date, overview: ReportOverview) {
+    if (overview === "Weekly") {
+        return new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(date);
+    }
+
+    if (overview === "Monthly") {
+        return new Intl.DateTimeFormat("en-US", { day: "numeric" }).format(date);
+    }
+
+    return new Intl.DateTimeFormat("en-US", { month: "short" }).format(date);
+}
+
+function buildTimeBuckets(overview: ReportOverview, now: Date) {
+    if (overview === "Annually") {
+        return Array.from({ length: 12 }, (_, index) => {
+            const date = startOfDay(addMonths(now, -(11 - index)));
+            return {
+                key: `${date.getFullYear()}-${date.getMonth() + 1}`,
+                label: formatBarLabel(date, overview),
+                total: 0,
+            };
+        });
+    }
+
+    const length =
+        overview === "Monthly"
+            ? new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+            : 7;
+    return Array.from({ length }, (_, index) => {
+        const date = startOfDay(addDays(now, -(length - 1 - index)));
+        return {
+            key: date.toISOString().slice(0, 10),
+            label: formatBarLabel(date, overview),
+            total: 0,
+        };
+    });
+}
+
+function buildSupplySnapshot(
+    rows: InventoryReportRow[],
+    overview: ReportOverview,
+    supplyType: ReportSupplyType,
+    now: Date,
+) {
+    const filteredRows = rows.filter((row) =>
+        supplyType === "Feeds"
+            ? isFeedInventory(row.item_type)
+            : isVitaminOrMedInventory(row.item_type),
+    );
+    const buckets = buildTimeBuckets(overview, now);
+    const bucketIndex = new Map(buckets.map((bucket, index) => [bucket.key, index]));
+
+    filteredRows.forEach((row) => {
+        const createdAt = new Date(row.created_at);
+        const key =
+            overview === "Annually"
+                ? `${createdAt.getFullYear()}-${createdAt.getMonth() + 1}`
+                : createdAt.toISOString().slice(0, 10);
+        const index = bucketIndex.get(key);
+
+        if (index === undefined) {
+            return;
+        }
+
+        buckets[index].total += Number(row.qty);
+    });
+
+    const highestValue = buckets.reduce(
+        (maxValue, bucket) => Math.max(maxValue, bucket.total),
+        0,
+    );
+
+    const bars = buckets.map((bucket) => ({
+        key: bucket.key,
+        label: bucket.label,
+        value: Number(bucket.total.toFixed(2)),
+        highlight: bucket.total === highestValue && highestValue > 0,
+    }));
+
+    const total = bars.reduce((sum, bar) => sum + bar.value, 0);
+    const peakBar = bars.find((bar) => bar.highlight);
+    const analyticsText =
+        total === 0
+            ? `No ${supplyType.toLowerCase()} inventory additions were recorded for ${formatOverviewWindow(overview)}.`
+            : `${supplyType} inventory additions totaled ${total.toFixed(2)} units for ${formatOverviewWindow(overview)}. The highest recorded day or month was ${peakBar?.label ?? "N/A"} at ${peakBar?.value.toFixed(2) ?? "0.00"} units.`;
+
+    return {
+        title: `${supplyType} Inventory Activity`,
+        bars,
+        maxY: toNiceAxisMax(highestValue),
+        analyticsText,
+    };
+}
+
+export async function fetchFarmReportSnapshot(input: {
+    farmId: string;
+    overview: ReportOverview;
+    productionType: ReportProductionType;
+    supplyType: ReportSupplyType;
+}) {
+    const now = new Date();
+    const reportStart = getProductionWindowStart(input.overview, now).toISOString();
+
+    const [
+        { data: eggRows, error: eggError },
+        { data: batchRows, error: batchError },
+        { data: inventoryRows, error: inventoryError },
+    ] = await Promise.all([
+        supabase
+            .from("egg_batches")
+            .select(
+                "egg_qty, hatched_qty, damaged_qty, unhatched_qty, color_name, origin, created_at",
+            )
+            .eq("farm_id", input.farmId)
+            .gte("created_at", reportStart),
+        supabase
+            .from("batches")
+            .select(
+                "female_count, male_count, isolated_count, killed_count, created_at",
+            )
+            .eq("farm_id", input.farmId)
+            .gte("created_at", reportStart),
+        supabase
+            .from("inventory_items")
+            .select("item_type, qty, created_at")
+            .eq("farm_id", input.farmId)
+            .gte("created_at", reportStart),
+    ]);
+
+    if (eggError) throw eggError;
+    if (batchError) throw batchError;
+    if (inventoryError) throw inventoryError;
+
+    const production =
+        input.productionType === "Eggs"
+            ? buildEggProductionSnapshot(
+                  ((eggRows ?? []) as EggBatchReportRow[]).filter((row) =>
+                      isWithinWindow(row.created_at, new Date(reportStart), now),
+                  ),
+                  input.overview,
+              )
+            : buildChickenProductionSnapshot(
+                  ((batchRows ?? []) as BatchReportRow[]).filter((row) =>
+                      isWithinWindow(row.created_at, new Date(reportStart), now),
+                  ),
+                  input.overview,
+              );
+
+    const supply = buildSupplySnapshot(
+        ((inventoryRows ?? []) as InventoryReportRow[]).filter((row) =>
+            isWithinWindow(row.created_at, new Date(reportStart), now),
+        ),
+        input.overview,
+        input.supplyType,
+        now,
+    );
+
+    return { production, supply } satisfies FarmReportSnapshot;
+}
+
+export async function fetchEggFertilityReportSnapshot(input: {
+    farmId: string;
+    overview: ReportOverview;
+    scope?: string;
+}) {
+    const now = new Date();
+    const reportStart = getProductionWindowStart(input.overview, now).toISOString();
+
+    const { data, error } = await supabase
+        .from("egg_batches")
+        .select(
+            "egg_qty, hatched_qty, damaged_qty, unhatched_qty, color_name, origin, created_at",
+        )
+        .eq("farm_id", input.farmId)
+        .gte("created_at", reportStart);
+
+    if (error) throw error;
+
+    const rows = ((data ?? []) as EggBatchReportRow[]).filter(
+        (row) =>
+            isWithinWindow(row.created_at, new Date(reportStart), now) &&
+            rowMatchesEggScope(row, input.scope),
+    );
+
+    return buildEggFertilitySnapshot(rows, input.overview);
+}
