@@ -15,7 +15,7 @@ import {
     TextInput,
     View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { moderateScale, responsiveFontSize, scale, verticalScale } from "@/utils/responsive";
 
 import { HealthFlowFooterButton } from "@/components/health-scan/health-flow-footer-button";
@@ -490,15 +490,11 @@ export default function ScannedHealthResultScreen() {
   const canMonitor = isMonitorableDisease(resolvedDetectedIllness);
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top + 8 }]}>
+    <SafeAreaView style={styles.screen} edges={["top"]}>
       <StatusBar style="dark" />
-      <ScrollView
-        contentContainerStyle={[
-          styles.scroll,
-          { paddingBottom: insets.bottom + TAB_BAR_OFFSET + 28 },
-        ]}
-        showsVerticalScrollIndicator={false}
-      >
+      
+      {/* Pinned Top Header */}
+      <View style={styles.fixedHeader}>
         <Text style={styles.pageTitle}>
           {isMonitoringRescan ? "Update Health Scan" : "Scanned Health Result"}
         </Text>
@@ -509,6 +505,15 @@ export default function ScannedHealthResultScreen() {
               ? `This update will be added to ${chtTag || "this chicken"}'s record. Previous scans are kept.`
               : "Saved behaviors and outcome summary in one clear report."}
         </Text>
+      </View>
+
+      <ScrollView
+        contentContainerStyle={[
+          styles.scroll,
+          { paddingTop: 8, paddingBottom: insets.bottom + TAB_BAR_OFFSET + 28 },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
 
         {isAnalyzingImage ? (
           <View style={styles.analysisLoadingCard}>
@@ -773,7 +778,7 @@ export default function ScannedHealthResultScreen() {
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -781,6 +786,10 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: ChickIntelPalette.light1,
+  },
+  fixedHeader: {
+    paddingHorizontal: moderateScale(16),
+    paddingTop: 8,
   },
   scroll: {
     paddingHorizontal: moderateScale(16),

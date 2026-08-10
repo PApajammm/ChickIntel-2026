@@ -1,48 +1,51 @@
 import BackgroundGradient from "@/assets_imported/background-gradient.svg";
 import { BlurCard } from "@/components/ui/blur-card";
-import {
-    ChickSelectionModal,
-    ChickSelectRow,
-} from "@/components/ui/chick-form";
 import { ChickFont } from "@/constants/chick-fonts";
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
 import { ReportsCardTheme, ReportsPageTheme } from "@/constants/reports-theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuth } from "@/providers/auth-provider";
 import {
-    moderateScale,
-    responsiveFontSize,
-    scale,
-    verticalScale,
+  moderateScale,
+  responsiveFontSize,
+  scale,
+  verticalScale,
 } from "@/utils/responsive";
 import {
-    fetchFarmReportSnapshot,
-    type FarmReportSnapshot,
-    type ReportDonutSlice,
-    type ReportOverview,
-    type ReportProductionType,
-    type ReportSupplyType,
+  fetchFarmReportSnapshot,
+  type FarmReportSnapshot,
+  type ReportDonutSlice,
+  type ReportOverview,
+  type ReportProductionType,
+  type ReportSupplyType,
 } from "@/utils/supabase-reports";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Print from "expo-print";
 import { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Modal,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Circle, G } from "react-native-svg";
 
 const OVERVIEW_OPTIONS: ReportOverview[] = ["Weekly", "Monthly", "Annually"];
 const TYPE_OPTIONS: ReportProductionType[] = ["Eggs", "Chickens"];
 const SUPPLY_OPTIONS: ReportSupplyType[] = ["Vitamins & Meds", "Feeds"];
-const PRINT_SCOPES = ["Egg & Chicken", "Vitamins & Meds", "Feeds"] as const;
+
+const PRINT_SCOPES = [
+  "All Categories (Multi-Page)",
+  "Eggs Only",
+  "Chickens Only",
+  "Vitamins & Meds Only",
+  "Feeds Only",
+] as const;
 
 type PrintScopeOption = (typeof PRINT_SCOPES)[number];
 
@@ -81,66 +84,112 @@ function donutSvgFor(snapshot: FarmReportSnapshot["production"]) {
         );
       const dashOffset =
         circumference - (previousPercent / 100) * circumference;
-      return `<circle cx="110" cy="110" r="78" fill="none" stroke="${escapeHtml(slice.color)}" stroke-width="28" stroke-linecap="round" stroke-dasharray="${strokeLength.toFixed(2)} ${circumference.toFixed(2)}" stroke-dashoffset="${dashOffset.toFixed(2)}" transform="rotate(-90 110 110)"></circle>`;
+      return `<circle cx="110" cy="110" r="78" fill="none" stroke="${escapeHtml(slice.color)}" stroke-width="26" stroke-dasharray="${strokeLength.toFixed(2)} ${circumference.toFixed(2)}" stroke-dashoffset="${dashOffset.toFixed(2)}" transform="rotate(-90 110 110)"></circle>`;
     })
     .join("");
 
   return `
-        <svg width="220" height="220" viewBox="0 0 220 220" role="img" aria-label="Production donut chart">
-            <circle cx="110" cy="110" r="78" fill="none" stroke="#e7f1eb" stroke-width="28"></circle>
-            ${segments}
-            <circle cx="110" cy="110" r="50" fill="white"></circle>
-            <text x="110" y="102" text-anchor="middle" font-size="28" font-weight="700" fill="#203029">${snapshot.total}</text>
-            <text x="110" y="132" text-anchor="middle" font-size="12" fill="#688078">Total</text>
-        </svg>`;
+    <svg width="190" height="190" viewBox="0 0 220 220" role="img" aria-label="Production donut chart">
+        <circle cx="110" cy="110" r="78" fill="none" stroke="#e8f3ee" stroke-width="26"></circle>
+        ${segments}
+        <circle cx="110" cy="110" r="52" fill="white"></circle>
+        <text x="110" y="104" text-anchor="middle" font-size="28" font-weight="800" fill="#203029">${snapshot.total.toLocaleString()}</text>
+        <text x="110" y="128" text-anchor="middle" font-size="12" font-weight="600" fill="#688078">Total Count</text>
+    </svg>`;
 }
 
-function legendFor(snapshot: FarmReportSnapshot["production"]) {
-  return snapshot.slices
+function renderProductionSection(
+  title: string,
+  categoryIcon: string,
+  snapshot: FarmReportSnapshot["production"],
+) {
+  const rows = snapshot.slices
     .map((slice) => {
-      return `<div class="legend-row"><span class="swatch" style="background:${escapeHtml(slice.color)}"></span><span>${escapeHtml(slice.label)} ${escapeHtml(slice.displayPercent)}</span></div>`;
+      const percentVal =
+        snapshot.total > 0 ? Math.round((slice.count / snapshot.total) * 100) : 0;
+      return `
+        <tr>
+            <td style="font-weight: 700;">
+              <span class="swatch-dot" style="background:${escapeHtml(slice.color)}"></span>
+              ${escapeHtml(slice.label.toUpperCase())}
+            </td>
+            <td style="font-weight: 700; text-align: right;">${slice.count.toLocaleString()}</td>
+            <td style="text-align: right; font-weight: 600; color: #317667;">${escapeHtml(slice.displayPercent)}</td>
+            <td>
+              <div class="table-progress-track">
+                <div class="table-progress-fill" style="width: ${percentVal}%; background: ${escapeHtml(slice.color)};"></div>
+              </div>
+            </td>
+        </tr>`;
     })
     .join("");
-}
 
-function rowsFor(snapshot: FarmReportSnapshot["production"]) {
-  return snapshot.slices
-    .map(
-      (slice) => `
-                <tr>
-                    <td>${escapeHtml(slice.label)}</td>
-                    <td>${slice.count}</td>
-                    <td>${escapeHtml(slice.displayPercent)}</td>
-                </tr>`,
-    )
-    .join("");
-}
+  const topSlice = snapshot.slices.reduce(
+    (max, item) => (item.count > max.count ? item : max),
+    snapshot.slices[0] || { label: "N/A", count: 0, displayPercent: "0%" }
+  );
 
-function renderProductionSection(snapshot: FarmReportSnapshot["production"]) {
   return `
-                <div class="section">
-                    <h2 class="section-title">${escapeHtml(snapshot.title)}</h2>
-                    <div class="chart-shell">
-                        <div>${donutSvgFor(snapshot)}</div>
-                        <div class="legend">${legendFor(snapshot)}</div>
-                    </div>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Category</th>
-                                <th>Count</th>
-                                <th>Percent</th>
-                            </tr>
-                        </thead>
-                        <tbody>${rowsFor(snapshot)}</tbody>
-                    </table>
-                    <div class="analytics">${escapeHtml(snapshot.analyticsText)}</div>
-                </div>`;
+    <div class="category-header">
+      <div class="category-title-wrap">
+        <span class="category-badge">${categoryIcon}</span>
+        <h2 class="category-title">${escapeHtml(title)}</h2>
+      </div>
+      <div class="category-tag">Production Category Page</div>
+    </div>
+
+    <!-- Top KPI Grid -->
+    <div class="kpi-banner">
+      <div class="kpi-box">
+        <div class="kpi-title">TOTAL VOLUME</div>
+        <div class="kpi-value">${snapshot.total.toLocaleString()}</div>
+        <div class="kpi-sub">Total Units Recorded</div>
+      </div>
+      <div class="kpi-box">
+        <div class="kpi-title">PRIMARY OUTCOME</div>
+        <div class="kpi-value" style="text-transform: capitalize;">${escapeHtml(topSlice.label)}</div>
+        <div class="kpi-sub">${escapeHtml(topSlice.displayPercent)} (${topSlice.count.toLocaleString()} units)</div>
+      </div>
+      <div class="kpi-box">
+        <div class="kpi-title">REPORT STATUS</div>
+        <div class="kpi-value" style="color: #317667;">Verified</div>
+        <div class="kpi-sub">ChickInteL Analytics</div>
+      </div>
+    </div>
+
+    <!-- Chart + Breakdown Section -->
+    <div class="section-card">
+      <div class="chart-flex-layout">
+        <div class="chart-visual-box">
+          ${donutSvgFor(snapshot)}
+        </div>
+        <div class="chart-details-box">
+          <div class="details-heading">Distribution Breakdown</div>
+          <table class="data-table">
+              <thead>
+                  <tr>
+                      <th>Category</th>
+                      <th style="text-align: right;">Count</th>
+                      <th style="text-align: right;">Share</th>
+                      <th style="width: 35%;">Ratio Bar</th>
+                  </tr>
+              </thead>
+              <tbody>${rows}</tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Insight Box -->
+    <div class="insight-box">
+      <div class="insight-title">💡 Operational Takeaway & Analysis</div>
+      <div class="insight-text">${escapeHtml(snapshot.analyticsText)}</div>
+    </div>`;
 }
 
 function barChartHtmlFor(supply: FarmReportSnapshot["supply"]) {
   if (!supply.bars.length) {
-    return `<div class="analytics">No supply bar chart data available.</div>`;
+    return `<div class="empty-state">No supply activity recorded for this period.</div>`;
   }
 
   const maxY = supply.maxY || 10;
@@ -178,36 +227,88 @@ function barChartHtmlFor(supply: FarmReportSnapshot["supply"]) {
     </div>`;
 }
 
-function renderSupplySection(supply: FarmReportSnapshot["supply"]) {
+function renderSupplySection(
+  title: string,
+  categoryIcon: string,
+  supply: FarmReportSnapshot["supply"],
+) {
+  const totalQty = supply.bars.reduce((sum, b) => sum + b.value, 0);
+  const peakBar = supply.bars.reduce(
+    (max, b) => (b.value > max.value ? b : max),
+    supply.bars[0] || { label: "N/A", value: 0 }
+  );
+
   const supplyRows =
     supply.bars.length > 0
       ? supply.bars
           .map(
             (bar) => `
                 <tr>
-                    <td>${escapeHtml(bar.label)}</td>
-                    <td>${bar.value}</td>
-                    <td>${bar.highlight ? "Highlighted Usage" : "Normal"}</td>
+                    <td style="font-weight: 700;">${escapeHtml(bar.label)}</td>
+                    <td style="font-weight: 700; text-align: right;">${bar.value.toLocaleString()}</td>
+                    <td style="text-align: center;">
+                      <span class="status-badge ${bar.highlight ? "status-peak" : "status-normal"}">
+                        ${bar.highlight ? "Peak Usage" : "Normal Usage"}
+                      </span>
+                    </td>
                 </tr>`,
           )
           .join("")
-      : `<tr><td colspan="3">No supply data available.</td></tr>`;
+      : `<tr><td colspan="3" style="text-align: center; color: #888;">No supply records available.</td></tr>`;
 
   return `
-    <div class="section">
-        <h2 class="section-title">${escapeHtml(supply.title)}</h2>
-        ${barChartHtmlFor(supply)}
-        <table>
-            <thead>
-                <tr>
-                    <th>Item / Period</th>
-                    <th>Quantity / Usage</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody>${supplyRows}</tbody>
-        </table>
-        <div class="analytics">${escapeHtml(supply.analyticsText)}</div>
+    <div class="category-header">
+      <div class="category-title-wrap">
+        <span class="category-badge">${categoryIcon}</span>
+        <h2 class="category-title">${escapeHtml(title)}</h2>
+      </div>
+      <div class="category-tag">Supply Category Page</div>
+    </div>
+
+    <!-- Top KPI Grid -->
+    <div class="kpi-banner">
+      <div class="kpi-box">
+        <div class="kpi-title">TOTAL USAGE RECORDED</div>
+        <div class="kpi-value">${totalQty.toLocaleString()}</div>
+        <div class="kpi-sub">Total Units Consumed</div>
+      </div>
+      <div class="kpi-box">
+        <div class="kpi-title">PEAK CONSUMPTION ITEM</div>
+        <div class="kpi-value">${escapeHtml(peakBar.label)}</div>
+        <div class="kpi-sub">${peakBar.value.toLocaleString()} Units</div>
+      </div>
+      <div class="kpi-box">
+        <div class="kpi-title">INVENTORY TRACKING</div>
+        <div class="kpi-value" style="color: #317667;">Active</div>
+        <div class="kpi-sub">ChickInteL Inventory System</div>
+      </div>
+    </div>
+
+    <!-- Chart Card -->
+    <div class="section-card">
+      <div class="details-heading" style="margin-bottom: 12px;">Consumption Trend Chart</div>
+      ${barChartHtmlFor(supply)}
+    </div>
+
+    <!-- Data Table Card -->
+    <div class="section-card" style="margin-top: 14px;">
+      <div class="details-heading" style="margin-bottom: 10px;">Item Usage Breakdown</div>
+      <table class="data-table">
+          <thead>
+              <tr>
+                  <th>Item / Period</th>
+                  <th style="text-align: right;">Quantity Consumed</th>
+                  <th style="text-align: center;">Activity Status</th>
+              </tr>
+          </thead>
+          <tbody>${supplyRows}</tbody>
+      </table>
+    </div>
+
+    <!-- Insight Box -->
+    <div class="insight-box">
+      <div class="insight-title">💡 Operational Takeaway & Inventory Analysis</div>
+      <div class="insight-text">${escapeHtml(supply.analyticsText)}</div>
     </div>`;
 }
 
@@ -217,97 +318,111 @@ function buildPrintableHtml({
   generatedDate,
   generatedTime,
   overview,
-  productionType,
-  supplyType,
-  report,
-  pageSize,
   printScope,
-  secondaryProductionReport,
+  eggReport,
+  chickenReport,
+  vitaminsReport,
+  feedsReport,
 }: {
   farmName: string;
   generatedBy: string;
   generatedDate: string;
   generatedTime: string;
   overview: ReportOverview;
-  productionType: ReportProductionType;
-  supplyType: ReportSupplyType;
-  report: FarmReportSnapshot;
-  pageSize: string;
   printScope: PrintScopeOption;
-  secondaryProductionReport?: FarmReportSnapshot;
+  eggReport: FarmReportSnapshot;
+  chickenReport: FarmReportSnapshot;
+  vitaminsReport: FarmReportSnapshot;
+  feedsReport: FarmReportSnapshot;
 }) {
-  const renderCategorySheet = (
-    sectionHtml: string,
-    prodTypeLabel: string,
-    suppTypeLabel: string,
-    pageIndex: number,
-    totalPages: number,
-    isLastPage: boolean,
-  ) => `
-      <div class="sheet ${isLastPage ? "" : "page-break"}">
-          <div class="header">
-              <div>
-                  <h1 class="title">ChickInteL Report</h1>
-                  <p class="subtitle">Printable farm report sized for ${escapeHtml(pageSize)}</p>
-              </div>
-              <div class="meta-card">
-                  <div class="meta-label">Generated By</div>
-                  <div class="meta-value">${escapeHtml(generatedBy)}</div>
-              </div>
-          </div>
-          <div class="meta-grid">
-              <div class="meta-card"><div class="meta-label">Farm</div><div class="meta-value">${escapeHtml(farmName)}</div></div>
-              <div class="meta-card"><div class="meta-label">Date</div><div class="meta-value">${escapeHtml(generatedDate)}</div></div>
-              <div class="meta-card"><div class="meta-label">Time</div><div class="meta-value">${escapeHtml(generatedTime)}</div></div>
-              <div class="meta-card"><div class="meta-label">Overview</div><div class="meta-value">${escapeHtml(overview)}</div></div>
-              <div class="meta-card"><div class="meta-label">Production</div><div class="meta-value">${escapeHtml(prodTypeLabel)}</div></div>
-              <div class="meta-card"><div class="meta-label">Supply</div><div class="meta-value">${escapeHtml(suppTypeLabel)}</div></div>
-          </div>
-          ${sectionHtml}
-          <div class="footer">Generated from ChickInteL report data. Page ${pageIndex} of ${totalPages}</div>
-      </div>`;
+  const pages: { contentHtml: string; categoryName: string }[] = [];
 
-  let sheetsHtml = "";
-
-  if (printScope === "Egg & Chicken" && secondaryProductionReport) {
-    const eggSectionHtml = renderProductionSection(report.production);
-    const chickenSectionHtml = renderProductionSection(
-      secondaryProductionReport.production,
-    );
-
-    sheetsHtml = `
-      ${renderCategorySheet(eggSectionHtml, "Eggs", supplyType, 1, 2, false)}
-      ${renderCategorySheet(chickenSectionHtml, "Chickens", supplyType, 2, 2, true)}
-    `;
-  } else if (printScope === "Egg & Chicken") {
-    const eggSectionHtml = renderProductionSection(report.production);
-    sheetsHtml = renderCategorySheet(
-      eggSectionHtml,
-      productionType,
-      supplyType,
-      1,
-      1,
-      true,
-    );
-  } else {
-    const supplySectionHtml = renderSupplySection(report.supply);
-    sheetsHtml = renderCategorySheet(
-      supplySectionHtml,
-      productionType,
-      printScope,
-      1,
-      1,
-      true,
-    );
+  if (printScope === "All Categories (Multi-Page)") {
+    pages.push({
+      categoryName: "Egg Production",
+      contentHtml: renderProductionSection("Egg Production Report", "🥚", eggReport.production),
+    });
+    pages.push({
+      categoryName: "Chicken Production",
+      contentHtml: renderProductionSection("Chicken Flock & Batch Report", "🐓", chickenReport.production),
+    });
+    pages.push({
+      categoryName: "Vitamins & Meds",
+      contentHtml: renderSupplySection("Vitamins & Medication Activity", "💊", vitaminsReport.supply),
+    });
+    pages.push({
+      categoryName: "Feeds Consumption",
+      contentHtml: renderSupplySection("Feeds Consumption & Inventory", "🌾", feedsReport.supply),
+    });
+  } else if (printScope === "Eggs Only") {
+    pages.push({
+      categoryName: "Egg Production",
+      contentHtml: renderProductionSection("Egg Production Report", "🥚", eggReport.production),
+    });
+  } else if (printScope === "Chickens Only") {
+    pages.push({
+      categoryName: "Chicken Production",
+      contentHtml: renderProductionSection("Chicken Flock & Batch Report", "🐓", chickenReport.production),
+    });
+  } else if (printScope === "Vitamins & Meds Only") {
+    pages.push({
+      categoryName: "Vitamins & Meds",
+      contentHtml: renderSupplySection("Vitamins & Medication Activity", "💊", vitaminsReport.supply),
+    });
+  } else if (printScope === "Feeds Only") {
+    pages.push({
+      categoryName: "Feeds Consumption",
+      contentHtml: renderSupplySection("Feeds Consumption & Inventory", "🌾", feedsReport.supply),
+    });
   }
+
+  const totalPages = pages.length;
+
+  const sheetsHtml = pages
+    .map(
+      (page, idx) => `
+      <div class="sheet ${idx === totalPages - 1 ? "" : "page-break"}">
+          <!-- Top Page Header -->
+          <div class="page-top-header">
+              <div class="brand-group">
+                  <h1 class="brand-title">ChickInteL</h1>
+                  <p class="brand-sub">Executive Farm Intelligence Report</p>
+              </div>
+              <div class="page-badge">
+                Page ${idx + 1} of ${totalPages} • ${escapeHtml(page.categoryName)}
+              </div>
+          </div>
+
+          <!-- Metadata Bar -->
+          <div class="meta-strip">
+              <div class="meta-item"><span class="meta-lbl">FARM:</span> <span class="meta-val">${escapeHtml(farmName)}</span></div>
+              <div class="meta-item"><span class="meta-lbl">DATE:</span> <span class="meta-val">${escapeHtml(generatedDate)}</span></div>
+              <div class="meta-item"><span class="meta-lbl">TIME:</span> <span class="meta-val">${escapeHtml(generatedTime)}</span></div>
+              <div class="meta-item"><span class="meta-lbl">TIMEFRAME:</span> <span class="meta-val">${escapeHtml(overview)}</span></div>
+              <div class="meta-item"><span class="meta-lbl">PREPARED BY:</span> <span class="meta-val">${escapeHtml(generatedBy)}</span></div>
+          </div>
+
+          <!-- Page Section Body -->
+          ${page.contentHtml}
+
+          <!-- Footer -->
+          <div class="page-footer">
+            <span>Official ChickInteL Farm Document</span>
+            <span>Generated on ${escapeHtml(generatedDate)} ${escapeHtml(generatedTime)}</span>
+            <span>Page ${idx + 1} of ${totalPages}</span>
+          </div>
+      </div>`
+    )
+    .join("");
 
   return `<!DOCTYPE html>
     <html>
         <head>
             <meta charset="utf-8" />
+            <title>ChickInteL Farm Report - ${escapeHtml(overview)}</title>
             <style>
                 @page {
-                    size: ${PAGE_SIZE_CONFIG[pageSize]?.printLabel || "A4 portrait"};
+                    size: A4 portrait;
                     margin: 0;
                 }
                 * { box-sizing: border-box; }
@@ -316,68 +431,236 @@ function buildPrintableHtml({
                     padding: 0;
                     width: 100%;
                     height: 100%;
-                    font-family: Arial, sans-serif;
+                    font-family: 'Segoe UI', Helvetica, Arial, sans-serif;
                     color: #203029;
                     background: #f4faf7;
+                    -webkit-print-color-adjust: exact;
+                    print-color-adjust: exact;
                 }
                 body {
-                    padding: 22px;
+                    padding: 16px;
                 }
                 .page-break {
                     page-break-after: always;
                     break-after: page;
                 }
                 .sheet {
-                    min-height: calc(100vh - 44px);
+                    min-height: 1080px;
                     width: 100%;
-                    background: linear-gradient(180deg, #fcfffd 0%, #eef7f2 100%);
+                    background: #ffffff;
                     border: 1px solid #dcebe5;
-                    border-radius: 20px;
+                    border-radius: 16px;
                     padding: 24px;
                     display: flex;
                     flex-direction: column;
-                    gap: 18px;
+                    gap: 14px;
                     page-break-inside: avoid;
                     break-inside: avoid;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.03);
                 }
-                .header {
+                .page-top-header {
                     display: flex;
                     justify-content: space-between;
-                    align-items: flex-start;
-                    gap: 16px;
+                    align-items: center;
+                    border-bottom: 2px solid #317667;
+                    padding-bottom: 12px;
                 }
-                .title {
-                    font-size: 28px;
+                .brand-title {
+                    font-size: 26px;
+                    font-weight: 800;
+                    color: #317667;
+                    margin: 0;
+                    letter-spacing: -0.5px;
+                }
+                .brand-sub {
+                    font-size: 11px;
+                    color: #688078;
+                    margin: 2px 0 0;
+                    font-weight: 600;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                }
+                .page-badge {
+                    background: rgba(49, 118, 103, 0.1);
+                    border: 1px solid rgba(49, 118, 103, 0.2);
+                    color: #317667;
+                    padding: 6px 14px;
+                    border-radius: 20px;
+                    font-size: 11px;
                     font-weight: 700;
-                    margin: 0 0 6px;
                 }
-                .subtitle {
-                    font-size: 13px;
-                    color: #4f645c;
+                .meta-strip {
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 12px;
+                    background: #f4faf7;
+                    border: 1px solid #e0efe9;
+                    border-radius: 10px;
+                    padding: 10px 14px;
+                }
+                .meta-item {
+                    font-size: 11px;
+                    color: #49635a;
+                }
+                .meta-lbl {
+                    font-weight: 700;
+                    color: #688078;
+                    margin-right: 4px;
+                }
+                .meta-val {
+                    font-weight: 700;
+                    color: #203029;
+                }
+
+                .category-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-top: 4px;
+                }
+                .category-title-wrap {
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                }
+                .category-badge {
+                    font-size: 22px;
+                }
+                .category-title {
+                    font-size: 20px;
+                    font-weight: 800;
+                    color: #203029;
                     margin: 0;
                 }
-                .meta-grid {
+                .category-tag {
+                    font-size: 11px;
+                    font-weight: 700;
+                    color: #688078;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                }
+
+                /* KPI Banner */
+                .kpi-banner {
                     display: grid;
-                    grid-template-columns: repeat(3, minmax(0, 1fr));
+                    grid-template-columns: repeat(3, 1fr);
                     gap: 12px;
                 }
-                .meta-card, .section {
-                    background: rgba(255,255,255,0.86);
-                    border: 1px solid #dbe9e4;
-                    border-radius: 16px;
-                    padding: 14px 16px;
-                    page-break-inside: avoid;
-                    break-inside: avoid;
+                .kpi-box {
+                    background: #f9fcfb;
+                    border: 1px solid #dcebe5;
+                    border-radius: 12px;
+                    padding: 12px;
                 }
+                .kpi-title {
+                    font-size: 10px;
+                    font-weight: 700;
+                    color: #688078;
+                    letter-spacing: 0.5px;
+                }
+                .kpi-value {
+                    font-size: 18px;
+                    font-weight: 800;
+                    color: #203029;
+                    margin: 4px 0 2px;
+                }
+                .kpi-sub {
+                    font-size: 10px;
+                    color: #317667;
+                    font-weight: 600;
+                }
+
+                /* Section Cards */
+                .section-card {
+                    background: #ffffff;
+                    border: 1px solid #e2efe9;
+                    border-radius: 14px;
+                    padding: 16px;
+                }
+                .chart-flex-layout {
+                    display: flex;
+                    gap: 20px;
+                    align-items: center;
+                }
+                .chart-visual-box {
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    min-width: 200px;
+                }
+                .chart-details-box {
+                    flex: 1;
+                }
+                .details-heading {
+                    font-size: 13px;
+                    font-weight: 700;
+                    color: #203029;
+                    margin-bottom: 8px;
+                }
+
+                /* Tables */
+                .data-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                }
+                .data-table th, .data-table td {
+                    padding: 8px 10px;
+                    font-size: 12px;
+                    border-bottom: 1px solid #eef5f2;
+                }
+                .data-table th {
+                    background: #f4faf7;
+                    color: #587068;
+                    font-weight: 700;
+                    text-transform: uppercase;
+                    font-size: 10px;
+                    letter-spacing: 0.5px;
+                    text-align: left;
+                }
+                .swatch-dot {
+                    width: 8px;
+                    height: 8px;
+                    border-radius: 50%;
+                    display: inline-block;
+                    margin-right: 6px;
+                }
+                .table-progress-track {
+                    height: 6px;
+                    background: #eef5f2;
+                    border-radius: 3px;
+                    overflow: hidden;
+                    width: 100%;
+                }
+                .table-progress-fill {
+                    height: 100%;
+                    border-radius: 3px;
+                }
+                .status-badge {
+                    display: inline-block;
+                    padding: 3px 10px;
+                    border-radius: 12px;
+                    font-size: 10px;
+                    font-weight: 700;
+                }
+                .status-peak {
+                    background: rgba(32, 48, 41, 0.1);
+                    color: #203029;
+                }
+                .status-normal {
+                    background: rgba(49, 118, 103, 0.1);
+                    color: #317667;
+                }
+
+                /* Bar Chart */
                 .bar-chart-container {
                     position: relative;
-                    height: 160px;
-                    margin: 14px 0;
+                    height: 140px;
+                    margin-top: 10px;
                     padding-left: 28px;
                 }
                 .grid-lines-bg {
                     position: absolute;
-                    top: 0; left: 0; right: 0; bottom: 22px;
+                    top: 0; left: 0; right: 0; bottom: 20px;
                     display: flex;
                     flex-direction: column;
                     justify-content: space-between;
@@ -386,13 +669,13 @@ function buildPrintableHtml({
                     display: flex;
                     align-items: center;
                     gap: 8px;
-                    font-size: 11px;
+                    font-size: 10px;
                     color: #688078;
                 }
                 .grid-row .line {
                     flex: 1;
                     height: 1px;
-                    background: #e4efea;
+                    background: #e8f3ee;
                 }
                 .bars-flex {
                     position: relative;
@@ -402,7 +685,7 @@ function buildPrintableHtml({
                     align-items: flex-end;
                     justify-content: space-around;
                     padding-left: 8px;
-                    padding-bottom: 22px;
+                    padding-bottom: 20px;
                 }
                 .bar-col {
                     display: flex;
@@ -417,11 +700,11 @@ function buildPrintableHtml({
                     font-size: 10px;
                     font-weight: 700;
                     color: #317667;
-                    margin-bottom: 4px;
+                    margin-bottom: 3px;
                 }
                 .bar-track {
                     width: 100%;
-                    max-width: 24px;
+                    max-width: 22px;
                     height: 100%;
                     display: flex;
                     align-items: flex-end;
@@ -433,86 +716,46 @@ function buildPrintableHtml({
                     border-radius: 4px 4px 0 0;
                 }
                 .bar-label {
-                    font-size: 11px;
+                    font-size: 10px;
                     font-weight: 600;
                     color: #203029;
-                    margin-top: 6px;
+                    margin-top: 4px;
                     white-space: nowrap;
-                    text-overflow: ellipsis;
                     overflow: hidden;
+                    text-overflow: ellipsis;
                     max-width: 100%;
                 }
-                .meta-label {
-                    font-size: 11px;
-                    text-transform: uppercase;
-                    letter-spacing: .08em;
-                    color: #688078;
-                    margin-bottom: 6px;
-                }
-                .meta-value {
-                    font-size: 16px;
-                    font-weight: 700;
-                }
-                .section-title {
-                    font-size: 18px;
-                    font-weight: 700;
-                    margin: 0 0 10px;
-                }
-                .chart-shell {
-                    display: flex;
-                    gap: 18px;
-                    align-items: center;
-                    justify-content: center;
-                    flex-wrap: wrap;
-                    margin: 12px 0 10px;
-                }
-                .legend {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 8px;
-                    min-width: 180px;
-                }
-                .legend-row {
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                    font-size: 13px;
-                    color: #466058;
-                    text-transform: capitalize;
-                }
-                .swatch {
-                    width: 10px;
-                    height: 10px;
-                    border-radius: 999px;
-                    display: inline-block;
-                }
-                table {
-                    width: 100%;
-                    border-collapse: collapse;
-                }
-                th, td {
-                    text-align: left;
-                    padding: 10px 8px;
-                    border-bottom: 1px solid #e4efea;
-                    font-size: 13px;
-                }
-                th {
-                    font-size: 12px;
-                    color: #587068;
-                    text-transform: uppercase;
-                    letter-spacing: .04em;
-                }
-                .analytics {
-                    margin-top: 10px;
-                    font-size: 13px;
-                    line-height: 1.5;
-                    color: #466058;
-                }
-                .footer {
+
+                /* Insight Box */
+                .insight-box {
+                    background: rgba(49, 118, 103, 0.06);
+                    border: 1px solid rgba(49, 118, 103, 0.18);
+                    border-radius: 12px;
+                    padding: 14px;
                     margin-top: auto;
-                    padding-top: 8px;
+                }
+                .insight-title {
                     font-size: 12px;
-                    color: #5e746c;
+                    font-weight: 700;
+                    color: #317667;
+                    margin-bottom: 4px;
+                }
+                .insight-text {
+                    font-size: 11px;
+                    line-height: 1.5;
+                    color: #203029;
+                }
+
+                /* Page Footer */
+                .page-footer {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    border-top: 1px solid #e8f3ee;
+                    padding-top: 10px;
+                    margin-top: 8px;
+                    font-size: 10px;
+                    color: #688078;
                 }
             </style>
         </head>
@@ -540,27 +783,6 @@ const EMPTY_REPORT: FarmReportSnapshot = {
     analyticsText: "No supply data is available yet.",
   },
 };
-
-function ReportDropdown({
-  label,
-  value,
-  onOpen,
-}: {
-  label: string;
-  value: string;
-  onOpen: () => void;
-}) {
-  return (
-    <ChickSelectRow
-      label={label.replace(":", "")}
-      value={value}
-      onPress={onOpen}
-      style={{ marginBottom: 8 }}
-      rowStyle={styles.compactDropdownRow}
-      labelStyle={styles.compactDropdownLabel}
-    />
-  );
-}
 
 function PrintModal({
   visible,
@@ -594,7 +816,7 @@ function PrintModal({
         <View style={styles.printModalCenter} pointerEvents="box-none">
           <View style={styles.printModalCard}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Print Report</Text>
+              <Text style={styles.modalTitle}>Print PDF Farm Report</Text>
               <Pressable onPress={onClose} hitSlop={12}>
                 <MaterialCommunityIcons
                   name="close"
@@ -604,7 +826,7 @@ function PrintModal({
               </Pressable>
             </View>
 
-            <Text style={styles.sectionLabel}>What to print</Text>
+            <Text style={styles.sectionLabel}>Select PDF Page Structure</Text>
             <View style={styles.chipRow}>
               {PRINT_SCOPES.map((entry) => (
                 <TouchableOpacity
@@ -633,12 +855,12 @@ function PrintModal({
               disabled={printingReport}
             >
               <MaterialCommunityIcons
-                name="printer-outline"
-                size={20}
+                name="file-pdf-box"
+                size={22}
                 color="#FFF"
               />
               <Text style={styles.printBtnText}>
-                {printingReport ? "Opening print dialog..." : "Print"}
+                {printingReport ? "Generating multi-page PDF..." : "Export & Print PDF"}
               </Text>
             </TouchableOpacity>
 
@@ -655,6 +877,51 @@ function PrintModal({
   );
 }
 
+function SegmentedPills<T extends string>({
+  options,
+  selected,
+  onSelect,
+  icons,
+}: {
+  options: T[];
+  selected: T;
+  onSelect: (opt: T) => void;
+  icons?: Record<string, keyof typeof MaterialCommunityIcons.glyphMap>;
+}) {
+  return (
+    <View style={styles.segmentedContainer}>
+      {options.map((opt) => {
+        const active = opt === selected;
+        const iconName = icons?.[opt];
+        return (
+          <TouchableOpacity
+            key={opt}
+            onPress={() => onSelect(opt)}
+            activeOpacity={0.8}
+            style={[styles.segmentedItem, active && styles.segmentedItemActive]}
+          >
+            {iconName && (
+              <MaterialCommunityIcons
+                name={iconName}
+                size={14}
+                color={active ? "#FFF" : ChickIntelPalette.gray2}
+              />
+            )}
+            <Text
+              style={[
+                styles.segmentedText,
+                active && styles.segmentedTextActive,
+              ]}
+            >
+              {opt}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+}
+
 function DonutChart({
   slices,
   total,
@@ -662,8 +929,8 @@ function DonutChart({
   slices: ReportDonutSlice[];
   total: number;
 }) {
-  const size = 140;
-  const strokeWidth = 28;
+  const size = 150;
+  const strokeWidth = 26;
   const radius = (size - strokeWidth) / 2;
   const center = size / 2;
   const circumference = 2 * Math.PI * radius;
@@ -704,50 +971,49 @@ function DonutChart({
         </Svg>
 
         <View style={styles.donutCenterWrap}>
-          <View style={styles.donutCenterValueWrap}>
-            <Text style={styles.donutCenterValue}>{total}</Text>
-          </View>
-          <Text style={styles.donutCenterLabel}>Total</Text>
+          <Text style={styles.donutCenterValue}>{total.toLocaleString()}</Text>
+          <Text style={styles.donutCenterLabel}>Total Items</Text>
         </View>
       </View>
 
-      <View style={styles.donutSummaryRow}>
-        {slices.map((slice) => (
-          <View key={`${slice.label}-summary`} style={styles.donutSummaryChip}>
-            <View
-              style={[
-                styles.donutSummarySwatch,
-                { backgroundColor: slice.color },
-              ]}
-            />
-            <Text style={styles.donutSummaryText}>
-              {slice.label}: {slice.displayPercent}
-            </Text>
-          </View>
-        ))}
-      </View>
-
-      <View style={styles.donutLegend}>
-        {slices.map((slice) => (
-          <View key={`${slice.label}-legend`} style={styles.donutLegendRow}>
-            <View style={styles.donutLegendLeft}>
-              <View
-                style={[
-                  styles.donutLegendSwatch,
-                  { backgroundColor: slice.color },
-                ]}
-              />
-              <Text style={styles.donutLegendLabel}>{slice.label}</Text>
+      <View style={styles.breakdownList}>
+        {slices.map((slice) => {
+          const percentVal = total > 0 ? Math.round((slice.count / total) * 100) : 0;
+          return (
+            <View key={slice.label} style={styles.breakdownRowContainer}>
+              <View style={styles.breakdownRowHeader}>
+                <View style={styles.breakdownLabelGroup}>
+                  <View
+                    style={[
+                      styles.breakdownDot,
+                      { backgroundColor: slice.color },
+                    ]}
+                  />
+                  <Text style={styles.breakdownLabelText}>{slice.label}</Text>
+                </View>
+                <Text style={styles.breakdownValueText}>
+                  {slice.count.toLocaleString()} ({slice.displayPercent})
+                </Text>
+              </View>
+              <View style={styles.progressTrack}>
+                <View
+                  style={[
+                    styles.progressFill,
+                    {
+                      width: `${percentVal}%`,
+                      backgroundColor: slice.color,
+                    },
+                  ]}
+                />
+              </View>
             </View>
-            <Text style={styles.donutLegendValue}>
-              {slice.count} ({slice.displayPercent})
-            </Text>
-          </View>
-        ))}
+          );
+        })}
       </View>
     </View>
   );
 }
+
 function ConsumptionBarChart({
   bars,
   maxY,
@@ -755,9 +1021,18 @@ function ConsumptionBarChart({
   bars: FarmReportSnapshot["supply"]["bars"];
   maxY: number;
 }) {
-  const graphHeight = 140;
+  const graphHeight = 130;
   const axisValues = [maxY, Math.round(maxY / 2), 0];
-  const barWidth = bars.length > 10 ? 18 : bars.length > 7 ? 20 : 24;
+  const barWidth = bars.length > 10 ? 18 : bars.length > 7 ? 22 : 28;
+
+  if (bars.length === 0) {
+    return (
+      <View style={styles.emptyChartBox}>
+        <MaterialCommunityIcons name="cube-outline" size={28} color={ChickIntelPalette.gray2} />
+        <Text style={styles.emptyChartText}>No consumption data recorded for this timeframe.</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.barGraphContainer}>
@@ -780,20 +1055,45 @@ function ConsumptionBarChart({
           return (
             <View
               key={item.key}
-              style={[styles.barCol, { width: barWidth + 8 }]}
+              style={[styles.barCol, { width: barWidth + 12 }]}
             >
-              <View
-                style={[
-                  styles.barFill,
-                  { height: barHeight, width: barWidth },
-                  item.highlight ? styles.barFillHighlight : null,
-                ]}
-              />
-              <Text style={styles.xAxisText}>{item.label}</Text>
+              <Text style={styles.barValueLabel}>
+                {item.value > 0 ? item.value : ""}
+              </Text>
+              <View style={styles.barTrack}>
+                <View
+                  style={[
+                    styles.barFill,
+                    { height: barHeight, width: barWidth },
+                    item.highlight ? styles.barFillHighlight : null,
+                  ]}
+                />
+              </View>
+              <Text style={styles.xAxisText} numberOfLines={1}>
+                {item.label}
+              </Text>
             </View>
           );
         })}
       </View>
+    </View>
+  );
+}
+
+function SmartInsightCard({ text }: { text: string }) {
+  return (
+    <View style={styles.insightCard}>
+      <View style={styles.insightHeaderRow}>
+        <View style={styles.insightIconBadge}>
+          <MaterialCommunityIcons
+            name="lightbulb-on-outline"
+            size={16}
+            color={ChickIntelPalette.green1}
+          />
+        </View>
+        <Text style={styles.insightTitle}>Key Takeaway & Insight</Text>
+      </View>
+      <Text style={styles.insightBodyText}>{text}</Text>
     </View>
   );
 }
@@ -813,31 +1113,18 @@ export default function ReportsScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [selectionModal, setSelectionModal] = useState<{
-    visible: boolean;
-    title: string;
-    options: string[];
-    value: string;
-    setter: (value: string) => void;
-  }>({
-    visible: false,
-    title: "",
-    options: [],
-    value: "",
-    setter: () => {},
-  });
   const [printModalVisible, setPrintModalVisible] = useState(false);
   const [printScope, setPrintScope] =
-    useState<PrintScopeOption>("Egg & Chicken");
+    useState<PrintScopeOption>("All Categories (Multi-Page)");
   const [printingReport, setPrintingReport] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
 
   const generatedBy = profile?.display_name || profile?.email || "Farm User";
   const generatedDate = new Intl.DateTimeFormat("en-US", {
-    weekday: "long",
+    weekday: "short",
     year: "numeric",
-    month: "long",
+    month: "short",
     day: "numeric",
   }).format(new Date());
   const generatedTime = new Intl.DateTimeFormat("en-US", {
@@ -852,41 +1139,52 @@ export default function ReportsScreen() {
     setPrintingReport(true);
 
     try {
-      let printableReport = report;
-      let secondaryProductionReport: FarmReportSnapshot | undefined;
+      if (!activeFarm?.id) {
+        throw new Error("No active farm selected to print reports.");
+      }
 
-      if (printScope === "Egg & Chicken" && activeFarm?.id) {
-        const [eggReport, chickenReport] = await Promise.all([
+      const farmId = activeFarm.id;
+
+      // Fetch all snapshots for per-page category compilation
+      const [eggReport, chickenReport, vitaminsReport, feedsReport] =
+        await Promise.all([
           fetchFarmReportSnapshot({
-            farmId: activeFarm.id,
+            farmId,
             overview,
             productionType: "Eggs",
-            supplyType,
+            supplyType: "Vitamins & Meds",
           }),
           fetchFarmReportSnapshot({
-            farmId: activeFarm.id,
+            farmId,
             overview,
             productionType: "Chickens",
-            supplyType,
+            supplyType: "Vitamins & Meds",
+          }),
+          fetchFarmReportSnapshot({
+            farmId,
+            overview,
+            productionType: "Eggs",
+            supplyType: "Vitamins & Meds",
+          }),
+          fetchFarmReportSnapshot({
+            farmId,
+            overview,
+            productionType: "Eggs",
+            supplyType: "Feeds",
           }),
         ]);
 
-        printableReport = eggReport;
-        secondaryProductionReport = chickenReport;
-      }
-
       const html = buildPrintableHtml({
-        farmName: activeFarm?.name || "No active farm",
+        farmName: activeFarm?.name || "ChickInteL Farm",
         generatedBy,
         generatedDate,
         generatedTime,
         overview,
-        productionType: prodType,
-        supplyType,
-        report: printableReport,
-        pageSize: "A4",
         printScope,
-        secondaryProductionReport,
+        eggReport,
+        chickenReport,
+        vitaminsReport,
+        feedsReport,
       });
 
       await Print.printAsync({
@@ -894,7 +1192,7 @@ export default function ReportsScreen() {
         orientation: "portrait",
       });
 
-      setSaveMessage(``);
+      setSaveMessage("PDF report exported successfully.");
       setPrintModalVisible(false);
     } catch (printError) {
       setSaveError(
@@ -914,7 +1212,6 @@ export default function ReportsScreen() {
     }
 
     const farmId = activeFarmId;
-
     let cancelled = false;
 
     async function loadReport() {
@@ -959,8 +1256,18 @@ export default function ReportsScreen() {
     ? "rgba(255, 255, 255, 0.2)"
     : "rgba(255, 255, 255, 0.6)";
 
+  const topSlice = report.production.slices.reduce(
+    (max, item) => (item.count > max.count ? item : max),
+    report.production.slices[0] || { label: "N/A", count: 0, displayPercent: "0%" }
+  );
+
+  const totalSupplyUsage = report.supply.bars.reduce(
+    (sum, item) => sum + item.value,
+    0
+  );
+
   return (
-    <View style={styles.screen}>
+    <SafeAreaView style={styles.screen} edges={["top"]}>
       <BackgroundGradient
         width="100%"
         height="100%"
@@ -969,34 +1276,59 @@ export default function ReportsScreen() {
       />
 
       <View style={styles.viewShot}>
+        {/* Pinned Top Header */}
+        <View style={styles.fixedHeader}>
+          <View style={styles.header}>
+            <View>
+              <Text style={styles.screenTitle}>Farm Reports</Text>
+              <Text style={styles.screenSubtitle}>
+                {activeFarm?.name || "No active farm"} • {overview} Snapshot
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.printButton}
+              onPress={() => setPrintModalVisible(true)}
+              activeOpacity={0.8}
+            >
+              <MaterialCommunityIcons
+                name="printer-outline"
+                size={22}
+                color="#FFF"
+              />
+            </TouchableOpacity>
+          </View>
+
+          {/* Timeframe Filter Bar */}
+          <View style={styles.timeframeBarContainer}>
+            <Text style={styles.timeframeLabel}>Timeframe Filter:</Text>
+            <SegmentedPills
+              options={OVERVIEW_OPTIONS}
+              selected={overview}
+              onSelect={(val) => setOverview(val)}
+              icons={{
+                Weekly: "calendar-week",
+                Monthly: "calendar-month",
+                Annually: "calendar-multiselect",
+              }}
+            />
+          </View>
+        </View>
+
         <ScrollView
           contentContainerStyle={[
             styles.content,
             {
-              paddingTop: insets.top + 20,
-              paddingBottom: insets.bottom + 120,
+              paddingTop: 10,
+              paddingBottom: insets.bottom + 110,
             },
           ]}
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.header}>
-            <Text style={styles.screenTitle}>Reports</Text>
-            <Pressable
-              style={styles.printButton}
-              onPress={() => setPrintModalVisible(true)}
-            >
-              <MaterialCommunityIcons
-                name="printer-outline"
-                size={24}
-                color={ChickIntelPalette.gray1}
-              />
-            </Pressable>
-          </View>
 
           {loading ? (
             <View style={styles.statusRow}>
               <ActivityIndicator color={ChickIntelPalette.green1} />
-              <Text style={styles.statusText}>Loading report data...</Text>
+              <Text style={styles.statusText}>Updating report analytics...</Text>
             </View>
           ) : null}
 
@@ -1006,57 +1338,65 @@ export default function ReportsScreen() {
             <Text style={styles.successText}>{saveMessage}</Text>
           ) : null}
 
-          <BlurCard
-            style={[styles.heroCard, isDark && styles.heroCardDark]}
-            borderRadius={20}
-            intensity={18}
-            transparent
-          >
-            <View style={styles.heroContent}>
-              <View style={styles.heroTopRow}>
-                <View style={styles.heroTitleWrap}>
-                  <View style={styles.heroIconBadge}>
-                    <MaterialCommunityIcons
-                      name="chart-box-outline"
-                      size={18}
-                      color={ChickIntelPalette.green1}
-                    />
-                  </View>
-                  <View style={styles.heroCopy}>
-                    <Text style={styles.heroEyebrow}>
-                      Farm performance snapshot
-                    </Text>
-                    <Text style={styles.heroTitle}>Your reports, elevated</Text>
-                  </View>
-                </View>
-                <View style={styles.heroBadge}>
-                  <Text style={styles.heroBadgeText}>{overview}</Text>
-                </View>
+          {/* KPI Summary Cards */}
+          <View style={styles.kpiGrid}>
+            <View style={styles.kpiCard}>
+              <View style={styles.kpiIconWrap}>
+                <MaterialCommunityIcons
+                  name={prodType === "Eggs" ? "egg" : "bird"}
+                  size={16}
+                  color={ChickIntelPalette.green1}
+                />
               </View>
-
-              <View style={styles.heroMetaGrid}>
-                <View style={styles.heroMetaItem}>
-                  <Text style={styles.heroMetaLabel}>Farm</Text>
-                  <Text style={styles.heroMetaValue}>
-                    {activeFarm?.name || "No active farm"}
-                  </Text>
-                </View>
-                <View style={styles.heroMetaItem}>
-                  <Text style={styles.heroMetaLabel}>Generated</Text>
-                  <Text style={styles.heroMetaValue}>{generatedDate}</Text>
-                </View>
-                <View style={styles.heroMetaItem}>
-                  <Text style={styles.heroMetaLabel}>By</Text>
-                  <Text style={styles.heroMetaValue}>{generatedBy}</Text>
-                </View>
-              </View>
+              <Text style={styles.kpiLabel}>Total {prodType}</Text>
+              <Text style={styles.kpiValue}>
+                {report.production.total.toLocaleString()}
+              </Text>
+              <Text style={styles.kpiSubtext}>
+                {overview} total recorded
+              </Text>
             </View>
-          </BlurCard>
 
+            <View style={styles.kpiCard}>
+              <View style={styles.kpiIconWrap}>
+                <MaterialCommunityIcons
+                  name="chart-pie"
+                  size={16}
+                  color={ChickIntelPalette.green1}
+                />
+              </View>
+              <Text style={styles.kpiLabel}>Top Outcome</Text>
+              <Text style={[styles.kpiValue, { textTransform: "capitalize" }]}>
+                {topSlice.label}
+              </Text>
+              <Text style={styles.kpiSubtext}>
+                {topSlice.displayPercent} ({topSlice.count.toLocaleString()})
+              </Text>
+            </View>
+
+            <View style={styles.kpiCard}>
+              <View style={styles.kpiIconWrap}>
+                <MaterialCommunityIcons
+                  name="truck-delivery-outline"
+                  size={16}
+                  color={ChickIntelPalette.green1}
+                />
+              </View>
+              <Text style={styles.kpiLabel}>Supply Usage</Text>
+              <Text style={styles.kpiValue}>
+                {totalSupplyUsage.toLocaleString()}
+              </Text>
+              <Text style={styles.kpiSubtext}>
+                {supplyType} items
+              </Text>
+            </View>
+          </View>
+
+          {/* Section 1: Production Overview */}
           <BlurCard
             style={[styles.reportCard, isDark && styles.reportCardDark]}
-            borderRadius={18}
-            intensity={16}
+            borderRadius={20}
+            intensity={18}
             transparent
           >
             <View
@@ -1072,8 +1412,8 @@ export default function ReportsScreen() {
                 <View style={styles.cardTitleWrap}>
                   <View style={styles.cardIconBadge}>
                     <MaterialCommunityIcons
-                      name="egg-outline"
-                      size={16}
+                      name={prodType === "Eggs" ? "egg-outline" : "bird"}
+                      size={18}
                       color={ChickIntelPalette.green1}
                     />
                   </View>
@@ -1081,37 +1421,16 @@ export default function ReportsScreen() {
                     {report.production.title}
                   </Text>
                 </View>
-                <View style={styles.cardHeaderPill}>
-                  <Text style={styles.cardHeaderPillText}>{prodType}</Text>
-                </View>
+                <SegmentedPills
+                  options={TYPE_OPTIONS}
+                  selected={prodType}
+                  onSelect={(val) => setProdType(val)}
+                  icons={{
+                    Eggs: "egg",
+                    Chickens: "bird",
+                  }}
+                />
               </View>
-              <ReportDropdown
-                label="Overview:"
-                value={overview}
-                onOpen={() =>
-                  setSelectionModal({
-                    visible: true,
-                    title: "Select Overview",
-                    options: OVERVIEW_OPTIONS,
-                    value: overview,
-                    setter: (value) => setOverview(value as ReportOverview),
-                  })
-                }
-              />
-              <ReportDropdown
-                label="Type:"
-                value={prodType}
-                onOpen={() =>
-                  setSelectionModal({
-                    visible: true,
-                    title: "Select Type",
-                    options: TYPE_OPTIONS,
-                    value: prodType,
-                    setter: (value) =>
-                      setProdType(value as ReportProductionType),
-                  })
-                }
-              />
 
               <View style={styles.chartWrapper}>
                 <DonutChart
@@ -1120,16 +1439,15 @@ export default function ReportsScreen() {
                 />
               </View>
 
-              <Text style={styles.analyticsText}>
-                {report.production.analyticsText}
-              </Text>
+              <SmartInsightCard text={report.production.analyticsText} />
             </View>
           </BlurCard>
 
+          {/* Section 2: Supply Activity */}
           <BlurCard
             style={[styles.reportCard, isDark && styles.reportCardDark]}
-            borderRadius={18}
-            intensity={16}
+            borderRadius={20}
+            intensity={18}
             transparent
           >
             <View
@@ -1146,42 +1464,22 @@ export default function ReportsScreen() {
                   <View style={styles.cardIconBadge}>
                     <MaterialCommunityIcons
                       name="truck-delivery-outline"
-                      size={16}
+                      size={18}
                       color={ChickIntelPalette.green1}
                     />
                   </View>
                   <Text style={styles.cardTitle}>{report.supply.title}</Text>
                 </View>
-                <View style={styles.cardHeaderPill}>
-                  <Text style={styles.cardHeaderPillText}>{supplyType}</Text>
-                </View>
+                <SegmentedPills
+                  options={SUPPLY_OPTIONS}
+                  selected={supplyType}
+                  onSelect={(val) => setSupplyType(val)}
+                  icons={{
+                    "Vitamins & Meds": "pill",
+                    Feeds: "barley",
+                  }}
+                />
               </View>
-              <ReportDropdown
-                label="Overview:"
-                value={overview}
-                onOpen={() =>
-                  setSelectionModal({
-                    visible: true,
-                    title: "Select Overview",
-                    options: OVERVIEW_OPTIONS,
-                    value: overview,
-                    setter: (value) => setOverview(value as ReportOverview),
-                  })
-                }
-              />
-              <ReportDropdown
-                label="Supply:"
-                value={supplyType}
-                onOpen={() =>
-                  setSelectionModal({
-                    visible: true,
-                    title: "Select Supply",
-                    options: SUPPLY_OPTIONS,
-                    value: supplyType,
-                    setter: (value) => setSupplyType(value as ReportSupplyType),
-                  })
-                }
-              />
 
               <View style={styles.barChartWrapper}>
                 <ConsumptionBarChart
@@ -1190,34 +1488,23 @@ export default function ReportsScreen() {
                 />
               </View>
 
-              <Text style={styles.analyticsText}>
-                {report.supply.analyticsText}
-              </Text>
+              <SmartInsightCard text={report.supply.analyticsText} />
             </View>
           </BlurCard>
 
+          {/* Footer Metadata */}
           <View style={styles.footerContainer}>
-            <Text style={styles.footerLabel}>Report Generation Details</Text>
+            <Text style={styles.footerLabel}>Report Snapshot Information</Text>
             <Text style={styles.footerText}>Generated by: {generatedBy}</Text>
-            <Text style={styles.footerText}>Date: {generatedDate}</Text>
-            <Text style={styles.footerText}>Time: {generatedTime}</Text>
             <Text style={styles.footerText}>
-              Location: {activeFarm?.name || "No active farm"}
+              Date: {generatedDate} at {generatedTime}
+            </Text>
+            <Text style={styles.footerText}>
+              Farm: {activeFarm?.name || "No active farm"}
             </Text>
           </View>
         </ScrollView>
       </View>
-
-      <ChickSelectionModal
-        visible={selectionModal.visible}
-        title={selectionModal.title}
-        options={selectionModal.options}
-        value={selectionModal.value}
-        onSelect={(value) => selectionModal.setter(value)}
-        onClose={() =>
-          setSelectionModal((previous) => ({ ...previous, visible: false }))
-        }
-      />
 
       <PrintModal
         visible={printModalVisible}
@@ -1227,17 +1514,23 @@ export default function ReportsScreen() {
         onPrintReport={handlePrintReport}
         printingReport={printingReport}
       />
-    </View>
+    </SafeAreaView>
   );
 }
+
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: ReportsPageTheme.screenBackground,
   },
+  fixedHeader: {
+    paddingHorizontal: ReportsPageTheme.contentPaddingHorizontal,
+    gap: 10,
+    paddingBottom: 6,
+  },
   content: {
     paddingHorizontal: ReportsPageTheme.contentPaddingHorizontal,
-    gap: ReportsPageTheme.contentGap,
+    gap: 14,
   },
   viewShot: {
     flex: 1,
@@ -1246,33 +1539,96 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: ReportsPageTheme.headerPaddingHorizontal,
-    marginTop: ReportsPageTheme.headerTopMargin,
-    marginBottom: ReportsPageTheme.headerBottomMargin,
+    paddingHorizontal: moderateScale(4),
+    marginTop: verticalScale(6),
+    marginBottom: verticalScale(2),
+  },
+  screenTitle: {
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(22),
+    fontWeight: "800",
+    color: ChickIntelPalette.gray1,
+    letterSpacing: -0.3,
+  },
+  screenSubtitle: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12),
+    color: ChickIntelPalette.gray2,
+    marginTop: 2,
   },
   printButton: {
-    width: ReportsPageTheme.printButtonSize,
-    height: ReportsPageTheme.printButtonSize,
-    borderRadius: ReportsPageTheme.printButtonRadius,
+    width: scale(42),
+    height: verticalScale(42),
+    borderRadius: 14,
     backgroundColor: ChickIntelPalette.green1,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.22)",
+    borderColor: "rgba(49, 118, 103, 0.25)",
     shadowColor: "#317667",
-    shadowOpacity: 0.16,
+    shadowOpacity: 0.22,
     shadowRadius: 10,
     shadowOffset: { width: scale(0), height: verticalScale(4) },
-    elevation: 3,
+    elevation: 4,
   },
-  screenTitle: {
-    ...ReportsPageTheme.screenTitle,
+  timeframeBarContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "rgba(255, 255, 255, 0.85)",
+    borderRadius: 14,
+    paddingHorizontal: moderateScale(12),
+    paddingVertical: verticalScale(8),
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.16)",
+    shadowColor: "#317667",
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+    gap: 8,
+  },
+  timeframeLabel: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(11),
+    fontWeight: "700",
+    color: ChickIntelPalette.gray1,
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+  },
+  segmentedContainer: {
+    flexDirection: "row",
+    backgroundColor: "rgba(49, 118, 103, 0.08)",
+    borderRadius: 10,
+    padding: 3,
+    gap: 3,
+  },
+  segmentedItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: moderateScale(10),
+    paddingVertical: verticalScale(6),
+    borderRadius: 8,
+  },
+  segmentedItemActive: {
+    backgroundColor: ChickIntelPalette.green1,
+  },
+  segmentedText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(11),
+    fontWeight: "600",
+    color: ChickIntelPalette.gray1,
+  },
+  segmentedTextActive: {
+    color: "#FFFFFF",
+    fontWeight: "700",
   },
   statusRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    paddingHorizontal: moderateScale(12),
+    paddingHorizontal: moderateScale(8),
   },
   statusText: {
     fontFamily: ChickFont.sans,
@@ -1283,119 +1639,67 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(13),
     color: "#A64040",
-    paddingHorizontal: moderateScale(12),
+    paddingHorizontal: moderateScale(8),
   },
   successText: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(13),
     color: ChickIntelPalette.green1,
-    paddingHorizontal: moderateScale(12),
+    paddingHorizontal: moderateScale(8),
   },
-  heroCard: {
-    overflow: "hidden",
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.18)",
-    backgroundColor: "rgba(255, 255, 255, 0.84)",
-    shadowColor: "#317667",
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    shadowOffset: { width: scale(0), height: verticalScale(8) },
-    elevation: 4,
-  },
-  heroCardDark: {
-    backgroundColor: "rgba(255, 255, 255, 0.16)",
-    borderColor: "rgba(255, 255, 255, 0.2)",
-  },
-  heroContent: {
-    padding: moderateScale(16),
-    gap: 12,
-  },
-  heroTopRow: {
+
+  // KPI Summary Cards
+  kpiGrid: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: 12,
+    gap: 8,
   },
-  heroTitleWrap: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
+  kpiCard: {
     flex: 1,
+    backgroundColor: "rgba(255, 255, 255, 0.88)",
+    borderRadius: 16,
+    padding: moderateScale(12),
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.14)",
+    shadowColor: "#317667",
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+    gap: 2,
   },
-  heroIconBadge: {
-    width: scale(38),
-    height: verticalScale(38),
-    borderRadius: 12,
+  kpiIconWrap: {
+    width: scale(28),
+    height: verticalScale(28),
+    borderRadius: 8,
     backgroundColor: "rgba(49, 118, 103, 0.12)",
     alignItems: "center",
     justifyContent: "center",
+    marginBottom: 4,
   },
-  heroCopy: {
-    flex: 1,
-  },
-  heroEyebrow: {
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(10),
-    fontWeight: "700",
-    color: ChickIntelPalette.green1,
-    textTransform: "uppercase",
-    letterSpacing: 0.6,
-    marginBottom: 2,
-  },
-  heroTitle: {
-    fontFamily: ChickFont.display,
-    fontSize: responsiveFontSize(18),
-    fontWeight: "800",
-    color: ChickIntelPalette.gray1,
-    letterSpacing: -0.3,
-  },
-  heroBadge: {
-    paddingHorizontal: moderateScale(10),
-    paddingVertical: verticalScale(6),
-    borderRadius: 999,
-    backgroundColor: "rgba(49, 118, 103, 0.12)",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.18)",
-  },
-  heroBadgeText: {
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(11),
-    fontWeight: "700",
-    color: ChickIntelPalette.green1,
-  },
-  heroMetaGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  heroMetaItem: {
-    flex: 1,
-    minWidth: scale(90),
-    paddingHorizontal: moderateScale(10),
-    paddingVertical: verticalScale(10),
-    borderRadius: 12,
-    backgroundColor: "rgba(244, 248, 247, 0.9)",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.12)",
-  },
-  heroMetaLabel: {
+  kpiLabel: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(10),
     color: ChickIntelPalette.gray2,
     textTransform: "uppercase",
     letterSpacing: 0.4,
-    marginBottom: 3,
   },
-  heroMetaValue: {
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(12),
-    fontWeight: "700",
+  kpiValue: {
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(16),
+    fontWeight: "800",
     color: ChickIntelPalette.gray1,
   },
+  kpiSubtext: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(10),
+    color: ChickIntelPalette.green1,
+    fontWeight: "600",
+  },
+
+  // Cards & Headers
   reportCard: {
     overflow: "hidden",
-    borderRadius: 18,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: "rgba(49, 118, 103, 0.16)",
     backgroundColor: "rgba(255, 255, 255, 0.86)",
@@ -1414,19 +1718,21 @@ const styles = StyleSheet.create({
     padding: ReportsPageTheme.cardInnerPadding,
     borderWidth: 1,
     overflow: "hidden",
+    gap: 12,
   },
   cardHeaderRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    gap: 10,
-    marginBottom: 8,
+    gap: 8,
+    flexWrap: "wrap",
   },
   cardTitleWrap: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
     flex: 1,
+    minWidth: scale(130),
   },
   cardIconBadge: {
     width: scale(34),
@@ -1438,33 +1744,263 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontFamily: ChickFont.display,
-    fontSize: responsiveFontSize(17),
+    fontSize: responsiveFontSize(16),
     fontWeight: "700",
     color: ChickIntelPalette.gray1,
     flexShrink: 1,
   },
-  cardHeaderPill: {
-    paddingHorizontal: moderateScale(10),
-    paddingVertical: verticalScale(6),
-    borderRadius: 999,
-    backgroundColor: "rgba(49, 118, 103, 0.12)",
+
+  // Donut Chart Container & Breakdown
+  chartWrapper: {
+    paddingVertical: verticalScale(14),
+    paddingHorizontal: moderateScale(14),
+    borderRadius: 16,
+    backgroundColor: "rgba(244, 248, 247, 0.72)",
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.18)",
+    borderColor: "rgba(49, 118, 103, 0.1)",
   },
-  cardHeaderPillText: {
+  donutContainer: {
+    width: "100%",
+    alignItems: "center",
+    gap: 16,
+  },
+  donutSvgWrap: {
+    width: 150,
+    height: 150,
+    position: "relative",
+  },
+  donutCenterWrap: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  donutCenterValue: {
+    fontFamily: ChickFont.display,
+    fontWeight: "800",
+    fontSize: responsiveFontSize(22),
+    color: ChickIntelPalette.gray1,
+  },
+  donutCenterLabel: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(11),
+    color: ChickIntelPalette.gray2,
+  },
+
+  // Breakdown List
+  breakdownList: {
+    width: "100%",
+    gap: 10,
+  },
+  breakdownRowContainer: {
+    gap: 4,
+  },
+  breakdownRowHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  breakdownLabelGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  breakdownDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  breakdownLabelText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12),
+    fontWeight: "600",
+    color: ChickIntelPalette.gray1,
+    textTransform: "capitalize",
+  },
+  breakdownValueText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12),
+    fontWeight: "700",
+    color: ChickIntelPalette.gray1,
+  },
+  progressTrack: {
+    height: 6,
+    width: "100%",
+    backgroundColor: "rgba(0, 0, 0, 0.06)",
+    borderRadius: 3,
+    overflow: "hidden",
+  },
+  progressFill: {
+    height: "100%",
+    borderRadius: 3,
+  },
+
+  // Bar Chart Container
+  barChartWrapper: {
+    paddingTop: verticalScale(10),
+    paddingBottom: verticalScale(8),
+    paddingHorizontal: moderateScale(10),
+    borderRadius: 16,
+    backgroundColor: "rgba(244, 248, 247, 0.72)",
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.1)",
+  },
+  barGraphContainer: {
+    height: verticalScale(175),
+    position: "relative",
+    paddingLeft: 22,
+    paddingTop: 16,
+  },
+  gridLinesWrap: {
+    position: "absolute",
+    top: 16,
+    left: 0,
+    right: 0,
+    bottom: 24,
+    justifyContent: "space-between",
+  },
+  gridLineRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: verticalScale(16),
+  },
+  yAxisText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(10),
+    color: ChickIntelPalette.gray2,
+    width: scale(22),
+  },
+  gridLine: {
+    flex: 1,
+    height: verticalScale(1),
+    backgroundColor: "rgba(0,0,0,0.08)",
+  },
+  barsWrap: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "space-around",
+    height: "100%",
+    paddingBottom: 22,
+  },
+  barCol: {
+    alignItems: "center",
+    height: "100%",
+    justifyContent: "flex-end",
+  },
+  barValueLabel: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(10),
+    fontWeight: "700",
+    color: ChickIntelPalette.green1,
+    marginBottom: 2,
+  },
+  barTrack: {
+    flex: 1,
+    width: "100%",
+    justifyContent: "flex-end",
+    alignItems: "center",
+  },
+  barFill: {
+    backgroundColor: "#81BDB0",
+    borderTopLeftRadius: 4,
+    borderTopRightRadius: 4,
+  },
+  barFillHighlight: {
+    backgroundColor: "#323330",
+  },
+  xAxisText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(10),
+    color: ChickIntelPalette.gray1,
+    marginTop: 4,
+    fontWeight: "600",
+  },
+  emptyChartBox: {
+    padding: verticalScale(30),
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  emptyChartText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12),
+    color: ChickIntelPalette.gray2,
+    textAlign: "center",
+  },
+
+  // Smart Insights Card
+  insightCard: {
+    backgroundColor: "rgba(49, 118, 103, 0.07)",
+    borderRadius: 14,
+    padding: moderateScale(12),
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.14)",
+    gap: 6,
+  },
+  insightHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  insightIconBadge: {
+    width: scale(22),
+    height: verticalScale(22),
+    borderRadius: 6,
+    backgroundColor: "rgba(49, 118, 103, 0.14)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  insightTitle: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12),
+    fontWeight: "700",
+    color: ChickIntelPalette.green1,
+  },
+  insightBodyText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12),
+    lineHeight: 18,
+    color: ChickIntelPalette.gray1,
+  },
+
+  // Footer Container
+  footerContainer: {
+    marginTop: verticalScale(10),
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(0,0,0,0.08)",
+    alignItems: "center",
+    gap: 2,
+  },
+  footerLabel: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(11),
     fontWeight: "700",
-    color: ChickIntelPalette.green1,
-    textTransform: "capitalize",
+    color: ChickIntelPalette.gray1,
+    marginBottom: 4,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    textAlign: "center",
   },
+  footerText: {
+    fontFamily: ReportsCardTheme.footerTextFontFamily,
+    fontSize: ReportsCardTheme.footerTextFontSize,
+    lineHeight: ReportsCardTheme.footerTextLineHeight,
+    color: ReportsCardTheme.footerTextColor,
+    textAlign: "center",
+  },
+
+  // Print Modal
   printModalRoot: {
     flex: 1,
     position: "relative",
   },
   printModalScrim: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(51, 51, 51, 0.5)",
+    backgroundColor: "rgba(0, 0, 0, 0.45)",
   },
   printModalCenter: {
     ...StyleSheet.absoluteFillObject,
@@ -1496,9 +2032,8 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontFamily: ChickFont.display,
     fontSize: responsiveFontSize(18),
-    fontWeight: "600",
+    fontWeight: "700",
     color: ChickIntelPalette.gray1,
-    marginBottom: 0,
   },
   sectionLabel: {
     fontFamily: ReportsCardTheme.sectionTitleFontFamily,
@@ -1506,17 +2041,16 @@ const styles = StyleSheet.create({
     fontWeight: ReportsCardTheme.sectionTitleFontWeight,
     color: ReportsCardTheme.sectionTitleColor,
     marginTop: 12,
-    marginBottom: 6,
+    marginBottom: 8,
   },
   chipRow: {
-    flexDirection: "row",
-    gap: 8,
-    flexWrap: "wrap",
+    flexDirection: "column",
+    gap: 6,
   },
   chip: {
     paddingHorizontal: moderateScale(14),
-    paddingVertical: verticalScale(7),
-    borderRadius: ReportsCardTheme.chipRadius,
+    paddingVertical: verticalScale(10),
+    borderRadius: 10,
     backgroundColor: "#F0F2F2",
     borderWidth: 1,
     borderColor: "transparent",
@@ -1526,13 +2060,13 @@ const styles = StyleSheet.create({
     borderColor: ChickIntelPalette.green1,
   },
   chipText: {
-    fontFamily: ReportsCardTheme.chipFontFamily,
-    fontSize: ReportsCardTheme.chipFontSize,
-    color: ReportsCardTheme.chipTextColor,
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12),
+    color: ChickIntelPalette.gray1,
   },
   chipTextSelected: {
-    color: ReportsCardTheme.chipSelectedTextColor,
-    fontWeight: ReportsCardTheme.chipFontWeight,
+    color: "#FFFFFF",
+    fontWeight: "700",
   },
   printBtn: {
     backgroundColor: ChickIntelPalette.green1,
@@ -1540,24 +2074,23 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     paddingVertical: verticalScale(12),
-    borderRadius: 5,
-    marginTop: 24,
+    borderRadius: 10,
+    marginTop: 18,
     gap: 8,
   },
   printBtnText: {
     color: "#FFF",
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(15),
-    fontWeight: "600",
+    fontSize: responsiveFontSize(14),
+    fontWeight: "700",
   },
   secondaryActionBtn: {
-    marginTop: 12,
+    marginTop: 8,
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
     paddingVertical: verticalScale(12),
-    borderRadius: 5,
-    gap: 8,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: ChickIntelPalette.lightGreen,
     backgroundColor: "#F7FBFA",
@@ -1565,362 +2098,7 @@ const styles = StyleSheet.create({
   secondaryActionText: {
     color: ChickIntelPalette.gray1,
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(15),
-    fontWeight: "600",
-  },
-  compactDropdownRow: {
-    minHeight: ReportsPageTheme.dropdownRowHeight,
-    paddingVertical: ReportsPageTheme.dropdownRowPaddingVertical,
-    paddingHorizontal: moderateScale(12),
-    borderRadius: ReportsPageTheme.dropdownRowRadius,
-    marginBottom: 6,
-    backgroundColor: "rgba(244, 248, 247, 0.9)",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.14)",
-  },
-  compactDropdownLabel: {
-    color: ReportsPageTheme.dropdownLabelColor,
-    fontWeight: "700",
-  },
-  chartWrapper: {
-    alignItems: "center",
-    marginTop: ReportsPageTheme.chartTopMargin,
-    marginBottom: 0,
-    minHeight: ReportsPageTheme.chartHeight,
-    justifyContent: "center",
-    paddingVertical: verticalScale(10),
-    borderRadius: 16,
-    backgroundColor: "rgba(244, 248, 247, 0.72)",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.1)",
-  },
-  donutContainer: {
-    width: "100%",
-    alignItems: "center",
-    justifyContent: "flex-start",
-    gap: 14,
-  },
-  donutSvgWrap: {
-    width: ReportsCardTheme.donutSize,
-    height: ReportsCardTheme.donutSize,
-    position: "relative",
-  },
-  donutCenterWrap: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  donutCenterValueWrap: {
-    backgroundColor: "transparent",
-    paddingHorizontal: moderateScale(12),
-    paddingVertical: verticalScale(4),
-    borderRadius: 6,
-    marginBottom: 2,
-  },
-  donutCenterValue: {
-    fontFamily: ReportsCardTheme.centerValueFontFamily,
-    fontWeight: ReportsCardTheme.centerValueFontWeight,
-    fontSize: ReportsCardTheme.centerValueFontSize,
-    color: ReportsCardTheme.centerValueColor,
-  },
-  donutCenterLabel: {
-    fontFamily: ReportsCardTheme.centerLabelFontFamily,
-    fontSize: ReportsCardTheme.centerLabelFontSize,
-    color: ReportsCardTheme.centerLabelColor,
-  },
-  donutSummaryRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "center",
-    gap: 8,
-    width: "100%",
-    maxWidth: scale(260),
-  },
-  donutSummaryChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: moderateScale(10),
-    paddingVertical: verticalScale(6),
-    borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.58)",
-    borderWidth: 1,
-    borderColor: "rgba(49,118,103,0.12)",
-  },
-  donutSummarySwatch: {
-    width: scale(10),
-    height: verticalScale(10),
-    borderRadius: 999,
-  },
-  donutSummaryText: {
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(11),
-    fontWeight: "600",
-    color: ChickIntelPalette.gray1,
-    textTransform: "capitalize",
-  },
-  donutLegend: {
-    marginTop: 4,
-    gap: 8,
-    width: "100%",
-    maxWidth: scale(240),
-    alignSelf: "center",
-  },
-  donutLegendRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-  },
-  donutLegendLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    flexShrink: 1,
-  },
-  donutLegendSwatch: {
-    width: scale(12),
-    height: verticalScale(12),
-    borderRadius: 999,
-  },
-  donutLegendLabel: {
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(12),
-    fontWeight: "600",
-    color: ChickIntelPalette.gray1,
-    textTransform: "capitalize",
-  },
-  donutLegendValue: {
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(12),
-    fontWeight: "700",
-    color: ChickIntelPalette.gray1,
-  },
-  barChartWrapper: {
-    marginTop: 14,
-    paddingTop: 6,
-    paddingBottom: verticalScale(4),
-    paddingHorizontal: moderateScale(2),
-    borderRadius: 16,
-    backgroundColor: "rgba(244, 248, 247, 0.72)",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.1)",
-  },
-  barGraphContainer: {
-    height: verticalScale(180),
-    position: "relative",
-    paddingLeft: 24,
-  },
-  gridLinesWrap: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 24,
-    justifyContent: "space-between",
-  },
-  gridLineRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    height: verticalScale(20),
-  },
-  yAxisText: {
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(10),
-    color: "#888",
-    width: scale(24),
-  },
-  gridLine: {
-    flex: 1,
-    height: verticalScale(1),
-    backgroundColor: "rgba(0,0,0,0.1)",
-  },
-  barsWrap: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    justifyContent: "space-between",
-    height: "100%",
-    paddingLeft: 4,
-  },
-  barCol: {
-    alignItems: "center",
-  },
-  barFill: {
-    backgroundColor: "#81BDB0",
-    borderTopLeftRadius: 4,
-    borderTopRightRadius: 4,
-    marginBottom: 6,
-  },
-  barFillHighlight: {
-    backgroundColor: "#323330",
-  },
-  xAxisText: {
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(10),
-    color: "#666",
-  },
-  analyticsText: {
-    fontFamily: ReportsCardTheme.footerTextFontFamily,
-    fontSize: responsiveFontSize(12),
-    lineHeight: 18,
-    color: ReportsPageTheme.analyticsTextColor,
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: "rgba(0,0,0,0.05)",
-    backgroundColor: "rgba(244, 248, 247, 0.48)",
-    borderRadius: 10,
-    paddingHorizontal: moderateScale(10),
-    paddingBottom: verticalScale(6),
-  },
-  footerContainer: {
-    marginTop: ReportsPageTheme.footerTopMargin,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: "rgba(0,0,0,0.1)",
-    alignItems: "center",
-  },
-  footerLabel: {
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(11),
-    fontWeight: "600",
-    color: ChickIntelPalette.gray1,
-    marginBottom: 6,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-    textAlign: "center",
-  },
-  footerText: {
-    fontFamily: ReportsCardTheme.footerTextFontFamily,
-    fontSize: ReportsCardTheme.footerTextFontSize,
-    lineHeight: ReportsCardTheme.footerTextLineHeight,
-    color: ReportsCardTheme.footerTextColor,
-    marginBottom: 2,
-    textAlign: "center",
-  },
-  hiddenExportRoot: {
-    position: "absolute",
-    opacity: 0.01,
-    left: -2000,
-    top: 0,
-  },
-  exportSheet: {
-    backgroundColor: "#F3FAF6",
-    borderRadius: 28,
-    padding: moderateScale(36),
-    borderWidth: 1,
-    borderColor: "#D8EAE2",
-    gap: 24,
-  },
-  exportHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    gap: 24,
-  },
-  exportTitle: {
-    fontFamily: ChickFont.display,
-    fontSize: responsiveFontSize(46),
-    fontWeight: "700",
-    color: ChickIntelPalette.gray1,
-  },
-  exportSubtitle: {
-    marginTop: 8,
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(20),
-    color: "#5B746B",
-  },
-  exportBadge: {
-    backgroundColor: "rgba(255,255,255,0.88)",
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: "#DAEAE3",
-    paddingVertical: verticalScale(16),
-    paddingHorizontal: moderateScale(18),
-    minWidth: scale(260),
-  },
-  exportBadgeLabel: {
-    fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(14),
-    color: "#678077",
-    textTransform: "uppercase",
-    letterSpacing: 1,
-  },
-  exportBadgeValue: {
-    marginTop: 6,
-    fontFamily: ChickFont.display,
-    fontSize: responsiveFontSize(24),
-    color: ChickIntelPalette.gray1,
-  },
-  exportMetaGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 14,
-  },
-  exportMetaCard: {
-    width: "31%",
-    minWidth: scale(220),
-    backgroundColor: "rgba(255,255,255,0.88)",
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: "#DAEAE3",
-    paddingVertical: verticalScale(16),
-    paddingHorizontal: moderateScale(18),
-  },
-  exportMetaLabel: {
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(14),
-    color: "#678077",
-    textTransform: "uppercase",
-    letterSpacing: 1,
-  },
-  exportMetaValue: {
-    marginTop: 8,
-    fontFamily: ChickFont.display,
-    fontSize: responsiveFontSize(24),
-    color: ChickIntelPalette.gray1,
-  },
-  exportSection: {
-    backgroundColor: "rgba(255,255,255,0.9)",
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: "#DAEAE3",
-    padding: moderateScale(24),
-  },
-  exportSectionTitle: {
-    fontFamily: ChickFont.display,
-    fontSize: responsiveFontSize(30),
-    color: ChickIntelPalette.gray1,
-    marginBottom: 18,
-  },
-  exportChartArea: {
-    alignItems: "center",
-    minHeight: verticalScale(470),
-    justifyContent: "center",
-  },
-  exportBarArea: {
-    minHeight: verticalScale(320),
-    justifyContent: "center",
-  },
-  exportAnalyticsText: {
-    marginTop: 16,
-    paddingTop: 14,
-    borderTopWidth: 1,
-    borderTopColor: "#E4EFEA",
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(20),
-    lineHeight: 30,
-    color: "#49635A",
-  },
-  exportFooter: {
-    marginTop: "auto",
-    textAlign: "center",
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(18),
-    color: "#5B746B",
+    fontWeight: "600",
   },
 });

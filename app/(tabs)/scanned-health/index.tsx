@@ -14,7 +14,7 @@ import {
     Text,
     View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { BehaviorChecklist } from "@/components/health-scan/behavior-checklist";
 import { HealthFlowFooterButton } from "@/components/health-scan/health-flow-footer-button";
@@ -145,17 +145,11 @@ export default function ScannedHealthInputScreen() {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={insets.top + TAB_BAR_OFFSET}
     >
-      <View style={[styles.screen, { paddingTop: insets.top + 8 }]}>
+      <SafeAreaView style={styles.screen} edges={["top"]}>
         <StatusBar style="dark" />
-        <ScrollView
-          contentContainerStyle={[
-            styles.scroll,
-            { paddingBottom: insets.bottom + TAB_BAR_OFFSET + 28 },
-          ]}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
-        >
+        
+        {/* Pinned Top Header */}
+        <View style={styles.fixedHeader}>
           <Text style={styles.pageTitle}>
             {isMonitoringRescan ? "Update Health Scan" : "Scanned Health"}
           </Text>
@@ -164,7 +158,17 @@ export default function ScannedHealthInputScreen() {
               ? `Confirm behaviors for ${chtTag || "this chicken"}. The same monitoring record will be updated.`
               : "Confirm what you're seeing before generating the result."}
           </Text>
+        </View>
 
+        <ScrollView
+          contentContainerStyle={[
+            styles.scroll,
+            { paddingTop: 8, paddingBottom: insets.bottom + TAB_BAR_OFFSET + 28 },
+          ]}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+        >
           <HealthInputSummaryCard
             photoUri={photoUri}
             detectedIllness={detectedIllness}
@@ -191,7 +195,7 @@ export default function ScannedHealthInputScreen() {
 
           <HealthFlowFooterButton variant="next" onPress={goNext} />
         </ScrollView>
-      </View>
+      </SafeAreaView>
     </KeyboardAvoidingView>
   );
 }
@@ -200,6 +204,10 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: ChickIntelPalette.light1,
+  },
+  fixedHeader: {
+    paddingHorizontal: moderateScale(16),
+    paddingTop: 8,
   },
   scroll: {
     paddingHorizontal: moderateScale(16),
