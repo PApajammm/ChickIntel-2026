@@ -29,7 +29,9 @@ import {
     ActivityIndicator,
     Alert,
     FlatList,
+    KeyboardAvoidingView,
     Modal,
+    Platform,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -309,11 +311,7 @@ export default function AdminDashboardScreen() {
         Alert.alert("Success", "Farmer account updated successfully.");
       } else {
         // Create
-        await createFarmer(
-          fullEmail,
-          farmerForm.name,
-          farmerForm.password,
-        );
+        await createFarmer(fullEmail, farmerForm.name, farmerForm.password);
         Alert.alert(
           "Success",
           `Farmer account created successfully.\nEmail: ${fullEmail}`,
@@ -1446,348 +1444,373 @@ export default function AdminDashboardScreen() {
         animationType="slide"
         onRequestClose={() => setFarmerModalVisible(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalCard, { backgroundColor: colors.surface }]}>
+        <KeyboardAvoidingView
+          style={styles.keyboardModalArea}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          keyboardVerticalOffset={insets.top}
+        >
+          <View style={styles.modalOverlay}>
             <View
-              style={[styles.modalHeader, { borderBottomColor: colors.border }]}
+              style={[styles.modalCard, { backgroundColor: colors.surface }]}
             >
-              <Text style={[styles.modalTitle, { color: colors.text }]}>
-                {editingId
-                  ? "Edit Farmer Details"
-                  : "Create New Farmer Account"}
-              </Text>
-              <Pressable onPress={() => setFarmerModalVisible(false)}>
-                <MaterialCommunityIcons
-                  name="close"
-                  size={24}
-                  color={colors.text}
-                />
-              </Pressable>
-            </View>
-            <ScrollView style={styles.modalScroll}>
-              <View style={styles.formGroup}>
-                <Text style={[styles.formLabel, { color: colors.text }]}>
-                  Full Name
+              <View
+                style={[
+                  styles.modalHeader,
+                  { borderBottomColor: colors.border },
+                ]}
+              >
+                <Text style={[styles.modalTitle, { color: colors.text }]}>
+                  {editingId
+                    ? "Edit Farmer Details"
+                    : "Create New Farmer Account"}
                 </Text>
-                <TextInput
-                  placeholder="e.g. John Doe"
-                  placeholderTextColor={colors.textMuted}
-                  value={farmerForm.name}
-                  onChangeText={(txt) =>
-                    setFarmerForm((p) => ({ ...p, name: txt }))
-                  }
-                  style={[
-                    styles.formInput,
-                    {
-                      color: colors.text,
-                      borderColor: formErrors.name
-                        ? colors.danger
-                        : colors.border,
-                    },
-                  ]}
-                />
-                {formErrors.name && (
-                  <Text style={[styles.formError, { color: colors.danger }]}>
-                    {formErrors.name}
-                  </Text>
-                )}
+                <Pressable onPress={() => setFarmerModalVisible(false)}>
+                  <MaterialCommunityIcons
+                    name="close"
+                    size={24}
+                    color={colors.text}
+                  />
+                </Pressable>
               </View>
-
-              <View style={styles.formGroup}>
-                <Text style={[styles.formLabel, { color: colors.text }]}>
-                  Email Address
-                </Text>
-                {!editingId ? (
-                  <>
-                    <View
-                      style={[
-                        styles.emailInputContainer,
-                        {
-                          borderColor: formErrors.email
-                            ? colors.danger
-                            : colors.border,
-                          backgroundColor: colors.surface,
-                        },
-                      ]}
-                    >
-                      <TextInput
-                        placeholder="e.g. brian"
-                        placeholderTextColor={colors.textMuted}
-                        value={farmerForm.email}
-                        onChangeText={(txt) => {
-                          const clean = getEmailPrefix(txt);
-                          setFarmerForm((p) => ({ ...p, email: clean }));
-                        }}
-                        keyboardType="email-address"
-                        autoCapitalize="none"
-                        autoCorrect={false}
-                        style={[
-                          styles.formInput,
-                          styles.emailInputFlex,
-                          { color: colors.text },
-                        ]}
-                      />
-                      <View
-                        style={[
-                          styles.emailSuffixBadge,
-                          {
-                            backgroundColor: colors.surfaceMuted,
-                            borderLeftColor: colors.border,
-                          },
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.emailSuffixText,
-                            { color: colors.textMuted },
-                          ]}
-                        >
-                          @gmail.com
-                        </Text>
-                      </View>
-                    </View>
-                    <Text
-                      style={[
-                        styles.formHelperText,
-                        { color: colors.textMuted },
-                      ]}
-                    >
-                      No need to type @gmail.com — it is added automatically!
-                      {farmerForm.email.trim() ? (
-                        <Text style={{ fontWeight: "700", color: colors.primary }}>
-                          {"\n"}Full Email: {farmerForm.email.trim().toLowerCase()}@gmail.com
-                        </Text>
-                      ) : null}
-                    </Text>
-                  </>
-                ) : (
+              <ScrollView
+                style={styles.modalScroll}
+                contentContainerStyle={styles.modalScrollContent}
+                keyboardShouldPersistTaps="handled"
+                keyboardDismissMode="on-drag"
+                showsVerticalScrollIndicator={false}
+              >
+                <View style={styles.formGroup}>
+                  <Text style={[styles.formLabel, { color: colors.text }]}>
+                    Full Name
+                  </Text>
                   <TextInput
-                    value={farmerForm.email}
-                    editable={false}
+                    placeholder="e.g. John Doe"
+                    placeholderTextColor={colors.textMuted}
+                    value={farmerForm.name}
+                    onChangeText={(txt) =>
+                      setFarmerForm((p) => ({ ...p, name: txt }))
+                    }
                     style={[
                       styles.formInput,
-                      styles.formInputDisabled,
                       {
-                        color: colors.textMuted,
-                        borderColor: colors.border,
+                        color: colors.text,
+                        borderColor: formErrors.name
+                          ? colors.danger
+                          : colors.border,
                       },
                     ]}
                   />
-                )}
-                {formErrors.email && (
-                  <Text style={[styles.formError, { color: colors.danger }]}>
-                    {formErrors.email}
-                  </Text>
-                )}
-              </View>
-
-              {!editingId ? (
-                <>
-                  <View style={styles.formGroup}>
-                    <Text style={[styles.formLabel, { color: colors.text }]}>
-                      Password
+                  {formErrors.name && (
+                    <Text style={[styles.formError, { color: colors.danger }]}>
+                      {formErrors.name}
                     </Text>
-                    <View style={styles.passwordInputContainer}>
-                      <TextInput
-                        placeholder="At least 6 characters"
-                        placeholderTextColor={colors.textMuted}
-                        value={farmerForm.password}
-                        onChangeText={(txt) =>
-                          setFarmerForm((p) => ({ ...p, password: txt }))
-                        }
-                        secureTextEntry={!showPassword}
-                        autoCapitalize="none"
-                        style={[
-                          styles.formInput,
-                          styles.passwordInput,
-                          {
-                            color: colors.text,
-                            borderColor: formErrors.password
-                              ? colors.danger
-                              : colors.border,
-                          },
-                        ]}
-                      />
-                      <Pressable
-                        onPress={() => setShowPassword((prev) => !prev)}
-                        style={styles.passwordVisibilityToggle}
-                        accessibilityLabel={
-                          showPassword ? "Hide password" : "Show password"
-                        }
-                      >
-                        <MaterialCommunityIcons
-                          name={showPassword ? "eye-off" : "eye"}
-                          size={20}
-                          color={colors.textMuted}
-                        />
-                      </Pressable>
-                    </View>
-                    {formErrors.password && (
-                      <Text
-                        style={[styles.formError, { color: colors.danger }]}
-                      >
-                        {formErrors.password}
-                      </Text>
-                    )}
-                  </View>
+                  )}
+                </View>
 
-                  <View style={styles.formGroup}>
-                    <Text style={[styles.formLabel, { color: colors.text }]}>
-                      Confirm Password
-                    </Text>
-                    <View style={styles.passwordInputContainer}>
-                      <TextInput
-                        placeholder="Confirm your password"
-                        placeholderTextColor={colors.textMuted}
-                        value={farmerForm.confirmPassword}
-                        onChangeText={(txt) =>
-                          setFarmerForm((p) => ({ ...p, confirmPassword: txt }))
-                        }
-                        secureTextEntry={!showConfirmPassword}
-                        autoCapitalize="none"
-                        style={[
-                          styles.formInput,
-                          styles.passwordInput,
-                          {
-                            color: colors.text,
-                            borderColor: formErrors.confirmPassword
-                              ? colors.danger
-                              : colors.border,
-                          },
-                        ]}
-                      />
-                      <Pressable
-                        onPress={() => setShowConfirmPassword((prev) => !prev)}
-                        style={styles.passwordVisibilityToggle}
-                        accessibilityLabel={
-                          showConfirmPassword
-                            ? "Hide confirm password"
-                            : "Show confirm password"
-                        }
-                      >
-                        <MaterialCommunityIcons
-                          name={showConfirmPassword ? "eye-off" : "eye"}
-                          size={20}
-                          color={colors.textMuted}
-                        />
-                      </Pressable>
-                    </View>
-                    {formErrors.confirmPassword && (
-                      <Text
-                        style={[styles.formError, { color: colors.danger }]}
-                      >
-                        {formErrors.confirmPassword}
-                      </Text>
-                    )}
-                  </View>
-                </>
-              ) : (
                 <View style={styles.formGroup}>
                   <Text style={[styles.formLabel, { color: colors.text }]}>
-                    Account Status
+                    Email Address
                   </Text>
-                  <View style={styles.statusToggleRow}>
-                    <Pressable
-                      onPress={() =>
-                        setFarmerForm((p) => ({ ...p, isActive: true }))
-                      }
-                      style={[
-                        styles.toggleOption,
-                        { borderColor: colors.border },
-                        farmerForm.isActive && {
-                          backgroundColor: colors.successSoft,
-                          borderColor: colors.success,
-                        },
-                      ]}
-                    >
-                      <MaterialCommunityIcons
-                        name="check"
-                        size={16}
-                        color={
-                          farmerForm.isActive
-                            ? colors.success
-                            : colors.textMuted
-                        }
-                      />
-                      <Text
+                  {!editingId ? (
+                    <>
+                      <View
                         style={[
-                          styles.toggleOptionText,
+                          styles.emailInputContainer,
                           {
-                            color: farmerForm.isActive
-                              ? colors.success
-                              : colors.textMuted,
-                          },
-                        ]}
-                      >
-                        Active
-                      </Text>
-                    </Pressable>
-                    <Pressable
-                      onPress={() =>
-                        setFarmerForm((p) => ({ ...p, isActive: false }))
-                      }
-                      style={[
-                        styles.toggleOption,
-                        { borderColor: colors.border },
-                        !farmerForm.isActive && {
-                          backgroundColor: colors.dangerSoft,
-                          borderColor: colors.danger,
-                        },
-                      ]}
-                    >
-                      <MaterialCommunityIcons
-                        name="close"
-                        size={16}
-                        color={
-                          !farmerForm.isActive
-                            ? colors.danger
-                            : colors.textMuted
-                        }
-                      />
-                      <Text
-                        style={[
-                          styles.toggleOptionText,
-                          {
-                            color: !farmerForm.isActive
+                            borderColor: formErrors.email
                               ? colors.danger
-                              : colors.textMuted,
+                              : colors.border,
+                            backgroundColor: colors.surface,
                           },
                         ]}
                       >
-                        Inactive
+                        <TextInput
+                          placeholder="e.g. brian"
+                          placeholderTextColor={colors.textMuted}
+                          value={farmerForm.email}
+                          onChangeText={(txt) => {
+                            const clean = getEmailPrefix(txt);
+                            setFarmerForm((p) => ({ ...p, email: clean }));
+                          }}
+                          keyboardType="email-address"
+                          autoCapitalize="none"
+                          autoCorrect={false}
+                          style={[
+                            styles.formInput,
+                            styles.emailInputFlex,
+                            { color: colors.text },
+                          ]}
+                        />
+                        <View
+                          style={[
+                            styles.emailSuffixBadge,
+                            {
+                              backgroundColor: colors.surfaceMuted,
+                              borderLeftColor: colors.border,
+                            },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.emailSuffixText,
+                              { color: colors.textMuted },
+                            ]}
+                          >
+                            @gmail.com
+                          </Text>
+                        </View>
+                      </View>
+                      <Text
+                        style={[
+                          styles.formHelperText,
+                          { color: colors.textMuted },
+                        ]}
+                      >
+                        No need to type @gmail.com — it is added automatically!
+                        {farmerForm.email.trim() ? (
+                          <Text
+                            style={{ fontWeight: "700", color: colors.primary }}
+                          >
+                            {"\n"}Full Email:{" "}
+                            {farmerForm.email.trim().toLowerCase()}@gmail.com
+                          </Text>
+                        ) : null}
                       </Text>
-                    </Pressable>
-                  </View>
+                    </>
+                  ) : (
+                    <TextInput
+                      value={farmerForm.email}
+                      editable={false}
+                      style={[
+                        styles.formInput,
+                        styles.formInputDisabled,
+                        {
+                          color: colors.textMuted,
+                          borderColor: colors.border,
+                        },
+                      ]}
+                    />
+                  )}
+                  {formErrors.email && (
+                    <Text style={[styles.formError, { color: colors.danger }]}>
+                      {formErrors.email}
+                    </Text>
+                  )}
                 </View>
-              )}
-            </ScrollView>
-            <View
-              style={[styles.modalActions, { borderTopColor: colors.border }]}
-            >
-              <Pressable
-                onPress={() => setFarmerModalVisible(false)}
-                style={styles.cancelBtn}
+
+                {!editingId ? (
+                  <>
+                    <View style={styles.formGroup}>
+                      <Text style={[styles.formLabel, { color: colors.text }]}>
+                        Password
+                      </Text>
+                      <View style={styles.passwordInputContainer}>
+                        <TextInput
+                          placeholder="At least 6 characters"
+                          placeholderTextColor={colors.textMuted}
+                          value={farmerForm.password}
+                          onChangeText={(txt) =>
+                            setFarmerForm((p) => ({ ...p, password: txt }))
+                          }
+                          secureTextEntry={!showPassword}
+                          autoCapitalize="none"
+                          style={[
+                            styles.formInput,
+                            styles.passwordInput,
+                            {
+                              color: colors.text,
+                              borderColor: formErrors.password
+                                ? colors.danger
+                                : colors.border,
+                            },
+                          ]}
+                        />
+                        <Pressable
+                          onPress={() => setShowPassword((prev) => !prev)}
+                          style={styles.passwordVisibilityToggle}
+                          accessibilityLabel={
+                            showPassword ? "Hide password" : "Show password"
+                          }
+                        >
+                          <MaterialCommunityIcons
+                            name={showPassword ? "eye-off" : "eye"}
+                            size={20}
+                            color={colors.textMuted}
+                          />
+                        </Pressable>
+                      </View>
+                      {formErrors.password && (
+                        <Text
+                          style={[styles.formError, { color: colors.danger }]}
+                        >
+                          {formErrors.password}
+                        </Text>
+                      )}
+                    </View>
+
+                    <View style={styles.formGroup}>
+                      <Text style={[styles.formLabel, { color: colors.text }]}>
+                        Confirm Password
+                      </Text>
+                      <View style={styles.passwordInputContainer}>
+                        <TextInput
+                          placeholder="Confirm your password"
+                          placeholderTextColor={colors.textMuted}
+                          value={farmerForm.confirmPassword}
+                          onChangeText={(txt) =>
+                            setFarmerForm((p) => ({
+                              ...p,
+                              confirmPassword: txt,
+                            }))
+                          }
+                          secureTextEntry={!showConfirmPassword}
+                          autoCapitalize="none"
+                          style={[
+                            styles.formInput,
+                            styles.passwordInput,
+                            {
+                              color: colors.text,
+                              borderColor: formErrors.confirmPassword
+                                ? colors.danger
+                                : colors.border,
+                            },
+                          ]}
+                        />
+                        <Pressable
+                          onPress={() =>
+                            setShowConfirmPassword((prev) => !prev)
+                          }
+                          style={styles.passwordVisibilityToggle}
+                          accessibilityLabel={
+                            showConfirmPassword
+                              ? "Hide confirm password"
+                              : "Show confirm password"
+                          }
+                        >
+                          <MaterialCommunityIcons
+                            name={showConfirmPassword ? "eye-off" : "eye"}
+                            size={20}
+                            color={colors.textMuted}
+                          />
+                        </Pressable>
+                      </View>
+                      {formErrors.confirmPassword && (
+                        <Text
+                          style={[styles.formError, { color: colors.danger }]}
+                        >
+                          {formErrors.confirmPassword}
+                        </Text>
+                      )}
+                    </View>
+                  </>
+                ) : (
+                  <View style={styles.formGroup}>
+                    <Text style={[styles.formLabel, { color: colors.text }]}>
+                      Account Status
+                    </Text>
+                    <View style={styles.statusToggleRow}>
+                      <Pressable
+                        onPress={() =>
+                          setFarmerForm((p) => ({ ...p, isActive: true }))
+                        }
+                        style={[
+                          styles.toggleOption,
+                          { borderColor: colors.border },
+                          farmerForm.isActive && {
+                            backgroundColor: colors.successSoft,
+                            borderColor: colors.success,
+                          },
+                        ]}
+                      >
+                        <MaterialCommunityIcons
+                          name="check"
+                          size={16}
+                          color={
+                            farmerForm.isActive
+                              ? colors.success
+                              : colors.textMuted
+                          }
+                        />
+                        <Text
+                          style={[
+                            styles.toggleOptionText,
+                            {
+                              color: farmerForm.isActive
+                                ? colors.success
+                                : colors.textMuted,
+                            },
+                          ]}
+                        >
+                          Active
+                        </Text>
+                      </Pressable>
+                      <Pressable
+                        onPress={() =>
+                          setFarmerForm((p) => ({ ...p, isActive: false }))
+                        }
+                        style={[
+                          styles.toggleOption,
+                          { borderColor: colors.border },
+                          !farmerForm.isActive && {
+                            backgroundColor: colors.dangerSoft,
+                            borderColor: colors.danger,
+                          },
+                        ]}
+                      >
+                        <MaterialCommunityIcons
+                          name="close"
+                          size={16}
+                          color={
+                            !farmerForm.isActive
+                              ? colors.danger
+                              : colors.textMuted
+                          }
+                        />
+                        <Text
+                          style={[
+                            styles.toggleOptionText,
+                            {
+                              color: !farmerForm.isActive
+                                ? colors.danger
+                                : colors.textMuted,
+                            },
+                          ]}
+                        >
+                          Inactive
+                        </Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                )}
+              </ScrollView>
+              <View
+                style={[styles.modalActions, { borderTopColor: colors.border }]}
               >
-                <Text
-                  style={[styles.cancelBtnText, { color: colors.textMuted }]}
+                <Pressable
+                  onPress={() => setFarmerModalVisible(false)}
+                  style={styles.cancelBtn}
                 >
-                  Cancel
-                </Text>
-              </Pressable>
-              <Pressable
-                onPress={handleSaveFarmer}
-                style={[
-                  styles.saveBtn,
-                  { backgroundColor: ChickIntelPalette.green1 },
-                ]}
-              >
-                <Text style={styles.saveBtnText}>
-                  {editingId ? "Save Changes" : "Create Farmer"}
-                </Text>
-              </Pressable>
+                  <Text
+                    style={[styles.cancelBtnText, { color: colors.textMuted }]}
+                  >
+                    Cancel
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={handleSaveFarmer}
+                  style={[
+                    styles.saveBtn,
+                    { backgroundColor: ChickIntelPalette.green1 },
+                  ]}
+                >
+                  <Text style={styles.saveBtnText}>
+                    {editingId ? "Save Changes" : "Create Farmer"}
+                  </Text>
+                </Pressable>
+              </View>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Breed Form Modal */}
@@ -1797,175 +1820,196 @@ export default function AdminDashboardScreen() {
         animationType="slide"
         onRequestClose={() => setBreedModalVisible(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalCard, { backgroundColor: colors.surface }]}>
+        <KeyboardAvoidingView
+          style={styles.keyboardModalArea}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          keyboardVerticalOffset={insets.top}
+        >
+          <View style={styles.modalOverlay}>
             <View
-              style={[styles.modalHeader, { borderBottomColor: colors.border }]}
+              style={[styles.modalCard, { backgroundColor: colors.surface }]}
             >
-              <Text style={[styles.modalTitle, { color: colors.text }]}>
-                {editingId ? "Edit Breed Details" : "Add New Breed"}
-              </Text>
-              <Pressable onPress={() => setBreedModalVisible(false)}>
-                <MaterialCommunityIcons
-                  name="close"
-                  size={24}
-                  color={colors.text}
-                />
-              </Pressable>
-            </View>
-            <ScrollView style={styles.modalScroll}>
-              <View style={styles.formGroup}>
-                <Text style={[styles.formLabel, { color: colors.text }]}>
-                  Breed Name
-                </Text>
-                <TextInput
-                  placeholder="e.g. Rhode Island Red"
-                  placeholderTextColor={colors.textMuted}
-                  value={breedForm.name}
-                  onChangeText={(txt) =>
-                    setBreedForm((p) => ({ ...p, name: txt }))
-                  }
-                  style={[
-                    styles.formInput,
-                    {
-                      color: colors.text,
-                      borderColor: formErrors.name
-                        ? colors.danger
-                        : colors.border,
-                    },
-                  ]}
-                />
-                {formErrors.name && (
-                  <Text style={[styles.formError, { color: colors.danger }]}>
-                    {formErrors.name}
-                  </Text>
-                )}
-              </View>
-
-              <View style={styles.formGroup}>
-                <Text style={[styles.formLabel, { color: colors.text }]}>
-                  Description
-                </Text>
-                <TextInput
-                  placeholder="Describe breed temperament, egg laying, attributes..."
-                  placeholderTextColor={colors.textMuted}
-                  value={breedForm.description}
-                  onChangeText={(txt) =>
-                    setBreedForm((p) => ({ ...p, description: txt }))
-                  }
-                  multiline
-                  numberOfLines={4}
-                  style={[
-                    styles.formInput,
-                    styles.textArea,
-                    { color: colors.text, borderColor: colors.border },
-                  ]}
-                />
-              </View>
-
-              {editingId && (
-                <View style={styles.formGroup}>
-                  <Text style={[styles.formLabel, { color: colors.text }]}>
-                    Breed Status
-                  </Text>
-                  <View style={styles.statusToggleRow}>
-                    <Pressable
-                      onPress={() =>
-                        setBreedForm((p) => ({ ...p, isActive: true }))
-                      }
-                      style={[
-                        styles.toggleOption,
-                        { borderColor: colors.border },
-                        breedForm.isActive && {
-                          backgroundColor: colors.successSoft,
-                          borderColor: colors.success,
-                        },
-                      ]}
-                    >
-                      <MaterialCommunityIcons
-                        name="check"
-                        size={16}
-                        color={
-                          breedForm.isActive ? colors.success : colors.textMuted
-                        }
-                      />
-                      <Text
-                        style={[
-                          styles.toggleOptionText,
-                          {
-                            color: breedForm.isActive
-                              ? colors.success
-                              : colors.textMuted,
-                          },
-                        ]}
-                      >
-                        Active
-                      </Text>
-                    </Pressable>
-                    <Pressable
-                      onPress={() =>
-                        setBreedForm((p) => ({ ...p, isActive: false }))
-                      }
-                      style={[
-                        styles.toggleOption,
-                        { borderColor: colors.border },
-                        !breedForm.isActive && {
-                          backgroundColor: colors.dangerSoft,
-                          borderColor: colors.danger,
-                        },
-                      ]}
-                    >
-                      <MaterialCommunityIcons
-                        name="close"
-                        size={16}
-                        color={
-                          !breedForm.isActive ? colors.danger : colors.textMuted
-                        }
-                      />
-                      <Text
-                        style={[
-                          styles.toggleOptionText,
-                          {
-                            color: !breedForm.isActive
-                              ? colors.danger
-                              : colors.textMuted,
-                          },
-                        ]}
-                      >
-                        Inactive
-                      </Text>
-                    </Pressable>
-                  </View>
-                </View>
-              )}
-            </ScrollView>
-            <View
-              style={[styles.modalActions, { borderTopColor: colors.border }]}
-            >
-              <Pressable
-                onPress={() => setBreedModalVisible(false)}
-                style={styles.cancelBtn}
-              >
-                <Text
-                  style={[styles.cancelBtnText, { color: colors.textMuted }]}
-                >
-                  Cancel
-                </Text>
-              </Pressable>
-              <Pressable
-                onPress={handleSaveBreed}
+              <View
                 style={[
-                  styles.saveBtn,
-                  { backgroundColor: ChickIntelPalette.green1 },
+                  styles.modalHeader,
+                  { borderBottomColor: colors.border },
                 ]}
               >
-                <Text style={styles.saveBtnText}>
-                  {editingId ? "Save Changes" : "Add Breed"}
+                <Text style={[styles.modalTitle, { color: colors.text }]}>
+                  {editingId ? "Edit Breed Details" : "Add New Breed"}
                 </Text>
-              </Pressable>
+                <Pressable onPress={() => setBreedModalVisible(false)}>
+                  <MaterialCommunityIcons
+                    name="close"
+                    size={24}
+                    color={colors.text}
+                  />
+                </Pressable>
+              </View>
+              <ScrollView
+                style={styles.modalScroll}
+                contentContainerStyle={styles.modalScrollContent}
+                keyboardShouldPersistTaps="handled"
+                keyboardDismissMode="on-drag"
+                showsVerticalScrollIndicator={false}
+              >
+                <View style={styles.formGroup}>
+                  <Text style={[styles.formLabel, { color: colors.text }]}>
+                    Breed Name
+                  </Text>
+                  <TextInput
+                    placeholder="e.g. Rhode Island Red"
+                    placeholderTextColor={colors.textMuted}
+                    value={breedForm.name}
+                    onChangeText={(txt) =>
+                      setBreedForm((p) => ({ ...p, name: txt }))
+                    }
+                    style={[
+                      styles.formInput,
+                      {
+                        color: colors.text,
+                        borderColor: formErrors.name
+                          ? colors.danger
+                          : colors.border,
+                      },
+                    ]}
+                  />
+                  {formErrors.name && (
+                    <Text style={[styles.formError, { color: colors.danger }]}>
+                      {formErrors.name}
+                    </Text>
+                  )}
+                </View>
+
+                <View style={styles.formGroup}>
+                  <Text style={[styles.formLabel, { color: colors.text }]}>
+                    Description
+                  </Text>
+                  <TextInput
+                    placeholder="Describe breed temperament, egg laying, attributes..."
+                    placeholderTextColor={colors.textMuted}
+                    value={breedForm.description}
+                    onChangeText={(txt) =>
+                      setBreedForm((p) => ({ ...p, description: txt }))
+                    }
+                    multiline
+                    numberOfLines={4}
+                    style={[
+                      styles.formInput,
+                      styles.textArea,
+                      { color: colors.text, borderColor: colors.border },
+                    ]}
+                  />
+                </View>
+
+                {editingId && (
+                  <View style={styles.formGroup}>
+                    <Text style={[styles.formLabel, { color: colors.text }]}>
+                      Breed Status
+                    </Text>
+                    <View style={styles.statusToggleRow}>
+                      <Pressable
+                        onPress={() =>
+                          setBreedForm((p) => ({ ...p, isActive: true }))
+                        }
+                        style={[
+                          styles.toggleOption,
+                          { borderColor: colors.border },
+                          breedForm.isActive && {
+                            backgroundColor: colors.successSoft,
+                            borderColor: colors.success,
+                          },
+                        ]}
+                      >
+                        <MaterialCommunityIcons
+                          name="check"
+                          size={16}
+                          color={
+                            breedForm.isActive
+                              ? colors.success
+                              : colors.textMuted
+                          }
+                        />
+                        <Text
+                          style={[
+                            styles.toggleOptionText,
+                            {
+                              color: breedForm.isActive
+                                ? colors.success
+                                : colors.textMuted,
+                            },
+                          ]}
+                        >
+                          Active
+                        </Text>
+                      </Pressable>
+                      <Pressable
+                        onPress={() =>
+                          setBreedForm((p) => ({ ...p, isActive: false }))
+                        }
+                        style={[
+                          styles.toggleOption,
+                          { borderColor: colors.border },
+                          !breedForm.isActive && {
+                            backgroundColor: colors.dangerSoft,
+                            borderColor: colors.danger,
+                          },
+                        ]}
+                      >
+                        <MaterialCommunityIcons
+                          name="close"
+                          size={16}
+                          color={
+                            !breedForm.isActive
+                              ? colors.danger
+                              : colors.textMuted
+                          }
+                        />
+                        <Text
+                          style={[
+                            styles.toggleOptionText,
+                            {
+                              color: !breedForm.isActive
+                                ? colors.danger
+                                : colors.textMuted,
+                            },
+                          ]}
+                        >
+                          Inactive
+                        </Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                )}
+              </ScrollView>
+              <View
+                style={[styles.modalActions, { borderTopColor: colors.border }]}
+              >
+                <Pressable
+                  onPress={() => setBreedModalVisible(false)}
+                  style={styles.cancelBtn}
+                >
+                  <Text
+                    style={[styles.cancelBtnText, { color: colors.textMuted }]}
+                  >
+                    Cancel
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={handleSaveBreed}
+                  style={[
+                    styles.saveBtn,
+                    { backgroundColor: ChickIntelPalette.green1 },
+                  ]}
+                >
+                  <Text style={styles.saveBtnText}>
+                    {editingId ? "Save Changes" : "Add Breed"}
+                  </Text>
+                </Pressable>
+              </View>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Item Type Form Modal */}
@@ -1975,175 +2019,198 @@ export default function AdminDashboardScreen() {
         animationType="slide"
         onRequestClose={() => setItemModalVisible(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalCard, { backgroundColor: colors.surface }]}>
+        <KeyboardAvoidingView
+          style={styles.keyboardModalArea}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          keyboardVerticalOffset={insets.top}
+        >
+          <View style={styles.modalOverlay}>
             <View
-              style={[styles.modalHeader, { borderBottomColor: colors.border }]}
+              style={[styles.modalCard, { backgroundColor: colors.surface }]}
             >
-              <Text style={[styles.modalTitle, { color: colors.text }]}>
-                {editingId ? "Edit Category Details" : "Add New Item Category"}
-              </Text>
-              <Pressable onPress={() => setItemModalVisible(false)}>
-                <MaterialCommunityIcons
-                  name="close"
-                  size={24}
-                  color={colors.text}
-                />
-              </Pressable>
-            </View>
-            <ScrollView style={styles.modalScroll}>
-              <View style={styles.formGroup}>
-                <Text style={[styles.formLabel, { color: colors.text }]}>
-                  Category Name
-                </Text>
-                <TextInput
-                  placeholder="e.g. Supplements"
-                  placeholderTextColor={colors.textMuted}
-                  value={itemForm.name}
-                  onChangeText={(txt) =>
-                    setItemForm((p) => ({ ...p, name: txt }))
-                  }
-                  style={[
-                    styles.formInput,
-                    {
-                      color: colors.text,
-                      borderColor: formErrors.name
-                        ? colors.danger
-                        : colors.border,
-                    },
-                  ]}
-                />
-                {formErrors.name && (
-                  <Text style={[styles.formError, { color: colors.danger }]}>
-                    {formErrors.name}
-                  </Text>
-                )}
-              </View>
-
-              <View style={styles.formGroup}>
-                <Text style={[styles.formLabel, { color: colors.text }]}>
-                  Description
-                </Text>
-                <TextInput
-                  placeholder="Describe inventory category usage, notes..."
-                  placeholderTextColor={colors.textMuted}
-                  value={itemForm.description}
-                  onChangeText={(txt) =>
-                    setItemForm((p) => ({ ...p, description: txt }))
-                  }
-                  multiline
-                  numberOfLines={4}
-                  style={[
-                    styles.formInput,
-                    styles.textArea,
-                    { color: colors.text, borderColor: colors.border },
-                  ]}
-                />
-              </View>
-
-              {editingId && (
-                <View style={styles.formGroup}>
-                  <Text style={[styles.formLabel, { color: colors.text }]}>
-                    Category Status
-                  </Text>
-                  <View style={styles.statusToggleRow}>
-                    <Pressable
-                      onPress={() =>
-                        setItemForm((p) => ({ ...p, isActive: true }))
-                      }
-                      style={[
-                        styles.toggleOption,
-                        { borderColor: colors.border },
-                        itemForm.isActive && {
-                          backgroundColor: colors.successSoft,
-                          borderColor: colors.success,
-                        },
-                      ]}
-                    >
-                      <MaterialCommunityIcons
-                        name="check"
-                        size={16}
-                        color={
-                          itemForm.isActive ? colors.success : colors.textMuted
-                        }
-                      />
-                      <Text
-                        style={[
-                          styles.toggleOptionText,
-                          {
-                            color: itemForm.isActive
-                              ? colors.success
-                              : colors.textMuted,
-                          },
-                        ]}
-                      >
-                        Active
-                      </Text>
-                    </Pressable>
-                    <Pressable
-                      onPress={() =>
-                        setItemForm((p) => ({ ...p, isActive: false }))
-                      }
-                      style={[
-                        styles.toggleOption,
-                        { borderColor: colors.border },
-                        !itemForm.isActive && {
-                          backgroundColor: colors.dangerSoft,
-                          borderColor: colors.danger,
-                        },
-                      ]}
-                    >
-                      <MaterialCommunityIcons
-                        name="close"
-                        size={16}
-                        color={
-                          !itemForm.isActive ? colors.danger : colors.textMuted
-                        }
-                      />
-                      <Text
-                        style={[
-                          styles.toggleOptionText,
-                          {
-                            color: !itemForm.isActive
-                              ? colors.danger
-                              : colors.textMuted,
-                          },
-                        ]}
-                      >
-                        Inactive
-                      </Text>
-                    </Pressable>
-                  </View>
-                </View>
-              )}
-            </ScrollView>
-            <View
-              style={[styles.modalActions, { borderTopColor: colors.border }]}
-            >
-              <Pressable
-                onPress={() => setItemModalVisible(false)}
-                style={styles.cancelBtn}
-              >
-                <Text
-                  style={[styles.cancelBtnText, { color: colors.textMuted }]}
-                >
-                  Cancel
-                </Text>
-              </Pressable>
-              <Pressable
-                onPress={handleSaveItem}
+              <View
                 style={[
-                  styles.saveBtn,
-                  { backgroundColor: ChickIntelPalette.green1 },
+                  styles.modalHeader,
+                  { borderBottomColor: colors.border },
                 ]}
               >
-                <Text style={styles.saveBtnText}>
-                  {editingId ? "Save Changes" : "Add Category"}
+                <Text style={[styles.modalTitle, { color: colors.text }]}>
+                  {editingId
+                    ? "Edit Category Details"
+                    : "Add New Item Category"}
                 </Text>
-              </Pressable>
+                <Pressable onPress={() => setItemModalVisible(false)}>
+                  <MaterialCommunityIcons
+                    name="close"
+                    size={24}
+                    color={colors.text}
+                  />
+                </Pressable>
+              </View>
+              <ScrollView
+                style={styles.modalScroll}
+                contentContainerStyle={styles.modalScrollContent}
+                keyboardShouldPersistTaps="handled"
+                keyboardDismissMode="on-drag"
+                showsVerticalScrollIndicator={false}
+              >
+                <View style={styles.formGroup}>
+                  <Text style={[styles.formLabel, { color: colors.text }]}>
+                    Category Name
+                  </Text>
+                  <TextInput
+                    placeholder="e.g. Supplements"
+                    placeholderTextColor={colors.textMuted}
+                    value={itemForm.name}
+                    onChangeText={(txt) =>
+                      setItemForm((p) => ({ ...p, name: txt }))
+                    }
+                    style={[
+                      styles.formInput,
+                      {
+                        color: colors.text,
+                        borderColor: formErrors.name
+                          ? colors.danger
+                          : colors.border,
+                      },
+                    ]}
+                  />
+                  {formErrors.name && (
+                    <Text style={[styles.formError, { color: colors.danger }]}>
+                      {formErrors.name}
+                    </Text>
+                  )}
+                </View>
+
+                <View style={styles.formGroup}>
+                  <Text style={[styles.formLabel, { color: colors.text }]}>
+                    Description
+                  </Text>
+                  <TextInput
+                    placeholder="Describe inventory category usage, notes..."
+                    placeholderTextColor={colors.textMuted}
+                    value={itemForm.description}
+                    onChangeText={(txt) =>
+                      setItemForm((p) => ({ ...p, description: txt }))
+                    }
+                    multiline
+                    numberOfLines={4}
+                    style={[
+                      styles.formInput,
+                      styles.textArea,
+                      { color: colors.text, borderColor: colors.border },
+                    ]}
+                  />
+                </View>
+
+                {editingId && (
+                  <View style={styles.formGroup}>
+                    <Text style={[styles.formLabel, { color: colors.text }]}>
+                      Category Status
+                    </Text>
+                    <View style={styles.statusToggleRow}>
+                      <Pressable
+                        onPress={() =>
+                          setItemForm((p) => ({ ...p, isActive: true }))
+                        }
+                        style={[
+                          styles.toggleOption,
+                          { borderColor: colors.border },
+                          itemForm.isActive && {
+                            backgroundColor: colors.successSoft,
+                            borderColor: colors.success,
+                          },
+                        ]}
+                      >
+                        <MaterialCommunityIcons
+                          name="check"
+                          size={16}
+                          color={
+                            itemForm.isActive
+                              ? colors.success
+                              : colors.textMuted
+                          }
+                        />
+                        <Text
+                          style={[
+                            styles.toggleOptionText,
+                            {
+                              color: itemForm.isActive
+                                ? colors.success
+                                : colors.textMuted,
+                            },
+                          ]}
+                        >
+                          Active
+                        </Text>
+                      </Pressable>
+                      <Pressable
+                        onPress={() =>
+                          setItemForm((p) => ({ ...p, isActive: false }))
+                        }
+                        style={[
+                          styles.toggleOption,
+                          { borderColor: colors.border },
+                          !itemForm.isActive && {
+                            backgroundColor: colors.dangerSoft,
+                            borderColor: colors.danger,
+                          },
+                        ]}
+                      >
+                        <MaterialCommunityIcons
+                          name="close"
+                          size={16}
+                          color={
+                            !itemForm.isActive
+                              ? colors.danger
+                              : colors.textMuted
+                          }
+                        />
+                        <Text
+                          style={[
+                            styles.toggleOptionText,
+                            {
+                              color: !itemForm.isActive
+                                ? colors.danger
+                                : colors.textMuted,
+                            },
+                          ]}
+                        >
+                          Inactive
+                        </Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                )}
+              </ScrollView>
+              <View
+                style={[styles.modalActions, { borderTopColor: colors.border }]}
+              >
+                <Pressable
+                  onPress={() => setItemModalVisible(false)}
+                  style={styles.cancelBtn}
+                >
+                  <Text
+                    style={[styles.cancelBtnText, { color: colors.textMuted }]}
+                  >
+                    Cancel
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={handleSaveItem}
+                  style={[
+                    styles.saveBtn,
+                    { backgroundColor: ChickIntelPalette.green1 },
+                  ]}
+                >
+                  <Text style={styles.saveBtnText}>
+                    {editingId ? "Save Changes" : "Add Category"}
+                  </Text>
+                </Pressable>
+              </View>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
@@ -2366,6 +2433,9 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.5)",
     justifyContent: "flex-end",
   },
+  keyboardModalArea: {
+    flex: 1,
+  },
   modalCard: {
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
@@ -2388,6 +2458,9 @@ const styles = StyleSheet.create({
   modalScroll: {
     paddingHorizontal: 20,
     paddingTop: 16,
+  },
+  modalScrollContent: {
+    paddingBottom: 20,
   },
   formGroup: {
     marginBottom: 16,

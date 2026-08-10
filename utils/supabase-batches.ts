@@ -4,6 +4,7 @@ import type { BatchItem } from "@/utils/batch-store";
 type BatchRow = {
   id: string;
   batch_no: string;
+  created_at: string;
   breed_name: string;
   female_count: number;
   male_count: number;
@@ -21,6 +22,7 @@ function normalizeBatchColorName(value: string | null | undefined) {
 function mapBatchRow(row: BatchRow): BatchItem {
   return {
     id: row.batch_no,
+    createdAt: row.created_at,
     breed: row.breed_name,
     femaleCount: row.female_count,
     maleCount: row.male_count,
@@ -37,7 +39,7 @@ export async function fetchFarmBatches(farmId: string) {
   const { data, error } = await supabase
     .from("batches")
     .select(
-      "id, batch_no, breed_name, female_count, male_count, age_label, isolated_count, killed_count, color_name, color_hex",
+      "id, batch_no, breed_name, female_count, male_count, age_label, isolated_count, killed_count, color_name, color_hex, created_at",
     )
     .eq("farm_id", farmId)
     .order("created_at", { ascending: false });
@@ -88,8 +90,6 @@ export async function createFarmBatch(
   farmId: string,
   input: Omit<BatchItem, "notes">,
 ) {
-
-
   const resolvedBatchNo = await resolveBatchNo(farmId, input.id);
 
   const { data, error } = await supabase

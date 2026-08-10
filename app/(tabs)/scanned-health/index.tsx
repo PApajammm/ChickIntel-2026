@@ -1,3 +1,8 @@
+import {
+    moderateScale,
+    responsiveFontSize,
+    verticalScale,
+} from "@/utils/responsive";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useMemo, useState } from "react";
@@ -10,11 +15,10 @@ import {
     View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { moderateScale, responsiveFontSize, verticalScale } from "@/utils/responsive";
 
+import { BehaviorChecklist } from "@/components/health-scan/behavior-checklist";
 import { HealthFlowFooterButton } from "@/components/health-scan/health-flow-footer-button";
 import { HealthInputSummaryCard } from "@/components/health-scan/health-input-summary-card";
-import { BehaviorChecklist } from "@/components/health-scan/behavior-checklist";
 import { ChickFont } from "@/constants/chick-fonts";
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
 import { DEFAULT_IMAGE_BASED_DETECTION } from "@/constants/health-scan-behaviors";
@@ -149,6 +153,8 @@ export default function ScannedHealthInputScreen() {
             { paddingBottom: insets.bottom + TAB_BAR_OFFSET + 28 },
           ]}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
         >
           <Text style={styles.pageTitle}>
             {isMonitoringRescan ? "Update Health Scan" : "Scanned Health"}

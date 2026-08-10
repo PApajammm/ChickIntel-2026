@@ -249,22 +249,11 @@ export function StockAlertProvider({ children }: PropsWithChildren) {
         return;
       }
 
-      const nextNotification: GlobalNotification = {
-        ...notification,
-        title: sanitizedTitle,
-        message: sanitizedMessage,
-        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      };
       const dedupeKey =
-        nextNotification.dedupeKey ??
-        `${nextNotification.title}:${nextNotification.message}`;
+        notification.dedupeKey ?? `${sanitizedTitle}:${sanitizedMessage}`;
 
-      const currentDedupeKey =
-        currentNotificationRef.current?.dedupeKey ??
-        (currentNotificationRef.current
-          ? `${currentNotificationRef.current.title}:${currentNotificationRef.current.message}`
-          : "");
-      const isDuplicateCurrent = currentDedupeKey === dedupeKey;
+      const isDuplicateCurrent =
+        currentNotificationRef.current?.dedupeKey === dedupeKey;
       const isDuplicateQueued = queueRef.current.some(
         (queued) =>
           (queued.dedupeKey ?? `${queued.title}:${queued.message}`) ===
@@ -275,7 +264,7 @@ export function StockAlertProvider({ children }: PropsWithChildren) {
         return;
       }
 
-      // Schedule real OS system notification (if supported by native runtime)
+      // Schedule real OS system notification strictly on the phone device
       try {
         if (NotificationsModule?.scheduleNotificationAsync) {
           void NotificationsModule.scheduleNotificationAsync({
@@ -288,28 +277,10 @@ export function StockAlertProvider({ children }: PropsWithChildren) {
           }).catch(() => {});
         }
       } catch {
-        // Fallback for Expo Go / Web mode
+        // Fallback for non-native environments
       }
-
-      if (!currentNotificationRef.current) {
-        currentNotificationRef.current = nextNotification;
-        setCurrentNotification(nextNotification);
-        animateBannerIn();
-        if (timeoutRef.current) {
-          clearTimeout(timeoutRef.current);
-        }
-        timeoutRef.current = setTimeout(() => {
-          if (!mountedRef.current) {
-            return;
-          }
-          showNextNotification();
-        }, ALERT_DURATION_MS);
-        return;
-      }
-
-      queueRef.current.push(nextNotification);
     },
-    [animateBannerIn, showNextNotification],
+    [],
   );
 
   useEffect(() => {
@@ -612,87 +583,6 @@ export function StockAlertProvider({ children }: PropsWithChildren) {
   return (
     <StockAlertContext.Provider value={value}>
       {children}
-      {currentNotification ? (
-        <Animated.View
-          pointerEvents="box-none"
-          style={[
-            styles.overlay,
-            {
-              top: insets.top + 12,
-              opacity: bannerOpacity,
-              transform: [{ translateY: bannerTranslateY }],
-            },
-          ]}
-        >
-          <BlurCard style={styles.bannerCard} borderRadius={22} intensity={22}>
-            <Pressable style={styles.bannerSurface}>
-              <View
-                style={[
-                  styles.bannerAccent,
-                  {
-                    backgroundColor:
-                      notificationMeta?.fillColor ?? ChickIntelPalette.green1,
-                  },
-                ]}
-              />
-              <View
-                style={[
-                  styles.bannerIconWrap,
-                  currentNotification.severity === "depleted"
-                    ? styles.bannerIconWrapDepleted
-                    : null,
-                  {
-                    backgroundColor:
-                      notificationMeta?.softColor ?? "rgba(49, 118, 103, 0.12)",
-                  },
-                ]}
-              >
-                <MaterialCommunityIcons
-                  name={
-                    currentNotification.severity === "depleted"
-                      ? "alert-octagon"
-                      : currentNotification.severity === "critical"
-                        ? "alert-circle"
-                        : "alert-outline"
-                  }
-                  size={currentNotification.severity === "depleted" ? 24 : 22}
-                  color={
-                    notificationMeta?.fillColor ?? ChickIntelPalette.green1
-                  }
-                />
-              </View>
-              <View style={styles.bannerBody}>
-                {currentNotification.severity === "depleted" ? (
-                  <View style={styles.urgentBadge}>
-                    <Text style={styles.urgentBadgeText}>URGENT</Text>
-                  </View>
-                ) : null}
-                <Text style={styles.bannerTitle}>
-                  {currentNotification.title}
-                </Text>
-                <Text style={styles.bannerMessage}>
-                  {currentNotification.message}
-                </Text>
-              </View>
-              <TouchableOpacity
-                style={[
-                  styles.bannerDismiss,
-                  currentNotification.severity === "depleted"
-                    ? styles.bannerDismissDepleted
-                    : null,
-                ]}
-                onPress={dismissCurrentNotification}
-              >
-                <MaterialCommunityIcons
-                  name="close"
-                  size={18}
-                  color={ChickIntelPalette.gray1}
-                />
-              </TouchableOpacity>
-            </Pressable>
-          </BlurCard>
-        </Animated.View>
-      ) : null}
     </StockAlertContext.Provider>
   );
 }

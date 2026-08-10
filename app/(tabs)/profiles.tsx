@@ -21,13 +21,18 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
 import BackgroundGradient from "@/assets_imported/background-gradient.svg";
 import { BlurCard } from "@/components/ui/blur-card";
 import { PrimaryFab } from "@/components/ui/primary-fab";
 import { ChickFont } from "@/constants/chick-fonts";
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
+import { getFarmColors } from "@/constants/farm-theme";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuth } from "@/providers/auth-provider";
 import {
   type BatchItem,
@@ -57,6 +62,7 @@ type EggColorCard = {
   rawBatchNo: string;
   batches: number;
   fertilityRate: string;
+  createdAt?: string;
 };
 
 type ChickenEditFormState = {
@@ -84,10 +90,30 @@ function getDerivedUnhatchedQty(
   return clampNonNegative(eggQty - hatchedQty - damagedQty);
 }
 
+function formatProfileBatchId(prefix: "C" | "E", value: string | number) {
+  const digits = String(value).replace(/[^0-9]/g, "");
+  return `BATCH ${prefix}${(digits || "1").padStart(3, "0")}`;
+}
+
+function formatCreatedDate(value?: string) {
+  if (!value) return "Date unavailable";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Date unavailable";
+
+  return `Added ${date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  })}`;
+}
+
 export default function ProfilesScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { activeFarm } = useAuth();
+  const colorScheme = useColorScheme();
+  const colors = getFarmColors(colorScheme);
   const { mode: profileModeParam } = useLocalSearchParams<{
     mode?: string;
   }>();
@@ -324,6 +350,7 @@ export default function ProfilesScreen() {
       string,
       {
         batchNo: string;
+        createdAt?: string;
         colorName: string;
         colorHex: string;
         count: number;
@@ -338,6 +365,7 @@ export default function ProfilesScreen() {
       if (!batchMap.has(key)) {
         batchMap.set(key, {
           batchNo: batch.id,
+          createdAt: batch.createdAt,
           colorName: batch.colorName || "Default",
           colorHex: batch.colorHex || ChickIntelPalette.gray2,
           count: 0,
@@ -354,6 +382,7 @@ export default function ProfilesScreen() {
 
       const existing = batchMap.get(key) ?? {
         batchNo: parentBatchNo || "0001",
+        createdAt: egg.createdAt,
         colorName: egg.colorName || egg.origin || "Unspecified",
         colorHex: egg.colorHex || ChickIntelPalette.gray2,
         count: 0,
@@ -361,6 +390,13 @@ export default function ProfilesScreen() {
         damagedQty: 0,
         unhatchedQty: 0,
       };
+
+      if (
+        egg.createdAt &&
+        (!existing.createdAt || egg.createdAt < existing.createdAt)
+      ) {
+        existing.createdAt = egg.createdAt;
+      }
 
       existing.count += 1;
       existing.hatchedQty += egg.hatchedQty ?? 0;
@@ -389,6 +425,7 @@ export default function ProfilesScreen() {
           damagedQty: item.damagedQty,
           unhatchedQty: item.unhatchedQty,
         }),
+        createdAt: item.createdAt,
       };
     });
   }, [chickenData, savedEggBatches]);
@@ -397,31 +434,32 @@ export default function ProfilesScreen() {
     insets.bottom + TAB_BAR_OFFSET - 2 - FAB_OFFSET_FROM_TAB_TOP;
 
   return (
-    <View style={styles.screen}>
-      <BackgroundGradient
-        width="110%"
-        height="110%"
-        preserveAspectRatio="xMidYMid slice"
-        style={[
-          StyleSheet.absoluteFill,
-          { transform: [{ scale: 1.08 }, { translateY: -14 }] },
-        ]}
-      />
-      <StatusBar style="dark" />
-      <ScrollView
-        contentContainerStyle={[
-          styles.content,
-          {
-            paddingTop: insets.top + 10,
-            paddingBottom: insets.bottom + TAB_BAR_OFFSET + 96,
-          },
-        ]}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="on-drag"
-      >
+    <SafeAreaView
+      style={[styles.screen, { backgroundColor: colors.background }]}
+      edges={["top"]}
+    >
+      {colorScheme === "dark" ? (
+        <View
+          style={[
+            StyleSheet.absoluteFill,
+            { backgroundColor: colors.background },
+          ]}
+        />
+      ) : (
+        <BackgroundGradient
+          width="110%"
+          height="110%"
+          preserveAspectRatio="xMidYMid slice"
+          style={[
+            StyleSheet.absoluteFill,
+            { transform: [{ scale: 1.08 }, { translateY: -14 }] },
+          ]}
+        />
+      )}
+      <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
+      <View style={styles.fixedHeader}>
         <View style={styles.pageHeaderRow}>
-          <Text style={styles.pageTitle}>
+          <Text style={[styles.pageTitle, { color: colors.text }]}>
             {mode === "chicken"
               ? "Batch Profile (chicken)"
               : "Batch Profile (eggs)"}
@@ -431,9 +469,7 @@ export default function ProfilesScreen() {
               onPress={() =>
                 router.push({
                   pathname: "/(tabs)/egg-fertility-report" as any,
-                  params: {
-                    overview: "Weekly",
-                  },
+                  params: { overview: "Weekly" },
                 })
               }
               style={styles.eggAnalyticsIconButton}
@@ -448,48 +484,61 @@ export default function ProfilesScreen() {
             </Pressable>
           ) : null}
         </View>
-
-        <View style={styles.segmentWrap}>
-          <Pressable
-            onPress={() => setMode("chicken")}
-            style={[
-              styles.segment,
-              mode === "chicken"
-                ? styles.segmentActive
-                : styles.segmentInactive,
-            ]}
-          >
-            <Text
+        <View style={styles.segmentStickyHeader}>
+          <View style={styles.segmentWrap}>
+            <Pressable
+              onPress={() => setMode("chicken")}
               style={[
-                styles.segmentText,
+                styles.segment,
                 mode === "chicken"
-                  ? styles.segmentTextActive
-                  : styles.segmentTextInactive,
+                  ? styles.segmentActive
+                  : styles.segmentInactive,
               ]}
             >
-              Chicken Batch
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={() => setMode("egg")}
-            style={[
-              styles.segment,
-              mode === "egg" ? styles.segmentActive : styles.segmentInactive,
-            ]}
-          >
-            <Text
+              <Text
+                style={[
+                  styles.segmentText,
+                  mode === "chicken"
+                    ? styles.segmentTextActive
+                    : styles.segmentTextInactive,
+                ]}
+              >
+                Chicken Batch
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setMode("egg")}
               style={[
-                styles.segmentText,
-                mode === "egg"
-                  ? styles.segmentTextActive
-                  : styles.segmentTextInactive,
+                styles.segment,
+                mode === "egg" ? styles.segmentActive : styles.segmentInactive,
               ]}
             >
-              Egg Batch
-            </Text>
-          </Pressable>
+              <Text
+                style={[
+                  styles.segmentText,
+                  mode === "egg"
+                    ? styles.segmentTextActive
+                    : styles.segmentTextInactive,
+                ]}
+              >
+                Egg Batch
+              </Text>
+            </Pressable>
+          </View>
         </View>
-
+      </View>
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          {
+            paddingTop: 10,
+            paddingBottom: insets.bottom + TAB_BAR_OFFSET + 96,
+          },
+        ]}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+      >
         {mode === "chicken" ? (
           <View style={styles.list}>
             {chickenLoading ? (
@@ -518,18 +567,22 @@ export default function ProfilesScreen() {
                     <View style={styles.headerLeftStack}>
                       <View style={styles.batchPillBadge}>
                         <MaterialCommunityIcons
-                          name="tag-outline"
+                          name="bird"
                           size={12}
-                          color={ChickIntelPalette.green1}
+                          color="#000000"
                         />
+
                         <Text style={styles.batchPillText}>
-                          Batch #{item.id}
+                          {formatProfileBatchId("C", item.id)}
                         </Text>
                       </View>
 
                       {item.breed ? (
                         <Text style={styles.breedTitle}>{item.breed}</Text>
                       ) : null}
+                      <Text style={styles.createdDateText}>
+                        {formatCreatedDate(item.createdAt)}
+                      </Text>
                     </View>
 
                     <View style={styles.headerRightActions}>
@@ -710,14 +763,17 @@ export default function ProfilesScreen() {
                     <View style={styles.headerLeftStack}>
                       <View style={styles.batchPillBadge}>
                         <MaterialCommunityIcons
-                          name="egg-outline"
+                          name="bird"
                           size={13}
                           color="#111111"
                         />
                         <Text style={styles.batchPillText}>
-                          Batch #{item.originBatchNo}
+                          {formatProfileBatchId("C", item.originBatchNo)}
                         </Text>
                       </View>
+                      <Text style={styles.createdDateText}>
+                        {formatCreatedDate(item.createdAt)}
+                      </Text>
                     </View>
 
                     <View style={styles.colorPillBadge}>
@@ -800,6 +856,8 @@ export default function ProfilesScreen() {
             <ScrollView
               contentContainerStyle={styles.modalScrollContent}
               keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+              showsVerticalScrollIndicator={false}
             >
               <View style={styles.modalCard}>
                 <View style={styles.modalHeader}>
@@ -814,7 +872,9 @@ export default function ProfilesScreen() {
                     <Text style={styles.modalTitle}>Edit Chicken Batch</Text>
                   </View>
                   <Text style={styles.modalSubtitle} numberOfLines={1}>
-                    Batch #{selectedBatch?.id} •{" "}
+                    {selectedBatch
+                      ? `${formatProfileBatchId("C", selectedBatch.id)} • `
+                      : ""}
                     {selectedBatch?.breed || "General"}
                   </Text>
                 </View>
@@ -942,6 +1002,8 @@ export default function ProfilesScreen() {
             <ScrollView
               contentContainerStyle={styles.modalScrollContent}
               keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+              showsVerticalScrollIndicator={false}
             >
               <View style={styles.modalCard}>
                 <View style={styles.modalHeader}>
@@ -956,7 +1018,8 @@ export default function ProfilesScreen() {
                     <Text style={styles.modalTitle}>Edit Egg Batch</Text>
                   </View>
                   <Text style={styles.modalSubtitle} numberOfLines={1}>
-                    Batch #{eggForm.batchNo} • {eggForm.origin || "Egg Batch"}
+                    {formatProfileBatchId("E", eggForm.batchNo)} •{" "}
+                    {eggForm.origin || "Egg Batch"}
                   </Text>
                 </View>
 
@@ -1102,7 +1165,7 @@ export default function ProfilesScreen() {
           </View>
         </Pressable>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -1110,6 +1173,10 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: ChickIntelPalette.light1,
+  },
+  fixedHeader: {
+    paddingHorizontal: moderateScale(20),
+    backgroundColor: "transparent",
   },
   content: {
     paddingHorizontal: moderateScale(20),
@@ -1133,6 +1200,10 @@ const styles = StyleSheet.create({
     marginTop: 10,
     marginBottom: 8,
   },
+  segmentStickyHeader: {
+    backgroundColor: "transparent",
+    paddingVertical: 6,
+  },
   eggAnalyticsIconButton: {
     width: scale(36),
     height: verticalScale(36),
@@ -1146,9 +1217,9 @@ const styles = StyleSheet.create({
   },
   segmentWrap: {
     flexDirection: "row",
-    padding: moderateScale(3),
-    borderRadius: 14,
-    backgroundColor: "rgba(255, 255, 255, 0.52)",
+    padding: 3,
+    borderRadius: 12,
+    backgroundColor: "rgba(255, 255, 255, 0.18)",
     borderWidth: 1,
     borderColor: "rgba(67, 139, 123, 0.16)",
   },
@@ -1156,9 +1227,9 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    minHeight: verticalScale(36),
-    borderRadius: 11,
-    paddingHorizontal: moderateScale(10),
+    minHeight: verticalScale(40),
+    borderRadius: 9,
+    paddingHorizontal: moderateScale(8),
   },
   segmentActive: {
     backgroundColor: "rgba(49, 118, 103, 0.14)",
@@ -1168,8 +1239,9 @@ const styles = StyleSheet.create({
   },
   segmentText: {
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(12),
+    fontSize: responsiveFontSize(13),
     fontWeight: "700",
+    lineHeight: 18,
   },
   segmentTextActive: {
     color: ChickIntelPalette.green1,
@@ -1251,6 +1323,12 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: -0.3,
     color: ChickIntelPalette.gray1,
+  },
+  createdDateText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(11),
+    lineHeight: 16,
+    color: "rgba(51, 51, 51, 0.58)",
   },
   headerRightActions: {
     flexDirection: "row",

@@ -1,8 +1,8 @@
 import {
-  moderateScale,
-  responsiveFontSize,
-  scale,
-  verticalScale,
+    moderateScale,
+    responsiveFontSize,
+    scale,
+    verticalScale,
 } from "@/utils/responsive";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
@@ -10,16 +10,16 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  Alert,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
+    Alert,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -30,14 +30,14 @@ import { ChickFont } from "@/constants/chick-fonts";
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
 import { useAuth } from "@/providers/auth-provider";
 import {
-  formatEggFertilityPercent,
-  type EggBatchItem,
+    formatEggFertilityPercent,
+    type EggBatchItem,
 } from "@/utils/batch-store";
 import { logError } from "@/utils/logger";
 import {
-  deleteFarmEggBatch,
-  fetchFarmEggBatches,
-  updateFarmEggBatch,
+    deleteFarmEggBatch,
+    fetchFarmEggBatches,
+    updateFarmEggBatch,
 } from "@/utils/supabase-egg-batches";
 
 const TAB_BAR_OFFSET = 55;
@@ -46,6 +46,11 @@ const FAB_OFFSET_FROM_TAB_TOP = 50;
 function normalizeColor(value: string | string[] | undefined) {
   if (Array.isArray(value)) return value[0] ?? "";
   return value ?? "";
+}
+
+function formatEggBatchId(value: string | number) {
+  const digits = String(value).replace(/[^0-9]/g, "");
+  return `BATCH E${(digits || "1").padStart(3, "0")}`;
 }
 
 function matchesOriginBatch(
@@ -476,7 +481,7 @@ export default function EggBatchColorScreen() {
                             color="#111111"
                           />
                           <Text style={styles.batchPillText}>
-                            Batch #{egg.batchNo}
+                            {formatEggBatchId(egg.batchNo)}
                           </Text>
                         </View>
 
@@ -646,6 +651,8 @@ export default function EggBatchColorScreen() {
             <ScrollView
               contentContainerStyle={styles.modalScrollContent}
               keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+              showsVerticalScrollIndicator={false}
             >
               <View style={styles.modalCard}>
                 <Text style={styles.modalTitle}>

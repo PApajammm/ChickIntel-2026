@@ -8,6 +8,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ChickFont } from "@/constants/chick-fonts";
 import { moderateScale, responsiveFontSize, scale, verticalScale } from "@/utils/responsive";
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
+import { getFarmColors } from "@/constants/farm-theme";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuth } from "@/providers/auth-provider";
 
 type ChickTabBarProps = Omit<BottomTabBarProps, "state"> & {
@@ -19,6 +21,8 @@ export function ChickTabBar({ onLogoutPress, ..._rest }: ChickTabBarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { profile } = useAuth();
+  const colorScheme = useColorScheme();
+  const colors = getFarmColors(colorScheme);
 
   const isHomePath = pathname === "/" || pathname === "/(tabs)";
   const isScanner = pathname.includes("scanner");
@@ -32,7 +36,6 @@ export function ChickTabBar({ onLogoutPress, ..._rest }: ChickTabBarProps) {
 
     const history = peekHistory();
     if (history.length > 1) {
-      // Previous path in history should be the second-to-last entry.
       const prev = history[history.length - 2];
       if (prev && prev !== pathname) {
         router.push(prev as Href);
@@ -40,7 +43,6 @@ export function ChickTabBar({ onLogoutPress, ..._rest }: ChickTabBarProps) {
       }
     }
 
-    // Fallback to home when no useful back path exists.
     router.replace("/(tabs)");
   }
 
@@ -50,16 +52,27 @@ export function ChickTabBar({ onLogoutPress, ..._rest }: ChickTabBarProps) {
     }
   }
 
+  const inactiveColor = isScanner
+    ? ChickIntelPalette.gray1
+    : colors.textMuted;
+  const activeColor = colors.primary;
+
   return (
     <View
       style={[
         styles.wrap,
-        isScanner && styles.wrapScanner,
         {
-          paddingBottom: Math.max(insets.bottom, 6),
+          backgroundColor: isScanner
+            ? "transparent"
+            : colorScheme === "dark"
+              ? colors.surface
+              : ChickIntelPalette.light1,
           borderTopColor: isScanner
             ? "transparent"
-            : ChickIntelPalette.lightGreen,
+            : colorScheme === "dark"
+              ? colors.border
+              : ChickIntelPalette.lightGreen,
+          paddingBottom: Math.max(insets.bottom, 6),
         },
       ]}
     >
@@ -72,11 +85,9 @@ export function ChickTabBar({ onLogoutPress, ..._rest }: ChickTabBarProps) {
         <MaterialCommunityIcons
           name="arrow-left"
           size={26}
-          color={isScanner ? ChickIntelPalette.gray1 : ChickIntelPalette.gray2}
+          color={inactiveColor}
         />
-        <Text
-          style={[styles.label, isScanner ? styles.labelOnScanner : undefined]}
-        >
+        <Text style={[styles.label, { color: inactiveColor }]}>
           Back
         </Text>
       </Pressable>
@@ -90,16 +101,13 @@ export function ChickTabBar({ onLogoutPress, ..._rest }: ChickTabBarProps) {
         <MaterialCommunityIcons
           name="home-variant"
           size={28}
-          color={
-            homeActive
-              ? ChickIntelPalette.green1
-              : isScanner
-                ? ChickIntelPalette.gray1
-                : ChickIntelPalette.gray2
-          }
+          color={homeActive ? activeColor : inactiveColor}
         />
         <Text
-          style={[styles.label, homeActive ? styles.labelActive : undefined]}
+          style={[
+            styles.label,
+            { color: homeActive ? activeColor : inactiveColor },
+          ]}
         >
           Home
         </Text>
@@ -115,11 +123,9 @@ export function ChickTabBar({ onLogoutPress, ..._rest }: ChickTabBarProps) {
           <MaterialCommunityIcons
             name="cog"
             size={26}
-            color={isScanner ? ChickIntelPalette.gray1 : ChickIntelPalette.gray2}
+            color={inactiveColor}
           />
-          <Text
-            style={[styles.label, isScanner ? styles.labelOnScanner : undefined]}
-          >
+          <Text style={[styles.label, { color: inactiveColor }]}>
             Admin
           </Text>
         </Pressable>
@@ -134,11 +140,9 @@ export function ChickTabBar({ onLogoutPress, ..._rest }: ChickTabBarProps) {
         <MaterialCommunityIcons
           name="power"
           size={26}
-          color={isScanner ? ChickIntelPalette.gray1 : ChickIntelPalette.gray2}
+          color={inactiveColor}
         />
-        <Text
-          style={[styles.label, isScanner ? styles.labelOnScanner : undefined]}
-        >
+        <Text style={[styles.label, { color: inactiveColor }]}>
           Logout
         </Text>
       </Pressable>
@@ -153,19 +157,12 @@ const styles = StyleSheet.create({
     justifyContent: "space-around",
     paddingTop: verticalScale(6),
     paddingHorizontal: moderateScale(8),
-    backgroundColor: ChickIntelPalette.light1,
     borderTopWidth: 1,
     shadowColor: "#000",
     shadowOpacity: 0.06,
     shadowRadius: 8,
     shadowOffset: { width: scale(0), height: -2 },
     elevation: 10,
-  },
-  wrapScanner: {
-    backgroundColor: "transparent",
-    borderTopWidth: 0,
-    shadowOpacity: 0,
-    elevation: 0,
   },
   item: {
     flex: 1,
@@ -179,12 +176,5 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(10),
     fontWeight: "600",
     letterSpacing: 0.2,
-    color: ChickIntelPalette.gray2,
-  },
-  labelActive: {
-    color: ChickIntelPalette.green1,
-  },
-  labelOnScanner: {
-    color: ChickIntelPalette.gray1,
   },
 });

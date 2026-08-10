@@ -1,3 +1,9 @@
+import {
+    moderateScale,
+    responsiveFontSize,
+    scale,
+    verticalScale,
+} from "@/utils/responsive";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import Slider from "@react-native-community/slider";
 import { useFocusEffect } from "@react-navigation/native";
@@ -7,25 +13,24 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useMemo, useRef, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-  useWindowDimensions,
+    ActivityIndicator,
+    Alert,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
+    useWindowDimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { moderateScale, responsiveFontSize, scale, verticalScale } from "@/utils/responsive";
 
 import {
-  CameraViewport,
-  type CameraViewportRef,
+    CameraViewport,
+    type CameraViewportRef,
 } from "@/components/scanner/camera-viewport";
 import { ScannerShutter } from "@/components/scanner/scanner-shutter";
 import { ViewfinderOverlay } from "@/components/scanner/viewfinder-overlay";
@@ -33,9 +38,9 @@ import { ChickFont } from "@/constants/chick-fonts";
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
 import { useAuth } from "@/providers/auth-provider";
 import {
-  inferBreedFromImage,
-  isNonChickenClassifierLabel,
-  mapBreedPredictionToAttributes,
+    inferBreedFromImage,
+    isNonChickenClassifierLabel,
+    mapBreedPredictionToAttributes,
 } from "@/utils/breed-image-inference";
 import { logError, logStep } from "@/utils/logger";
 import { addRecentBreedScan } from "@/utils/recent-breed-scans";
@@ -62,7 +67,7 @@ const COLOR_OPTIONS = [
   // Oranges & Yellows
   { name: "Orange", hex: "#E67E22" },
   { name: "Yellow", hex: "#E2B53C" },
-  
+
   // Greens & Teals
   { name: "Green", hex: "#3FA06E" },
 
@@ -102,9 +107,7 @@ export default function AddBatchScreen() {
   const filteredColorOptions = useMemo(() => {
     if (!colorSearchQuery.trim()) return COLOR_OPTIONS;
     const q = colorSearchQuery.toLowerCase().trim();
-    return COLOR_OPTIONS.filter((opt) =>
-      opt.name.toLowerCase().includes(q),
-    );
+    return COLOR_OPTIONS.filter((opt) => opt.name.toLowerCase().includes(q));
   }, [colorSearchQuery]);
 
   function getNextBatchNo(existingBatchIds: (string | null | undefined)[]) {
@@ -180,10 +183,7 @@ export default function AddBatchScreen() {
     }, []),
   );
 
-  const usedBatchColorSet = useMemo(
-    () => new Set<string>(),
-    [],
-  );
+  const usedBatchColorSet = useMemo(() => new Set<string>(), []);
   const allBatchColorsUsed = false;
 
   useFocusEffect(
@@ -359,13 +359,19 @@ export default function AddBatchScreen() {
           closeBreedScanner();
         })
         .catch((error) => {
-          Alert.alert("Scan failed", "Unable to capture a breed photo right now.");
+          Alert.alert(
+            "Scan failed",
+            "Unable to capture a breed photo right now.",
+          );
           logError("Add batch breed camera capture failed", error);
           setIsScanningBreed(false);
           setCapturedPhotoUri(null);
         });
     } catch (error) {
-      Alert.alert("Capture failed", "Unable to capture a breed photo right now.");
+      Alert.alert(
+        "Capture failed",
+        "Unable to capture a breed photo right now.",
+      );
       logError("Add batch camera picture capture failed", error);
     }
   }
@@ -684,7 +690,10 @@ export default function AddBatchScreen() {
                     router.push("/(tabs)/profiles");
                   })
                   .catch((error) => {
-                    Alert.alert("Save failed", "Unable to save the batch right now.");
+                    Alert.alert(
+                      "Save failed",
+                      "Unable to save the batch right now.",
+                    );
                     logError("Add batch save failed", error, {
                       farmId: activeFarm.id,
                       batchNo: newBatch.id,
@@ -752,11 +761,16 @@ export default function AddBatchScreen() {
           <StatusBar style="light" />
           {isScanningBreed && capturedPhotoUri ? (
             <View style={styles.scanLoadingOverlay}>
-              <Image source={{ uri: capturedPhotoUri }} style={styles.scanLoadingImage} />
+              <Image
+                source={{ uri: capturedPhotoUri }}
+                style={styles.scanLoadingImage}
+              />
               <View style={styles.scanLoadingContent}>
                 <ActivityIndicator size="large" color="#FFFFFF" />
                 <Text style={styles.scanLoadingText}>Scanning breed...</Text>
-                <Text style={styles.scanLoadingSubtitle}>Analyzing the captured frame</Text>
+                <Text style={styles.scanLoadingSubtitle}>
+                  Analyzing the captured frame
+                </Text>
               </View>
             </View>
           ) : (
@@ -816,7 +830,10 @@ export default function AddBatchScreen() {
                   </Pressable>
                 </View>
 
-                <View pointerEvents="box-none" style={styles.cameraViewfinderArea}>
+                <View
+                  pointerEvents="box-none"
+                  style={styles.cameraViewfinderArea}
+                >
                   <ViewfinderOverlay size={viewfinderSize} />
                 </View>
 
@@ -880,19 +897,28 @@ export default function AddBatchScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={styles.colorModalTitle}>Select Batch Color</Text>
                 <Text style={styles.colorModalSubtitle}>
-                  Choose a unique color tag for this batch ({COLOR_OPTIONS.length} available)
+                  Choose a unique color tag for this batch (
+                  {COLOR_OPTIONS.length} available)
                 </Text>
               </View>
               <Pressable
                 onPress={() => setColorModalOpen(false)}
                 style={styles.colorModalClose}
               >
-                <MaterialCommunityIcons name="close" size={20} color="#667171" />
+                <MaterialCommunityIcons
+                  name="close"
+                  size={20}
+                  color="#667171"
+                />
               </Pressable>
             </View>
 
             <View style={styles.colorSearchWrap}>
-              <MaterialCommunityIcons name="magnify" size={18} color="#8F9696" />
+              <MaterialCommunityIcons
+                name="magnify"
+                size={18}
+                color="#8F9696"
+              />
               <TextInput
                 value={colorSearchQuery}
                 onChangeText={setColorSearchQuery}
@@ -902,7 +928,11 @@ export default function AddBatchScreen() {
               />
               {colorSearchQuery ? (
                 <Pressable onPress={() => setColorSearchQuery("")}>
-                  <MaterialCommunityIcons name="close-circle" size={16} color="#8F9696" />
+                  <MaterialCommunityIcons
+                    name="close-circle"
+                    size={16}
+                    color="#8F9696"
+                  />
                 </Pressable>
               ) : null}
             </View>
@@ -911,6 +941,8 @@ export default function AddBatchScreen() {
               style={styles.colorGridScroll}
               contentContainerStyle={styles.colorGridContainer}
               showsVerticalScrollIndicator={true}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
             >
               {filteredColorOptions.map((opt) => {
                 const active = selectedColor.name === opt.name;

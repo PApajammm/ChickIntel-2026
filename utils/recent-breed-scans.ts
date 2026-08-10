@@ -38,20 +38,9 @@ const BREED_TRAIT_LIBRARY: Record<string, string[]> = {
     Leghorn: ["High egg production", "Active forager", "Heat tolerant"],
     Silkie: ["Gentle temperament", "Broody nature", "Cold sensitive"],
     "Rhode Island Red": ["Hardy breed", "Dual-purpose", "Consistent layer"],
-    "Barred Rock": ["Docile behavior", "Good layer", "Cold hardy"],
 };
 
 const DEFAULT_BREED_FEATURE_CARDS: FeaturedBreedCard[] = [
-    {
-        id: "default-barred-rock",
-        breedName: "Barred Rock",
-        traits: BREED_TRAIT_LIBRARY["Barred Rock"],
-        detail: "Docile behavior, good layer",
-        image: require("@/assets_imported/images_imported/barred-rock-chickens.jpg"),
-        tint: "rgba(88, 111, 64, 0.22)",
-        isDefault: true,
-        capturedAt: 0,
-    },
     {
         id: "default-silkie",
         breedName: "Silkie",
@@ -99,7 +88,7 @@ function fallbackImageForBreed(breedName: string): ImageSourcePropType {
     if (breedName === "Silkie") {
         return dashboardHeroImage;
     }
-    return require("@/assets_imported/images_imported/barred-rock-chickens.jpg");
+    return dashboardHeroImage;
 }
 
 import { ensurePersistentImageUri } from "@/utils/persistent-image-storage";

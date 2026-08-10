@@ -5,6 +5,12 @@ import { ChickIntelPalette } from "@/constants/chickintel-palette";
 import { ReportsCardTheme, ReportsPageTheme } from "@/constants/reports-theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuth } from "@/providers/auth-provider";
+import {
+    moderateScale,
+    responsiveFontSize,
+    scale,
+    verticalScale,
+} from "@/utils/responsive";
 import { fetchFarmEggBatches } from "@/utils/supabase-egg-batches";
 import {
     fetchEggFertilityReportSnapshot,
@@ -26,7 +32,6 @@ import {
     View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { moderateScale, responsiveFontSize, scale, verticalScale } from "@/utils/responsive";
 import Svg, { Circle, G } from "react-native-svg";
 
 type PeriodOption = "7 Days" | "30 Days" | "12 Months";
@@ -34,6 +39,8 @@ type ScopeOption = {
   key: string;
   label: string;
   colorHex?: string;
+  colorName?: string;
+  originBatchNo?: string;
 };
 
 const PERIOD_OPTIONS: PeriodOption[] = ["7 Days", "30 Days", "12 Months"];
@@ -344,14 +351,23 @@ export default function EggFertilityReportScreen() {
 
         const seen = new Map<string, ScopeOption>();
         rows.forEach((row) => {
-          const label = (row.colorName ?? row.origin ?? "").trim();
-          if (!label) return;
+          const colorName = (row.colorName ?? "").trim();
+          const originBatchNo = (row.origin ?? "").trim();
+          const label = [
+            colorName || "Unspecified color",
+            originBatchNo
+              ? `Batch C${originBatchNo.replace(/\D/g, "").padStart(3, "0")}`
+              : "Unknown chicken batch",
+          ].join(" • ");
+          if (!colorName && !originBatchNo) return;
 
-          const key = label.toLowerCase();
+          const key = `${colorName}|${originBatchNo}`.toLowerCase();
           if (!seen.has(key)) {
             seen.set(key, {
               key,
               label,
+              colorName,
+              originBatchNo,
               colorHex: row.colorHex ?? ChickIntelPalette.gray2,
             });
           }
@@ -375,7 +391,8 @@ export default function EggFertilityReportScreen() {
         ) {
           const match = nextOptions.find(
             (option) =>
-              option.label.toLowerCase() === initialScopeLabel.toLowerCase(),
+              option.colorName?.toLowerCase() ===
+              initialScopeLabel.toLowerCase(),
           );
           if (match) {
             setSelectedScopeKey(match.key);
@@ -431,7 +448,12 @@ export default function EggFertilityReportScreen() {
           farmId,
           overview: mapPeriodToOverview(period),
           scope:
-            selectedScope.key === "overall" ? undefined : selectedScope.label,
+            selectedScope.key === "overall"
+              ? undefined
+              : {
+                  colorName: selectedScope.colorName,
+                  originBatchNo: selectedScope.originBatchNo,
+                },
         });
 
         if (!cancelled) {
@@ -532,12 +554,17 @@ export default function EggFertilityReportScreen() {
                 Overall Egg Fertility Rate
               </Text>
             ) : (
-              <View
-                style={[
-                  styles.scopeDropdownPill,
-                  { backgroundColor: scopeHex },
-                ]}
-              />
+              <View style={styles.scopeDropdownSelected}>
+                <View
+                  style={[
+                    styles.scopeDropdownPill,
+                    { backgroundColor: scopeHex },
+                  ]}
+                />
+                <Text style={styles.scopeDropdownValueText} numberOfLines={1}>
+                  {selectedScope.label}
+                </Text>
+              </View>
             )}
             <MaterialCommunityIcons
               name="chevron-down"
@@ -662,15 +689,25 @@ export default function EggFertilityReportScreen() {
                         {option.label}
                       </Text>
                     ) : (
-                      <View
-                        style={[
-                          styles.scopeOptionPill,
-                          {
-                            backgroundColor:
-                              option.colorHex ?? ChickIntelPalette.gray2,
-                          },
-                        ]}
-                      />
+                      <View style={styles.scopeOptionContent}>
+                        <View
+                          style={[
+                            styles.scopeOptionPill,
+                            {
+                              backgroundColor:
+                                option.colorHex ?? ChickIntelPalette.gray2,
+                            },
+                          ]}
+                        />
+                        <Text
+                          style={[
+                            styles.scopeOptionText,
+                            isSelected ? styles.scopeOptionTextSelected : null,
+                          ]}
+                        >
+                          {option.label}
+                        </Text>
+                      </View>
                     )}
                     {isSelected ? (
                       <MaterialCommunityIcons
@@ -782,6 +819,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     gap: 10,
+  },
+  scopeDropdownSelected: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   scopeDropdownValueText: {
     flex: 1,
@@ -1034,5 +1077,11 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     borderWidth: 1,
     borderColor: "rgba(51, 51, 51, 0.08)",
+  },
+  scopeOptionContent: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
 });

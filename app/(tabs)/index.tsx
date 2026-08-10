@@ -46,6 +46,7 @@ import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuth } from "@/providers/auth-provider";
 import {
   fetchHomeKpiSnapshot,
+  formatBirdAdditionTrend,
   formatKpiTrend,
   type HomeKpiPeriod,
 } from "@/utils/home-kpis";
@@ -63,6 +64,8 @@ type KpiCardData = {
   period: string;
   background: "primarySoft" | "accentSoft";
   Artwork: ComponentType<{ width?: number; height?: number }>;
+  trendByPeriod?: Record<HomeKpiPeriod, string>;
+  valueByPeriod?: Record<HomeKpiPeriod, string>;
 };
 
 type QuickActionData = {
@@ -170,7 +173,15 @@ export default function HomeScreen() {
   const walkingX = useRef(new Animated.Value(Math.round(width * 0.15))).current;
   const [isFacingRight, setIsFacingRight] = useState(true);
 
-  const kpiArtworkSize = useMemo(() => rs(110), [rs]);
+  const dynamicKpiCardWidth = useMemo(() => {
+    if (width < 360) return Math.floor(width * 0.50);
+    if (width < 430) return Math.floor(width * 0.48);
+    return Math.min(Math.floor(width * 0.44), rs(240));
+  }, [width, rs]);
+
+  const dynamicKpiArtworkSize = useMemo(() => {
+    return Math.min(rs(110), Math.floor(dynamicKpiCardWidth * 0.50));
+  }, [rs, dynamicKpiCardWidth]);
   const [kpiCards, setKpiCards] = useState<KpiCardData[]>(initialKpiCards);
   const [featuredCards, setFeaturedCards] = useState<FeaturedBreedCard[]>(() =>
     getFeaturedBreedCards(),
@@ -288,7 +299,16 @@ export default function HomeScreen() {
         ...initialKpiCards[0],
         value: String(snapshot.totalBirds),
         period: birdsPeriod,
-        trend: `${formatKpiTrend(
+        trendByPeriod: Object.fromEntries(
+          PERIOD_OPTIONS.map((period) => [
+            period,
+            formatBirdAdditionTrend(
+              snapshot.birdAdditionsByPeriod[period].current,
+              snapshot.birdAdditionsByPeriod[period].previous,
+            ),
+          ]),
+        ) as Record<HomeKpiPeriod, string>,
+        trend: `${formatBirdAdditionTrend(
           snapshot.birdAdditionsByPeriod[birdsPeriod].current,
           snapshot.birdAdditionsByPeriod[birdsPeriod].previous,
         )} ${periodLabelFromPeriod(birdsPeriod)}`,
@@ -297,6 +317,21 @@ export default function HomeScreen() {
         ...initialKpiCards[1],
         value: String(snapshot.collectedEggsByPeriod[eggsPeriod].current),
         period: eggsPeriod,
+        valueByPeriod: Object.fromEntries(
+          PERIOD_OPTIONS.map((period) => [
+            period,
+            String(snapshot.collectedEggsByPeriod[period].current),
+          ]),
+        ) as Record<HomeKpiPeriod, string>,
+        trendByPeriod: Object.fromEntries(
+          PERIOD_OPTIONS.map((period) => [
+            period,
+            formatKpiTrend(
+              snapshot.collectedEggsByPeriod[period].current,
+              snapshot.collectedEggsByPeriod[period].previous,
+            ),
+          ]),
+        ) as Record<HomeKpiPeriod, string>,
         trend: `${formatKpiTrend(
           snapshot.collectedEggsByPeriod[eggsPeriod].current,
           snapshot.collectedEggsByPeriod[eggsPeriod].previous,
@@ -401,6 +436,23 @@ export default function HomeScreen() {
       };
     }
 
+    if (k.title === "Total Birds") {
+      return {
+        ...k,
+        period,
+        trend: `${k.trendByPeriod?.[period as HomeKpiPeriod] ?? "0% no change"} ${periodLabelFromPeriod(period)}`,
+      };
+    }
+
+    if (k.title === "Collected Eggs") {
+      return {
+        ...k,
+        value: k.valueByPeriod?.[period as HomeKpiPeriod] ?? k.value,
+        period,
+        trend: `${k.trendByPeriod?.[period as HomeKpiPeriod] ?? "+0%"} ${periodLabelFromPeriod(period)}`,
+      };
+    }
+
     // preserve numeric prefix like "+0%" if present, otherwise use whole trend
     const prefix = k.trend?.split(" ")[0] ?? k.trend ?? "";
     const suffix = periodLabelFromPeriod(period);
@@ -434,13 +486,19 @@ export default function HomeScreen() {
   const roleLabel = profile?.is_admin ? "Admin Owner" : `Farmer ${displayName}`;
 
   return (
-    <View style={styles.screen}>
-      <BackgroundGradient
-        width="100%"
-        height="100%"
-        preserveAspectRatio="xMidYMid slice"
-        style={StyleSheet.absoluteFill}
-      />
+    <View style={[styles.screen, { backgroundColor: colors.background }]}>
+      {colorScheme === "dark" ? (
+        <View
+          style={[StyleSheet.absoluteFill, { backgroundColor: colors.background }]}
+        />
+      ) : (
+        <BackgroundGradient
+          width="100%"
+          height="100%"
+          preserveAspectRatio="xMidYMid slice"
+          style={StyleSheet.absoluteFill}
+        />
+      )}
 
       <ScrollView
         contentContainerStyle={[
@@ -455,12 +513,16 @@ export default function HomeScreen() {
       >
         <View style={styles.headerRow}>
           <View style={styles.headerTitleWrap}>
-            <Text style={[styles.greeting, { color: ChickIntelPalette.gray1 }]}>
+            <Text style={[styles.greeting, { color: colors.text }]}>
               Welcome!
             </Text>
-            <Text style={styles.userRoleText}>{roleLabel}</Text>
+            <Text style={[styles.userRoleText, { color: colors.primary }]}>
+              {roleLabel}
+            </Text>
           </View>
-          <Text style={styles.headerDateLive}>{todayLabel}</Text>
+          <Text style={[styles.headerDateLive, { color: colors.textMuted }]}>
+            {todayLabel}
+          </Text>
         </View>
 
         <ScrollView
@@ -476,6 +538,7 @@ export default function HomeScreen() {
                 style={[
                   styles.kpiCard,
                   {
+                    width: dynamicKpiCardWidth,
                     borderColor: withAlpha(
                       colorScheme === "dark" ? "#CAE3DD" : colors.border,
                       colorScheme === "dark" ? 0.25 : 0.25,
@@ -504,7 +567,10 @@ export default function HomeScreen() {
                       styles.kpiLabelCompact,
                       { color: colors.textMuted },
                     ]}
-                    numberOfLines={2}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.8}
+                    maxFontSizeMultiplier={1.2}
                   >
                     {item.title}
                   </Text>
@@ -530,6 +596,9 @@ export default function HomeScreen() {
                         { color: colors.textMuted },
                       ]}
                       numberOfLines={1}
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.8}
+                      maxFontSizeMultiplier={1.2}
                     >
                       {item.period}
                     </Text>
@@ -541,17 +610,37 @@ export default function HomeScreen() {
                   </Pressable>
                 </View>
 
-                <View style={styles.kpiBody}>
-                  <Text style={[styles.kpiValue, { color: colors.text }]}>
+                <View
+                  style={[
+                    styles.kpiBody,
+                    { paddingRight: Math.floor(dynamicKpiArtworkSize * 0.45) },
+                  ]}
+                >
+                  <Text
+                    style={[styles.kpiValue, { color: colors.text }]}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.6}
+                    maxFontSizeMultiplier={1.25}
+                  >
                     {item.value}
                   </Text>
-                  <Text style={[styles.kpiTrend, { color: colors.textMuted }]}>
+                  <Text
+                    style={[styles.kpiTrend, { color: colors.textMuted }]}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.8}
+                    maxFontSizeMultiplier={1.2}
+                  >
                     {item.trend}
                   </Text>
                 </View>
 
-                <View style={styles.kpiArtworkWrap}>
-                  <Artwork width={kpiArtworkSize} height={kpiArtworkSize} />
+                <View style={styles.kpiArtworkWrap} pointerEvents="none">
+                  <Artwork
+                    width={dynamicKpiArtworkSize}
+                    height={dynamicKpiArtworkSize}
+                  />
                 </View>
               </BlurCard>
             );
@@ -780,10 +869,18 @@ export default function HomeScreen() {
           onPress={() => setPeriodPickerFor(null)}
         >
           <Pressable
-            style={styles.periodModalCard}
+            style={[
+              styles.periodModalCard,
+              {
+                backgroundColor: colors.surface,
+                borderColor: withAlpha(colors.border, 0.4),
+              },
+            ]}
             onPress={(e) => e.stopPropagation()}
           >
-            <Text style={styles.periodModalTitle}>Reporting period</Text>
+            <Text style={[styles.periodModalTitle, { color: colors.text }]}>
+              Reporting period
+            </Text>
             {PERIOD_OPTIONS.map((opt) => (
               <Pressable
                 key={opt}
@@ -794,17 +891,19 @@ export default function HomeScreen() {
                     opacity: pressed ? 0.85 : 1,
                     backgroundColor:
                       periodPickerFor && periodByTitle[periodPickerFor] === opt
-                        ? ChickIntelPalette.lightGreen
+                        ? withAlpha(colors.primary, 0.2)
                         : "transparent",
                   },
                 ]}
               >
-                <Text style={styles.periodOptionText}>{opt}</Text>
+                <Text style={[styles.periodOptionText, { color: colors.text }]}>
+                  {opt}
+                </Text>
                 {periodPickerFor && periodByTitle[periodPickerFor] === opt ? (
                   <MaterialCommunityIcons
                     name="check"
                     size={20}
-                    color={ChickIntelPalette.green1}
+                    color={colors.primary}
                   />
                 ) : null}
               </Pressable>
@@ -813,7 +912,9 @@ export default function HomeScreen() {
               onPress={() => setPeriodPickerFor(null)}
               style={styles.periodModalCancel}
             >
-              <Text style={styles.periodModalCancelText}>Close</Text>
+              <Text style={[styles.periodModalCancelText, { color: colors.textMuted }]}>
+                Close
+              </Text>
             </Pressable>
           </Pressable>
         </Pressable>
@@ -871,15 +972,14 @@ const styles = StyleSheet.create({
   },
   kpiRow: {
     flexDirection: "row",
-    gap: 15,
-    paddingHorizontal: moderateScale(2),
+    gap: moderateScale(12),
+    paddingHorizontal: moderateScale(4),
   },
   kpiCard: {
-    width: scale(170),
-    minHeight: verticalScale(185),
-    paddingHorizontal: moderateScale(13),
-    paddingTop: 13,
-    paddingBottom: 11,
+    minHeight: verticalScale(170),
+    paddingHorizontal: moderateScale(14),
+    paddingTop: verticalScale(14),
+    paddingBottom: verticalScale(12),
     overflow: "hidden",
   },
   kpiTint: {
@@ -888,65 +988,65 @@ const styles = StyleSheet.create({
   kpiTopRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-start",
+    alignItems: "center",
     gap: 6,
   },
   kpiLabel: {
     fontFamily: ChickFont.sans,
     flex: 1,
-    fontSize: responsiveFontSize(13),
-    fontWeight: "600",
-    lineHeight: 17,
+    fontSize: responsiveFontSize(14),
+    fontWeight: "700",
+    lineHeight: 18,
   },
-  /** One step smaller than kpiLabel — avoids awkward wrap on “Collected Eggs” */
+  /** Prominent KPI title styling */
   kpiLabelCompact: {
     fontFamily: ChickFont.sans,
     flex: 1,
-    fontSize: responsiveFontSize(13),
-    fontWeight: "600",
-    lineHeight: 17,
+    fontSize: responsiveFontSize(14),
+    fontWeight: "700",
+    lineHeight: 18,
   },
   periodChip: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 2,
-    borderRadius: 5,
+    gap: 3,
+    borderRadius: 6,
     paddingHorizontal: moderateScale(8),
     paddingVertical: verticalScale(4),
     borderWidth: 1,
     borderColor: "transparent",
-    maxWidth: "48%",
+    flexShrink: 0,
   },
   periodChipText: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(12),
     fontWeight: "600",
     letterSpacing: 0.15,
-    flexShrink: 1,
   },
   kpiBody: {
+    marginTop: verticalScale(8),
     gap: 2,
-    marginTop: 4,
-    paddingRight: 72,
+    justifyContent: "flex-start",
   },
   kpiValue: {
     fontFamily: ChickFont.display,
-    fontSize: responsiveFontSize(30),
-    lineHeight: 33,
-    fontWeight: "600",
-    letterSpacing: -0.9,
+    fontSize: responsiveFontSize(34),
+    lineHeight: 38,
+    fontWeight: "800",
+    letterSpacing: -1,
   },
   kpiTrend: {
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(11),
-    lineHeight: 15,
-    fontWeight: "500",
+    fontSize: responsiveFontSize(12),
+    lineHeight: 16,
+    fontWeight: "600",
+    marginTop: 2,
   },
   kpiArtworkWrap: {
     position: "absolute",
     right: 2,
     bottom: -2,
-    opacity: 0.98,
+    opacity: 0.95,
   },
   quickActionsCard: {
     paddingVertical: verticalScale(10),
