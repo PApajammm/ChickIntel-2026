@@ -6,6 +6,8 @@
 
 ---
 
+lalaalal
+
 ## Overview
 
 A single **Admin Dashboard** page accessible only to admin users, consolidating farmer account management, chicken breed catalog management, and inventory item type management.
