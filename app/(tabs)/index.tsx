@@ -4,25 +4,25 @@ import { useCameraPermissions } from "expo-camera";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ComponentType,
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+    type ComponentType,
 } from "react";
 import {
-  Alert,
-  Animated,
-  Easing,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  useWindowDimensions,
-  View,
+    Alert,
+    Animated,
+    Easing,
+    Modal,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    useWindowDimensions,
+    View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -45,17 +45,23 @@ import { getFarmColors } from "@/constants/farm-theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuth } from "@/providers/auth-provider";
 import {
-  fetchHomeKpiSnapshot,
-  formatBirdAdditionTrend,
-  formatKpiTrend,
-  type HomeKpiPeriod,
+    fetchHomeKpiSnapshot,
+    formatBirdAdditionTrend,
+    formatKpiTrend,
+    type HomeKpiPeriod,
 } from "@/utils/home-kpis";
 import { logError, logStep } from "@/utils/logger";
 import {
-  getFeaturedBreedCards,
-  type FeaturedBreedCard,
+    getFeaturedBreedCards,
+    type FeaturedBreedCard,
 } from "@/utils/recent-breed-scans";
-import { moderateScale, responsiveFontSize, scale, useResponsiveMetrics, verticalScale } from "@/utils/responsive";
+import {
+    moderateScale,
+    responsiveFontSize,
+    scale,
+    useResponsiveMetrics,
+    verticalScale,
+} from "@/utils/responsive";
 
 type KpiCardData = {
   title: string;
@@ -124,9 +130,9 @@ function hexToRgba(hex: string, alpha = 1) {
   const bigint =
     h.length === 3
       ? h
-        .split("")
-        .map((c) => c + c)
-        .join("")
+          .split("")
+          .map((c) => c + c)
+          .join("")
       : h;
 
   const n = parseInt(bigint, 16);
@@ -174,13 +180,13 @@ export default function HomeScreen() {
   const [isFacingRight, setIsFacingRight] = useState(true);
 
   const dynamicKpiCardWidth = useMemo(() => {
-    if (width < 360) return Math.floor(width * 0.50);
+    if (width < 360) return Math.floor(width * 0.5);
     if (width < 430) return Math.floor(width * 0.48);
     return Math.min(Math.floor(width * 0.44), rs(240));
   }, [width, rs]);
 
   const dynamicKpiArtworkSize = useMemo(() => {
-    return Math.min(rs(110), Math.floor(dynamicKpiCardWidth * 0.50));
+    return Math.min(rs(110), Math.floor(dynamicKpiCardWidth * 0.5));
   }, [rs, dynamicKpiCardWidth]);
   const [kpiCards, setKpiCards] = useState<KpiCardData[]>(initialKpiCards);
   const [featuredCards, setFeaturedCards] = useState<FeaturedBreedCard[]>(() =>
@@ -489,7 +495,10 @@ export default function HomeScreen() {
     <View style={[styles.screen, { backgroundColor: colors.background }]}>
       {colorScheme === "dark" ? (
         <View
-          style={[StyleSheet.absoluteFill, { backgroundColor: colors.background }]}
+          style={[
+            StyleSheet.absoluteFill,
+            { backgroundColor: colors.background },
+          ]}
         />
       ) : (
         <BackgroundGradient
@@ -912,7 +921,12 @@ export default function HomeScreen() {
               onPress={() => setPeriodPickerFor(null)}
               style={styles.periodModalCancel}
             >
-              <Text style={[styles.periodModalCancelText, { color: colors.textMuted }]}>
+              <Text
+                style={[
+                  styles.periodModalCancelText,
+                  { color: colors.textMuted },
+                ]}
+              >
                 Close
               </Text>
             </Pressable>

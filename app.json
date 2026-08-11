@@ -2,7 +2,7 @@
   "expo": {
     "name": "ChickIntel",
     "slug": "ChickInteL2026",
-    "version": "1.0.0",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "chickintel2026",
@@ -25,7 +25,8 @@
         "android.permission.RECORD_AUDIO",
         "android.permission.POST_NOTIFICATIONS"
       ],
-      "package": "com.anonymous.ChickInteL2026"
+      "package": "com.chickintel.app",
+      "versionCode": 2
     },
     "web": {
       "output": "static",
