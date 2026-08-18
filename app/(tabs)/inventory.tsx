@@ -34,6 +34,7 @@ import {
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useFocusEffect } from "@react-navigation/native";
+import { useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
     Alert,
@@ -65,6 +66,7 @@ const formatAppDate = (date?: Date | null) => {
 };
 
 export default function InventoryScreen() {
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
   const { activeFarm } = useAuth();
@@ -551,7 +553,26 @@ export default function InventoryScreen() {
         ]}
       />
       <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
-        <Text style={styles.screenTitle}>Inventory</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.addButton,
+              { opacity: pressed ? 0.75 : 1 },
+            ]}
+            onPress={() =>
+              router.canGoBack() ? router.back() : router.replace("/(tabs)")
+            }
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+          >
+            <MaterialCommunityIcons
+              name="arrow-left"
+              size={24}
+              color={ChickIntelPalette.gray1}
+            />
+          </Pressable>
+          <Text style={styles.screenTitle}>Inventory</Text>
+        </View>
         <Pressable
           style={styles.addButton}
           onPress={() => setAddModalVisible(true)}

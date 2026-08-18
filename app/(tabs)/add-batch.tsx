@@ -404,13 +404,23 @@ export default function AddBatchScreen() {
           keyboardDismissMode="on-drag"
         >
           <View style={styles.createHero}>
-            <View style={styles.createHeroIcon}>
+            <Pressable
+              onPress={() =>
+                router.canGoBack() ? router.back() : router.replace("/(tabs)")
+              }
+              style={({ pressed }) => [
+                styles.createHeroIcon,
+                { opacity: pressed ? 0.75 : 1 },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
+            >
               <MaterialCommunityIcons
-                name="bird"
-                size={28}
+                name="arrow-left"
+                size={24}
                 color={ChickIntelPalette.green1}
               />
-            </View>
+            </Pressable>
             <View style={styles.createHeroCopy}>
               <Text style={styles.createHeroKicker}>Chicken profile</Text>
               <Text style={styles.pageTitle}>{pageTitle}</Text>

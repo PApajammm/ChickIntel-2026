@@ -77,22 +77,6 @@ export function ChickTabBar({ onLogoutPress, ..._rest }: ChickTabBarProps) {
       ]}
     >
       <Pressable
-        onPress={goBack}
-        style={({ pressed }) => [styles.item, { opacity: pressed ? 0.75 : 1 }]}
-        accessibilityRole="button"
-        accessibilityLabel="Back"
-      >
-        <MaterialCommunityIcons
-          name="arrow-left"
-          size={26}
-          color={inactiveColor}
-        />
-        <Text style={[styles.label, { color: inactiveColor }]}>
-          Back
-        </Text>
-      </Pressable>
-
-      <Pressable
         onPress={goHome}
         style={({ pressed }) => [styles.item, { opacity: pressed ? 0.85 : 1 }]}
         accessibilityRole="button"

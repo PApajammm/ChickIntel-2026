@@ -2,6 +2,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useFocusEffect } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
+import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
     ActivityIndicator,
@@ -209,6 +210,7 @@ const groupTasksByDate = (tasks: SupabaseScheduleTask[]) =>
   }, {});
 
 export default function ScheduleScreen() {
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
@@ -770,12 +772,28 @@ export default function ScheduleScreen() {
         preserveAspectRatio="xMidYMid slice"
         style={StyleSheet.absoluteFill}
       />
-      <StatusBar style={isDark ? "light" : "dark"} />
+      <StatusBar style="dark" />
 
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
-        <Text style={[styles.headerTitle, { fontSize: responsiveTitleSize }]}>
-          Schedule
-        </Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+          <Pressable
+            onPress={() =>
+              router.canGoBack() ? router.back() : router.replace("/(tabs)")
+            }
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+          >
+            <MaterialCommunityIcons
+              name="arrow-left"
+              size={24}
+              color={ChickIntelPalette.gray1}
+            />
+          </Pressable>
+          <Text style={[styles.headerTitle, { fontSize: responsiveTitleSize }]}>
+            Schedule
+          </Text>
+        </View>
       </View>
 
       <ScrollView

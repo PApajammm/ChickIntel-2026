@@ -303,8 +303,14 @@ export default function HomeScreen() {
     return [
       {
         ...initialKpiCards[0],
-        value: String(snapshot.totalBirds),
+        value: String(snapshot.birdAdditionsByPeriod[birdsPeriod].current),
         period: birdsPeriod,
+        valueByPeriod: Object.fromEntries(
+          PERIOD_OPTIONS.map((period) => [
+            period,
+            String(snapshot.birdAdditionsByPeriod[period].current),
+          ]),
+        ) as Record<HomeKpiPeriod, string>,
         trendByPeriod: Object.fromEntries(
           PERIOD_OPTIONS.map((period) => [
             period,
@@ -347,7 +353,25 @@ export default function HomeScreen() {
         ...initialKpiCards[2],
         value: String(snapshot.feedQtyByPeriod[feedPeriod].current),
         period: feedPeriod,
-        trend: `kg ${periodLabelFromPeriod(feedPeriod)}`,
+        valueByPeriod: Object.fromEntries(
+          PERIOD_OPTIONS.map((period) => [
+            period,
+            String(snapshot.feedQtyByPeriod[period].current),
+          ]),
+        ) as Record<HomeKpiPeriod, string>,
+        trendByPeriod: Object.fromEntries(
+          PERIOD_OPTIONS.map((period) => [
+            period,
+            formatKpiTrend(
+              snapshot.feedQtyByPeriod[period].current,
+              snapshot.feedQtyByPeriod[period].previous,
+            ),
+          ]),
+        ) as Record<HomeKpiPeriod, string>,
+        trend: `${formatKpiTrend(
+          snapshot.feedQtyByPeriod[feedPeriod].current,
+          snapshot.feedQtyByPeriod[feedPeriod].previous,
+        )} kg ${periodLabelFromPeriod(feedPeriod)}`,
       },
     ];
   }, [activeFarm?.id, periodByTitle]);
@@ -435,32 +459,40 @@ export default function HomeScreen() {
   const displayKpis = kpiCards.map((k) => {
     const period = periodByTitle[k.title] ?? k.period;
     if (k.title === "Feeds Consumed") {
-      return {
-        ...k,
-        period,
-        trend: `kg ${periodLabelFromPeriod(period)}`,
-      };
-    }
-
-    if (k.title === "Total Birds") {
-      return {
-        ...k,
-        period,
-        trend: `${k.trendByPeriod?.[period as HomeKpiPeriod] ?? "0% no change"} ${periodLabelFromPeriod(period)}`,
-      };
-    }
-
-    if (k.title === "Collected Eggs") {
+      const rawTrend = k.trendByPeriod?.[period as HomeKpiPeriod] ?? "+0%";
+      const cleanTrend = rawTrend.replace(/^-/, "+");
       return {
         ...k,
         value: k.valueByPeriod?.[period as HomeKpiPeriod] ?? k.value,
         period,
-        trend: `${k.trendByPeriod?.[period as HomeKpiPeriod] ?? "+0%"} ${periodLabelFromPeriod(period)}`,
+        trend: `${cleanTrend} kg ${periodLabelFromPeriod(period)}`,
       };
     }
 
-    // preserve numeric prefix like "+0%" if present, otherwise use whole trend
-    const prefix = k.trend?.split(" ")[0] ?? k.trend ?? "";
+    if (k.title === "Total Birds") {
+      const rawTrend = k.trendByPeriod?.[period as HomeKpiPeriod] ?? "+0%";
+      const cleanTrend = rawTrend.replace(/^-/, "+");
+      return {
+        ...k,
+        value: k.valueByPeriod?.[period as HomeKpiPeriod] ?? k.value,
+        period,
+        trend: `${cleanTrend} ${periodLabelFromPeriod(period)}`,
+      };
+    }
+
+    if (k.title === "Collected Eggs") {
+      const rawTrend = k.trendByPeriod?.[period as HomeKpiPeriod] ?? "+0%";
+      const cleanTrend = rawTrend.replace(/^-/, "+");
+      return {
+        ...k,
+        value: k.valueByPeriod?.[period as HomeKpiPeriod] ?? k.value,
+        period,
+        trend: `${cleanTrend} ${periodLabelFromPeriod(period)}`,
+      };
+    }
+
+    const rawPrefix = k.trend?.split(" ")[0] ?? k.trend ?? "";
+    const prefix = rawPrefix.replace(/^-/, "+");
     const suffix = periodLabelFromPeriod(period);
     const trend = prefix ? `${prefix} ${suffix}` : k.trend;
 

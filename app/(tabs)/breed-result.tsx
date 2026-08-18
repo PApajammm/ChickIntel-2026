@@ -131,7 +131,23 @@ export default function BreedResultScreen() {
                 ]}
                 showsVerticalScrollIndicator={false}
             >
-                <Text style={styles.pageTitle}>Breed Result</Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                  <Pressable
+                    onPress={() =>
+                      router.canGoBack() ? router.back() : router.replace("/(tabs)/scanner")
+                    }
+                    hitSlop={12}
+                    accessibilityRole="button"
+                    accessibilityLabel="Go back"
+                  >
+                    <MaterialCommunityIcons
+                      name="arrow-left"
+                      size={24}
+                      color={ChickIntelPalette.gray1}
+                    />
+                  </Pressable>
+                  <Text style={styles.pageTitle}>Breed Result</Text>
+                </View>
                 <Text style={styles.pageSubtitle}>
                     {isAnalyzingImage
                         ? "Analyzing the captured image before displaying the profile."

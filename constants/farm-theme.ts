@@ -42,7 +42,7 @@ export const FarmColors = {
 } as const;
 
 export function getFarmColors(
-    colorScheme: "light" | "dark" | null | undefined,
+    _colorScheme?: "light" | "dark" | null | undefined,
 ) {
-    return FarmColors[colorScheme === "dark" ? "dark" : "light"];
+    return FarmColors.light;
 }

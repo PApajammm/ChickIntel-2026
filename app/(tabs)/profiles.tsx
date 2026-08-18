@@ -456,7 +456,7 @@ export default function ProfilesScreen() {
           ]}
         />
       )}
-      <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
+      <StatusBar style="dark" />
       <View style={styles.fixedHeader}>
         <View style={styles.pageHeaderRow}>
           <Text style={[styles.pageTitle, { color: colors.text }]}>
