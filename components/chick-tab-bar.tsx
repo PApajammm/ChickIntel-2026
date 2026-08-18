@@ -64,14 +64,10 @@ export function ChickTabBar({ onLogoutPress, ..._rest }: ChickTabBarProps) {
         {
           backgroundColor: isScanner
             ? "transparent"
-            : colorScheme === "dark"
-              ? colors.surface
-              : ChickIntelPalette.light1,
+            : ChickIntelPalette.light1,
           borderTopColor: isScanner
             ? "transparent"
-            : colorScheme === "dark"
-              ? colors.border
-              : ChickIntelPalette.lightGreen,
+            : ChickIntelPalette.lightGreen,
           paddingBottom: Math.max(insets.bottom, 6),
         },
       ]}

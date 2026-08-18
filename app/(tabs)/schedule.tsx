@@ -212,8 +212,7 @@ const groupTasksByDate = (tasks: SupabaseScheduleTask[]) =>
 export default function ScheduleScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
+  const isDark = false;
   const { activeFarm, configured } = useAuth();
   const { width } = useWindowDimensions();
 

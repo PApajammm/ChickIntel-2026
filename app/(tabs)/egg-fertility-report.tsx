@@ -555,8 +555,7 @@ export default function EggFertilityReportScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { activeFarm, profile } = useAuth();
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
+  const isDark = false;
   const params = useLocalSearchParams<{
     color?: string;
     colorHex?: string;

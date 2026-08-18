@@ -438,24 +438,15 @@ export default function ProfilesScreen() {
       style={[styles.screen, { backgroundColor: colors.background }]}
       edges={["top"]}
     >
-      {colorScheme === "dark" ? (
-        <View
-          style={[
-            StyleSheet.absoluteFill,
-            { backgroundColor: colors.background },
-          ]}
-        />
-      ) : (
-        <BackgroundGradient
-          width="110%"
-          height="110%"
-          preserveAspectRatio="xMidYMid slice"
-          style={[
-            StyleSheet.absoluteFill,
-            { transform: [{ scale: 1.08 }, { translateY: -14 }] },
-          ]}
-        />
-      )}
+      <BackgroundGradient
+        width="110%"
+        height="110%"
+        preserveAspectRatio="xMidYMid slice"
+        style={[
+          StyleSheet.absoluteFill,
+          { transform: [{ scale: 1.08 }, { translateY: -14 }] },
+        ]}
+      />
       <StatusBar style="dark" />
       <View style={styles.fixedHeader}>
         <View style={styles.pageHeaderRow}>

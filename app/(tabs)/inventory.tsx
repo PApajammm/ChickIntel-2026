@@ -78,7 +78,7 @@ export default function InventoryScreen() {
     removeInventoryItem,
     refreshFarmData,
   } = useFarmData();
-  const isDark = colorScheme === "dark";
+  const isDark = false;
 
   const [inventoryError, setInventoryError] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());

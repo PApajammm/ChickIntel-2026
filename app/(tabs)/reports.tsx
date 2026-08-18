@@ -1113,9 +1113,8 @@ function SmartInsightCard({ text }: { text: string }) {
 export default function ReportsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const colorScheme = useColorScheme();
   const { activeFarm, profile } = useAuth();
-  const isDark = colorScheme === "dark";
+  const isDark = false;
   const activeFarmId = activeFarm?.id;
 
   const [overview, setOverview] = useState<ReportOverview>("Weekly");

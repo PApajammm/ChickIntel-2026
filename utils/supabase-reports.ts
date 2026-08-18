@@ -128,7 +128,7 @@ function toNiceAxisMax(maxValue: number) {
 
 function formatOverviewWindow(overview: ReportOverview) {
   if (overview === "Weekly") return "the last 7 days";
-  if (overview === "Monthly") return "the current month";
+  if (overview === "Monthly") return "the last 30 days";
   return "the last 12 months";
 }
 

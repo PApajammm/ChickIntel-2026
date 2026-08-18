@@ -24,8 +24,7 @@ export function BlurCard({
   borderRadius = 16,
   transparent = false,
 }: BlurCardProps) {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
+  const isDark = false;
   const responsiveScale = useResponsiveScale();
 
   const borderColor = isDark

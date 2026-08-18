@@ -525,21 +525,15 @@ export default function HomeScreen() {
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.background }]}>
-      {colorScheme === "dark" ? (
-        <View
-          style={[
-            StyleSheet.absoluteFill,
-            { backgroundColor: colors.background },
-          ]}
-        />
-      ) : (
-        <BackgroundGradient
-          width="100%"
-          height="100%"
-          preserveAspectRatio="xMidYMid slice"
-          style={StyleSheet.absoluteFill}
-        />
-      )}
+      <BackgroundGradient
+        width="110%"
+        height="110%"
+        preserveAspectRatio="xMidYMid slice"
+        style={[
+          StyleSheet.absoluteFill,
+          { transform: [{ scale: 1.08 }, { translateY: -14 }] },
+        ]}
+      />
 
       <ScrollView
         contentContainerStyle={[
@@ -580,10 +574,7 @@ export default function HomeScreen() {
                   styles.kpiCard,
                   {
                     width: dynamicKpiCardWidth,
-                    borderColor: withAlpha(
-                      colorScheme === "dark" ? "#CAE3DD" : colors.border,
-                      colorScheme === "dark" ? 0.25 : 0.25,
-                    ),
+                    borderColor: withAlpha(colors.border, 0.25),
                   },
                 ]}
                 borderRadius={10}
@@ -593,10 +584,7 @@ export default function HomeScreen() {
                   style={[
                     styles.kpiTint,
                     {
-                      backgroundColor: withAlpha(
-                        colors[item.background],
-                        colorScheme === "dark" ? 0.16 : 0.22,
-                      ),
+                      backgroundColor: withAlpha(colors[item.background], 0.22),
                     },
                   ]}
                   pointerEvents="none"
@@ -620,14 +608,8 @@ export default function HomeScreen() {
                     style={[
                       styles.periodChip,
                       {
-                        backgroundColor: withAlpha(
-                          colors.surface,
-                          colorScheme === "dark" ? 0.24 : 0.38,
-                        ),
-                        borderColor: withAlpha(
-                          colors.border,
-                          colorScheme === "dark" ? 0.18 : 0.3,
-                        ),
+                        backgroundColor: withAlpha(colors.surface, 0.38),
+                        borderColor: withAlpha(colors.border, 0.3),
                       },
                     ]}
                   >
@@ -692,10 +674,7 @@ export default function HomeScreen() {
           style={[
             styles.quickActionsCard,
             {
-              borderColor: withAlpha(
-                ChickIntelPalette.green2,
-                colorScheme === "dark" ? 0.28 : 0.33,
-              ),
+              borderColor: withAlpha(ChickIntelPalette.green2, 0.33),
             },
           ]}
           borderRadius={18}
@@ -720,10 +699,7 @@ export default function HomeScreen() {
             style={[
               styles.quickActionsTint,
               {
-                backgroundColor: withAlpha(
-                  ChickIntelPalette.mediumGreen,
-                  colorScheme === "dark" ? 0.16 : 0.2,
-                ),
+                backgroundColor: withAlpha(ChickIntelPalette.mediumGreen, 0.2),
               },
             ]}
             pointerEvents="none"
