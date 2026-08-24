@@ -179,6 +179,31 @@ export default function HomeScreen() {
   const walkingX = useRef(new Animated.Value(Math.round(width * 0.15))).current;
   const [isFacingRight, setIsFacingRight] = useState(true);
   const [isQuickActionsExpanded, setIsQuickActionsExpanded] = useState(false);
+  const roleAnim = useRef(new Animated.Value(1)).current;
+  const roleColor = useMemo(() => {
+    return roleAnim.interpolate({
+      inputRange: [0.7, 1],
+      outputRange: ["#317667", "#1B4A40"],
+    });
+  }, [roleAnim]);
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(roleAnim, {
+          toValue: 0.7,
+          duration: 1500,
+          useNativeDriver: false,
+        }),
+        Animated.timing(roleAnim, {
+          toValue: 1,
+          duration: 1500,
+          useNativeDriver: false,
+        }),
+      ]),
+      { iterations: 5 }
+    ).start();
+  }, [roleAnim]);
 
   const dynamicKpiCardWidth = useMemo(() => {
     if (width < 360) return Math.floor(width * 0.5);
@@ -552,9 +577,20 @@ export default function HomeScreen() {
             <Text style={[styles.greeting, { color: colors.text }]}>
               Welcome!
             </Text>
-            <Text style={[styles.userRoleText, { color: colors.primary }]}>
+            <Animated.Text
+              style={[
+                styles.userRoleText,
+                {
+                  color: roleColor,
+                  opacity: roleAnim,
+                  textShadowColor: "rgba(49, 118, 103, 0.5)",
+                  textShadowOffset: { width: 0, height: 0 },
+                  textShadowRadius: 8,
+                }
+              ]}
+            >
               {roleLabel}
-            </Text>
+            </Animated.Text>
           </View>
           <Text style={[styles.headerDateLive, { color: colors.textMuted }]}>
             {todayLabel}
@@ -987,18 +1023,18 @@ const styles = StyleSheet.create({
   },
   greeting: {
     fontFamily: ChickFont.display,
-    fontSize: responsiveFontSize(27),
-    lineHeight: 38,
+    fontSize: responsiveFontSize(20),
+    lineHeight: 28,
     fontWeight: "600",
     letterSpacing: -0.65,
   },
   userRoleText: {
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(15),
-    lineHeight: 12,
-    fontWeight: "600",
+    fontSize: responsiveFontSize(19),
+    lineHeight: 20,
+    fontWeight: "700",
     color: ChickIntelPalette.green1,
-    marginTop: 1,
+    marginTop: 3,
   },
   /** Real-time date — neutral Gray 2 from ChickIntel palette */
   headerDateLive: {
