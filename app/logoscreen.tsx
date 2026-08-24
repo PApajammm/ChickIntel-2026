@@ -35,7 +35,7 @@ export default function LogoScreen() {
 
                 <View style={styles.footerCustom} pointerEvents="none">
                     <Text style={styles.footerSmall}>BY</Text>
-                    <Text style={styles.footerMain}>SD3A-G1</Text>
+                    <Text style={styles.footerMain}>SD4A-G1</Text>
                     <View style={styles.footerUnderline} />
                 </View>
             </View>
