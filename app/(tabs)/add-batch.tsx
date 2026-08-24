@@ -406,7 +406,10 @@ export default function AddBatchScreen() {
           <View style={styles.createHero}>
             <Pressable
               onPress={() =>
-                router.canGoBack() ? router.back() : router.replace("/(tabs)")
+                router.replace({
+                  pathname: "/(tabs)/profiles" as any,
+                  params: { mode: "chicken" },
+                })
               }
               style={({ pressed }) => [
                 styles.createHeroIcon,
@@ -697,7 +700,7 @@ export default function AddBatchScreen() {
                       farmId: activeFarm.id,
                       batchNo: newBatch.id,
                     });
-                    router.push("/(tabs)/profiles");
+                    router.push({ pathname: "/(tabs)/profiles" as any, params: { mode } });
                   })
                   .catch((error) => {
                     Alert.alert(

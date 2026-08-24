@@ -108,6 +108,132 @@ export function getStockSeverityMeta(statusPercent: number) {
   };
 }
 
+export type ExpirationStatus = "expired" | "expiring-soon" | "fresh" | "none";
+
+export interface ExpirationMeta {
+  status: ExpirationStatus;
+  daysRemaining: number | null;
+  label: string;
+  badgeLabel: string;
+  fillColor: string;
+  softColor: string;
+  textColor: string;
+  borderColor: string;
+  iconName: "alert-circle" | "clock-alert-outline" | "check-circle-outline" | "calendar-outline";
+  isExpired: boolean;
+  isExpiringSoon: boolean;
+}
+
+export function getExpirationStatus(
+  expirationDate?: Date | string | null,
+  referenceDate: Date = new Date(),
+  warningDaysThreshold: number = 7,
+): ExpirationMeta {
+  if (!expirationDate) {
+    return {
+      status: "none",
+      daysRemaining: null,
+      label: "No Expiration Date",
+      badgeLabel: "No Expiry",
+      fillColor: "rgba(0, 0, 0, 0.4)",
+      softColor: "rgba(0, 0, 0, 0.05)",
+      textColor: "rgba(51, 51, 51, 0.7)",
+      borderColor: "transparent",
+      iconName: "calendar-outline",
+      isExpired: false,
+      isExpiringSoon: false,
+    };
+  }
+
+  const expDate = new Date(expirationDate);
+  if (Number.isNaN(expDate.getTime())) {
+    return {
+      status: "none",
+      daysRemaining: null,
+      label: "Invalid Date",
+      badgeLabel: "Invalid",
+      fillColor: "rgba(0, 0, 0, 0.4)",
+      softColor: "rgba(0, 0, 0, 0.05)",
+      textColor: "rgba(51, 51, 51, 0.7)",
+      borderColor: "transparent",
+      iconName: "calendar-outline",
+      isExpired: false,
+      isExpiringSoon: false,
+    };
+  }
+
+  // Normalize times to midnight for calendar day comparison
+  const refMidnight = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), referenceDate.getDate());
+  const expMidnight = new Date(expDate.getFullYear(), expDate.getMonth(), expDate.getDate());
+  const diffTime = expMidnight.getTime() - refMidnight.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  if (diffDays < 0) {
+    const absDays = Math.abs(diffDays);
+    const agoText = absDays === 1 ? "1 day ago" : `${absDays} days ago`;
+    return {
+      status: "expired",
+      daysRemaining: diffDays,
+      label: `Expired (${agoText})`,
+      badgeLabel: `Expired ${absDays === 1 ? "1d ago" : `${absDays}d ago`}`,
+      fillColor: "#DC2626", // bold danger red
+      softColor: "rgba(220, 38, 38, 0.12)",
+      textColor: "#B91C1C",
+      borderColor: "rgba(220, 38, 38, 0.35)",
+      iconName: "alert-circle",
+      isExpired: true,
+      isExpiringSoon: false,
+    };
+  }
+
+  if (diffDays === 0) {
+    return {
+      status: "expired",
+      daysRemaining: 0,
+      label: "Expires Today!",
+      badgeLabel: "Expires Today",
+      fillColor: "#DC2626",
+      softColor: "rgba(220, 38, 38, 0.14)",
+      textColor: "#B91C1C",
+      borderColor: "rgba(220, 38, 38, 0.4)",
+      iconName: "alert-circle",
+      isExpired: true,
+      isExpiringSoon: false,
+    };
+  }
+
+  if (diffDays <= warningDaysThreshold) {
+    const inText = diffDays === 1 ? "Tomorrow" : `in ${diffDays} days`;
+    return {
+      status: "expiring-soon",
+      daysRemaining: diffDays,
+      label: `Expiring ${inText}`,
+      badgeLabel: `Exp: ${inText}`,
+      fillColor: "#D97706", // warm warning amber
+      softColor: "rgba(217, 119, 6, 0.14)",
+      textColor: "#B45309",
+      borderColor: "rgba(217, 119, 6, 0.35)",
+      iconName: "clock-alert-outline",
+      isExpired: false,
+      isExpiringSoon: true,
+    };
+  }
+
+  return {
+    status: "fresh",
+    daysRemaining: diffDays,
+    label: "Fresh & Usable",
+    badgeLabel: "Valid",
+    fillColor: "#059669", // fresh emerald green
+    softColor: "rgba(5, 150, 105, 0.1)",
+    textColor: "#047857",
+    borderColor: "rgba(5, 150, 105, 0.22)",
+    iconName: "check-circle-outline",
+    isExpired: false,
+    isExpiringSoon: false,
+  };
+}
+
 export function computeEffectiveInventoryItems(
   items: Array<SupabaseInventoryItem & { baseQty?: number }>,
   scheduleTasks: SupabaseScheduleTask[],
