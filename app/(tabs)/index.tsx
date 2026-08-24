@@ -178,6 +178,7 @@ export default function HomeScreen() {
   const walkRange = Math.round(width * 0.4);
   const walkingX = useRef(new Animated.Value(Math.round(width * 0.15))).current;
   const [isFacingRight, setIsFacingRight] = useState(true);
+  const [isQuickActionsExpanded, setIsQuickActionsExpanded] = useState(false);
 
   const dynamicKpiCardWidth = useMemo(() => {
     if (width < 360) return Math.floor(width * 0.5);
@@ -677,9 +678,25 @@ export default function HomeScreen() {
               borderColor: withAlpha(ChickIntelPalette.green2, 0.33),
             },
           ]}
-          borderRadius={18}
+          borderRadius={10}
           intensity={18}
         >
+          <View style={styles.quickActionsHeader}>
+            <Pressable
+              style={styles.viewAllBtn}
+              onPress={() => setIsQuickActionsExpanded(!isQuickActionsExpanded)}
+              accessibilityLabel={isQuickActionsExpanded ? "View Less" : "View All"}
+            >
+              <Text style={styles.viewAllText}>
+                {isQuickActionsExpanded ? "View Less" : "View All"}
+              </Text>
+              <MaterialCommunityIcons
+                name={isQuickActionsExpanded ? "arrow-down-circle-outline" : "arrow-right-circle-outline"}
+                size={18}
+                color={ChickIntelPalette.green1}
+              />
+            </Pressable>
+          </View>
           <View style={styles.walkingGifWrap}>
             <Animated.View style={{ transform: [{ translateX: walkingX }] }}>
               <Animated.View
@@ -705,7 +722,7 @@ export default function HomeScreen() {
             pointerEvents="none"
           />
           <View style={styles.quickActionsGrid}>
-            {quickActions.map((item) => {
+            {(isQuickActionsExpanded ? quickActions : quickActions.slice(0, 6)).map((item) => {
               const Icon = item.Icon;
               return (
                 <Pressable
@@ -1071,10 +1088,28 @@ const styles = StyleSheet.create({
     opacity: 0.95,
   },
   quickActionsCard: {
-    paddingVertical: verticalScale(10),
+    paddingBottom: verticalScale(10),
     paddingHorizontal: moderateScale(10),
     position: "relative",
     overflow: "hidden",
+  },
+  quickActionsHeader: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    paddingTop: verticalScale(8),
+    paddingRight: moderateScale(6),
+    zIndex: 10,
+  },
+  viewAllBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  viewAllText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12),
+    fontWeight: "700",
+    color: ChickIntelPalette.green1,
   },
   walkingGifWrap: {
     position: "absolute",
@@ -1119,11 +1154,11 @@ const styles = StyleSheet.create({
     paddingBottom: 6,
   },
   featureCardWrap: {
-    borderRadius: 28,
+    borderRadius: 10,
   },
   featureCard: {
     height: verticalScale(175),
-    borderRadius: 28,
+    borderRadius: 10,
     overflow: "hidden",
     shadowOpacity: 0.28,
     shadowRadius: 16,
