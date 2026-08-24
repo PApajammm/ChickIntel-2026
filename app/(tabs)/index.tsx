@@ -4,25 +4,25 @@ import { useCameraPermissions } from "expo-camera";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import {
-    useCallback,
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
-    type ComponentType,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentType,
 } from "react";
 import {
-    Alert,
-    Animated,
-    Easing,
-    Modal,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    useWindowDimensions,
-    View,
+  Alert,
+  Animated,
+  Easing,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -45,22 +45,22 @@ import { getFarmColors } from "@/constants/farm-theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuth } from "@/providers/auth-provider";
 import {
-    fetchHomeKpiSnapshot,
-    formatBirdAdditionTrend,
-    formatKpiTrend,
-    type HomeKpiPeriod,
+  fetchHomeKpiSnapshot,
+  formatBirdAdditionTrend,
+  formatKpiTrend,
+  type HomeKpiPeriod,
 } from "@/utils/home-kpis";
 import { logError, logStep } from "@/utils/logger";
 import {
-    getFeaturedBreedCards,
-    type FeaturedBreedCard,
+  getFeaturedBreedCards,
+  type FeaturedBreedCard,
 } from "@/utils/recent-breed-scans";
 import {
-    moderateScale,
-    responsiveFontSize,
-    scale,
-    useResponsiveMetrics,
-    verticalScale,
+  moderateScale,
+  responsiveFontSize,
+  scale,
+  useResponsiveMetrics,
+  verticalScale,
 } from "@/utils/responsive";
 
 type KpiCardData = {
@@ -130,9 +130,9 @@ function hexToRgba(hex: string, alpha = 1) {
   const bigint =
     h.length === 3
       ? h
-          .split("")
-          .map((c) => c + c)
-          .join("")
+        .split("")
+        .map((c) => c + c)
+        .join("")
       : h;
 
   const n = parseInt(bigint, 16);
@@ -692,7 +692,7 @@ export default function HomeScreen() {
               </Text>
               <MaterialCommunityIcons
                 name={isQuickActionsExpanded ? "arrow-down-circle-outline" : "arrow-right-circle-outline"}
-                size={18}
+                size={22}
                 color={ChickIntelPalette.green1}
               />
             </Pressable>
@@ -754,13 +754,14 @@ export default function HomeScreen() {
                         style={{
                           marginTop: 2,
                           fontFamily: ChickFont.sans,
-                          fontSize: 10,
-                          fontWeight: "800",
+                          fontSize: responsiveFontSize(11),
+                          fontWeight: "700",
                           color: ChickIntelPalette.green1,
                           textAlign: "center",
+                          lineHeight: 13,
                         }}
                       >
-                        Health Monitoring
+                        Health{"\n"}Monitoring
                       </Text>
                     )}
                   </View>
@@ -1088,8 +1089,9 @@ const styles = StyleSheet.create({
     opacity: 0.95,
   },
   quickActionsCard: {
-    paddingBottom: verticalScale(10),
-    paddingHorizontal: moderateScale(10),
+    paddingTop: verticalScale(12),
+    paddingBottom: verticalScale(12),
+    paddingHorizontal: moderateScale(12),
     position: "relative",
     overflow: "hidden",
   },
@@ -1097,17 +1099,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "flex-end",
     paddingTop: verticalScale(8),
-    paddingRight: moderateScale(6),
+    paddingRight: moderateScale(8),
     zIndex: 10,
   },
   viewAllBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 6,
   },
   viewAllText: {
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(12),
+    fontSize: responsiveFontSize(16),
     fontWeight: "700",
     color: ChickIntelPalette.green1,
   },
