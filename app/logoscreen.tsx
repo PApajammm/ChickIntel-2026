@@ -32,12 +32,6 @@ export default function LogoScreen() {
                 <View style={styles.logoWrap}>
                     <ChickenLogo width={scale(200)} height={verticalScale(240)} />
                 </View>
-
-                <View style={styles.footerCustom} pointerEvents="none">
-                    <Text style={styles.footerSmall}>BY</Text>
-                    <Text style={styles.footerMain}>SD4A-G1</Text>
-                    <View style={styles.footerUnderline} />
-                </View>
             </View>
         </AuthFrame>
     );
