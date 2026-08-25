@@ -1,6 +1,8 @@
+import { useFocusEffect } from "@react-navigation/native";
 import { router } from "expo-router";
-import { useEffect } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { useCallback } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 import ChickenLogo from "@/assets_imported/splash-chicken.svg";
 import { AuthFrame } from "@/components/farm-auth";
@@ -12,19 +14,21 @@ import { moderateScale, responsiveFontSize, scale, verticalScale } from "@/utils
 export default function LogoScreen() {
     const { initialized, session } = useAuth();
 
-    useEffect(() => {
-        if (!initialized) return;
+    useFocusEffect(
+        useCallback(() => {
+            if (!initialized) return;
 
-        logStep("LogoScreen mounted", { screen: "logoscreen" });
+            logStep("LogoScreen mounted", { screen: "logoscreen" });
 
-        const timer = setTimeout(() => {
-            const target = session ? "/(tabs)" : "/loginscreen";
-            logStep("LogoScreen auto-navigate", { target });
-            router.replace(target);
-        }, 4000);
+            const timer = setTimeout(() => {
+                const target = session ? "/(tabs)" : "/loginscreen";
+                logStep("LogoScreen auto-navigate", { target });
+                router.replace(target);
+            }, 4000);
 
-        return () => clearTimeout(timer);
-    }, [initialized, session]);
+            return () => clearTimeout(timer);
+        }, [initialized, session])
+    );
 
     return (
         <AuthFrame footerText={undefined}>
@@ -32,6 +36,13 @@ export default function LogoScreen() {
                 <View style={styles.logoWrap}>
                     <ChickenLogo width={scale(200)} height={verticalScale(240)} />
                 </View>
+                
+                <Pressable 
+                    onPress={() => router.push("/developers")}
+                    style={styles.infoButton}
+                >
+                    <MaterialCommunityIcons name="information-outline" size={24} color="#2b2b2b" />
+                </Pressable>
             </View>
         </AuthFrame>
     );
@@ -53,6 +64,13 @@ const styles = StyleSheet.create({
         borderRadius: 36,
         overflow: "visible",
         alignItems: "center",
+    },
+    infoButton: {
+        position: "absolute",
+        bottom: 40,
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 8,
     },
     footerCustom: {
         position: "absolute",
