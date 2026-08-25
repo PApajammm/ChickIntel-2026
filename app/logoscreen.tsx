@@ -36,6 +36,7 @@ export default function LogoScreen() {
                 <View style={styles.logoWrap}>
                     <ChickenLogo width={scale(200)} height={verticalScale(240)} />
                 </View>
+<<<<<<< HEAD
                 
                 <Pressable 
                     onPress={() => router.push("/developers")}
@@ -43,6 +44,14 @@ export default function LogoScreen() {
                 >
                     <MaterialCommunityIcons name="information-outline" size={24} color="#2b2b2b" />
                 </Pressable>
+=======
+
+                <View style={styles.footerCustom} pointerEvents="none">
+                    <Text style={styles.footerSmall}>BY</Text>
+                    <Text style={styles.footerMain}>SD3A-G1</Text>
+                    <View style={styles.footerUnderline} />
+                </View>
+>>>>>>> parent of 0a76eaf (Update SD3A splash)
             </View>
         </AuthFrame>
     );
