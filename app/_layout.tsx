@@ -35,7 +35,7 @@ export default function RootLayout() {
       <AuthProvider>
         <FarmDataProvider>
           <StockAlertProvider>
-            <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+            <ThemeProvider value={DefaultTheme}>
               <Stack>
                 <Stack.Screen name="index" options={{ headerShown: false }} />
                 <Stack.Screen
@@ -60,7 +60,7 @@ export default function RootLayout() {
                   }}
                 />
               </Stack>
-              <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
+              <StatusBar style="dark" />
             </ThemeProvider>
           </StockAlertProvider>
         </FarmDataProvider>

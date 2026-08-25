@@ -4,25 +4,25 @@ import { useCameraPermissions } from "expo-camera";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import {
-    useCallback,
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
-    type ComponentType,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentType,
 } from "react";
 import {
-    Alert,
-    Animated,
-    Easing,
-    Modal,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    useWindowDimensions,
-    View,
+  Alert,
+  Animated,
+  Easing,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -45,22 +45,23 @@ import { getFarmColors } from "@/constants/farm-theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuth } from "@/providers/auth-provider";
 import {
-    fetchHomeKpiSnapshot,
-    formatBirdAdditionTrend,
-    formatKpiTrend,
-    type HomeKpiPeriod,
+  fetchHomeKpiSnapshot,
+  formatBirdAdditionTrend,
+  formatConsumptionTrend,
+  formatKpiTrend,
+  type HomeKpiPeriod,
 } from "@/utils/home-kpis";
 import { logError, logStep } from "@/utils/logger";
 import {
-    getFeaturedBreedCards,
-    type FeaturedBreedCard,
+  getFeaturedBreedCards,
+  type FeaturedBreedCard,
 } from "@/utils/recent-breed-scans";
 import {
-    moderateScale,
-    responsiveFontSize,
-    scale,
-    useResponsiveMetrics,
-    verticalScale,
+  moderateScale,
+  responsiveFontSize,
+  scale,
+  useResponsiveMetrics,
+  verticalScale,
 } from "@/utils/responsive";
 
 type KpiCardData = {
@@ -98,8 +99,8 @@ const initialKpiCards: KpiCardData[] = [
   },
   {
     title: "Feeds Consumed",
-    value: "0",
-    trend: "+0% this week",
+    value: "-0",
+    trend: "0% this week",
     period: "7 days",
     background: "primarySoft",
     Artwork: FeedsKpiArt,
@@ -130,9 +131,9 @@ function hexToRgba(hex: string, alpha = 1) {
   const bigint =
     h.length === 3
       ? h
-          .split("")
-          .map((c) => c + c)
-          .join("")
+        .split("")
+        .map((c) => c + c)
+        .join("")
       : h;
 
   const n = parseInt(bigint, 16);
@@ -178,6 +179,32 @@ export default function HomeScreen() {
   const walkRange = Math.round(width * 0.4);
   const walkingX = useRef(new Animated.Value(Math.round(width * 0.15))).current;
   const [isFacingRight, setIsFacingRight] = useState(true);
+  const [isQuickActionsExpanded, setIsQuickActionsExpanded] = useState(false);
+  const roleAnim = useRef(new Animated.Value(1)).current;
+  const roleColor = useMemo(() => {
+    return roleAnim.interpolate({
+      inputRange: [0.7, 1],
+      outputRange: ["#317667", "#1B4A40"],
+    });
+  }, [roleAnim]);
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(roleAnim, {
+          toValue: 0.7,
+          duration: 1500,
+          useNativeDriver: false,
+        }),
+        Animated.timing(roleAnim, {
+          toValue: 1,
+          duration: 1500,
+          useNativeDriver: false,
+        }),
+      ]),
+      { iterations: 5 }
+    ).start();
+  }, [roleAnim]);
 
   const dynamicKpiCardWidth = useMemo(() => {
     if (width < 360) return Math.floor(width * 0.5);
@@ -303,8 +330,14 @@ export default function HomeScreen() {
     return [
       {
         ...initialKpiCards[0],
-        value: String(snapshot.totalBirds),
+        value: String(snapshot.birdAdditionsByPeriod[birdsPeriod].current),
         period: birdsPeriod,
+        valueByPeriod: Object.fromEntries(
+          PERIOD_OPTIONS.map((period) => [
+            period,
+            String(snapshot.birdAdditionsByPeriod[period].current),
+          ]),
+        ) as Record<HomeKpiPeriod, string>,
         trendByPeriod: Object.fromEntries(
           PERIOD_OPTIONS.map((period) => [
             period,
@@ -347,7 +380,25 @@ export default function HomeScreen() {
         ...initialKpiCards[2],
         value: String(snapshot.feedQtyByPeriod[feedPeriod].current),
         period: feedPeriod,
-        trend: `kg ${periodLabelFromPeriod(feedPeriod)}`,
+        valueByPeriod: Object.fromEntries(
+          PERIOD_OPTIONS.map((period) => [
+            period,
+            String(snapshot.feedQtyByPeriod[period].current),
+          ]),
+        ) as Record<HomeKpiPeriod, string>,
+        trendByPeriod: Object.fromEntries(
+          PERIOD_OPTIONS.map((period) => [
+            period,
+            formatConsumptionTrend(
+              snapshot.feedQtyByPeriod[period].current,
+              snapshot.feedQtyByPeriod[period].previous,
+            ),
+          ]),
+        ) as Record<HomeKpiPeriod, string>,
+        trend: `${formatConsumptionTrend(
+          snapshot.feedQtyByPeriod[feedPeriod].current,
+          snapshot.feedQtyByPeriod[feedPeriod].previous,
+        )} ${periodLabelFromPeriod(feedPeriod)}`,
       },
     ];
   }, [activeFarm?.id, periodByTitle]);
@@ -435,32 +486,40 @@ export default function HomeScreen() {
   const displayKpis = kpiCards.map((k) => {
     const period = periodByTitle[k.title] ?? k.period;
     if (k.title === "Feeds Consumed") {
+      const trend = k.trendByPeriod?.[period as HomeKpiPeriod] ?? "0%";
+      const rawValue = k.valueByPeriod?.[period as HomeKpiPeriod] ?? k.value;
       return {
         ...k,
+        value: rawValue.startsWith("-") ? rawValue : `-${rawValue}`,
         period,
-        trend: `kg ${periodLabelFromPeriod(period)}`,
+        trend: `${trend} ${periodLabelFromPeriod(period)}`,
       };
     }
 
     if (k.title === "Total Birds") {
-      return {
-        ...k,
-        period,
-        trend: `${k.trendByPeriod?.[period as HomeKpiPeriod] ?? "0% no change"} ${periodLabelFromPeriod(period)}`,
-      };
-    }
-
-    if (k.title === "Collected Eggs") {
+      const rawTrend = k.trendByPeriod?.[period as HomeKpiPeriod] ?? "+0%";
+      const cleanTrend = rawTrend.replace(/^-/, "+");
       return {
         ...k,
         value: k.valueByPeriod?.[period as HomeKpiPeriod] ?? k.value,
         period,
-        trend: `${k.trendByPeriod?.[period as HomeKpiPeriod] ?? "+0%"} ${periodLabelFromPeriod(period)}`,
+        trend: `${cleanTrend} ${periodLabelFromPeriod(period)}`,
       };
     }
 
-    // preserve numeric prefix like "+0%" if present, otherwise use whole trend
-    const prefix = k.trend?.split(" ")[0] ?? k.trend ?? "";
+    if (k.title === "Collected Eggs") {
+      const rawTrend = k.trendByPeriod?.[period as HomeKpiPeriod] ?? "+0%";
+      const cleanTrend = rawTrend.replace(/^-/, "+");
+      return {
+        ...k,
+        value: k.valueByPeriod?.[period as HomeKpiPeriod] ?? k.value,
+        period,
+        trend: `${cleanTrend} ${periodLabelFromPeriod(period)}`,
+      };
+    }
+
+    const rawPrefix = k.trend?.split(" ")[0] ?? k.trend ?? "";
+    const prefix = rawPrefix.replace(/^-/, "+");
     const suffix = periodLabelFromPeriod(period);
     const trend = prefix ? `${prefix} ${suffix}` : k.trend;
 
@@ -493,21 +552,15 @@ export default function HomeScreen() {
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.background }]}>
-      {colorScheme === "dark" ? (
-        <View
-          style={[
-            StyleSheet.absoluteFill,
-            { backgroundColor: colors.background },
-          ]}
-        />
-      ) : (
-        <BackgroundGradient
-          width="100%"
-          height="100%"
-          preserveAspectRatio="xMidYMid slice"
-          style={StyleSheet.absoluteFill}
-        />
-      )}
+      <BackgroundGradient
+        width="110%"
+        height="110%"
+        preserveAspectRatio="xMidYMid slice"
+        style={[
+          StyleSheet.absoluteFill,
+          { transform: [{ scale: 1.08 }, { translateY: -14 }] },
+        ]}
+      />
 
       <ScrollView
         contentContainerStyle={[
@@ -525,9 +578,20 @@ export default function HomeScreen() {
             <Text style={[styles.greeting, { color: colors.text }]}>
               Welcome!
             </Text>
-            <Text style={[styles.userRoleText, { color: colors.primary }]}>
+            <Animated.Text
+              style={[
+                styles.userRoleText,
+                {
+                  color: roleColor,
+                  opacity: roleAnim,
+                  textShadowColor: "rgba(49, 118, 103, 0.5)",
+                  textShadowOffset: { width: 0, height: 0 },
+                  textShadowRadius: 8,
+                }
+              ]}
+            >
               {roleLabel}
-            </Text>
+            </Animated.Text>
           </View>
           <Text style={[styles.headerDateLive, { color: colors.textMuted }]}>
             {todayLabel}
@@ -548,10 +612,7 @@ export default function HomeScreen() {
                   styles.kpiCard,
                   {
                     width: dynamicKpiCardWidth,
-                    borderColor: withAlpha(
-                      colorScheme === "dark" ? "#CAE3DD" : colors.border,
-                      colorScheme === "dark" ? 0.25 : 0.25,
-                    ),
+                    borderColor: withAlpha(colors.border, 0.25),
                   },
                 ]}
                 borderRadius={10}
@@ -561,10 +622,7 @@ export default function HomeScreen() {
                   style={[
                     styles.kpiTint,
                     {
-                      backgroundColor: withAlpha(
-                        colors[item.background],
-                        colorScheme === "dark" ? 0.16 : 0.22,
-                      ),
+                      backgroundColor: withAlpha(colors[item.background], 0.22),
                     },
                   ]}
                   pointerEvents="none"
@@ -588,14 +646,8 @@ export default function HomeScreen() {
                     style={[
                       styles.periodChip,
                       {
-                        backgroundColor: withAlpha(
-                          colors.surface,
-                          colorScheme === "dark" ? 0.24 : 0.38,
-                        ),
-                        borderColor: withAlpha(
-                          colors.border,
-                          colorScheme === "dark" ? 0.18 : 0.3,
-                        ),
+                        backgroundColor: withAlpha(colors.surface, 0.38),
+                        borderColor: withAlpha(colors.border, 0.3),
                       },
                     ]}
                   >
@@ -660,15 +712,28 @@ export default function HomeScreen() {
           style={[
             styles.quickActionsCard,
             {
-              borderColor: withAlpha(
-                ChickIntelPalette.green2,
-                colorScheme === "dark" ? 0.28 : 0.33,
-              ),
+              borderColor: withAlpha(ChickIntelPalette.green2, 0.33),
             },
           ]}
-          borderRadius={18}
+          borderRadius={10}
           intensity={18}
         >
+          <View style={styles.quickActionsHeader}>
+            <Pressable
+              style={styles.viewAllBtn}
+              onPress={() => setIsQuickActionsExpanded(!isQuickActionsExpanded)}
+              accessibilityLabel={isQuickActionsExpanded ? "View Less" : "View All"}
+            >
+              <Text style={styles.viewAllText}>
+                {isQuickActionsExpanded ? "View Less" : "View All"}
+              </Text>
+              <MaterialCommunityIcons
+                name={isQuickActionsExpanded ? "arrow-down-circle-outline" : "arrow-right-circle-outline"}
+                size={22}
+                color={ChickIntelPalette.green1}
+              />
+            </Pressable>
+          </View>
           <View style={styles.walkingGifWrap}>
             <Animated.View style={{ transform: [{ translateX: walkingX }] }}>
               <Animated.View
@@ -688,16 +753,13 @@ export default function HomeScreen() {
             style={[
               styles.quickActionsTint,
               {
-                backgroundColor: withAlpha(
-                  ChickIntelPalette.mediumGreen,
-                  colorScheme === "dark" ? 0.16 : 0.2,
-                ),
+                backgroundColor: withAlpha(ChickIntelPalette.mediumGreen, 0.2),
               },
             ]}
             pointerEvents="none"
           />
           <View style={styles.quickActionsGrid}>
-            {quickActions.map((item) => {
+            {(isQuickActionsExpanded ? quickActions : quickActions.slice(0, 6)).map((item) => {
               const Icon = item.Icon;
               return (
                 <Pressable
@@ -729,13 +791,14 @@ export default function HomeScreen() {
                         style={{
                           marginTop: 2,
                           fontFamily: ChickFont.sans,
-                          fontSize: 10,
-                          fontWeight: "800",
+                          fontSize: responsiveFontSize(11),
+                          fontWeight: "700",
                           color: ChickIntelPalette.green1,
                           textAlign: "center",
+                          lineHeight: 13,
                         }}
                       >
-                        Health Monitoring
+                        Health{"\n"}Monitoring
                       </Text>
                     )}
                   </View>
@@ -961,18 +1024,18 @@ const styles = StyleSheet.create({
   },
   greeting: {
     fontFamily: ChickFont.display,
-    fontSize: responsiveFontSize(27),
-    lineHeight: 38,
+    fontSize: responsiveFontSize(20),
+    lineHeight: 28,
     fontWeight: "600",
     letterSpacing: -0.65,
   },
   userRoleText: {
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(15),
-    lineHeight: 12,
-    fontWeight: "600",
+    fontSize: responsiveFontSize(19),
+    lineHeight: 20,
+    fontWeight: "700",
     color: ChickIntelPalette.green1,
-    marginTop: 1,
+    marginTop: 3,
   },
   /** Real-time date — neutral Gray 2 from ChickIntel palette */
   headerDateLive: {
@@ -1063,10 +1126,29 @@ const styles = StyleSheet.create({
     opacity: 0.95,
   },
   quickActionsCard: {
-    paddingVertical: verticalScale(10),
-    paddingHorizontal: moderateScale(10),
+    paddingTop: verticalScale(12),
+    paddingBottom: verticalScale(12),
+    paddingHorizontal: moderateScale(12),
     position: "relative",
     overflow: "hidden",
+  },
+  quickActionsHeader: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    paddingTop: verticalScale(8),
+    paddingRight: moderateScale(8),
+    zIndex: 10,
+  },
+  viewAllBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  viewAllText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(16),
+    fontWeight: "700",
+    color: ChickIntelPalette.green1,
   },
   walkingGifWrap: {
     position: "absolute",
@@ -1111,11 +1193,11 @@ const styles = StyleSheet.create({
     paddingBottom: 6,
   },
   featureCardWrap: {
-    borderRadius: 28,
+    borderRadius: 10,
   },
   featureCard: {
     height: verticalScale(175),
-    borderRadius: 28,
+    borderRadius: 10,
     overflow: "hidden",
     shadowOpacity: 0.28,
     shadowRadius: 16,

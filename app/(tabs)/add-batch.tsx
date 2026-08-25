@@ -404,13 +404,26 @@ export default function AddBatchScreen() {
           keyboardDismissMode="on-drag"
         >
           <View style={styles.createHero}>
-            <View style={styles.createHeroIcon}>
+            <Pressable
+              onPress={() =>
+                router.replace({
+                  pathname: "/(tabs)/profiles" as any,
+                  params: { mode: "chicken" },
+                })
+              }
+              style={({ pressed }) => [
+                styles.createHeroIcon,
+                { opacity: pressed ? 0.75 : 1 },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
+            >
               <MaterialCommunityIcons
-                name="bird"
-                size={28}
+                name="arrow-left"
+                size={24}
                 color={ChickIntelPalette.green1}
               />
-            </View>
+            </Pressable>
             <View style={styles.createHeroCopy}>
               <Text style={styles.createHeroKicker}>Chicken profile</Text>
               <Text style={styles.pageTitle}>{pageTitle}</Text>
@@ -687,7 +700,7 @@ export default function AddBatchScreen() {
                       farmId: activeFarm.id,
                       batchNo: newBatch.id,
                     });
-                    router.push("/(tabs)/profiles");
+                    router.push({ pathname: "/(tabs)/profiles" as any, params: { mode } });
                   })
                   .catch((error) => {
                     Alert.alert(

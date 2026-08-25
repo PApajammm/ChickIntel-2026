@@ -21,6 +21,7 @@ import {
 } from "@/utils/supabase-reports";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Print from "expo-print";
+import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -232,6 +233,17 @@ function renderSupplySection(
   categoryIcon: string,
   supply: FarmReportSnapshot["supply"],
 ) {
+  if (supply.slices && supply.slices.length > 0) {
+    return renderProductionSection(title, categoryIcon, {
+      title,
+      total:
+        supply.totalSlices ??
+        supply.slices.reduce((sum, s) => sum + s.count, 0),
+      slices: supply.slices,
+      analyticsText: supply.analyticsText,
+    });
+  }
+
   const totalQty = supply.bars.reduce((sum, b) => sum + b.value, 0);
   const peakBar = supply.bars.reduce(
     (max, b) => (b.value > max.value ? b : max),
@@ -1099,10 +1111,10 @@ function SmartInsightCard({ text }: { text: string }) {
 }
 
 export default function ReportsScreen() {
+  const router = useRouter();
   const insets = useSafeAreaInsets();
-  const colorScheme = useColorScheme();
   const { activeFarm, profile } = useAuth();
-  const isDark = colorScheme === "dark";
+  const isDark = false;
   const activeFarmId = activeFarm?.id;
 
   const [overview, setOverview] = useState<ReportOverview>("Weekly");
@@ -1279,11 +1291,28 @@ export default function ReportsScreen() {
         {/* Pinned Top Header */}
         <View style={styles.fixedHeader}>
           <View style={styles.header}>
-            <View>
-              <Text style={styles.screenTitle}>Farm Reports</Text>
-              <Text style={styles.screenSubtitle}>
-                {activeFarm?.name || "No active farm"} • {overview} Snapshot
-              </Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+              <TouchableOpacity
+                style={styles.printButton}
+                onPress={() =>
+                  router.canGoBack() ? router.back() : router.replace("/(tabs)")
+                }
+                activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel="Go back"
+              >
+                <MaterialCommunityIcons
+                  name="arrow-left"
+                  size={22}
+                  color="#FFF"
+                />
+              </TouchableOpacity>
+              <View>
+                <Text style={styles.screenTitle}>Farm Reports</Text>
+                <Text style={styles.screenSubtitle}>
+                  {activeFarm?.name || "No active farm"} • {overview} Snapshot
+                </Text>
+              </View>
             </View>
             <TouchableOpacity
               style={styles.printButton}
@@ -1481,12 +1510,21 @@ export default function ReportsScreen() {
                 />
               </View>
 
-              <View style={styles.barChartWrapper}>
-                <ConsumptionBarChart
-                  bars={report.supply.bars}
-                  maxY={report.supply.maxY}
-                />
-              </View>
+              {report.supply.slices && report.supply.slices.length > 0 ? (
+                <View style={styles.chartWrapper}>
+                  <DonutChart
+                    slices={report.supply.slices}
+                    total={report.supply.totalSlices ?? 0}
+                  />
+                </View>
+              ) : (
+                <View style={styles.barChartWrapper}>
+                  <ConsumptionBarChart
+                    bars={report.supply.bars}
+                    maxY={report.supply.maxY}
+                  />
+                </View>
+              )}
 
               <SmartInsightCard text={report.supply.analyticsText} />
             </View>

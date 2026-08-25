@@ -266,6 +266,23 @@ export default function ScannerScreen() {
 
             <View style={styles.overlay} pointerEvents="box-none">
                 <View style={[styles.topRow, { paddingTop: insets.top + 10 }]}>
+                    <Pressable
+                        onPress={() =>
+                            router.canGoBack() ? router.back() : router.replace("/(tabs)")
+                        }
+                        style={({ pressed }) => [
+                            styles.flashToggle,
+                            { opacity: pressed ? 0.86 : 1 },
+                        ]}
+                        accessibilityRole="button"
+                        accessibilityLabel="Go back"
+                    >
+                        <MaterialCommunityIcons
+                            name="arrow-left"
+                            size={22}
+                            color={ChickIntelPalette.gray1}
+                        />
+                    </Pressable>
                     <View style={styles.titleStack}>
                         <Text style={styles.instruction}>{modeCopy.title}</Text>
                         <Text style={styles.subInstruction} numberOfLines={isCompactScreen ? 1 : 2}>

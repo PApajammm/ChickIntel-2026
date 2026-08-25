@@ -39,10 +39,7 @@ export function AuthFrame({ children, footerText }: AuthFrameProps) {
                 style={[
                     styles.overlay,
                     {
-                        backgroundColor:
-                            colorScheme === "dark"
-                                ? "rgba(7, 11, 8, 0.72)"
-                                : "rgba(244, 240, 232, 0.72)",
+                        backgroundColor: "rgba(244, 240, 232, 0.72)",
                     },
                 ]}
             />

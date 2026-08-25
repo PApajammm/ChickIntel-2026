@@ -379,7 +379,23 @@ export default function HealthMonitoringIndexScreen() {
       >
         <StatusBar style="dark" />
         <View style={styles.headerRow}>
-          <Text style={styles.pageTitle}>Health Monitoring</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+            <Pressable
+              onPress={() =>
+                router.canGoBack() ? router.back() : router.replace("/(tabs)")
+              }
+              hitSlop={12}
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
+            >
+              <MaterialCommunityIcons
+                name="arrow-left"
+                size={24}
+                color={ChickIntelPalette.gray1}
+              />
+            </Pressable>
+            <Text style={styles.pageTitle}>Health Monitoring</Text>
+          </View>
         </View>
 
         <View style={styles.tabs}>

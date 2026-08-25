@@ -2,6 +2,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useFocusEffect } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
+import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
     ActivityIndicator,
@@ -209,9 +210,9 @@ const groupTasksByDate = (tasks: SupabaseScheduleTask[]) =>
   }, {});
 
 export default function ScheduleScreen() {
+  const router = useRouter();
   const insets = useSafeAreaInsets();
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
+  const isDark = false;
   const { activeFarm, configured } = useAuth();
   const { width } = useWindowDimensions();
 
@@ -604,6 +605,8 @@ export default function ScheduleScreen() {
       end.setMonth(start.getMonth() + 1);
     } else if (selectedRepeat === "Annually") {
       end.setFullYear(start.getFullYear() + 1);
+    } else if (selectedRepeat === "Custom") {
+      end.setDate(start.getDate() + 30);
     } else if (selectedRepeat === "Never") {
       end.setTime(start.getTime());
     }
@@ -658,6 +661,14 @@ export default function ScheduleScreen() {
       !isEggCollecting && newConsumableInventoryId !== null;
     const hasInventoryAmountInput =
       !isEggCollecting && newConsumableDailyAmount.trim().length > 0;
+
+    if (repeat === "Custom" && customRepeatDays.length === 0) {
+      Alert.alert(
+        "Custom repeat days required",
+        "Choose at least one day for this custom schedule.",
+      );
+      return;
+    }
 
     if (
       !isEggCollecting &&
@@ -770,12 +781,28 @@ export default function ScheduleScreen() {
         preserveAspectRatio="xMidYMid slice"
         style={StyleSheet.absoluteFill}
       />
-      <StatusBar style={isDark ? "light" : "dark"} />
+      <StatusBar style="dark" />
 
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
-        <Text style={[styles.headerTitle, { fontSize: responsiveTitleSize }]}>
-          Schedule
-        </Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+          <Pressable
+            onPress={() =>
+              router.canGoBack() ? router.back() : router.replace("/(tabs)")
+            }
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+          >
+            <MaterialCommunityIcons
+              name="arrow-left"
+              size={24}
+              color={ChickIntelPalette.gray1}
+            />
+          </Pressable>
+          <Text style={[styles.headerTitle, { fontSize: responsiveTitleSize }]}>
+            Schedule
+          </Text>
+        </View>
       </View>
 
       <ScrollView

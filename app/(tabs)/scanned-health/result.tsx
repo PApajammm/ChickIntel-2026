@@ -495,9 +495,25 @@ export default function ScannedHealthResultScreen() {
       
       {/* Pinned Top Header */}
       <View style={styles.fixedHeader}>
-        <Text style={styles.pageTitle}>
-          {isMonitoringRescan ? "Update Health Scan" : "Scanned Health Result"}
-        </Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+          <Pressable
+            onPress={() =>
+              router.canGoBack() ? router.back() : router.replace("/(tabs)")
+            }
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+          >
+            <MaterialCommunityIcons
+              name="arrow-left"
+              size={24}
+              color={ChickIntelPalette.gray1}
+            />
+          </Pressable>
+          <Text style={styles.pageTitle}>
+            {isMonitoringRescan ? "Update Health Scan" : "Scanned Health Result"}
+          </Text>
+        </View>
         <Text style={styles.pageSubtitle}>
           {isAnalyzingImage
             ? "Analyzing the captured image before finalizing the report."

@@ -64,34 +64,14 @@ export function ChickTabBar({ onLogoutPress, ..._rest }: ChickTabBarProps) {
         {
           backgroundColor: isScanner
             ? "transparent"
-            : colorScheme === "dark"
-              ? colors.surface
-              : ChickIntelPalette.light1,
+            : ChickIntelPalette.light1,
           borderTopColor: isScanner
             ? "transparent"
-            : colorScheme === "dark"
-              ? colors.border
-              : ChickIntelPalette.lightGreen,
+            : ChickIntelPalette.lightGreen,
           paddingBottom: Math.max(insets.bottom, 6),
         },
       ]}
     >
-      <Pressable
-        onPress={goBack}
-        style={({ pressed }) => [styles.item, { opacity: pressed ? 0.75 : 1 }]}
-        accessibilityRole="button"
-        accessibilityLabel="Back"
-      >
-        <MaterialCommunityIcons
-          name="arrow-left"
-          size={26}
-          color={inactiveColor}
-        />
-        <Text style={[styles.label, { color: inactiveColor }]}>
-          Back
-        </Text>
-      </Pressable>
-
       <Pressable
         onPress={goHome}
         style={({ pressed }) => [styles.item, { opacity: pressed ? 0.85 : 1 }]}

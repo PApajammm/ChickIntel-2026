@@ -131,9 +131,7 @@ export function MetricCard({
                     styles.metricIcon,
                     {
                         backgroundColor:
-                            toneBackgrounds[tone][
-                                colorScheme === "dark" ? "dark" : "light"
-                            ],
+                            toneBackgrounds[tone]["light"],
                     },
                 ]}
             >
@@ -141,9 +139,7 @@ export function MetricCard({
                     name={icon as never}
                     size={20}
                     color={
-                        toneText[tone][
-                            colorScheme === "dark" ? "dark" : "light"
-                        ]
+                        toneText[tone]["light"]
                     }
                 />
             </View>
@@ -195,9 +191,7 @@ export function ActionCard({
                     styles.actionIcon,
                     {
                         backgroundColor:
-                            toneBackgrounds[tone][
-                                colorScheme === "dark" ? "dark" : "light"
-                            ],
+                            toneBackgrounds[tone]["light"],
                     },
                 ]}
             >
@@ -205,9 +199,7 @@ export function ActionCard({
                     name={icon as never}
                     size={22}
                     color={
-                        toneText[tone][
-                            colorScheme === "dark" ? "dark" : "light"
-                        ]
+                        toneText[tone]["light"]
                     }
                 />
             </View>
@@ -237,9 +229,7 @@ export function StatusPill({ label, tone }: StatusPillProps) {
                 styles.statusPill,
                 {
                     backgroundColor:
-                        toneBackgrounds[tone][
-                            colorScheme === "dark" ? "dark" : "light"
-                        ],
+                        toneBackgrounds[tone]["light"],
                 },
             ]}
         >
@@ -247,9 +237,7 @@ export function StatusPill({ label, tone }: StatusPillProps) {
                 style={[
                     styles.statusPillText,
                     {
-                        color: toneText[tone][
-                            colorScheme === "dark" ? "dark" : "light"
-                        ],
+                        color: toneText[tone]["light"],
                     },
                 ]}
             >
@@ -278,9 +266,7 @@ export function ListRow({ icon, title, detail, trailing, tone }: ListRowProps) {
                     styles.listRowIcon,
                     {
                         backgroundColor:
-                            toneBackgrounds[tone][
-                                colorScheme === "dark" ? "dark" : "light"
-                            ],
+                            toneBackgrounds[tone]["light"],
                     },
                 ]}
             >
@@ -288,9 +274,7 @@ export function ListRow({ icon, title, detail, trailing, tone }: ListRowProps) {
                     name={icon as never}
                     size={18}
                     color={
-                        toneText[tone][
-                            colorScheme === "dark" ? "dark" : "light"
-                        ]
+                        toneText[tone]["light"]
                     }
                 />
             </View>

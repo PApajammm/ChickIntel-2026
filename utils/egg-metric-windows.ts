@@ -9,7 +9,15 @@ export function startOfDay(date: Date) {
 export function shiftDate(date: Date, amount: number, unit: "days" | "months") {
   const next = new Date(date);
   if (unit === "months") {
+    const day = next.getDate();
+    next.setDate(1);
     next.setMonth(next.getMonth() + amount);
+    const maxDays = new Date(
+      next.getFullYear(),
+      next.getMonth() + 1,
+      0,
+    ).getDate();
+    next.setDate(Math.min(day, maxDays));
   } else {
     next.setDate(next.getDate() + amount);
   }

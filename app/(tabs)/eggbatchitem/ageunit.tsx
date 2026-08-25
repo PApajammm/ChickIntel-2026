@@ -354,13 +354,26 @@ export default function EggBatchAgeUnitScreen() {
           keyboardDismissMode="on-drag"
         >
           <View style={styles.createHero}>
-            <View style={styles.createHeroIcon}>
+            <Pressable
+              onPress={() =>
+                router.replace({
+                  pathname: "/(tabs)/profiles" as any,
+                  params: { mode: "egg" },
+                })
+              }
+              style={({ pressed }) => [
+                styles.createHeroIcon,
+                { opacity: pressed ? 0.75 : 1 },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
+            >
               <MaterialCommunityIcons
-                name="egg-outline"
-                size={30}
+                name="arrow-left"
+                size={24}
                 color={ChickIntelPalette.green1}
               />
-            </View>
+            </Pressable>
             <View style={styles.createHeroCopy}>
               <Text style={styles.createHeroKicker}>Egg production</Text>
               <Text style={styles.pageTitle}>Create Egg Batch</Text>

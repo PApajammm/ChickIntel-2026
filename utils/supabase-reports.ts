@@ -30,6 +30,8 @@ export type FarmReportSnapshot = {
     title: string;
     bars: ReportBarPoint[];
     maxY: number;
+    slices?: ReportDonutSlice[];
+    totalSlices?: number;
     analyticsText: string;
   };
 };
@@ -59,6 +61,7 @@ type EggBatchReportRow = {
 };
 
 type BatchReportRow = {
+  batch_no?: string | null;
   female_count: number;
   male_count: number;
   isolated_count: number;
@@ -68,6 +71,7 @@ type BatchReportRow = {
 
 type InventoryReportRow = {
   item_type: string;
+  item_name?: string | null;
   qty: number;
   created_at: string;
 };
@@ -88,7 +92,15 @@ function addDays(date: Date, amount: number) {
 
 function addMonths(date: Date, amount: number) {
   const next = new Date(date);
+  const day = next.getDate();
+  next.setDate(1);
   next.setMonth(next.getMonth() + amount);
+  const maxDays = new Date(
+    next.getFullYear(),
+    next.getMonth() + 1,
+    0,
+  ).getDate();
+  next.setDate(Math.min(day, maxDays));
   return next;
 }
 
@@ -116,7 +128,7 @@ function toNiceAxisMax(maxValue: number) {
 
 function formatOverviewWindow(overview: ReportOverview) {
   if (overview === "Weekly") return "the last 7 days";
-  if (overview === "Monthly") return "the current month";
+  if (overview === "Monthly") return "the last 30 days";
   return "the last 12 months";
 }
 
@@ -271,21 +283,35 @@ function buildEggFertilitySnapshot(
 function buildChickenProductionSnapshot(
   rows: BatchReportRow[],
   overview: ReportOverview,
+  deceasedRows: { batch_no?: string | null }[] = [],
 ) {
-  const active = rows.reduce((sum, row) => {
+  const deceasedCountByBatch = new Map<string, number>();
+  deceasedRows.forEach((row) => {
+    if (row.batch_no) {
+      const key = row.batch_no.trim();
+      deceasedCountByBatch.set(key, (deceasedCountByBatch.get(key) ?? 0) + 1);
+    }
+  });
+
+  let active = 0;
+  let isolated = 0;
+  let lost = 0;
+
+  rows.forEach((row) => {
     const totalBirds = Number(row.female_count) + Number(row.male_count);
-    return (
-      sum +
-      clampToNonNegative(
-        totalBirds - Number(row.isolated_count) - Number(row.killed_count),
-      )
-    );
-  }, 0);
-  const isolated = rows.reduce(
-    (sum, row) => sum + Number(row.isolated_count),
-    0,
-  );
-  const lost = rows.reduce((sum, row) => sum + Number(row.killed_count), 0);
+    const isolatedCount = Number(row.isolated_count);
+    const batchKilled = Number(row.killed_count);
+    const monitoringDeceased = row.batch_no
+      ? (deceasedCountByBatch.get(row.batch_no.trim()) ?? 0)
+      : 0;
+    const killedCount = Math.max(batchKilled, monitoringDeceased);
+
+    const activeInRow = clampToNonNegative(totalBirds - isolatedCount - killedCount);
+    active += activeInRow;
+    isolated += isolatedCount;
+    lost += killedCount;
+  });
+
   const total = active + isolated + lost;
 
   const slices: ReportDonutSlice[] = [
@@ -423,10 +449,126 @@ function buildSupplySnapshot(
       ? `No ${supplyType.toLowerCase()} inventory additions were recorded for ${formatOverviewWindow(overview)}.`
       : `${supplyType} inventory additions totaled ${total.toFixed(2)} units for ${formatOverviewWindow(overview)}. The highest recorded day or month was ${peakBar?.label ?? "N/A"} at ${peakBar?.value.toFixed(2) ?? "0.00"} units.`;
 
+  let slices: ReportDonutSlice[] | undefined;
+  let totalSlices: number | undefined;
+
+  if (supplyType === "Vitamins & Meds") {
+    let vitaminsCount = 0;
+    let medsCount = 0;
+    let vaccinesCount = 0;
+
+    filteredRows.forEach((row) => {
+      const typeStr = (row.item_type ?? "").toLowerCase();
+      const nameStr = (row.item_name ?? "").toLowerCase();
+      const combined = `${typeStr} ${nameStr}`;
+      const qty = Number(row.qty ?? 0);
+
+      if (
+        combined.includes("vitamin") ||
+        combined.includes("supplement") ||
+        combined.includes("booster") ||
+        combined.includes("electrolyte") ||
+        combined.includes("calcium") ||
+        combined.includes("mineral")
+      ) {
+        vitaminsCount += qty;
+      } else if (
+        combined.includes("med") ||
+        combined.includes("medicine") ||
+        combined.includes("antibiotic") ||
+        combined.includes("treatment") ||
+        combined.includes("dewormer") ||
+        combined.includes("antiseptic")
+      ) {
+        medsCount += qty;
+      } else {
+        vaccinesCount += qty;
+      }
+    });
+
+    totalSlices = vitaminsCount + medsCount + vaccinesCount;
+
+    slices = [
+      {
+        label: "vitamins & supplements",
+        count: vitaminsCount,
+        color: DONUT_COLORS[0],
+        displayPercent: toDisplayPercent(vitaminsCount, totalSlices),
+      },
+      {
+        label: "medications & treatments",
+        count: medsCount,
+        color: DONUT_COLORS[1],
+        displayPercent: toDisplayPercent(medsCount, totalSlices),
+      },
+      {
+        label: "vaccines & prevention",
+        count: vaccinesCount,
+        color: DONUT_COLORS[2],
+        displayPercent: toDisplayPercent(vaccinesCount, totalSlices),
+      },
+    ];
+  } else if (supplyType === "Feeds") {
+    let layerCount = 0;
+    let growerCount = 0;
+    let pelletCount = 0;
+
+    filteredRows.forEach((row) => {
+      const typeStr = (row.item_type ?? "").toLowerCase();
+      const nameStr = (row.item_name ?? "").toLowerCase();
+      const combined = `${typeStr} ${nameStr}`;
+      const qty = Number(row.qty ?? 0);
+
+      if (
+        combined.includes("layer") ||
+        combined.includes("mash") ||
+        combined.includes("egg") ||
+        combined.includes("production")
+      ) {
+        layerCount += qty;
+      } else if (
+        combined.includes("grower") ||
+        combined.includes("starter") ||
+        combined.includes("chick") ||
+        combined.includes("brooder") ||
+        combined.includes("developer")
+      ) {
+        growerCount += qty;
+      } else {
+        pelletCount += qty;
+      }
+    });
+
+    totalSlices = layerCount + growerCount + pelletCount;
+
+    slices = [
+      {
+        label: "layer & production feeds",
+        count: layerCount,
+        color: DONUT_COLORS[0],
+        displayPercent: toDisplayPercent(layerCount, totalSlices),
+      },
+      {
+        label: "grower & starter feeds",
+        count: growerCount,
+        color: DONUT_COLORS[1],
+        displayPercent: toDisplayPercent(growerCount, totalSlices),
+      },
+      {
+        label: "pellets & finisher feeds",
+        count: pelletCount,
+        color: DONUT_COLORS[2],
+        displayPercent: toDisplayPercent(pelletCount, totalSlices),
+      },
+    ];
+  }
+
   return {
     title: `${supplyType} Inventory Activity`,
     bars,
     maxY: toNiceAxisMax(highestValue),
+    slices,
+    totalSlices,
     analyticsText,
   };
 }
@@ -447,6 +589,7 @@ export async function fetchFarmReportSnapshot(input: {
     { data: eggRows, error: eggError },
     { data: batchRows, error: batchError },
     { data: inventoryRows, error: inventoryError },
+    { data: deceasedRows },
   ] = await Promise.all([
     supabase
       .from("egg_batches")
@@ -458,15 +601,19 @@ export async function fetchFarmReportSnapshot(input: {
     supabase
       .from("batches")
       .select(
-        "female_count, male_count, isolated_count, killed_count, created_at",
+        "batch_no, female_count, male_count, isolated_count, killed_count, created_at",
       )
+      .eq("farm_id", input.farmId),
+    supabase
+      .from("inventory_items")
+      .select("item_type, item_name, qty, created_at")
       .eq("farm_id", input.farmId)
       .gte("created_at", reportStart),
     supabase
-      .from("inventory_items")
-      .select("item_type, qty, created_at")
+      .from("health_monitoring")
+      .select("batch_no, monitoring_status")
       .eq("farm_id", input.farmId)
-      .gte("created_at", reportStart),
+      .eq("monitoring_status", "Deceased"),
   ]);
 
   if (eggError) throw eggError;
@@ -486,6 +633,7 @@ export async function fetchFarmReportSnapshot(input: {
             isWithinWindow(row.created_at, new Date(reportStart), now),
           ),
           input.overview,
+          (deceasedRows ?? []) as { batch_no?: string | null }[],
         );
 
   const supply = buildSupplySnapshot(

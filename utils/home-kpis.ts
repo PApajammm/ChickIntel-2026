@@ -205,11 +205,12 @@ export async function fetchHomeKpiSnapshot(
     { data: batchRows, error: batchError },
     { data: eggRows, error: eggError },
     { data: inventoryRows, error: inventoryError },
+    { data: deceasedRows },
     scheduleTasks,
   ] = await Promise.all([
     supabase
       .from("batches")
-      .select("female_count, male_count, created_at")
+      .select("batch_no, female_count, male_count, isolated_count, killed_count, created_at")
       .eq("farm_id", farmId),
     supabase
       .from("egg_batches")
@@ -219,6 +220,11 @@ export async function fetchHomeKpiSnapshot(
       .from("inventory_items")
       .select("id, item_type, item_name, qty, created_at")
       .eq("farm_id", farmId),
+    supabase
+      .from("health_monitoring")
+      .select("batch_no, monitoring_status")
+      .eq("farm_id", farmId)
+      .eq("monitoring_status", "Deceased"),
     fetchScheduleTasks(farmId),
   ]);
 
@@ -226,19 +232,51 @@ export async function fetchHomeKpiSnapshot(
   if (eggError) throw eggError;
   if (inventoryError) throw inventoryError;
 
-  const batches = (batchRows ?? []) as BatchKpiRow[];
+  const batches = (batchRows ?? []) as (BatchKpiRow & {
+    batch_no?: string;
+    isolated_count?: number;
+    killed_count?: number;
+  })[];
   const eggs = (eggRows ?? []) as EggKpiRow[];
   const inventory = (inventoryRows ?? []) as InventoryKpiRow[];
 
-  const totalBirds = batches.reduce(
-    (sum, batch) => sum + Number(batch.female_count) + Number(batch.male_count),
-    0,
-  );
+  const deceasedCountByBatch = new Map<string, number>();
+  (deceasedRows ?? []).forEach((row: { batch_no?: string | null }) => {
+    if (row.batch_no) {
+      const key = row.batch_no.trim();
+      deceasedCountByBatch.set(key, (deceasedCountByBatch.get(key) ?? 0) + 1);
+    }
+  });
 
-  const birdEvents = batches.map((batch) => ({
-    createdAt: batch.created_at,
-    value: Number(batch.female_count) + Number(batch.male_count),
-  }));
+  const totalBirds = batches.reduce((sum, batch) => {
+    const female = Number(batch.female_count ?? 0);
+    const male = Number(batch.male_count ?? 0);
+    const isolated = Number(batch.isolated_count ?? 0);
+    const batchKilled = Number(batch.killed_count ?? 0);
+    const monitoringDeceased = batch.batch_no
+      ? (deceasedCountByBatch.get(batch.batch_no.trim()) ?? 0)
+      : 0;
+    const killed = Math.max(batchKilled, monitoringDeceased);
+    const activeInBatch = Math.max(0, female + male - killed - isolated);
+    return sum + activeInBatch;
+  }, 0);
+
+  const birdEvents = batches.map((batch) => {
+    const female = Number(batch.female_count ?? 0);
+    const male = Number(batch.male_count ?? 0);
+    const isolated = Number(batch.isolated_count ?? 0);
+    const batchKilled = Number(batch.killed_count ?? 0);
+    const monitoringDeceased = batch.batch_no
+      ? (deceasedCountByBatch.get(batch.batch_no.trim()) ?? 0)
+      : 0;
+    const killed = Math.max(batchKilled, monitoringDeceased);
+    const activeInBatch = Math.max(0, female + male - killed - isolated);
+
+    return {
+      createdAt: batch.created_at,
+      value: activeInBatch,
+    };
+  });
 
   const eggEvents = eggs.map((egg) => ({
     createdAt: egg.created_at,
@@ -287,7 +325,20 @@ export function formatKpiTrend(current: number, previous: number) {
   if (rounded === 0) return "+0%";
 
   const boundedMagnitude = Math.min(Math.max(Math.abs(rounded), 1), 100);
-  return `${rounded >= 0 ? "+" : "-"}${boundedMagnitude}%`;
+  return `+${boundedMagnitude}%`;
+}
+
+/** Keep consumption trends within the KPI's 0%-100% display range. */
+export function formatConsumptionTrend(current: number, previous: number) {
+  if (previous === 0) {
+    return current === 0 ? "0%" : "100%";
+  }
+
+  const rounded = Math.round(((previous - current) / previous) * 100);
+  if (rounded === 0) return "0%";
+
+  const magnitude = Math.min(Math.max(Math.abs(rounded), 1), 100);
+  return `${magnitude}%`;
 }
 
 export function formatBirdAdditionTrend(current: number, previous: number) {
@@ -298,5 +349,5 @@ export function formatBirdAdditionTrend(current: number, previous: number) {
 
   const rounded = Math.round(((current - previous) / previous) * 100);
   const magnitude = Math.min(Math.max(Math.abs(rounded), 1), 100);
-  return rounded >= 0 ? `+${magnitude}%` : `-${magnitude}%`;
+  return `+${magnitude}%`;
 }

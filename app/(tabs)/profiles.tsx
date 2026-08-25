@@ -438,32 +438,37 @@ export default function ProfilesScreen() {
       style={[styles.screen, { backgroundColor: colors.background }]}
       edges={["top"]}
     >
-      {colorScheme === "dark" ? (
-        <View
-          style={[
-            StyleSheet.absoluteFill,
-            { backgroundColor: colors.background },
-          ]}
-        />
-      ) : (
-        <BackgroundGradient
-          width="110%"
-          height="110%"
-          preserveAspectRatio="xMidYMid slice"
-          style={[
-            StyleSheet.absoluteFill,
-            { transform: [{ scale: 1.08 }, { translateY: -14 }] },
-          ]}
-        />
-      )}
-      <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
+      <BackgroundGradient
+        width="110%"
+        height="110%"
+        preserveAspectRatio="xMidYMid slice"
+        style={[
+          StyleSheet.absoluteFill,
+          { transform: [{ scale: 1.08 }, { translateY: -14 }] },
+        ]}
+      />
+      <StatusBar style="dark" />
       <View style={styles.fixedHeader}>
         <View style={styles.pageHeaderRow}>
-          <Text style={[styles.pageTitle, { color: colors.text }]}>
-            {mode === "chicken"
-              ? "Batch Profile (chicken)"
-              : "Batch Profile (eggs)"}
-          </Text>
+          <View style={styles.headerLeftRow}>
+            <Pressable
+              style={({ pressed }) => [styles.backButton, { opacity: pressed ? 0.75 : 1 }]}
+              onPress={() => (router.canGoBack() ? router.back() : router.replace("/(tabs)"))}
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
+            >
+              <MaterialCommunityIcons
+                name="arrow-left"
+                size={20}
+                color={ChickIntelPalette.gray1}
+              />
+            </Pressable>
+
+            <Text style={[styles.pageTitle, { color: colors.text }]}>
+              {mode === "chicken" ? "Batch Profile (chicken)" : "Batch Profile (eggs)"}
+            </Text>
+          </View>
+
           {mode === "egg" ? (
             <Pressable
               onPress={() =>
@@ -1200,6 +1205,12 @@ const styles = StyleSheet.create({
     marginTop: 10,
     marginBottom: 8,
   },
+  headerLeftRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flex: 1,
+  },
   segmentStickyHeader: {
     backgroundColor: "transparent",
     paddingVertical: 6,
@@ -1366,6 +1377,17 @@ const styles = StyleSheet.create({
     borderColor: "rgba(49, 118, 103, 0.16)",
     alignItems: "center",
     justifyContent: "center",
+  },
+  backButton: {
+    width: scale(40),
+    height: verticalScale(40),
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.6)",
+    borderWidth: 1,
+    borderColor: "rgba(49,118,103,0.12)",
+    flexShrink: 0,
   },
   iconCluster: {
     flexDirection: "row",
