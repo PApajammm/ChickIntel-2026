@@ -36,22 +36,14 @@ export default function LogoScreen() {
                 <View style={styles.logoWrap}>
                     <ChickenLogo width={scale(200)} height={verticalScale(240)} />
                 </View>
-<<<<<<< HEAD
-                
                 <Pressable 
                     onPress={() => router.push("/developers")}
                     style={styles.infoButton}
                 >
                     <MaterialCommunityIcons name="information-outline" size={24} color="#2b2b2b" />
                 </Pressable>
-=======
 
-                <View style={styles.footerCustom} pointerEvents="none">
-                    <Text style={styles.footerSmall}>BY</Text>
-                    <Text style={styles.footerMain}>SD3A-G1</Text>
-                    <View style={styles.footerUnderline} />
-                </View>
->>>>>>> parent of 0a76eaf (Update SD3A splash)
+
             </View>
         </AuthFrame>
     );
@@ -81,33 +73,5 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         padding: 8,
     },
-    footerCustom: {
-        position: "absolute",
-        bottom: 22,
-        left: 0,
-        right: 0,
-        alignItems: "center",
-    },
-    footerSmall: {
-        fontFamily: ChickFont.sans,
-        fontSize: responsiveFontSize(11),
-        fontWeight: "600",
-        color: "#2b2b2b",
-        letterSpacing: 0.75,
-        marginBottom: 4,
-    },
-    footerMain: {
-        fontFamily: ChickFont.display,
-        fontSize: responsiveFontSize(12),
-        fontWeight: "600",
-        color: "#2b2b2b",
-        letterSpacing: 1.1,
-    },
-    footerUnderline: {
-        marginTop: 6,
-        width: scale(48),
-        height: verticalScale(3),
-        backgroundColor: "rgba(0,0,0,0.2)",
-        borderRadius: 2,
-    },
+
 });
