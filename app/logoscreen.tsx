@@ -1,15 +1,14 @@
 import { useFocusEffect } from "@react-navigation/native";
 import { router } from "expo-router";
 import { useCallback } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 import ChickenLogo from "@/assets_imported/splash-chicken.svg";
 import { AuthFrame } from "@/components/farm-auth";
-import { ChickFont } from "@/constants/chick-fonts";
 import { useAuth } from "@/providers/auth-provider";
 import { logStep } from "@/utils/logger";
-import { moderateScale, responsiveFontSize, scale, verticalScale } from "@/utils/responsive";
+import { moderateScale, scale, verticalScale } from "@/utils/responsive";
 
 export default function LogoScreen() {
     const { initialized, session } = useAuth();
@@ -40,7 +39,7 @@ export default function LogoScreen() {
                     onPress={() => router.push("/developers")}
                     style={styles.infoButton}
                 >
-                    <MaterialCommunityIcons name="information-outline" size={24} color="#2b2b2b" />
+                    <MaterialCommunityIcons name="information-outline" size={48} color="#2b2b2b" />
                 </Pressable>
 
 

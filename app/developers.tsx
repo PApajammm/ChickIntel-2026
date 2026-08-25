@@ -44,6 +44,7 @@ function create3DInterpolations(cardIndex: number, animValue: Animated.Value) {
   const scaleRange: number[] = [];
   const opacityRange: number[] = [];
   const rotateYRange: string[] = [];
+  const darkOverlayRange: number[] = [];
 
   for (let i = 0; i <= steps; i++) {
     const val = rangeMin + i * stepSize;
@@ -57,47 +58,58 @@ function create3DInterpolations(cardIndex: number, animValue: Animated.Value) {
     translateYRange.push(RADIUS_Y * -cosTheta);
 
     const normalizedDepth = (cosTheta + 1) / 2;
-    scaleRange.push(0.72 + 0.34 * normalizedDepth);
-    opacityRange.push(0.42 + 0.58 * normalizedDepth);
+    scaleRange.push(0.68 + 0.38 * normalizedDepth);
+    opacityRange.push(0.35 + 0.65 * normalizedDepth);
+
+    // Front card has 0 dark overlay; non-centered / background cards ramp up to 0.76 darkness
+    const darkAmount = Math.max(0, 1 - Math.pow(normalizedDepth, 2)) * 0.76;
+    darkOverlayRange.push(darkAmount);
 
     const deg = Math.round(sinTheta * -22);
     rotateYRange.push(`${deg}deg`);
   }
 
   return {
-    transform: [
-      {
-        translateX: animValue.interpolate({
-          inputRange,
-          outputRange: translateXRange,
-          extrapolate: "extend",
-        }),
-      },
-      {
-        translateY: animValue.interpolate({
-          inputRange,
-          outputRange: translateYRange,
-          extrapolate: "extend",
-        }),
-      },
-      {
-        scale: animValue.interpolate({
-          inputRange,
-          outputRange: scaleRange,
-          extrapolate: "extend",
-        }),
-      },
-      {
-        rotateY: animValue.interpolate({
-          inputRange,
-          outputRange: rotateYRange,
-          extrapolate: "extend",
-        }),
-      },
-    ],
-    opacity: animValue.interpolate({
+    cardStyle: {
+      transform: [
+        {
+          translateX: animValue.interpolate({
+            inputRange,
+            outputRange: translateXRange,
+            extrapolate: "extend",
+          }),
+        },
+        {
+          translateY: animValue.interpolate({
+            inputRange,
+            outputRange: translateYRange,
+            extrapolate: "extend",
+          }),
+        },
+        {
+          scale: animValue.interpolate({
+            inputRange,
+            outputRange: scaleRange,
+            extrapolate: "extend",
+          }),
+        },
+        {
+          rotateY: animValue.interpolate({
+            inputRange,
+            outputRange: rotateYRange,
+            extrapolate: "extend",
+          }),
+        },
+      ],
+      opacity: animValue.interpolate({
+        inputRange,
+        outputRange: opacityRange,
+        extrapolate: "extend",
+      }),
+    },
+    darkOverlayOpacity: animValue.interpolate({
       inputRange,
-      outputRange: opacityRange,
+      outputRange: darkOverlayRange,
       extrapolate: "extend",
     }),
   };
@@ -172,10 +184,10 @@ export default function DevelopersScreen() {
           <Text style={styles.appVersion}>Version 1.4.6</Text>
         </View>
 
-        <Text style={styles.sectionTitle}>Meet the Team</Text>
-
         {/* 360-Degree Rotational 3D Carousel */}
         <View style={styles.carouselWrapper} {...panResponder.panHandlers}>
+          <Text style={styles.sectionTitle}>Meet the Team</Text>
+
           <View style={styles.carouselStage}>
             {DEVELOPERS.map((dev, index) => {
               const animatedStyles = create3DInterpolations(index, animValue);
@@ -191,7 +203,7 @@ export default function DevelopersScreen() {
                       zIndex,
                       elevation: isFront ? 12 : 3,
                     },
-                    animatedStyles,
+                    animatedStyles.cardStyle,
                   ]}
                 >
                   {/* Glassmorphic Aesthetic Card */}
@@ -219,6 +231,15 @@ export default function DevelopersScreen() {
                         {dev.name}
                       </Text>
                     </View>
+
+                    {/* Non-centered defocus & darkening overlay */}
+                    <Animated.View
+                      pointerEvents="none"
+                      style={[
+                        styles.cardDarkOverlay,
+                        { opacity: animatedStyles.darkOverlayOpacity },
+                      ]}
+                    />
                   </View>
                 </Animated.View>
               );
@@ -304,10 +325,10 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.display,
     fontSize: responsiveFontSize(24),
     fontWeight: "800",
-    color: ChickIntelPalette.green1,
+    color: ChickIntelPalette.gray1,
     letterSpacing: 1,
-    marginBottom: verticalScale(6),
-    marginTop: verticalScale(2),
+    marginBottom: verticalScale(20),
+    marginTop: 0,
   },
   carouselWrapper: {
     flex: 1,
@@ -353,6 +374,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.28,
     shadowRadius: 18,
     backgroundColor: "rgba(255, 255, 255, 0.95)",
+  },
+  cardDarkOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(16, 38, 33, 0.78)",
+    borderRadius: 24,
   },
   cardHeaderAccent: {
     width: "100%",
@@ -402,17 +428,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: moderateScale(8),
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(202, 227, 221, 0.65)",
+    backgroundColor: ChickIntelPalette.green1,
     borderRadius: 16,
     marginTop: moderateScale(10),
-    borderWidth: 1,
-    borderColor: "rgba(156, 213, 201, 0.6)",
+    shadowColor: ChickIntelPalette.green1,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 3,
   },
   devName: {
     fontFamily: ChickFont.display,
     fontSize: responsiveFontSize(13.5),
     fontWeight: "800",
-    color: ChickIntelPalette.green1,
+    color: "#FFFFFF",
     textAlign: "center",
     letterSpacing: 0.5,
   },
