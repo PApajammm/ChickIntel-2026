@@ -1,30 +1,34 @@
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native";
 import { router } from "expo-router";
-import { useEffect } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { useCallback } from "react";
+import { Pressable, StyleSheet, View } from "react-native";
 
 import ChickenLogo from "@/assets_imported/splash-chicken.svg";
 import { AuthFrame } from "@/components/farm-auth";
-import { ChickFont } from "@/constants/chick-fonts";
+import { ChickIntelPalette } from "@/constants/chickintel-palette";
 import { useAuth } from "@/providers/auth-provider";
 import { logStep } from "@/utils/logger";
-import { moderateScale, responsiveFontSize, scale, verticalScale } from "@/utils/responsive";
+import { moderateScale, scale, verticalScale } from "@/utils/responsive";
 
 export default function LogoScreen() {
     const { initialized, session } = useAuth();
 
-    useEffect(() => {
-        if (!initialized) return;
+    useFocusEffect(
+        useCallback(() => {
+            if (!initialized) return;
 
-        logStep("LogoScreen mounted", { screen: "logoscreen" });
+            logStep("LogoScreen mounted", { screen: "logoscreen" });
 
-        const timer = setTimeout(() => {
-            const target = session ? "/(tabs)" : "/loginscreen";
-            logStep("LogoScreen auto-navigate", { target });
-            router.replace(target);
-        }, 4000);
+            const timer = setTimeout(() => {
+                const target = session ? "/(tabs)" : "/loginscreen";
+                logStep("LogoScreen auto-navigate", { target });
+                router.replace(target);
+            }, 4000);
 
-        return () => clearTimeout(timer);
-    }, [initialized, session]);
+            return () => clearTimeout(timer);
+        }, [initialized, session])
+    );
 
     return (
         <AuthFrame footerText={undefined}>
@@ -33,11 +37,20 @@ export default function LogoScreen() {
                     <ChickenLogo width={scale(200)} height={verticalScale(240)} />
                 </View>
 
-                <View style={styles.footerCustom} pointerEvents="none">
-                    <Text style={styles.footerSmall}>BY</Text>
-                    <Text style={styles.footerMain}>SD3A-G1</Text>
-                    <View style={styles.footerUnderline} />
-                </View>
+                <Pressable
+                    style={({ pressed }) => [
+                        styles.infoButton,
+                        pressed && styles.infoButtonPressed,
+                    ]}
+                    onPress={() => router.push("/developers")}
+                    hitSlop={16}
+                >
+                    <MaterialCommunityIcons
+                        name="information-outline"
+                        size={42}
+                        color={ChickIntelPalette.gray1}
+                    />
+                </Pressable>
             </View>
         </AuthFrame>
     );
@@ -60,33 +73,15 @@ const styles = StyleSheet.create({
         overflow: "visible",
         alignItems: "center",
     },
-    footerCustom: {
+    infoButton: {
         position: "absolute",
-        bottom: 22,
-        left: 0,
-        right: 0,
+        bottom: verticalScale(36),
         alignItems: "center",
+        justifyContent: "center",
+        padding: moderateScale(8),
     },
-    footerSmall: {
-        fontFamily: ChickFont.sans,
-        fontSize: responsiveFontSize(11),
-        fontWeight: "600",
-        color: "#2b2b2b",
-        letterSpacing: 0.75,
-        marginBottom: 4,
-    },
-    footerMain: {
-        fontFamily: ChickFont.display,
-        fontSize: responsiveFontSize(12),
-        fontWeight: "600",
-        color: "#2b2b2b",
-        letterSpacing: 1.1,
-    },
-    footerUnderline: {
-        marginTop: 6,
-        width: scale(48),
-        height: verticalScale(3),
-        backgroundColor: "rgba(0,0,0,0.2)",
-        borderRadius: 2,
+    infoButtonPressed: {
+        opacity: 0.6,
+        transform: [{ scale: 0.92 }],
     },
 });
