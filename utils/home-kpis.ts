@@ -328,6 +328,19 @@ export function formatKpiTrend(current: number, previous: number) {
   return `+${boundedMagnitude}%`;
 }
 
+/** Keep consumption trends within the KPI's 0%-100% display range. */
+export function formatConsumptionTrend(current: number, previous: number) {
+  if (previous === 0) {
+    return current === 0 ? "0%" : "100%";
+  }
+
+  const rounded = Math.round(((previous - current) / previous) * 100);
+  if (rounded === 0) return "0%";
+
+  const magnitude = Math.min(Math.max(Math.abs(rounded), 1), 100);
+  return `${magnitude}%`;
+}
+
 export function formatBirdAdditionTrend(current: number, previous: number) {
   if (current === previous) return "+0%";
   if (previous === 0) {

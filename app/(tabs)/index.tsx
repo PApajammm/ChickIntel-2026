@@ -47,6 +47,7 @@ import { useAuth } from "@/providers/auth-provider";
 import {
   fetchHomeKpiSnapshot,
   formatBirdAdditionTrend,
+  formatConsumptionTrend,
   formatKpiTrend,
   type HomeKpiPeriod,
 } from "@/utils/home-kpis";
@@ -98,8 +99,8 @@ const initialKpiCards: KpiCardData[] = [
   },
   {
     title: "Feeds Consumed",
-    value: "0",
-    trend: "+0% this week",
+    value: "-0",
+    trend: "0% this week",
     period: "7 days",
     background: "primarySoft",
     Artwork: FeedsKpiArt,
@@ -388,16 +389,16 @@ export default function HomeScreen() {
         trendByPeriod: Object.fromEntries(
           PERIOD_OPTIONS.map((period) => [
             period,
-            formatKpiTrend(
+            formatConsumptionTrend(
               snapshot.feedQtyByPeriod[period].current,
               snapshot.feedQtyByPeriod[period].previous,
             ),
           ]),
         ) as Record<HomeKpiPeriod, string>,
-        trend: `${formatKpiTrend(
+        trend: `${formatConsumptionTrend(
           snapshot.feedQtyByPeriod[feedPeriod].current,
           snapshot.feedQtyByPeriod[feedPeriod].previous,
-        )} kg ${periodLabelFromPeriod(feedPeriod)}`,
+        )} ${periodLabelFromPeriod(feedPeriod)}`,
       },
     ];
   }, [activeFarm?.id, periodByTitle]);
@@ -485,13 +486,13 @@ export default function HomeScreen() {
   const displayKpis = kpiCards.map((k) => {
     const period = periodByTitle[k.title] ?? k.period;
     if (k.title === "Feeds Consumed") {
-      const rawTrend = k.trendByPeriod?.[period as HomeKpiPeriod] ?? "+0%";
-      const cleanTrend = rawTrend.replace(/^-/, "+");
+      const trend = k.trendByPeriod?.[period as HomeKpiPeriod] ?? "0%";
+      const rawValue = k.valueByPeriod?.[period as HomeKpiPeriod] ?? k.value;
       return {
         ...k,
-        value: k.valueByPeriod?.[period as HomeKpiPeriod] ?? k.value,
+        value: rawValue.startsWith("-") ? rawValue : `-${rawValue}`,
         period,
-        trend: `${cleanTrend} kg ${periodLabelFromPeriod(period)}`,
+        trend: `${trend} ${periodLabelFromPeriod(period)}`,
       };
     }
 

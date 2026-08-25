@@ -605,6 +605,8 @@ export default function ScheduleScreen() {
       end.setMonth(start.getMonth() + 1);
     } else if (selectedRepeat === "Annually") {
       end.setFullYear(start.getFullYear() + 1);
+    } else if (selectedRepeat === "Custom") {
+      end.setDate(start.getDate() + 30);
     } else if (selectedRepeat === "Never") {
       end.setTime(start.getTime());
     }
@@ -659,6 +661,14 @@ export default function ScheduleScreen() {
       !isEggCollecting && newConsumableInventoryId !== null;
     const hasInventoryAmountInput =
       !isEggCollecting && newConsumableDailyAmount.trim().length > 0;
+
+    if (repeat === "Custom" && customRepeatDays.length === 0) {
+      Alert.alert(
+        "Custom repeat days required",
+        "Choose at least one day for this custom schedule.",
+      );
+      return;
+    }
 
     if (
       !isEggCollecting &&

@@ -151,18 +151,8 @@ export function scheduleTaskMatchesDate(
         return false;
     }
 
-    // 3. Exact start date or end date match
-    if (targetKey === task.startDate || (task.endDate && targetKey === task.endDate)) {
-        return true;
-    }
-
-    // 4. If task has a bounded date range [startDate, endDate], all dates within range match
-    if (task.endDate) {
-        return true;
-    }
-
     if (task.repeat === "Never" || !task.repeat) {
-        return false;
+        return targetKey === task.startDate;
     }
 
     const taskStartDate = parseScheduleDateKey(task.startDate);
