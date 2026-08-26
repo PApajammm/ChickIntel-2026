@@ -279,8 +279,10 @@ export default function DevelopersScreen() {
             onPress={() => router.back()}
             style={({ pressed }) => [styles.backBtn, pressed && styles.backBtnPressed]}
             hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
           >
-            <MaterialCommunityIcons name="arrow-left" size={24} color={ChickIntelPalette.gray1} />
+            <MaterialCommunityIcons name="arrow-left" size={22} color="#FFF" />
           </Pressable>
           <View style={styles.titleContainer}>
             <Text style={styles.appTitle}>ChickIntel App 2026</Text>
@@ -529,14 +531,19 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: moderateScale(16),
     top: 0,
-    width: scale(38),
-    height: scale(38),
-    borderRadius: scale(19),
-    backgroundColor: "rgba(255, 255, 255, 0.8)",
+    width: scale(42),
+    height: verticalScale(42),
+    borderRadius: 14,
+    backgroundColor: ChickIntelPalette.green1,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.9)",
+    borderColor: "rgba(49, 118, 103, 0.25)",
+    shadowColor: "#317667",
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
+    shadowOffset: { width: scale(0), height: verticalScale(4) },
+    elevation: 4,
     zIndex: 10,
   },
   backBtnPressed: {

@@ -901,20 +901,21 @@ export default function ScheduleScreen() {
 
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-          <Pressable
+          <TouchableOpacity
+            style={styles.backButton}
             onPress={() =>
               router.canGoBack() ? router.back() : router.replace("/(tabs)")
             }
-            hitSlop={12}
+            activeOpacity={0.8}
             accessibilityRole="button"
             accessibilityLabel="Go back"
           >
             <MaterialCommunityIcons
               name="arrow-left"
-              size={24}
-              color={ChickIntelPalette.gray1}
+              size={22}
+              color="#FFF"
             />
-          </Pressable>
+          </TouchableOpacity>
           <Text style={[styles.headerTitle, { fontSize: responsiveTitleSize }]}>
             Schedule
           </Text>
@@ -1780,6 +1781,21 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: -0.55,
     color: ChickIntelPalette.gray1,
+  },
+  backButton: {
+    width: scale(42),
+    height: verticalScale(42),
+    borderRadius: 14,
+    backgroundColor: ChickIntelPalette.green1,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.25)",
+    shadowColor: "#317667",
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
+    shadowOffset: { width: scale(0), height: verticalScale(4) },
+    elevation: 4,
   },
   contentShell: {
     width: "100%",

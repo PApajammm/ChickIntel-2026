@@ -11,6 +11,7 @@ import {
     Pressable,
     StyleSheet,
     Text,
+    TouchableOpacity,
     View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -116,22 +117,19 @@ export default function ArchivesScreen() {
       >
         <StatusBar style="dark" />
         <View style={styles.headerRow}>
-          <Pressable
+          <TouchableOpacity
             onPress={handleBack}
-            hitSlop={12}
-            style={({ pressed }) => [
-              styles.backBtn,
-              { opacity: pressed ? 0.7 : 1 },
-            ]}
+            style={styles.backBtn}
+            activeOpacity={0.8}
             accessibilityRole="button"
             accessibilityLabel="Back"
           >
             <MaterialCommunityIcons
-              name="chevron-left"
-              size={28}
-              color={ChickIntelPalette.gray1}
+              name="arrow-left"
+              size={22}
+              color="#FFF"
             />
-          </Pressable>
+          </TouchableOpacity>
           <Text style={styles.title}>Archives</Text>
 
           {entries.length > 0 && (
@@ -260,13 +258,25 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 10,
     marginTop: 6,
     marginBottom: 14,
   },
   backBtn: {
-    padding: moderateScale(2),
-    marginLeft: -6,
+    width: scale(42),
+    height: verticalScale(42),
+    borderRadius: 14,
+    backgroundColor: ChickIntelPalette.green1,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.25)",
+    shadowColor: "#317667",
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
+    shadowOffset: { width: scale(0), height: verticalScale(4) },
+    elevation: 4,
+    flexShrink: 0,
   },
   title: {
     fontFamily: ChickFont.display,

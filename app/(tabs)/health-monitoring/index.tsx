@@ -16,6 +16,7 @@ import {
     Pressable,
     StyleSheet,
     Text,
+    TouchableOpacity,
     View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -380,41 +381,50 @@ export default function HealthMonitoringIndexScreen() {
         <StatusBar style="dark" />
         <View style={styles.headerRow}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-            <Pressable
+            <TouchableOpacity
+              style={styles.backButton}
               onPress={() =>
                 router.canGoBack() ? router.back() : router.replace("/(tabs)")
               }
-              hitSlop={12}
+              activeOpacity={0.8}
               accessibilityRole="button"
               accessibilityLabel="Go back"
             >
               <MaterialCommunityIcons
                 name="arrow-left"
-                size={24}
-                color={ChickIntelPalette.gray1}
+                size={22}
+                color="#FFF"
               />
-            </Pressable>
+            </TouchableOpacity>
             <Text style={styles.pageTitle}>Health Monitoring</Text>
           </View>
         </View>
 
         <View style={styles.tabs}>
-          {(["Active", "History"] as const).map((tab) => (
-            <Pressable
-              key={tab}
-              onPress={() => setSelectedTab(tab)}
-              style={[styles.tab, selectedTab === tab && styles.tabActive]}
-            >
-              <Text
-                style={[
-                  styles.tabText,
-                  selectedTab === tab && styles.tabTextActive,
-                ]}
+          {(["Active", "History"] as const).map((tab) => {
+            const active = selectedTab === tab;
+            return (
+              <Pressable
+                key={tab}
+                onPress={() => setSelectedTab(tab)}
+                style={[styles.tab, active && styles.tabActive]}
               >
-                {tab}
-              </Text>
-            </Pressable>
-          ))}
+                <MaterialCommunityIcons
+                  name={tab === "Active" ? "heart-pulse" : "history"}
+                  size={16}
+                  color={active ? "#FFFFFF" : ChickIntelPalette.gray2}
+                />
+                <Text
+                  style={[
+                    styles.tabText,
+                    active && styles.tabTextActive,
+                  ]}
+                >
+                  {tab}
+                </Text>
+              </Pressable>
+            );
+          })}
         </View>
 
         <FlatList
@@ -542,33 +552,60 @@ const styles = StyleSheet.create({
     letterSpacing: -0.55,
     color: ChickIntelPalette.gray1,
   },
+  backButton: {
+    width: scale(42),
+    height: verticalScale(42),
+    borderRadius: 14,
+    backgroundColor: ChickIntelPalette.green1,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.25)",
+    shadowColor: "#317667",
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
+    shadowOffset: { width: scale(0), height: verticalScale(4) },
+    elevation: 4,
+    flexShrink: 0,
+  },
   tabs: {
     flexDirection: "row",
-    padding: moderateScale(3),
+    backgroundColor: "rgba(255, 255, 255, 0.85)",
     borderRadius: 14,
-    backgroundColor: "rgba(255, 255, 255, 0.52)",
+    padding: 4,
+    gap: 4,
     borderWidth: 1,
-    borderColor: "rgba(67, 139, 123, 0.16)",
+    borderColor: "rgba(49, 118, 103, 0.16)",
+    shadowColor: "#317667",
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
   },
   tab: {
     flex: 1,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    minHeight: verticalScale(36),
-    borderRadius: 11,
+    minHeight: verticalScale(38),
+    borderRadius: 10,
     paddingHorizontal: moderateScale(10),
+    gap: 6,
   },
   tabActive: {
-    backgroundColor: "rgba(49, 118, 103, 0.14)",
+    backgroundColor: ChickIntelPalette.green1,
+    shadowColor: "#317667",
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
   },
   tabText: {
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(12),
+    fontSize: responsiveFontSize(13),
     fontWeight: "700",
-    color: "rgba(51, 51, 51, 0.58)",
+    color: ChickIntelPalette.gray2,
   },
   tabTextActive: {
-    color: ChickIntelPalette.green1,
+    color: "#FFFFFF",
   },
   listTop: {
     height: verticalScale(12),

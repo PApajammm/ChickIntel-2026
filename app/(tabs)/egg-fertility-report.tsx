@@ -780,13 +780,21 @@ export default function EggFertilityReportScreen() {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <Pressable style={styles.backButton} onPress={() => router.back()}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() =>
+                router.canGoBack() ? router.back() : router.replace("/(tabs)")
+              }
+              activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
+            >
               <MaterialCommunityIcons
                 name="arrow-left"
-                size={20}
-                color={ChickIntelPalette.gray1}
+                size={22}
+                color="#FFF"
               />
-            </Pressable>
+            </TouchableOpacity>
             <View style={styles.headerCopy}>
               <Text style={styles.screenTitle}>Egg Fertility Report</Text>
               <Text style={styles.headerSubtitle} numberOfLines={1}>{scopeLabel}</Text>
@@ -1085,16 +1093,6 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingRight: 10,
   },
-  backButton: {
-    width: scale(36),
-    height: verticalScale(36),
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "rgba(49,118,103,0.2)",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.8)",
-  },
   headerCopy: {
     flex: 1,
     gap: 2,
@@ -1110,6 +1108,22 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(12),
     color: ChickIntelPalette.gray2,
+  },
+  backButton: {
+    width: scale(42),
+    height: verticalScale(42),
+    borderRadius: 14,
+    backgroundColor: ChickIntelPalette.green1,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.25)",
+    shadowColor: "#317667",
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
+    shadowOffset: { width: scale(0), height: verticalScale(4) },
+    elevation: 4,
+    flexShrink: 0,
   },
   printButton: {
     width: scale(42),
