@@ -11,6 +11,7 @@ import {
     Pressable,
     StyleSheet,
     Text,
+    TouchableOpacity,
     View,
     useWindowDimensions,
 } from "react-native";
@@ -266,35 +267,34 @@ export default function ScannerScreen() {
 
             <View style={styles.overlay} pointerEvents="box-none">
                 <View style={[styles.topRow, { paddingTop: insets.top + 10 }]}>
-                    <Pressable
+                    <TouchableOpacity
                         onPress={() =>
                             router.canGoBack() ? router.back() : router.replace("/(tabs)")
                         }
-                        style={({ pressed }) => [
-                            styles.flashToggle,
-                            { opacity: pressed ? 0.86 : 1 },
-                        ]}
+                        style={styles.backButton}
+                        activeOpacity={0.8}
                         accessibilityRole="button"
                         accessibilityLabel="Go back"
                     >
                         <MaterialCommunityIcons
                             name="arrow-left"
                             size={22}
-                            color={ChickIntelPalette.gray1}
+                            color="#FFF"
                         />
-                    </Pressable>
+                    </TouchableOpacity>
                     <View style={styles.titleStack}>
                         <Text style={styles.instruction}>{modeCopy.title}</Text>
                         <Text style={styles.subInstruction} numberOfLines={isCompactScreen ? 1 : 2}>
                             {modeCopy.subtitle}
                         </Text>
                     </View>
-                    <Pressable
+                    <TouchableOpacity
                         onPress={() => setTorchEnabled((prev) => !prev)}
-                        style={({ pressed }) => [
+                        style={[
                             styles.flashToggle,
-                            { opacity: pressed ? 0.86 : 1 },
+                            torchEnabled && styles.flashToggleActive,
                         ]}
+                        activeOpacity={0.8}
                         accessibilityRole="button"
                         accessibilityLabel={
                             torchEnabled ? "Turn flash off" : "Turn flash on"
@@ -302,22 +302,14 @@ export default function ScannerScreen() {
                     >
                         <MaterialCommunityIcons
                             name={torchEnabled ? "flash" : "flash-off"}
-                            size={18}
+                            size={22}
                             color={
                                 torchEnabled
-                                    ? ChickIntelPalette.green1
-                                    : ChickIntelPalette.gray2
+                                    ? "#FFF"
+                                    : ChickIntelPalette.gray1
                             }
                         />
-                        <Text
-                            style={[
-                                styles.flashToggleText,
-                                torchEnabled && styles.flashToggleTextActive,
-                            ]}
-                        >
-                            {torchEnabled ? "Flash On" : "Flash Off"}
-                        </Text>
-                    </Pressable>
+                    </TouchableOpacity>
                 </View>
 
                 <View pointerEvents="box-none" style={[styles.viewfinderRegion, isCompactScreen && { gap: 6 }]}>
@@ -404,6 +396,22 @@ const styles = StyleSheet.create({
         justifyContent: "space-between",
         gap: 12,
     },
+    backButton: {
+        width: rscale(42),
+        height: verticalScale(42),
+        borderRadius: 14,
+        backgroundColor: ChickIntelPalette.green1,
+        justifyContent: "center",
+        alignItems: "center",
+        borderWidth: 1,
+        borderColor: "rgba(255, 255, 255, 0.3)",
+        shadowColor: "#000",
+        shadowOpacity: 0.25,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 3 },
+        elevation: 4,
+        flexShrink: 0,
+    },
     titleStack: {
         flex: 1,
         gap: 4,
@@ -432,24 +440,23 @@ const styles = StyleSheet.create({
         maxWidth: rscale(260),
     },
     flashToggle: {
-        flexDirection: "row",
+        width: rscale(42),
+        height: verticalScale(42),
+        borderRadius: 14,
+        backgroundColor: "rgba(255, 255, 255, 0.85)",
+        justifyContent: "center",
         alignItems: "center",
-        gap: 6,
-        borderRadius: 999,
-        paddingHorizontal: moderateScale(14),
-        paddingVertical: verticalScale(8),
-        backgroundColor: "rgba(202, 227, 221, 0.92)",
         borderWidth: 1,
-        borderColor: ChickIntelPalette.green2,
+        borderColor: "rgba(49, 118, 103, 0.25)",
+        shadowColor: "#317667",
+        shadowOpacity: 0.22,
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: verticalScale(4) },
+        elevation: 4,
+        flexShrink: 0,
     },
-    flashToggleText: {
-        fontFamily: ChickFont.sans,
-        fontSize: responsiveFontSize(12),
-        fontWeight: "600",
-        color: ChickIntelPalette.gray1,
-    },
-    flashToggleTextActive: {
-        color: ChickIntelPalette.green1,
+    flashToggleActive: {
+        backgroundColor: ChickIntelPalette.green1,
     },
     viewfinderRegion: {
         flex: 1,

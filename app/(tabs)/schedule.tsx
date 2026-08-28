@@ -3,12 +3,13 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { useFocusEffect } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
 import { useRouter } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
     KeyboardAvoidingView,
     Modal,
+    PanResponder,
     Platform,
     Pressable,
     ScrollView,
@@ -74,6 +75,9 @@ const MONTHS = [
   "November",
   "December",
 ];
+const PREVIEW_TIMEFRAME_OPTIONS = ["Weekly", "Monthly"] as const;
+type PreviewTimeframeOption = (typeof PREVIEW_TIMEFRAME_OPTIONS)[number];
+
 type ScheduleTask = SupabaseScheduleTask;
 type FeedInventoryOption = Pick<
   SupabaseInventoryItem,
@@ -230,6 +234,9 @@ export default function ScheduleScreen() {
   const [dayTasks, setDayTasks] =
     useState<Record<string, ScheduleTask[]>>(initialTasksByDate);
   const [loadingTasks, setLoadingTasks] = useState(false);
+  const [previewTimeframe, setPreviewTimeframe] =
+    useState<PreviewTimeframeOption>("Weekly");
+  const [previewBaseDate, setPreviewBaseDate] = useState<Date>(new Date());
 
   // Add Modal State
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
@@ -566,8 +573,10 @@ export default function ScheduleScreen() {
   );
 
   const currentMonthTasks = useMemo(() => {
-    const viewYear = viewDate.getFullYear();
-    const viewMonth = viewDate.getMonth();
+    const targetDate =
+      previewTimeframe === "Monthly" ? previewBaseDate : viewDate;
+    const viewYear = targetDate.getFullYear();
+    const viewMonth = targetDate.getMonth();
 
     return allTasks
       .filter((task) => {
@@ -585,10 +594,117 @@ export default function ScheduleScreen() {
           ? left.time.localeCompare(right.time)
           : left.startDate.localeCompare(right.startDate),
       );
-  }, [allTasks, viewDate]);
+  }, [allTasks, previewBaseDate, previewTimeframe, viewDate]);
+
+  const currentWeeklyTasks = useMemo(() => {
+    // Determine the week of the previewBaseDate (Sunday - Saturday)
+    const startOfWeek = new Date(previewBaseDate);
+    const day = startOfWeek.getDay();
+    startOfWeek.setDate(startOfWeek.getDate() - day);
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(endOfWeek.getDate() + 6);
+    endOfWeek.setHours(23, 59, 59, 999);
+
+    return allTasks
+      .filter((task) => {
+        const cur = new Date(startOfWeek);
+        while (cur <= endOfWeek) {
+          if (scheduleTaskMatchesDate(task, cur)) {
+            return true;
+          }
+          cur.setDate(cur.getDate() + 1);
+        }
+        return false;
+      })
+      .sort((left, right) =>
+        left.startDate === right.startDate
+          ? left.time.localeCompare(right.time)
+          : left.startDate.localeCompare(right.startDate),
+      );
+  }, [allTasks, previewBaseDate]);
+
+  const displayedPreviewTasks =
+    previewTimeframe === "Weekly" ? currentWeeklyTasks : currentMonthTasks;
+
+  const previewTimeframeTitle = useMemo(() => {
+    if (previewTimeframe === "Weekly") {
+      const startOfWeek = new Date(previewBaseDate);
+      const day = startOfWeek.getDay();
+      startOfWeek.setDate(startOfWeek.getDate() - day);
+      const endOfWeek = new Date(startOfWeek);
+      endOfWeek.setDate(endOfWeek.getDate() + 6);
+
+      const firstDayOfMonth = new Date(
+        startOfWeek.getFullYear(),
+        startOfWeek.getMonth(),
+        1,
+      ).getDay();
+      const weekNum = Math.min(
+        5,
+        Math.max(1, Math.ceil((startOfWeek.getDate() + firstDayOfMonth) / 7)),
+      );
+
+      const startMonth = MONTHS[startOfWeek.getMonth()].slice(0, 3);
+      const endMonth = MONTHS[endOfWeek.getMonth()].slice(0, 3);
+      const dateRangeStr =
+        startOfWeek.getMonth() === endOfWeek.getMonth()
+          ? `${startMonth} ${startOfWeek.getDate()} - ${endOfWeek.getDate()}`
+          : `${startMonth} ${startOfWeek.getDate()} - ${endMonth} ${endOfWeek.getDate()}`;
+
+      return `Week ${weekNum} (${dateRangeStr})`;
+    }
+    const targetDate = previewBaseDate;
+    return `${MONTHS[targetDate.getMonth()]} ${targetDate.getFullYear()}`;
+  }, [previewBaseDate, previewTimeframe]);
+
+  const handlePrevPreview = () => {
+    if (previewTimeframe === "Weekly") {
+      const next = new Date(previewBaseDate);
+      next.setDate(next.getDate() - 7);
+      setPreviewBaseDate(next);
+    } else {
+      const next = new Date(previewBaseDate);
+      next.setMonth(next.getMonth() - 1);
+      setPreviewBaseDate(next);
+      setViewDate(next);
+    }
+  };
+
+  const handleNextPreview = () => {
+    if (previewTimeframe === "Weekly") {
+      const next = new Date(previewBaseDate);
+      next.setDate(next.getDate() + 7);
+      setPreviewBaseDate(next);
+    } else {
+      const next = new Date(previewBaseDate);
+      next.setMonth(next.getMonth() + 1);
+      setPreviewBaseDate(next);
+      setViewDate(next);
+    }
+  };
+
+  const previewPanResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gestureState) =>
+        Math.abs(gestureState.dx) > 18 &&
+        Math.abs(gestureState.dx) > Math.abs(gestureState.dy) * 1.3,
+      onPanResponderRelease: (_, gestureState) => {
+        if (gestureState.dx > 35) {
+          // Swiped Right -> Previous
+          handlePrevPreview();
+        } else if (gestureState.dx < -35) {
+          // Swiped Left -> Next
+          handleNextPreview();
+        }
+      },
+    }),
+  ).current;
 
   const handleDateSelect = (date: Date) => {
     setSelectedDate(date);
+    setPreviewBaseDate(new Date(date));
   };
 
   const handleRepeatSelection = (selectedRepeat: string) => {
@@ -785,20 +901,21 @@ export default function ScheduleScreen() {
 
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-          <Pressable
+          <TouchableOpacity
+            style={styles.backButton}
             onPress={() =>
               router.canGoBack() ? router.back() : router.replace("/(tabs)")
             }
-            hitSlop={12}
+            activeOpacity={0.8}
             accessibilityRole="button"
             accessibilityLabel="Go back"
           >
             <MaterialCommunityIcons
               name="arrow-left"
-              size={24}
-              color={ChickIntelPalette.gray1}
+              size={22}
+              color="#FFF"
             />
-          </Pressable>
+          </TouchableOpacity>
           <Text style={[styles.headerTitle, { fontSize: responsiveTitleSize }]}>
             Schedule
           </Text>
@@ -1059,13 +1176,14 @@ export default function ScheduleScreen() {
             </View>
           </BlurCard>
 
-          {/* Monthly Tasks Preview Section */}
+          {/* Tasks Preview Section with Weekly & Monthly Timeframe Filter */}
           <BlurCard
             style={[styles.glassCard, { marginTop: 14 }]}
             borderRadius={10}
             intensity={16}
           >
             <View
+              {...previewPanResponder.panHandlers}
               style={[
                 styles.cardSurface,
                 {
@@ -1076,29 +1194,113 @@ export default function ScheduleScreen() {
                 },
               ]}
             >
-              <View style={styles.previewHeaderRow}>
-                <View style={styles.previewTitleStack}>
-                  <MaterialCommunityIcons
-                    name="calendar-month-outline"
-                    size={20}
-                    color={ChickIntelPalette.green1}
-                  />
-                  <Text style={styles.previewHeaderTitle}>
-                    {MONTHS[viewDate.getMonth()]} {viewDate.getFullYear()} Tasks
-                    Preview
-                  </Text>
+              {/* Timeframe Filter Bar (Matching Reports Page Design) */}
+              <View style={styles.previewTimeframeBar}>
+                <Text style={styles.previewTimeframeLabel}>TASKS PREVIEW</Text>
+                <View style={styles.previewSegmentedContainer}>
+                  {PREVIEW_TIMEFRAME_OPTIONS.map((option) => {
+                    const active = previewTimeframe === option;
+                    return (
+                      <TouchableOpacity
+                        key={option}
+                        onPress={() => setPreviewTimeframe(option)}
+                        activeOpacity={0.8}
+                        style={[
+                          styles.previewSegmentedItem,
+                          active && styles.previewSegmentedItemActive,
+                        ]}
+                      >
+                        <MaterialCommunityIcons
+                          name={
+                            option === "Weekly"
+                              ? "calendar-week"
+                              : "calendar-month"
+                          }
+                          size={14}
+                          color={active ? "#FFF" : ChickIntelPalette.gray2}
+                        />
+                        <Text
+                          style={[
+                            styles.previewSegmentedText,
+                            active && styles.previewSegmentedTextActive,
+                          ]}
+                        >
+                          {option}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
+              </View>
+
+              {/* Preview Navigation Header: Centered [<] Week Range [>] and Counter */}
+              <View style={styles.previewHeaderRow}>
+                <View style={styles.previewNavHeaderCenter}>
+                  <TouchableOpacity
+                    onPress={handlePrevPreview}
+                    style={styles.previewNavBtn}
+                    hitSlop={10}
+                    activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                      previewTimeframe === "Weekly"
+                        ? "Previous week"
+                        : "Previous month"
+                    }
+                  >
+                    <MaterialCommunityIcons
+                      name="chevron-left"
+                      size={18}
+                      color={ChickIntelPalette.green1}
+                    />
+                  </TouchableOpacity>
+
+                  <View style={styles.previewTitleStack}>
+                    <MaterialCommunityIcons
+                      name={
+                        previewTimeframe === "Weekly"
+                          ? "calendar-week-outline"
+                          : "calendar-month-outline"
+                      }
+                      size={16}
+                      color={ChickIntelPalette.green1}
+                    />
+                    <Text style={styles.previewHeaderTitle} numberOfLines={1}>
+                      {previewTimeframeTitle}
+                    </Text>
+                  </View>
+
+                  <TouchableOpacity
+                    onPress={handleNextPreview}
+                    style={styles.previewNavBtn}
+                    hitSlop={10}
+                    activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                      previewTimeframe === "Weekly"
+                        ? "Next week"
+                        : "Next month"
+                    }
+                  >
+                    <MaterialCommunityIcons
+                      name="chevron-right"
+                      size={18}
+                      color={ChickIntelPalette.green1}
+                    />
+                  </TouchableOpacity>
+                </View>
+
                 <View style={styles.previewCountBadge}>
                   <Text style={styles.previewCountText}>
-                    {currentMonthTasks.length} task
-                    {currentMonthTasks.length === 1 ? "" : "s"}
+                    {displayedPreviewTasks.length} task
+                    {displayedPreviewTasks.length === 1 ? "" : "s"}
                   </Text>
                 </View>
               </View>
 
-              {currentMonthTasks.length > 0 ? (
+              {displayedPreviewTasks.length > 0 ? (
                 <View style={styles.previewList}>
-                  {currentMonthTasks.map((task) => {
+                  {displayedPreviewTasks.map((task) => {
                     const completion = completions.find(
                       (c) =>
                         c.taskId === task.id &&
@@ -1204,7 +1406,9 @@ export default function ScheduleScreen() {
                 </View>
               ) : (
                 <Text style={styles.noEvents}>
-                  No tasks scheduled for {MONTHS[viewDate.getMonth()]}
+                  {previewTimeframe === "Weekly"
+                    ? "No tasks scheduled for this week"
+                    : `No tasks scheduled for ${MONTHS[viewDate.getMonth()]}`}
                 </Text>
               )}
             </View>
@@ -1578,6 +1782,21 @@ const styles = StyleSheet.create({
     letterSpacing: -0.55,
     color: ChickIntelPalette.gray1,
   },
+  backButton: {
+    width: scale(42),
+    height: verticalScale(42),
+    borderRadius: 14,
+    backgroundColor: ChickIntelPalette.green1,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.25)",
+    shadowColor: "#317667",
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
+    shadowOffset: { width: scale(0), height: verticalScale(4) },
+    elevation: 4,
+  },
   contentShell: {
     width: "100%",
     maxWidth: scale(920),
@@ -1905,28 +2124,100 @@ const styles = StyleSheet.create({
   daySelectorTextSelected: {
     color: "#FFF",
   },
-  // Monthly Tasks Preview Styles
-  previewHeaderRow: {
+  // Tasks Preview Styles
+  previewTimeframeBar: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 12,
+    backgroundColor: "rgba(255, 255, 255, 0.85)",
+    borderRadius: 12,
+    paddingHorizontal: moderateScale(10),
+    paddingVertical: verticalScale(6),
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.16)",
+    marginBottom: verticalScale(12),
+    gap: 8,
+  },
+  previewTimeframeLabel: {
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(20),
+    fontWeight: "700",
+    color: ChickIntelPalette.gray1,
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+  },
+  previewSegmentedContainer: {
+    flexDirection: "row",
+    backgroundColor: "rgba(49, 118, 103, 0.08)",
+    borderRadius: 8,
+    padding: 3,
+    gap: 3,
+  },
+  previewSegmentedItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: moderateScale(10),
+    paddingVertical: verticalScale(5),
+    borderRadius: 6,
+  },
+  previewSegmentedItemActive: {
+    backgroundColor: ChickIntelPalette.green1,
+  },
+  previewSegmentedText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(11),
+    fontWeight: "600",
+    color: ChickIntelPalette.gray1,
+  },
+  previewSegmentedTextActive: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+  },
+  previewHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: verticalScale(12),
+    position: "relative",
+    width: "100%",
+  },
+  previewNavHeaderCenter: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: moderateScale(6),
+    alignSelf: "center",
+  },
+  previewNavBtn: {
+    width: scale(26),
+    height: scale(26),
+    borderRadius: scale(13),
+    backgroundColor: "rgba(49, 118, 103, 0.12)",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.22)",
   },
   previewTitleStack: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 4,
+    paddingHorizontal: moderateScale(2),
   },
   previewHeaderTitle: {
     fontFamily: ChickFont.display,
-    fontSize: responsiveFontSize(16),
+    fontSize: responsiveFontSize(13),
     fontWeight: "700",
     color: ChickIntelPalette.gray1,
+    textAlign: "center",
   },
   previewCountBadge: {
+    position: "absolute",
+    right: 0,
     backgroundColor: "rgba(49, 118, 103, 0.12)",
-    paddingHorizontal: moderateScale(8),
-    paddingVertical: verticalScale(4),
+    paddingHorizontal: moderateScale(7),
+    paddingVertical: verticalScale(3),
     borderRadius: 6,
   },
   previewCountText: {

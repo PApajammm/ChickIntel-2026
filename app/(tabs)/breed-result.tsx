@@ -10,9 +10,11 @@ import {
     ScrollView,
     StyleSheet,
     Text,
+    TouchableOpacity,
     View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { moderateScale, responsiveFontSize, scale, verticalScale } from "@/utils/responsive";
 
 import { AttributeList } from "@/components/breed-scan/attribute-list";
 import { BlurCard } from "@/components/ui/blur-card";
@@ -27,7 +29,6 @@ import {
 } from "@/utils/breed-image-inference";
 import { logStep } from "@/utils/logger";
 import { addRecentBreedScan } from "@/utils/recent-breed-scans";
-import { moderateScale, responsiveFontSize, scale, verticalScale } from "@/utils/responsive";
 
 const TAB_BAR_OFFSET = 55;
 
@@ -132,20 +133,21 @@ export default function BreedResultScreen() {
                 showsVerticalScrollIndicator={false}
             >
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                  <Pressable
+                  <TouchableOpacity
+                    style={styles.backButton}
                     onPress={() =>
                       router.canGoBack() ? router.back() : router.replace("/(tabs)/scanner")
                     }
-                    hitSlop={12}
+                    activeOpacity={0.8}
                     accessibilityRole="button"
                     accessibilityLabel="Go back"
                   >
                     <MaterialCommunityIcons
                       name="arrow-left"
-                      size={24}
-                      color={ChickIntelPalette.gray1}
+                      size={22}
+                      color="#FFF"
                     />
-                  </Pressable>
+                  </TouchableOpacity>
                   <Text style={styles.pageTitle}>Breed Result</Text>
                 </View>
                 <Text style={styles.pageSubtitle}>
@@ -277,7 +279,22 @@ const styles = StyleSheet.create({
         fontWeight: "800",
         letterSpacing: -0.45,
         color: ChickIntelPalette.gray1,
-        textAlign: "center",
+    },
+    backButton: {
+        width: scale(42),
+        height: verticalScale(42),
+        borderRadius: 14,
+        backgroundColor: ChickIntelPalette.green1,
+        justifyContent: "center",
+        alignItems: "center",
+        borderWidth: 1,
+        borderColor: "rgba(49, 118, 103, 0.25)",
+        shadowColor: "#317667",
+        shadowOpacity: 0.22,
+        shadowRadius: 10,
+        shadowOffset: { width: scale(0), height: verticalScale(4) },
+        elevation: 4,
+        flexShrink: 0,
     },
     pageSubtitle: {
         fontFamily: ChickFont.sans,

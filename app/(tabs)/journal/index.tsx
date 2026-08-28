@@ -220,6 +220,9 @@ export default function JournalIndexScreen() {
       >
         <StatusBar style="dark" />
         <JournalHeader
+          onBackPress={() =>
+            router.canGoBack() ? router.back() : router.replace("/(tabs)")
+          }
           onArchivePress={onBulkArchive}
           archiveDisabled={selected.size === 0}
           onOpenArchives={() => router.push("/(tabs)/journal/archives")}

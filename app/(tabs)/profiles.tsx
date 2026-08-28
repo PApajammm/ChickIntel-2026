@@ -19,6 +19,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  TouchableOpacity,
   View,
 } from "react-native";
 import {
@@ -451,18 +452,21 @@ export default function ProfilesScreen() {
       <View style={styles.fixedHeader}>
         <View style={styles.pageHeaderRow}>
           <View style={styles.headerLeftRow}>
-            <Pressable
-              style={({ pressed }) => [styles.backButton, { opacity: pressed ? 0.75 : 1 }]}
-              onPress={() => (router.canGoBack() ? router.back() : router.replace("/(tabs)"))}
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() =>
+                router.canGoBack() ? router.back() : router.replace("/(tabs)")
+              }
+              activeOpacity={0.8}
               accessibilityRole="button"
               accessibilityLabel="Go back"
             >
               <MaterialCommunityIcons
                 name="arrow-left"
-                size={20}
-                color={ChickIntelPalette.gray1}
+                size={22}
+                color="#FFF"
               />
-            </Pressable>
+            </TouchableOpacity>
 
             <Text style={[styles.pageTitle, { color: colors.text }]}>
               {mode === "chicken" ? "Batch Profile (chicken)" : "Batch Profile (eggs)"}
@@ -470,7 +474,7 @@ export default function ProfilesScreen() {
           </View>
 
           {mode === "egg" ? (
-            <Pressable
+            <TouchableOpacity
               onPress={() =>
                 router.push({
                   pathname: "/(tabs)/egg-fertility-report" as any,
@@ -478,15 +482,16 @@ export default function ProfilesScreen() {
                 })
               }
               style={styles.eggAnalyticsIconButton}
+              activeOpacity={0.8}
               accessibilityRole="button"
               accessibilityLabel="Open egg fertility report"
             >
               <MaterialCommunityIcons
                 name="chart-donut"
-                size={18}
-                color={ChickIntelPalette.gray1}
+                size={22}
+                color="#FFF"
               />
-            </Pressable>
+            </TouchableOpacity>
           ) : null}
         </View>
         <View style={styles.segmentStickyHeader}>
@@ -500,6 +505,11 @@ export default function ProfilesScreen() {
                   : styles.segmentInactive,
               ]}
             >
+              <MaterialCommunityIcons
+                name="bird"
+                size={16}
+                color={mode === "chicken" ? "#FFFFFF" : ChickIntelPalette.gray2}
+              />
               <Text
                 style={[
                   styles.segmentText,
@@ -518,6 +528,11 @@ export default function ProfilesScreen() {
                 mode === "egg" ? styles.segmentActive : styles.segmentInactive,
               ]}
             >
+              <MaterialCommunityIcons
+                name="egg-outline"
+                size={16}
+                color={mode === "egg" ? "#FFFFFF" : ChickIntelPalette.gray2}
+              />
               <Text
                 style={[
                   styles.segmentText,
@@ -1215,35 +1230,35 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
     paddingVertical: 6,
   },
-  eggAnalyticsIconButton: {
-    width: scale(36),
-    height: verticalScale(36),
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "rgba(49,118,103,0.18)",
-    backgroundColor: "rgba(255,255,255,0.58)",
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-  },
   segmentWrap: {
     flexDirection: "row",
-    padding: 3,
-    borderRadius: 12,
-    backgroundColor: "rgba(255, 255, 255, 0.18)",
+    backgroundColor: "rgba(255, 255, 255, 0.85)",
+    borderRadius: 14,
+    padding: 4,
+    gap: 4,
     borderWidth: 1,
-    borderColor: "rgba(67, 139, 123, 0.16)",
+    borderColor: "rgba(49, 118, 103, 0.16)",
+    shadowColor: "#317667",
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
   },
   segment: {
     flex: 1,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    minHeight: verticalScale(40),
-    borderRadius: 9,
-    paddingHorizontal: moderateScale(8),
+    minHeight: verticalScale(38),
+    borderRadius: 10,
+    paddingHorizontal: moderateScale(10),
+    gap: 6,
   },
   segmentActive: {
-    backgroundColor: "rgba(49, 118, 103, 0.14)",
+    backgroundColor: ChickIntelPalette.green1,
+    shadowColor: "#317667",
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
   },
   segmentInactive: {
     backgroundColor: "transparent",
@@ -1253,12 +1268,13 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(13),
     fontWeight: "700",
     lineHeight: 18,
+    color: ChickIntelPalette.gray2,
   },
   segmentTextActive: {
-    color: ChickIntelPalette.green1,
+    color: "#FFFFFF",
   },
   segmentTextInactive: {
-    color: "rgba(51, 51, 51, 0.58)",
+    color: ChickIntelPalette.gray2,
   },
   list: {
     gap: 10,
@@ -1379,14 +1395,35 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   backButton: {
-    width: scale(40),
-    height: verticalScale(40),
-    borderRadius: 10,
-    alignItems: "center",
+    width: scale(42),
+    height: verticalScale(42),
+    borderRadius: 14,
+    backgroundColor: ChickIntelPalette.green1,
     justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.6)",
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: "rgba(49,118,103,0.12)",
+    borderColor: "rgba(49, 118, 103, 0.25)",
+    shadowColor: "#317667",
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
+    shadowOffset: { width: scale(0), height: verticalScale(4) },
+    elevation: 4,
+    flexShrink: 0,
+  },
+  eggAnalyticsIconButton: {
+    width: scale(42),
+    height: verticalScale(42),
+    borderRadius: 14,
+    backgroundColor: ChickIntelPalette.green1,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.25)",
+    shadowColor: "#317667",
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
+    shadowOffset: { width: scale(0), height: verticalScale(4) },
+    elevation: 4,
     flexShrink: 0,
   },
   iconCluster: {

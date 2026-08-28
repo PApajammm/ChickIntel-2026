@@ -1,11 +1,12 @@
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { router } from "expo-router";
 import { useCallback } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 import ChickenLogo from "@/assets_imported/splash-chicken.svg";
 import { AuthFrame } from "@/components/farm-auth";
+import { ChickIntelPalette } from "@/constants/chickintel-palette";
 import { useAuth } from "@/providers/auth-provider";
 import { logStep } from "@/utils/logger";
 import { moderateScale, scale, verticalScale } from "@/utils/responsive";
@@ -35,14 +36,21 @@ export default function LogoScreen() {
                 <View style={styles.logoWrap}>
                     <ChickenLogo width={scale(200)} height={verticalScale(240)} />
                 </View>
-                <Pressable 
+
+                <Pressable
+                    style={({ pressed }) => [
+                        styles.infoButton,
+                        pressed && styles.infoButtonPressed,
+                    ]}
                     onPress={() => router.push("/developers")}
-                    style={styles.infoButton}
+                    hitSlop={16}
                 >
-                    <MaterialCommunityIcons name="information-outline" size={48} color="#2b2b2b" />
+                    <MaterialCommunityIcons
+                        name="information-outline"
+                        size={42}
+                        color={ChickIntelPalette.gray1}
+                    />
                 </Pressable>
-
-
             </View>
         </AuthFrame>
     );
@@ -67,10 +75,13 @@ const styles = StyleSheet.create({
     },
     infoButton: {
         position: "absolute",
-        bottom: 40,
+        bottom: verticalScale(36),
         alignItems: "center",
         justifyContent: "center",
-        padding: 8,
+        padding: moderateScale(8),
     },
-
+    infoButtonPressed: {
+        opacity: 0.6,
+        transform: [{ scale: 0.92 }],
+    },
 });

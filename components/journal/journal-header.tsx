@@ -1,11 +1,12 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 import { ChickFont } from "@/constants/chick-fonts";
-import { moderateScale, responsiveFontSize, verticalScale } from "@/utils/responsive";
+import { moderateScale, responsiveFontSize, scale, verticalScale } from "@/utils/responsive";
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
 
 type JournalHeaderProps = {
+  onBackPress?: () => void;
   onArchivePress: () => void;
   archiveDisabled?: boolean;
   onOpenArchives: () => void;
@@ -18,6 +19,7 @@ type JournalHeaderProps = {
  * Title row with clean header icons and archive selection mode support.
  */
 export function JournalHeader({
+  onBackPress,
   onArchivePress,
   archiveDisabled,
   onOpenArchives,
@@ -27,13 +29,30 @@ export function JournalHeader({
 }: JournalHeaderProps) {
   return (
     <View style={styles.row}>
-      <Text style={styles.title} numberOfLines={2}>
-        {isSelecting
-          ? selectedCount > 0
-            ? `${selectedCount} Selected`
-            : "Select Logs to Archive"
-          : "Behavior Journal"}
-      </Text>
+      <View style={styles.titleLeftRow}>
+        {onBackPress ? (
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={onBackPress}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+          >
+            <MaterialCommunityIcons
+              name="arrow-left"
+              size={22}
+              color="#FFF"
+            />
+          </TouchableOpacity>
+        ) : null}
+        <Text style={styles.title} numberOfLines={2}>
+          {isSelecting
+            ? selectedCount > 0
+              ? `${selectedCount} Selected`
+              : "Select Logs to Archive"
+            : "Behavior Journal"}
+        </Text>
+      </View>
       <View style={styles.headerIcons}>
         {!isSelecting ? (
           <>
@@ -117,6 +136,28 @@ const styles = StyleSheet.create({
     gap: 12,
     marginTop: verticalScale(10),
     marginBottom: verticalScale(8),
+  },
+  titleLeftRow: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  backButton: {
+    width: scale(42),
+    height: verticalScale(42),
+    borderRadius: 14,
+    backgroundColor: ChickIntelPalette.green1,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.25)",
+    shadowColor: "#317667",
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
+    shadowOffset: { width: scale(0), height: verticalScale(4) },
+    elevation: 4,
+    flexShrink: 0,
   },
   title: {
     flex: 1,

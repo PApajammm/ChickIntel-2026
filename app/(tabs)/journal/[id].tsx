@@ -2,9 +2,9 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { moderateScale, responsiveFontSize, verticalScale } from "@/utils/responsive";
+import { moderateScale, responsiveFontSize, scale, verticalScale } from "@/utils/responsive";
 
 import BackgroundGradient from "@/assets_imported/background-gradient.svg";
 import { HealthInputSummaryCard } from "@/components/health-scan/health-input-summary-card";
@@ -137,22 +137,19 @@ export default function JournalDetailScreen() {
             />
             <StatusBar style="dark" />
             <View style={styles.topBar}>
-                <Pressable
+                <TouchableOpacity
                     onPress={handleBack}
-                    hitSlop={12}
-                    style={({ pressed }) => [
-                        styles.backBtn,
-                        { opacity: pressed ? 0.7 : 1 },
-                    ]}
+                    style={styles.backBtn}
+                    activeOpacity={0.8}
                     accessibilityRole="button"
                     accessibilityLabel="Back"
                 >
                     <MaterialCommunityIcons
-                        name="chevron-left"
-                        size={28}
-                        color={ChickIntelPalette.gray1}
+                        name="arrow-left"
+                        size={22}
+                        color="#FFF"
                     />
-                </Pressable>
+                </TouchableOpacity>
                 <Text style={styles.pageTitle}>Behavior Journal</Text>
                 <Text style={styles.savedMeta}>
                     {formatJournalDateTime(entry.savedAt)}
@@ -269,11 +266,23 @@ const styles = StyleSheet.create({
         justifyContent: "space-between",
         paddingHorizontal: moderateScale(16),
         marginBottom: 12,
-        gap: 8,
+        gap: 10,
     },
     backBtn: {
-        padding: moderateScale(2),
-        marginLeft: -6,
+        width: scale(42),
+        height: verticalScale(42),
+        borderRadius: 14,
+        backgroundColor: ChickIntelPalette.green1,
+        justifyContent: "center",
+        alignItems: "center",
+        borderWidth: 1,
+        borderColor: "rgba(49, 118, 103, 0.25)",
+        shadowColor: "#317667",
+        shadowOpacity: 0.22,
+        shadowRadius: 10,
+        shadowOffset: { width: scale(0), height: verticalScale(4) },
+        elevation: 4,
+        flexShrink: 0,
     },
     savedMeta: {
         ...HealthTypography.meta,

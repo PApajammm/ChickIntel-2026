@@ -670,35 +670,36 @@ export default function InventoryScreen() {
       />
       <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-          <Pressable
-            style={({ pressed }) => [
-              styles.addButton,
-              { opacity: pressed ? 0.75 : 1 },
-            ]}
+          <TouchableOpacity
+            style={styles.backButton}
             onPress={() =>
               router.canGoBack() ? router.back() : router.replace("/(tabs)")
             }
+            activeOpacity={0.8}
             accessibilityRole="button"
             accessibilityLabel="Go back"
           >
             <MaterialCommunityIcons
               name="arrow-left"
-              size={24}
-              color={ChickIntelPalette.gray1}
+              size={22}
+              color="#FFF"
             />
-          </Pressable>
+          </TouchableOpacity>
           <Text style={styles.screenTitle}>Inventory</Text>
         </View>
-        <Pressable
+        <TouchableOpacity
           style={styles.addButton}
           onPress={() => setAddModalVisible(true)}
+          activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel="Add inventory item"
         >
           <MaterialCommunityIcons
             name="plus"
-            size={28}
-            color={ChickIntelPalette.gray1}
+            size={24}
+            color="#FFF"
           />
-        </Pressable>
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -1505,14 +1506,35 @@ const styles = StyleSheet.create({
     color: ChickIntelPalette.gray1,
   },
   addButton: {
-    width: scale(44),
-    height: verticalScale(44),
-    borderRadius: 22,
-    backgroundColor: "rgba(255,255,255,0.4)",
+    width: scale(42),
+    height: verticalScale(42),
+    borderRadius: 14,
+    backgroundColor: ChickIntelPalette.green1,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.6)",
+    borderColor: "rgba(49, 118, 103, 0.25)",
+    shadowColor: "#317667",
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
+    shadowOffset: { width: scale(0), height: verticalScale(4) },
+    elevation: 4,
+    flexShrink: 0,
+  },
+  backButton: {
+    width: scale(42),
+    height: verticalScale(42),
+    borderRadius: 14,
+    backgroundColor: ChickIntelPalette.green1,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.25)",
+    shadowColor: "#317667",
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
+    shadowOffset: { width: scale(0), height: verticalScale(4) },
+    elevation: 4,
   },
   content: {
     paddingHorizontal: moderateScale(20),
