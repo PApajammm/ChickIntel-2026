@@ -508,7 +508,7 @@ export default function ProfilesScreen() {
               <MaterialCommunityIcons
                 name="bird"
                 size={16}
-                color={mode === "chicken" ? "#FFFFFF" : ChickIntelPalette.gray2}
+                color={mode === "chicken" ? "#FFFFFF" : "#4A5452"}
               />
               <Text
                 style={[
@@ -531,7 +531,7 @@ export default function ProfilesScreen() {
               <MaterialCommunityIcons
                 name="egg-outline"
                 size={16}
-                color={mode === "egg" ? "#FFFFFF" : ChickIntelPalette.gray2}
+                color={mode === "egg" ? "#FFFFFF" : "#4A5452"}
               />
               <Text
                 style={[
@@ -1268,13 +1268,13 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(13),
     fontWeight: "700",
     lineHeight: 18,
-    color: ChickIntelPalette.gray2,
+    color: "#4A5452",
   },
   segmentTextActive: {
     color: "#FFFFFF",
   },
   segmentTextInactive: {
-    color: ChickIntelPalette.gray2,
+    color: "#4A5452",
   },
   list: {
     gap: 10,

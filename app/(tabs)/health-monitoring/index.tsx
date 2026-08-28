@@ -412,7 +412,7 @@ export default function HealthMonitoringIndexScreen() {
                 <MaterialCommunityIcons
                   name={tab === "Active" ? "heart-pulse" : "history"}
                   size={16}
-                  color={active ? "#FFFFFF" : ChickIntelPalette.gray2}
+                  color={active ? "#FFFFFF" : "#4A5452"}
                 />
                 <Text
                   style={[
@@ -602,7 +602,7 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(13),
     fontWeight: "700",
-    color: ChickIntelPalette.gray2,
+    color: "#4A5452",
   },
   tabTextActive: {
     color: "#FFFFFF",

@@ -19,6 +19,7 @@ import {
     StyleSheet,
     Text,
     TextInput,
+    TouchableOpacity,
     View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -353,62 +354,69 @@ export default function EggBatchColorScreen() {
         keyboardDismissMode="on-drag"
       >
         <View style={styles.headerRow}>
-          <View style={styles.headerCopy}>
-            <Pressable
+          <View style={styles.headerLeftRow}>
+            <TouchableOpacity
               onPress={() =>
-                router.push({
-                  pathname: "/(tabs)/profiles" as any,
-                  params: { mode: "egg" },
-                })
+                router.canGoBack()
+                  ? router.back()
+                  : router.push({
+                      pathname: "/(tabs)/profiles" as any,
+                      params: { mode: "egg" },
+                    })
               }
               accessibilityRole="button"
               accessibilityLabel="Back to egg batch profile"
-              style={styles.backInlineBtn}
+              style={styles.backButton}
+              activeOpacity={0.8}
             >
               <MaterialCommunityIcons
                 name="arrow-left"
-                size={18}
-                color={ChickIntelPalette.gray1}
+                size={22}
+                color="#FFF"
               />
-            </Pressable>
-            <Text style={styles.pageTitle}>Egg Batches per Color / Origin</Text>
-            <Text style={styles.subtitle}>
-              {colorName ? (
-                colorName
-              ) : (
-                <Text style={styles.subtitleMuted}>Selected color</Text>
-              )}{" "}
-              • {summaryMetrics.batchCount} batches • Fertility{" "}
-              {summaryMetrics.fertility}
-            </Text>
+            </TouchableOpacity>
+            <View style={styles.headerTitleWrap}>
+              <Text style={styles.pageTitle}>Egg Batches per Color / Origin</Text>
+              <Text style={styles.subtitle}>
+                {colorName ? (
+                  colorName
+                ) : (
+                  <Text style={styles.subtitleMuted}>Selected color</Text>
+                )}{" "}
+                • {summaryMetrics.batchCount} batches • Fertility{" "}
+                {summaryMetrics.fertility}
+              </Text>
+            </View>
           </View>
           <View style={styles.headerActions}>
             {hasSelectedEggs ? (
               <>
-                <Pressable
+                <TouchableOpacity
                   onPress={clearSelection}
-                  style={styles.headerActionBtn}
+                  style={styles.headerCloseBtn}
                   accessibilityRole="button"
                   accessibilityLabel="Clear selected egg batches"
+                  activeOpacity={0.8}
                 >
                   <MaterialCommunityIcons
                     name="close"
-                    size={18}
-                    color={ChickIntelPalette.gray1}
+                    size={22}
+                    color="#FFF"
                   />
-                </Pressable>
-                <Pressable
+                </TouchableOpacity>
+                <TouchableOpacity
                   onPress={confirmDeleteSelectedEggs}
-                  style={[styles.headerActionBtn, styles.headerDeleteBtn]}
+                  style={styles.headerDeleteBtn}
                   accessibilityRole="button"
                   accessibilityLabel="Delete selected egg batches"
+                  activeOpacity={0.8}
                 >
                   <MaterialCommunityIcons
                     name="trash-can-outline"
-                    size={18}
-                    color="#B04B58"
+                    size={22}
+                    color="#FFF"
                   />
-                </Pressable>
+                </TouchableOpacity>
               </>
             ) : null}
           </View>
@@ -746,45 +754,71 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-start",
+    alignItems: "center",
     gap: 12,
   },
-  headerCopy: {
+  headerLeftRow: {
     flex: 1,
-    gap: 4,
     flexDirection: "row",
     alignItems: "center",
-    flexWrap: "wrap",
-    columnGap: 8,
+    gap: 10,
+  },
+  headerTitleWrap: {
+    flex: 1,
+    gap: 2,
   },
   headerActions: {
     flexDirection: "row",
     gap: 8,
-    paddingTop: 2,
-  },
-  headerActionBtn: {
-    width: scale(34),
-    height: verticalScale(34),
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "rgba(49,118,103,0.18)",
-    backgroundColor: ChickIntelPalette.light1,
     alignItems: "center",
+  },
+  headerCloseBtn: {
+    width: scale(42),
+    height: verticalScale(42),
+    borderRadius: 14,
+    backgroundColor: ChickIntelPalette.green1,
     justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.25)",
+    shadowColor: "#317667",
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
+    shadowOffset: { width: scale(0), height: verticalScale(4) },
+    elevation: 4,
+    flexShrink: 0,
   },
   headerDeleteBtn: {
-    borderColor: "rgba(176,75,88,0.2)",
-    backgroundColor: "rgba(176,75,88,0.08)",
-  },
-  backInlineBtn: {
-    width: scale(32),
-    height: verticalScale(32),
-    borderRadius: 5,
-    borderWidth: 1,
-    borderColor: "rgba(49,118,103,0.18)",
-    alignItems: "center",
+    width: scale(42),
+    height: verticalScale(42),
+    borderRadius: 14,
+    backgroundColor: "#DC2626",
     justifyContent: "center",
-    backgroundColor: ChickIntelPalette.light1,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(220, 38, 38, 0.35)",
+    shadowColor: "#DC2626",
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    shadowOffset: { width: scale(0), height: verticalScale(4) },
+    elevation: 4,
+    flexShrink: 0,
+  },
+  backButton: {
+    width: scale(42),
+    height: verticalScale(42),
+    borderRadius: 14,
+    backgroundColor: ChickIntelPalette.green1,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.25)",
+    shadowColor: "#317667",
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
+    shadowOffset: { width: scale(0), height: verticalScale(4) },
+    elevation: 4,
+    flexShrink: 0,
   },
   pageTitle: {
     fontFamily: ChickFont.display,

@@ -916,7 +916,7 @@ function SegmentedPills<T extends string>({
               <MaterialCommunityIcons
                 name={iconName}
                 size={14}
-                color={active ? "#FFF" : ChickIntelPalette.gray2}
+                color={active ? "#FFF" : "#4A5452"}
               />
             )}
             <Text

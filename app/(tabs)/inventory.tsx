@@ -46,6 +46,38 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type InventoryItem = SupabaseInventoryItem & { baseQty?: number };
 
+const INVENTORY_TABS = [
+  { id: "equipment", label: "Equipment", icon: "tools" },
+  { id: "feeds", label: "Feeds", icon: "barley" },
+  { id: "medicine", label: "Medicine", icon: "pill" },
+  { id: "vitamins", label: "Vitamins", icon: "bottle-tonic-plus-outline" },
+] as const;
+
+type InventoryTabId = (typeof INVENTORY_TABS)[number]["id"];
+
+function getCategoryTab(categoryOrType?: string): InventoryTabId {
+  const norm = (categoryOrType || "").trim().toLowerCase();
+  if (norm.includes("feed")) return "feeds";
+  if (
+    norm.includes("medicin") ||
+    norm.includes("medicat") ||
+    norm.includes("vaccin")
+  ) {
+    return "medicine";
+  }
+  if (norm.includes("vitamin") || norm.includes("supplem")) {
+    return "vitamins";
+  }
+  return "equipment";
+}
+
+const defaultTypeForTab: Record<InventoryTabId, string> = {
+  equipment: "Equipment",
+  feeds: "Feeds",
+  medicine: "Medicine",
+  vitamins: "Vitamins",
+};
+
 const UNIT_OPTIONS = ["kg", "lbs", "box", "pcs", "ml", "vials"];
 const formatQuantityValue = (value: number) =>
   Number.isInteger(value) ? String(value) : value.toFixed(2);
@@ -73,6 +105,7 @@ export default function InventoryScreen() {
   } = useFarmData();
   const isDark = false;
 
+  const [selectedTab, setSelectedTab] = useState<InventoryTabId>("equipment");
   const [inventoryError, setInventoryError] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
@@ -270,6 +303,44 @@ export default function InventoryScreen() {
       expiredItemsList: filteredExpired,
     };
   }, [effectiveItems, activeExpirationFilter]);
+
+  const tabAlerts = useMemo(() => {
+    const alerts: Record<
+      InventoryTabId,
+      { total: number; hasExpired: boolean }
+    > = {
+      equipment: { total: 0, hasExpired: false },
+      feeds: { total: 0, hasExpired: false },
+      medicine: { total: 0, hasExpired: false },
+      vitamins: { total: 0, hasExpired: false },
+    };
+
+    const now = new Date();
+    effectiveItems.forEach((item) => {
+      const tab = getCategoryTab(item.type);
+      alerts[tab].total += 1;
+      if (item.expirationDate) {
+        const meta = getExpirationStatus(item.expirationDate, now);
+        if (meta.isExpired) {
+          alerts[tab].hasExpired = true;
+        }
+      }
+    });
+
+    return alerts;
+  }, [effectiveItems]);
+
+  const currentTabGroups = useMemo(() => {
+    return activeCategoryGroups.filter(([groupTitle]) =>
+      getCategoryTab(groupTitle) === selectedTab,
+    );
+  }, [activeCategoryGroups, selectedTab]);
+
+  const currentTabExpiredItems = useMemo(() => {
+    return expiredItemsList.filter(
+      (item) => getCategoryTab(item.type) === selectedTab,
+    );
+  }, [expiredItemsList, selectedTab]);
 
   const toggleTypeSelection = (groupItems: InventoryItem[]) => {
     const ids = groupItems.map((item) => item.id);
@@ -689,7 +760,10 @@ export default function InventoryScreen() {
         </View>
         <TouchableOpacity
           style={styles.addButton}
-          onPress={() => setAddModalVisible(true)}
+          onPress={() => {
+            setNewItemType(defaultTypeForTab[selectedTab] || "Choose type");
+            setAddModalVisible(true);
+          }}
           activeOpacity={0.8}
           accessibilityRole="button"
           accessibilityLabel="Add inventory item"
@@ -864,6 +938,54 @@ export default function InventoryScreen() {
             </BlurCard>
           ) : null}
 
+          {/* 4 Category Tabs acting as the header/title for the dynamic tables below */}
+          <View style={styles.tabSectionHeader}>
+            <View style={styles.segmentWrap}>
+              {INVENTORY_TABS.map((tab) => {
+                const isActive = selectedTab === tab.id;
+                const hasExpired = tabAlerts[tab.id]?.hasExpired;
+                return (
+                  <Pressable
+                    key={tab.id}
+                    onPress={() => setSelectedTab(tab.id)}
+                    style={[
+                      styles.segment,
+                      isActive ? styles.segmentActive : styles.segmentInactive,
+                    ]}
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected: isActive }}
+                    accessibilityLabel={`${tab.label} tab`}
+                  >
+                    <MaterialCommunityIcons
+                      name={tab.icon as any}
+                      size={15}
+                      color={isActive ? "#FFFFFF" : "#4A5452"}
+                    />
+                    <Text
+                      style={[
+                        styles.segmentText,
+                        isActive
+                          ? styles.segmentTextActive
+                          : styles.segmentTextInactive,
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {tab.label}
+                    </Text>
+                    {hasExpired ? (
+                      <View
+                        style={[
+                          styles.segmentAlertDot,
+                          isActive && styles.segmentAlertDotActive,
+                        ]}
+                      />
+                    ) : null}
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+
           {loadingItems ? (
             <Text style={styles.emptyStateText}>Loading inventory...</Text>
           ) : null}
@@ -896,17 +1018,69 @@ export default function InventoryScreen() {
             </View>
           ) : null}
 
-          {/* Regular Active Inventory Category Tables */}
+          {/* Active Category Tables for Selected Tab */}
           {!loadingItems && !inventoryError
-            ? activeCategoryGroups.map(([groupTitle, groupItems]) =>
+            ? currentTabGroups.map(([groupTitle, groupItems]) =>
                 renderInventoryTable(groupTitle, groupItems, false),
               )
             : null}
 
-          {/* Dedicated Expired Items Table (Positioned Below Active Categories) */}
-          {!loadingItems && !inventoryError && expiredItemsList.length > 0
-            ? renderInventoryTable("Expired Supplies", expiredItemsList, true)
+          {/* Dedicated Expired Items Table for Selected Tab */}
+          {!loadingItems &&
+          !inventoryError &&
+          currentTabExpiredItems.length > 0
+            ? renderInventoryTable(
+                `Expired ${INVENTORY_TABS.find((t) => t.id === selectedTab)?.label || "Supplies"}`,
+                currentTabExpiredItems,
+                true,
+              )
             : null}
+
+          {/* Tab Empty State when no items exist for this tab */}
+          {!loadingItems &&
+          !inventoryError &&
+          effectiveItems.length > 0 &&
+          currentTabGroups.length === 0 &&
+          currentTabExpiredItems.length === 0 ? (
+            <BlurCard
+              style={styles.tabEmptyCard}
+              borderRadius={14}
+              intensity={16}
+            >
+              <View style={styles.tabEmptyInner}>
+                <View style={styles.tabEmptyIconWrap}>
+                  <MaterialCommunityIcons
+                    name={
+                      INVENTORY_TABS.find((t) => t.id === selectedTab)?.icon as any
+                    }
+                    size={32}
+                    color={ChickIntelPalette.green1}
+                  />
+                </View>
+                <Text style={styles.tabEmptyTitle}>
+                  No {INVENTORY_TABS.find((t) => t.id === selectedTab)?.label} Items
+                </Text>
+                <Text style={styles.tabEmptySubtitle}>
+                  You don't have any items under this category yet.
+                </Text>
+                <TouchableOpacity
+                  style={styles.tabEmptyAddBtn}
+                  onPress={() => {
+                    setNewItemType(
+                      defaultTypeForTab[selectedTab] || "Choose type",
+                    );
+                    setAddModalVisible(true);
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <MaterialCommunityIcons name="plus" size={16} color="#FFF" />
+                  <Text style={styles.tabEmptyAddBtnText}>
+                    Add {INVENTORY_TABS.find((t) => t.id === selectedTab)?.label}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </BlurCard>
+          ) : null}
         </View>
       </ScrollView>
 
@@ -1494,8 +1668,121 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: moderateScale(20),
-    marginTop: 10,
+    marginTop: 4,
     marginBottom: 8,
+  },
+  tabSectionHeader: {
+    backgroundColor: "transparent",
+    marginTop: verticalScale(12),
+    marginBottom: verticalScale(4),
+  },
+  segmentWrap: {
+    flexDirection: "row",
+    backgroundColor: "rgba(255, 255, 255, 0.85)",
+    borderRadius: 14,
+    padding: 4,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.16)",
+    shadowColor: "#317667",
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+  },
+  segment: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: verticalScale(38),
+    borderRadius: 10,
+    paddingHorizontal: moderateScale(4),
+    gap: 4,
+  },
+  segmentActive: {
+    backgroundColor: ChickIntelPalette.green1,
+    shadowColor: "#317667",
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  segmentInactive: {
+    backgroundColor: "transparent",
+  },
+  segmentText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(11.5),
+    fontWeight: "700",
+    lineHeight: 16,
+    color: "#4A5452",
+  },
+  segmentTextActive: {
+    color: "#FFFFFF",
+  },
+  segmentTextInactive: {
+    color: "#4A5452",
+  },
+  segmentAlertDot: {
+    width: scale(6),
+    height: verticalScale(6),
+    borderRadius: 3,
+    backgroundColor: "#DC2626",
+    marginLeft: 1,
+  },
+  segmentAlertDotActive: {
+    backgroundColor: "#FFD2D2",
+  },
+  tabEmptyCard: {
+    overflow: "hidden",
+    marginTop: 12,
+  },
+  tabEmptyInner: {
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.18)",
+    borderRadius: 14,
+    paddingVertical: verticalScale(28),
+    paddingHorizontal: moderateScale(20),
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  tabEmptyIconWrap: {
+    width: scale(52),
+    height: verticalScale(52),
+    borderRadius: 26,
+    backgroundColor: "rgba(49, 118, 103, 0.12)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
+  },
+  tabEmptyTitle: {
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(16),
+    fontWeight: "700",
+    color: ChickIntelPalette.gray1,
+  },
+  tabEmptySubtitle: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(13),
+    color: ChickIntelPalette.gray2,
+    textAlign: "center",
+  },
+  tabEmptyAddBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: ChickIntelPalette.green1,
+    paddingHorizontal: moderateScale(14),
+    paddingVertical: verticalScale(8),
+    borderRadius: 10,
+    marginTop: 6,
+  },
+  tabEmptyAddBtnText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(13),
+    fontWeight: "700",
+    color: "#FFFFFF",
   },
   screenTitle: {
     fontFamily: ChickFont.display,
