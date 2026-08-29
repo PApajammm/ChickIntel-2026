@@ -713,6 +713,19 @@ export default function InventoryScreen() {
     groupItems: EffectiveInventoryItem[],
     isExpiredTable: boolean = false,
   ) => {
+    const selectedTabMeta = INVENTORY_TABS.find((t) => t.id === selectedTab);
+    const isCategoryTitle =
+      groupTitle.toLowerCase() === selectedTab.toLowerCase() ||
+      groupTitle.toLowerCase() ===
+        (selectedTabMeta?.label.toLowerCase() || "") ||
+      groupTitle.toLowerCase().startsWith("expired ");
+
+    const displayTitle = isExpiredTable
+      ? "Expired Stock"
+      : isCategoryTitle
+        ? "Active Stock"
+        : `Active Stock (${groupTitle})`;
+
     return (
       <BlurCard
         key={groupTitle}
@@ -735,8 +748,13 @@ export default function InventoryScreen() {
                 </View>
               ) : null}
               <View>
-                <Text style={styles.tableSectionTitle}>
-                  {groupTitle}
+                <Text
+                  style={[
+                    styles.tableSectionTitle,
+                    isExpiredTable && styles.tableSectionTitleExpired,
+                  ]}
+                >
+                  {displayTitle}
                 </Text>
               </View>
             </View>
