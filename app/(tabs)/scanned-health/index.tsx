@@ -20,6 +20,7 @@ import {
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
+import BackgroundGradient from "@/assets_imported/background-gradient.svg";
 import { BehaviorChecklist } from "@/components/health-scan/behavior-checklist";
 import { HealthFlowFooterButton } from "@/components/health-scan/health-flow-footer-button";
 import { HealthInputSummaryCard } from "@/components/health-scan/health-input-summary-card";
@@ -149,11 +150,21 @@ export default function ScannedHealthInputScreen() {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={insets.top + TAB_BAR_OFFSET}
     >
-      <SafeAreaView style={styles.screen} edges={["top"]}>
-        <StatusBar style="dark" />
-        
-        {/* Pinned Top Header */}
-        <View style={styles.fixedHeader}>
+      <View style={styles.screen}>
+        <BackgroundGradient
+          width="110%"
+          height="110%"
+          preserveAspectRatio="xMidYMid slice"
+          style={[
+            StyleSheet.absoluteFill,
+            { transform: [{ scale: 1.08 }, { translateY: -14 }] },
+          ]}
+        />
+        <SafeAreaView style={styles.safeArea} edges={["top"]}>
+          <StatusBar style="dark" />
+          
+          {/* Pinned Top Header */}
+          <View style={styles.fixedHeader}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
             <TouchableOpacity
               style={styles.backButton}
@@ -216,7 +227,8 @@ export default function ScannedHealthInputScreen() {
 
           <HealthFlowFooterButton variant="next" onPress={goNext} />
         </ScrollView>
-      </SafeAreaView>
+        </SafeAreaView>
+      </View>
     </KeyboardAvoidingView>
   );
 }
@@ -225,6 +237,9 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: ChickIntelPalette.light1,
+  },
+  safeArea: {
+    flex: 1,
   },
   fixedHeader: {
     paddingHorizontal: moderateScale(16),

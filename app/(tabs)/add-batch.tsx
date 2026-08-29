@@ -23,11 +23,13 @@ import {
     StyleSheet,
     Text,
     TextInput,
+    TouchableOpacity,
     View,
     useWindowDimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import BackgroundGradient from "@/assets_imported/background-gradient.svg";
 import {
     CameraViewport,
     type CameraViewportRef,
@@ -385,6 +387,15 @@ export default function AddBatchScreen() {
 
   return (
     <View style={styles.screen}>
+      <BackgroundGradient
+        width="110%"
+        height="110%"
+        preserveAspectRatio="xMidYMid slice"
+        style={[
+          StyleSheet.absoluteFill,
+          { transform: [{ scale: 1.08 }, { translateY: -14 }] },
+        ]}
+      />
       <StatusBar style="dark" />
       <KeyboardAvoidingView
         style={styles.keyboardArea}
@@ -403,42 +414,50 @@ export default function AddBatchScreen() {
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
         >
-          <View style={styles.createHero}>
-            <Pressable
+          <View style={styles.topBar}>
+            <TouchableOpacity
               onPress={() =>
-                router.replace({
-                  pathname: "/(tabs)/profiles" as any,
-                  params: { mode: "chicken" },
-                })
+                router.canGoBack()
+                  ? router.back()
+                  : router.replace({
+                      pathname: "/(tabs)/profiles" as any,
+                      params: { mode: "chicken" },
+                    })
               }
-              style={({ pressed }) => [
-                styles.createHeroIcon,
-                { opacity: pressed ? 0.75 : 1 },
-              ]}
+              style={styles.backButton}
+              activeOpacity={0.8}
               accessibilityRole="button"
               accessibilityLabel="Go back"
             >
               <MaterialCommunityIcons
                 name="arrow-left"
-                size={24}
-                color={ChickIntelPalette.green1}
+                size={22}
+                color="#FFF"
               />
-            </Pressable>
-            <View style={styles.createHeroCopy}>
-              <Text style={styles.createHeroKicker}>Chicken profile</Text>
-              <Text style={styles.pageTitle}>{pageTitle}</Text>
-              <Text style={styles.createHeroSubtitle}>
-                Register a flock group with its tag color, age, breed, and sex
-                count.
-              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.titleCard}>
+            <View style={styles.kickerRow}>
+              <MaterialCommunityIcons
+                name="feather"
+                size={15}
+                color="#CAE3DD"
+              />
+              <Text style={styles.kickerText}>Chicken profile</Text>
             </View>
+            <Text style={styles.pageTitle}>{pageTitle}</Text>
+            <Text style={styles.pageSubtitle}>
+              Register a flock group with its tag color, age, breed, and sex
+              count.
+            </Text>
           </View>
 
           <View style={styles.summaryChipRow}>
             <View style={styles.summaryChip}>
               <MaterialCommunityIcons
                 name="identifier"
-                size={14}
+                size={12}
                 color={ChickIntelPalette.green1}
               />
               <Text style={styles.summaryChipText}>#{batchNo || "Auto"}</Text>
@@ -455,7 +474,7 @@ export default function AddBatchScreen() {
             <View style={styles.summaryChip}>
               <MaterialCommunityIcons
                 name="counter"
-                size={14}
+                size={12}
                 color={ChickIntelPalette.green1}
               />
               <Text style={styles.summaryChipText}>
@@ -464,8 +483,8 @@ export default function AddBatchScreen() {
             </View>
           </View>
 
-          <View style={styles.formCard}>
-            <View style={styles.formSection}>
+          {/* Form Sections */}
+          <View style={styles.formSection}>
               <View style={styles.formSectionHeader}>
                 <MaterialCommunityIcons
                   name="tag-multiple-outline"
@@ -533,7 +552,7 @@ export default function AddBatchScreen() {
               </View>
 
               <View style={styles.gridRow}>
-                <View style={styles.halfField}>
+                <View style={styles.ageNumberCol}>
                   <Text style={styles.fieldLabel}>No.</Text>
                   <TextInput
                     value={durationCount}
@@ -547,27 +566,42 @@ export default function AddBatchScreen() {
                     placeholderTextColor="#8F9696"
                   />
                 </View>
-                <View style={styles.halfField}>
+                <View style={styles.ageUnitCol}>
                   <Text style={styles.fieldLabel}>Age unit</Text>
-                  <Pressable
-                    onPress={() =>
-                      setAgeUnit((u) =>
-                        u === AGE_UNIT_OPTIONS[0]
-                          ? AGE_UNIT_OPTIONS[1]
-                          : AGE_UNIT_OPTIONS[0],
-                      )
-                    }
-                    style={styles.select}
-                    accessibilityRole="button"
-                    accessibilityLabel="Select age unit"
-                  >
-                    <Text style={styles.selectText}>{ageUnit}</Text>
-                    <MaterialCommunityIcons
-                      name="chevron-down"
-                      size={20}
-                      color={ChickIntelPalette.gray2}
-                    />
-                  </Pressable>
+                  <View style={styles.previewSegmentedContainer}>
+                    {AGE_UNIT_OPTIONS.map((option) => {
+                      const active = ageUnit === option;
+                      return (
+                        <TouchableOpacity
+                          key={option}
+                          onPress={() => setAgeUnit(option)}
+                          activeOpacity={0.8}
+                          style={[
+                            styles.previewSegmentedItem,
+                            active && styles.previewSegmentedItemActive,
+                          ]}
+                        >
+                          <MaterialCommunityIcons
+                            name={
+                              option === "Days old"
+                                ? "calendar-today"
+                                : "calendar-week"
+                            }
+                            size={14}
+                            color={active ? "#FFF" : "#4A5452"}
+                          />
+                          <Text
+                            style={[
+                              styles.previewSegmentedText,
+                              active && styles.previewSegmentedTextActive,
+                            ]}
+                          >
+                            {option}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
                 </View>
               </View>
 
@@ -722,7 +756,6 @@ export default function AddBatchScreen() {
             >
               <Text style={styles.saveText}>Save Record</Text>
             </Pressable>
-          </View>
         </ScrollView>
       </KeyboardAvoidingView>
 
@@ -1179,68 +1212,82 @@ const styles = StyleSheet.create({
     paddingHorizontal: moderateScale(16),
     gap: 12,
   },
-  createHero: {
+  topBar: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    borderRadius: 18,
-    paddingHorizontal: moderateScale(14),
-    paddingVertical: verticalScale(14),
-    backgroundColor: "rgba(202, 227, 221, 0.38)",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.2)",
   },
-  createHeroIcon: {
-    width: scale(52),
-    height: verticalScale(52),
-    borderRadius: 17,
-    alignItems: "center",
+  backButton: {
+    width: scale(42),
+    height: verticalScale(42),
+    borderRadius: 14,
+    backgroundColor: ChickIntelPalette.green1,
     justifyContent: "center",
-    backgroundColor: "rgba(254, 254, 254, 0.74)",
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.18)",
+    borderColor: "rgba(49, 118, 103, 0.25)",
+    shadowColor: "#317667",
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
+    shadowOffset: { width: scale(0), height: verticalScale(4) },
+    elevation: 4,
+    flexShrink: 0,
   },
-  createHeroCopy: {
-    flex: 1,
-    minWidth: 0,
+  titleCard: {
+    borderRadius: 10,
+    paddingHorizontal: moderateScale(16),
+    paddingVertical: verticalScale(14),
+    backgroundColor: ChickIntelPalette.green1,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.15)",
+    shadowColor: "#317667",
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
+    shadowOffset: { width: scale(0), height: verticalScale(4) },
+    elevation: 4,
+    gap: 4,
   },
-  createHeroKicker: {
+  kickerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  kickerText: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(11),
     fontWeight: "800",
     letterSpacing: 0.55,
     textTransform: "uppercase",
-    color: ChickIntelPalette.green1,
+    color: "#CAE3DD",
   },
   pageTitle: {
     fontFamily: ChickFont.display,
-    fontSize: responsiveFontSize(22),
-    lineHeight: 28,
+    fontSize: responsiveFontSize(20),
+    lineHeight: 26,
     fontWeight: "800",
-    letterSpacing: -0.5,
-    color: ChickIntelPalette.gray1,
+    letterSpacing: -0.4,
+    color: "#FFFFFF",
   },
-  createHeroSubtitle: {
+  pageSubtitle: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(12),
     lineHeight: 17,
-    fontWeight: "600",
-    color: ChickIntelPalette.gray2,
-    marginTop: verticalScale(2),
+    fontWeight: "500",
+    color: "rgba(255, 255, 255, 0.88)",
   },
   summaryChipRow: {
     flexDirection: "row",
-    gap: 8,
+    gap: 6,
   },
   summaryChip: {
     flex: 1,
-    minHeight: verticalScale(34),
+    minHeight: verticalScale(26),
+    paddingVertical: verticalScale(3),
+    paddingHorizontal: moderateScale(6),
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
-    borderRadius: 999,
-    paddingHorizontal: moderateScale(8),
+    gap: 4,
+    borderRadius: 8,
     backgroundColor: "rgba(254, 254, 254, 0.72)",
     borderWidth: 1,
     borderColor: "rgba(49, 118, 103, 0.16)",
@@ -1248,66 +1295,69 @@ const styles = StyleSheet.create({
   summaryChipText: {
     flexShrink: 1,
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(11),
-    fontWeight: "800",
+    fontSize: responsiveFontSize(10),
+    fontWeight: "700",
     color: ChickIntelPalette.gray1,
   },
   summaryColorDot: {
-    width: scale(12),
-    height: verticalScale(12),
+    width: scale(9),
+    height: verticalScale(9),
     borderRadius: 999,
     borderWidth: 1,
     borderColor: "rgba(0,0,0,0.12)",
   },
-  segmentWrap: {
-    flexDirection: "row",
-    borderRadius: 5,
-    backgroundColor: ChickIntelPalette.lightGreen,
-    padding: moderateScale(4),
-    borderWidth: 1,
-    borderColor: "rgba(49,118,103,0.2)",
+  ageNumberCol: {
+    width: scale(72),
+    gap: 5,
   },
-  segment: {
+  ageUnitCol: {
     flex: 1,
+    gap: 5,
+  },
+  previewSegmentedContainer: {
+    flexDirection: "row",
+    height: verticalScale(46),
+    backgroundColor: "rgba(49, 118, 103, 0.08)",
+    borderRadius: 8,
+    padding: 3,
+    gap: 3,
+    alignItems: "center",
+  },
+  previewSegmentedItem: {
+    flex: 1,
+    height: "100%",
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: verticalScale(10),
-    borderRadius: 5,
+    gap: 4,
+    borderRadius: 6,
   },
-  segmentActive: {
-    backgroundColor: ChickIntelPalette.gray1,
+  previewSegmentedItemActive: {
+    backgroundColor: ChickIntelPalette.green1,
   },
-  segmentInactive: {
-    backgroundColor: "transparent",
-  },
-  segmentText: {
+  previewSegmentedText: {
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(13),
+    fontSize: responsiveFontSize(11),
     fontWeight: "600",
-    letterSpacing: 0.1,
+    color: "#4A5452",
   },
-  segmentTextActive: {
-    color: ChickIntelPalette.light1,
-  },
-  segmentTextInactive: {
-    color: ChickIntelPalette.gray1,
-  },
-  formCard: {
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "rgba(49,118,103,0.18)",
-    backgroundColor: "rgba(254, 254, 254, 0.58)",
-    padding: moderateScale(12),
-    gap: 12,
+  previewSegmentedTextActive: {
+    color: "#FFFFFF",
+    fontWeight: "700",
   },
   formSection: {
     gap: 10,
-    borderRadius: 16,
-    paddingHorizontal: moderateScale(12),
-    paddingVertical: verticalScale(12),
-    backgroundColor: "rgba(254, 254, 254, 0.82)",
+    borderRadius: 10,
+    paddingHorizontal: moderateScale(14),
+    paddingVertical: verticalScale(14),
+    backgroundColor: "rgba(254, 254, 254, 0.92)",
     borderWidth: 1,
     borderColor: "rgba(67, 139, 123, 0.18)",
+    shadowColor: "#317667",
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   formSectionHeader: {
     flexDirection: "row",
@@ -1533,7 +1583,7 @@ const styles = StyleSheet.create({
   saveButton: {
     marginTop: 8,
     height: verticalScale(52),
-    borderRadius: 999,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: ChickIntelPalette.green1,

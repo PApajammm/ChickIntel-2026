@@ -226,7 +226,7 @@ export default function ScheduleScreen() {
   );
   const responsivePadding = Math.max(12, Math.round(16 * responsiveScale));
   const responsiveTitleSize = Math.max(18, Math.round(20 * responsiveScale));
-  const responsiveMonthSize = Math.max(16, Math.round(18 * responsiveScale));
+  const responsiveMonthSize = Math.max(18, Math.round(21 * responsiveScale));
   const responsiveAgendaSize = Math.max(14, Math.round(15 * responsiveScale));
 
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -1827,8 +1827,8 @@ const styles = StyleSheet.create({
   },
   monthTitle: {
     fontFamily: ChickFont.display,
-    fontSize: responsiveFontSize(18),
-    fontWeight: "600",
+    fontSize: responsiveFontSize(21),
+    fontWeight: "700",
     color: ChickIntelPalette.green1,
     textAlign: "center",
     flex: 1,
@@ -2140,7 +2140,7 @@ const styles = StyleSheet.create({
   },
   previewTimeframeLabel: {
     fontFamily: ChickFont.display,
-    fontSize: responsiveFontSize(20),
+    fontSize: responsiveFontSize(14),
     fontWeight: "700",
     color: ChickIntelPalette.gray1,
     textTransform: "uppercase",
@@ -2178,7 +2178,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: verticalScale(12),
+    paddingBottom: verticalScale(15),
+    marginBottom: verticalScale(4),
     position: "relative",
     width: "100%",
   },

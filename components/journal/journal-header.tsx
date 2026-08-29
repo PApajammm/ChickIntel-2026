@@ -56,71 +56,65 @@ export function JournalHeader({
       <View style={styles.headerIcons}>
         {!isSelecting ? (
           <>
-            <Pressable
+            <TouchableOpacity
               onPress={onOpenArchives}
-              hitSlop={8}
-              style={({ pressed }) => [
-                styles.iconHit,
-                { opacity: pressed ? 0.85 : 1 },
-              ]}
+              style={styles.headerButton}
+              activeOpacity={0.8}
               accessibilityRole="button"
               accessibilityLabel="Open archives"
             >
               <MaterialCommunityIcons
                 name="archive-outline"
-                size={20}
-                color={ChickIntelPalette.gray1}
+                size={22}
+                color="#FFF"
               />
-            </Pressable>
-            <Pressable
+            </TouchableOpacity>
+            <TouchableOpacity
               onPress={onToggleSelecting}
-              hitSlop={12}
-              style={({ pressed }) => [
-                styles.iconHit,
-                { opacity: pressed ? 0.65 : 1 },
-              ]}
+              style={styles.headerButton}
+              activeOpacity={0.8}
               accessibilityRole="button"
               accessibilityLabel="Select logs to archive"
             >
               <MaterialCommunityIcons
                 name="checkbox-multiple-marked-outline"
                 size={22}
-                color={ChickIntelPalette.gray1}
+                color="#FFF"
               />
-            </Pressable>
+            </TouchableOpacity>
           </>
         ) : (
           <>
-            <Pressable
+            <TouchableOpacity
               onPress={onArchivePress}
               disabled={archiveDisabled}
-              hitSlop={12}
-              style={({ pressed }) => [
-                styles.archiveBtn,
-                { opacity: archiveDisabled ? 0.4 : pressed ? 0.75 : 1 },
+              style={[
+                styles.headerButton,
+                archiveDisabled && styles.headerButtonDisabled,
               ]}
+              activeOpacity={0.8}
               accessibilityRole="button"
               accessibilityLabel="Archive selected logs"
             >
               <MaterialCommunityIcons
                 name="archive-arrow-down-outline"
-                size={18}
+                size={22}
                 color="#FFF"
               />
-              <Text style={styles.archiveBtnText}>Archive</Text>
-            </Pressable>
-            <Pressable
+            </TouchableOpacity>
+            <TouchableOpacity
               onPress={onToggleSelecting}
-              hitSlop={8}
-              style={({ pressed }) => [
-                styles.cancelBtn,
-                { opacity: pressed ? 0.75 : 1 },
-              ]}
+              style={styles.headerButton}
+              activeOpacity={0.8}
               accessibilityRole="button"
-              accessibilityLabel="Cancel selection mode"
+              accessibilityLabel="Done"
             >
-              <Text style={styles.cancelBtnText}>Done</Text>
-            </Pressable>
+              <MaterialCommunityIcons
+                name="check"
+                size={22}
+                color="#FFF"
+              />
+            </TouchableOpacity>
           </>
         )}
       </View>
@@ -131,7 +125,7 @@ export function JournalHeader({
 const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
-    alignItems: "flex-start",
+    alignItems: "center",
     justifyContent: "space-between",
     gap: 12,
     marginTop: verticalScale(10),
@@ -177,31 +171,23 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
   },
-  archiveBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
+  headerButton: {
+    width: scale(42),
+    height: verticalScale(42),
+    borderRadius: 14,
     backgroundColor: ChickIntelPalette.green1,
-    paddingHorizontal: moderateScale(12),
-    paddingVertical: verticalScale(6),
-    borderRadius: 8,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.25)",
+    shadowColor: "#317667",
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
+    shadowOffset: { width: scale(0), height: verticalScale(4) },
+    elevation: 4,
+    flexShrink: 0,
   },
-  archiveBtnText: {
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(13),
-    fontWeight: "700",
-    color: "#FFF",
-  },
-  cancelBtn: {
-    paddingHorizontal: moderateScale(10),
-    paddingVertical: verticalScale(6),
-    borderRadius: 8,
-    backgroundColor: "rgba(49, 118, 103, 0.12)",
-  },
-  cancelBtnText: {
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(13),
-    fontWeight: "700",
-    color: ChickIntelPalette.green1,
+  headerButtonDisabled: {
+    opacity: 0.4,
   },
 });
