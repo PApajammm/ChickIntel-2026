@@ -45,12 +45,9 @@ export function BlurCard({
             10,
             Math.round(borderRadius * responsiveScale),
           ),
-          borderColor,
           backgroundColor: transparent
             ? "transparent"
             : ChickIntelPalette.light1,
-          shadowOpacity: transparent ? 0 : 0.08,
-          elevation: transparent ? 0 : 3,
         },
         style,
       ]}
@@ -81,13 +78,8 @@ export function BlurCard({
 
 const styles = StyleSheet.create({
   wrap: {
-    borderWidth: 1,
+    borderWidth: 0,
     overflow: "hidden",
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 3,
   },
   inner: {
     flex: 1,

@@ -51,6 +51,7 @@ function emitConsole(
     const ctx = safeStringify(context);
     const formatted = `[ChickInteL][${timestamp}][${level}] ${message}${ctx ? ` ${ctx}` : ""}`;
     if (level === "error") console.error(formatted);
+    else if (level === "warn") console.warn(formatted);
     else console.log(formatted);
 }
 
@@ -69,6 +70,10 @@ function log(
 
 export function logStep(step: string, context?: LogContext) {
     log("info", step, context);
+}
+
+export function logWarn(step: string, context?: LogContext) {
+    log("warn", step, context);
 }
 
 export function logError(step: string, error: unknown, context?: LogContext) {

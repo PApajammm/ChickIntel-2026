@@ -74,9 +74,13 @@ export async function fetchInventoryItems(farmId: string) {
     return mapped;
   }
 
-  const activeCategorySet = new Set(
-    activeCategoryOptions.map((cat) => cat.trim().toLowerCase()),
-  );
+  const activeCategorySet = new Set([
+    "equipment",
+    "feeds",
+    "medicine",
+    "vitamins",
+    ...activeCategoryOptions.map((cat) => cat.trim().toLowerCase()),
+  ]);
 
   return mapped.filter((item) =>
     activeCategorySet.has(item.type.trim().toLowerCase()),

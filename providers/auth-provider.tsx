@@ -9,7 +9,7 @@ import {
 } from "react";
 
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
-import { logError, logStep } from "@/utils/logger";
+import { logError, logStep, logWarn } from "@/utils/logger";
 
 export type AppProfile = {
   id: string;
@@ -108,7 +108,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setMemberships([]);
     setError(null);
     logStep("Cleared invalid local Supabase session");
-    logError("Recovered from invalid refresh token", reason);
+    logWarn("Recovered from invalid refresh token", { reason: String(reason) });
   }
 
   async function refreshOwnership(userId?: string) {

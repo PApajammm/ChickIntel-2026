@@ -612,7 +612,6 @@ export default function HomeScreen() {
                   styles.kpiCard,
                   {
                     width: dynamicKpiCardWidth,
-                    borderColor: withAlpha(colors.border, 0.25),
                   },
                 ]}
                 borderRadius={10}
@@ -709,12 +708,7 @@ export default function HomeScreen() {
         </ScrollView>
 
         <BlurCard
-          style={[
-            styles.quickActionsCard,
-            {
-              borderColor: withAlpha(ChickIntelPalette.green2, 0.33),
-            },
-          ]}
+          style={styles.quickActionsCard}
           borderRadius={10}
           intensity={18}
         >

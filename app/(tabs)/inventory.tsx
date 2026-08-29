@@ -29,6 +29,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     Alert,
@@ -61,8 +62,30 @@ type InventoryTab = {
 };
 type InventoryTabId = string;
 
+const DEFAULT_INVENTORY_CATEGORIES = [
+  "Equipment",
+  "Feeds",
+  "Medicine",
+  "Vitamins",
+];
+
 function getCategoryTab(categoryOrType?: string): InventoryTabId {
-  return (categoryOrType || "").trim().toLowerCase() || "equipment";
+  const normalized = (categoryOrType || "").trim().toLowerCase();
+  if (normalized.includes("feed")) return "feeds";
+  if (
+    normalized.includes("medicin") ||
+    normalized.includes("vaccin") ||
+    normalized.includes("antibiotic")
+  ) {
+    return "medicine";
+  }
+  if (normalized.includes("vitamin") || normalized.includes("supplem")) {
+    return "vitamins";
+  }
+  if (normalized.includes("equip") || normalized.includes("tool")) {
+    return "equipment";
+  }
+  return normalized || "equipment";
 }
 
 function getCategoryIcon(category: string) {
@@ -375,11 +398,13 @@ export default function InventoryScreen() {
 
   // Add Item Modal State
   const [addModalVisible, setAddModalVisible] = useState(false);
-  const [typeOptions, setTypeOptions] = useState<string[]>([]);
-  const [newItemType, setNewItemType] = useState("Choose type");
+  const [typeOptions, setTypeOptions] = useState<string[]>(
+    DEFAULT_INVENTORY_CATEGORIES,
+  );
+  const [newItemType, setNewItemType] = useState("Select Category");
   const [newItemName, setNewItemName] = useState("");
   const [newItemQty, setNewItemQty] = useState("");
-  const [newItemUnit, setNewItemUnit] = useState("Choose Measurement unit");
+  const [newItemUnit, setNewItemUnit] = useState("Measurement unit");
   const [newItemDate, setNewItemDate] = useState(new Date());
   const [newItemExpDate, setNewItemExpDate] = useState<Date | undefined>(
     undefined,
@@ -388,25 +413,26 @@ export default function InventoryScreen() {
   const [showExpDatePicker, setShowExpDatePicker] = useState(false);
 
   const inventoryTabs = useMemo<InventoryTab[]>(() => {
-    const activeTypeNames = [
-      ...new Set(typeOptions.map((type) => type.trim()).filter(Boolean)),
-    ];
+    // 1. The 4 canonical default inventory tabs (always guaranteed to be present)
+    const baseTabs: InventoryTab[] = DEFAULT_INVENTORY_TABS.map((tab) => ({
+      ...tab,
+    }));
 
-    if (!activeTypeNames.length) {
-      return DEFAULT_INVENTORY_TABS.map((tab) => ({ ...tab }));
-    }
-
-    return activeTypeNames.map((label) => {
-      const defaultTab = DEFAULT_INVENTORY_TABS.find(
-        (tab) => tab.id === getCategoryTab(label),
-      );
-
-      return {
-        id: getCategoryTab(label),
-        label: defaultTab?.label ?? label,
-        icon: defaultTab?.icon ?? getCategoryIcon(label),
-      };
+    // 2. Include any additional custom categories from typeOptions that don't map to the base 4
+    typeOptions.forEach((type) => {
+      const trimmed = type.trim();
+      if (!trimmed) return;
+      const tabId = getCategoryTab(trimmed);
+      if (!baseTabs.some((t) => t.id === tabId)) {
+        baseTabs.push({
+          id: tabId,
+          label: trimmed,
+          icon: getCategoryIcon(trimmed),
+        });
+      }
     });
+
+    return baseTabs;
   }, [typeOptions]);
 
   useEffect(() => {
@@ -470,7 +496,15 @@ export default function InventoryScreen() {
 
       fetchInventoryCategoryOptions()
         .then((options) => {
-          if (!cancelled) setTypeOptions(options);
+          if (!cancelled) {
+            const merged = [
+              ...new Set([
+                ...DEFAULT_INVENTORY_CATEGORIES,
+                ...options,
+              ]),
+            ];
+            setTypeOptions(merged);
+          }
         })
         .catch((error) => {
           if (!cancelled) {
@@ -649,14 +683,20 @@ export default function InventoryScreen() {
     if (!activeFarm?.id) return;
     const parsedQty = Number.parseFloat(newItemQty) || 0;
     const normalizedType =
-      newItemType === "Choose type" ? "Other" : newItemType;
+      newItemType === "Choose type" || newItemType === "Select Category"
+        ? "Other"
+        : newItemType;
 
     try {
       await addInventoryItem({
         type: normalizedType,
-        name: newItemName || "Unnamed Item",
+        name: newItemName.trim() || "Unnamed Item",
         qty: parsedQty,
-        unit: newItemUnit === "Choose Measurement unit" ? "pcs" : newItemUnit,
+        unit:
+          newItemUnit === "Choose Measurement unit" ||
+          newItemUnit === "Measurement unit"
+            ? "pcs"
+            : newItemUnit,
         purchasedDate: newItemDate,
         expirationDate: hasExpirationDate(normalizedType)
           ? newItemExpDate
@@ -670,10 +710,10 @@ export default function InventoryScreen() {
     }
     setAddModalVisible(false);
     // Reset form
-    setNewItemType("Choose type");
+    setNewItemType("Select Category");
     setNewItemName("");
     setNewItemQty("");
-    setNewItemUnit("Choose Measurement unit");
+    setNewItemUnit("Measurement unit");
     setNewItemDate(new Date());
     setNewItemExpDate(undefined);
     setShowExpDatePicker(false);
@@ -763,13 +803,11 @@ export default function InventoryScreen() {
               style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
             >
               {isExpiredTable ? (
-                <View style={styles.expiredBadgeIcon}>
-                  <MaterialCommunityIcons
-                    name="alert-octagon"
-                    size={16}
-                    color="#FFF"
-                  />
-                </View>
+                <MaterialCommunityIcons
+                  name="alert-decagram"
+                  size={20}
+                  color="#EF4444"
+                />
               ) : null}
               <View>
                 <Text
@@ -1027,6 +1065,7 @@ export default function InventoryScreen() {
           { transform: [{ scale: 1.08 }, { translateY: -14 }] },
         ]}
       />
+      <StatusBar style="dark" />
       <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
           <TouchableOpacity
@@ -1047,7 +1086,7 @@ export default function InventoryScreen() {
           onPress={() => {
             setNewItemType(
               inventoryTabs.find((tab) => tab.id === selectedTab)?.label ||
-                "Choose type",
+                "Select Category",
             );
             setAddModalVisible(true);
           }}
@@ -1075,61 +1114,56 @@ export default function InventoryScreen() {
             />
           ) : null}
 
-          {/* Scrollable category tabs for the dynamic tables below */}
+          {/* Category tabs fitting full screen width */}
           <View style={styles.tabSectionHeader}>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.tabScrollContent}
-              keyboardShouldPersistTaps="handled"
-            >
-              <View style={styles.segmentWrap}>
-                {inventoryTabs.map((tab) => {
-                  const isActive = selectedTab === tab.id;
-                  const hasExpired = tabAlerts[tab.id]?.hasExpired;
-                  return (
-                    <Pressable
-                      key={tab.id}
-                      onPress={() => setSelectedTab(tab.id)}
+            <View style={styles.segmentWrap}>
+              {inventoryTabs.map((tab) => {
+                const isActive = selectedTab === tab.id;
+                const hasExpired = tabAlerts[tab.id]?.hasExpired;
+                return (
+                  <Pressable
+                    key={tab.id}
+                    onPress={() => setSelectedTab(tab.id)}
+                    style={[
+                      styles.segment,
+                      isActive
+                        ? styles.segmentActive
+                        : styles.segmentInactive,
+                    ]}
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected: isActive }}
+                    accessibilityLabel={`${tab.label} tab`}
+                  >
+                    <MaterialCommunityIcons
+                      name={tab.icon as any}
+                      size={13}
+                      color={isActive ? "#FFFFFF" : "#4A5452"}
+                    />
+                    <Text
                       style={[
-                        styles.segment,
+                        styles.segmentText,
                         isActive
-                          ? styles.segmentActive
-                          : styles.segmentInactive,
+                          ? styles.segmentTextActive
+                          : styles.segmentTextInactive,
                       ]}
-                      accessibilityRole="tab"
-                      accessibilityState={{ selected: isActive }}
-                      accessibilityLabel={`${tab.label} tab`}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.8}
                     >
-                      <MaterialCommunityIcons
-                        name={tab.icon as any}
-                        size={15}
-                        color={isActive ? "#FFFFFF" : "#4A5452"}
-                      />
-                      <Text
+                      {tab.label}
+                    </Text>
+                    {hasExpired ? (
+                      <View
                         style={[
-                          styles.segmentText,
-                          isActive
-                            ? styles.segmentTextActive
-                            : styles.segmentTextInactive,
+                          styles.segmentAlertDot,
+                          isActive && styles.segmentAlertDotActive,
                         ]}
-                        numberOfLines={1}
-                      >
-                        {tab.label}
-                      </Text>
-                      {hasExpired ? (
-                        <View
-                          style={[
-                            styles.segmentAlertDot,
-                            isActive && styles.segmentAlertDotActive,
-                          ]}
-                        />
-                      ) : null}
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </ScrollView>
+                      />
+                    ) : null}
+                  </Pressable>
+                );
+              })}
+            </View>
           </View>
 
           {loadingItems ? (
@@ -1231,6 +1265,611 @@ export default function InventoryScreen() {
         </View>
       </ScrollView>
 
+      {/* Add New Item Modal */}
+      <Modal
+        visible={addModalVisible}
+        animationType="slide"
+        onRequestClose={() => setAddModalVisible(false)}
+      >
+        <View style={styles.modalScreen}>
+          <BackgroundGradient
+            width="110%"
+            height="110%"
+            preserveAspectRatio="xMidYMid slice"
+            style={[
+              StyleSheet.absoluteFill,
+              { transform: [{ scale: 1.08 }, { translateY: -14 }] },
+            ]}
+          />
+          <StatusBar style="dark" />
+          <KeyboardAvoidingView
+            style={styles.modalKeyboardArea}
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            keyboardVerticalOffset={insets.top}
+          >
+            <View
+              style={[
+                styles.modalHeaderContainer,
+                { paddingTop: insets.top + 10 },
+              ]}
+            >
+              <View style={styles.modalTopBar}>
+                <TouchableOpacity
+                  onPress={() => setAddModalVisible(false)}
+                  style={styles.modalBackButton}
+                  activeOpacity={0.8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Go back"
+                >
+                  <MaterialCommunityIcons
+                    name="arrow-left"
+                    size={22}
+                    color="#FFF"
+                  />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.modalTitleCard}>
+                <View style={styles.modalKickerRow}>
+                  <MaterialCommunityIcons
+                    name="package-variant-plus"
+                    size={15}
+                    color="#CAE3DD"
+                  />
+                  <Text style={styles.modalKickerText}>Inventory stock</Text>
+                </View>
+                <Text style={styles.modalPageTitle}>Add New Item</Text>
+                <Text style={styles.modalPageSubtitle}>
+                  Track quantity, unit, delivery date, and expiry details.
+                </Text>
+              </View>
+
+              <View style={styles.modalSummaryChipRow}>
+                <View style={styles.modalSummaryChip}>
+                  <MaterialCommunityIcons
+                    name="cube-outline"
+                    size={12}
+                    color={ChickIntelPalette.green1}
+                  />
+                  <Text style={styles.modalSummaryChipText} numberOfLines={1}>
+                    {newItemType === "Select Category" ||
+                    newItemType === "Choose type"
+                      ? "No category yet"
+                      : newItemType}
+                  </Text>
+                </View>
+                <View style={styles.modalSummaryChip}>
+                  <MaterialCommunityIcons
+                    name="scale-balance"
+                    size={12}
+                    color={ChickIntelPalette.green1}
+                  />
+                  <Text style={styles.modalSummaryChipText} numberOfLines={1}>
+                    {newItemQty.trim() || "0"}{" "}
+                    {newItemUnit === "Measurement unit" ||
+                    newItemUnit === "Choose Measurement unit"
+                      ? "unit"
+                      : newItemUnit}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            <ScrollView
+              contentContainerStyle={[
+                styles.modalScrollContent,
+                { paddingBottom: insets.bottom + 24 },
+              ]}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+            >
+              <View style={styles.modalFormSection}>
+                <View style={styles.modalFormSectionHeader}>
+                  <MaterialCommunityIcons
+                    name="clipboard-text-outline"
+                    size={18}
+                    color={ChickIntelPalette.green1}
+                  />
+                  <Text style={styles.modalFormSectionTitle}>
+                    Item details
+                  </Text>
+                </View>
+
+                <ChickSelectRow
+                  value={newItemType}
+                  placeholder="Select Category"
+                  rowStyle={styles.compactSelectRow}
+                  onPress={() =>
+                    setSelectionModal({
+                      visible: true,
+                      title: "Select Category",
+                      options: typeOptions,
+                      value: newItemType,
+                      onSelect: setNewItemType,
+                    })
+                  }
+                />
+
+                <ChickTextInput
+                  placeholder="Item name"
+                  value={newItemName}
+                  onChangeText={setNewItemName}
+                  style={styles.compactInput}
+                />
+              </View>
+
+              <View style={styles.modalFormSection}>
+                <View style={styles.modalFormSectionHeader}>
+                  <MaterialCommunityIcons
+                    name="chart-box-outline"
+                    size={18}
+                    color={ChickIntelPalette.green1}
+                  />
+                  <Text style={styles.modalFormSectionTitle}>
+                    Stock amount
+                  </Text>
+                </View>
+
+                <View style={styles.addModalTwoColumn}>
+                  <View style={styles.addModalColumn}>
+                    <ChickTextInput
+                      placeholder="Quantity"
+                      keyboardType="numeric"
+                      value={newItemQty}
+                      onChangeText={setNewItemQty}
+                      style={styles.compactInput}
+                    />
+                  </View>
+
+                  <View style={styles.addModalColumn}>
+                    <ChickSelectRow
+                      value={newItemUnit}
+                      placeholder="Measurement unit"
+                      rowStyle={styles.compactSelectRow}
+                      onPress={() =>
+                        setSelectionModal({
+                          visible: true,
+                          title: "Select Unit",
+                          options: UNIT_OPTIONS,
+                          value: newItemUnit,
+                          onSelect: setNewItemUnit,
+                        })
+                      }
+                    />
+                  </View>
+                </View>
+              </View>
+
+              <View style={styles.modalFormSection}>
+                <View style={styles.modalFormSectionHeader}>
+                  <MaterialCommunityIcons
+                    name="calendar-month-outline"
+                    size={18}
+                    color={ChickIntelPalette.green1}
+                  />
+                  <Text style={styles.modalFormSectionTitle}>Stock dates</Text>
+                </View>
+
+                <TouchableOpacity
+                  style={styles.dateRow}
+                  onPress={() => setShowDatePicker(true)}
+                  activeOpacity={0.85}
+                >
+                  <View style={styles.dateRowCopy}>
+                    <MaterialCommunityIcons
+                      name="calendar-blank-outline"
+                      size={18}
+                      color={ChickIntelPalette.green1}
+                    />
+                    <Text style={styles.dateRowText}>
+                      {newItemDate
+                        ? `Date of purchase: ${formatAppDate(newItemDate)}`
+                        : "Date of purchase"}
+                    </Text>
+                  </View>
+                  <MaterialCommunityIcons
+                    name="chevron-right"
+                    size={20}
+                    color={ChickIntelPalette.gray2}
+                  />
+                </TouchableOpacity>
+                {showDatePicker && (
+                  <DateTimePicker
+                    value={newItemDate}
+                    mode="date"
+                    display="default"
+                    onChange={onDateChange}
+                  />
+                )}
+
+                {hasExpirationDate(newItemType) ? (
+                  <>
+                    <TouchableOpacity
+                      style={[styles.dateRow, styles.expirationDateRow]}
+                      onPress={() => setShowExpDatePicker(true)}
+                      activeOpacity={0.85}
+                    >
+                      <View style={styles.dateRowCopy}>
+                        <MaterialCommunityIcons
+                          name="calendar-clock-outline"
+                          size={18}
+                          color="#B45309"
+                        />
+                        <Text
+                          style={[
+                            styles.dateRowText,
+                            styles.expirationDateRowText,
+                          ]}
+                        >
+                          {newItemExpDate
+                            ? `Expiration date: ${formatAppDate(newItemExpDate)}`
+                            : "Expiration date"}
+                        </Text>
+                      </View>
+                      <MaterialCommunityIcons
+                        name="chevron-right"
+                        size={20}
+                        color="#B45309"
+                      />
+                    </TouchableOpacity>
+                    {showExpDatePicker && (
+                      <DateTimePicker
+                        value={newItemExpDate || new Date()}
+                        mode="date"
+                        display="default"
+                        onChange={onExpDateChange}
+                      />
+                    )}
+                  </>
+                ) : (
+                  <View style={styles.addModalInfoCallout}>
+                    <MaterialCommunityIcons
+                      name="information-outline"
+                      size={17}
+                      color={ChickIntelPalette.green1}
+                    />
+                    <Text style={styles.addModalInfoText}>
+                      Expiration appears for feeds, medicines, vitamins, and
+                      other perishable supplies.
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              <View style={styles.modalActionRow}>
+                <TouchableOpacity
+                  style={styles.modalCancelButton}
+                  onPress={() => setAddModalVisible(false)}
+                  activeOpacity={0.8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Cancel adding item"
+                >
+                  <Text style={styles.modalCancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.modalSaveButton,
+                    { opacity: pressed ? 0.9 : 1 },
+                  ]}
+                  onPress={handleSaveNewItem}
+                  accessibilityRole="button"
+                  accessibilityLabel="Add new inventory item"
+                >
+                  <Text style={styles.modalSaveButtonText}>Add Item</Text>
+                </Pressable>
+              </View>
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </View>
+      </Modal>
+
+      {/* Edit Item Modal (Stock Update) */}
+      <Modal
+        visible={editModalVisible}
+        animationType="slide"
+        onRequestClose={() => setEditModalVisible(false)}
+      >
+        <View style={styles.modalScreen}>
+          <BackgroundGradient
+            width="110%"
+            height="110%"
+            preserveAspectRatio="xMidYMid slice"
+            style={[
+              StyleSheet.absoluteFill,
+              { transform: [{ scale: 1.08 }, { translateY: -14 }] },
+            ]}
+          />
+          <StatusBar style="dark" />
+          <KeyboardAvoidingView
+            style={styles.modalKeyboardArea}
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            keyboardVerticalOffset={insets.top}
+          >
+            <View
+              style={[
+                styles.modalHeaderContainer,
+                { paddingTop: insets.top + 10 },
+              ]}
+            >
+              <View style={styles.modalTopBar}>
+                <TouchableOpacity
+                  onPress={() => setEditModalVisible(false)}
+                  style={styles.modalBackButton}
+                  activeOpacity={0.8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Go back"
+                >
+                  <MaterialCommunityIcons
+                    name="arrow-left"
+                    size={22}
+                    color="#FFF"
+                  />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.modalTitleCard}>
+                <View style={styles.modalKickerRow}>
+                  <MaterialCommunityIcons
+                    name="package-variant-closed-check"
+                    size={15}
+                    color="#CAE3DD"
+                  />
+                  <Text style={styles.modalKickerText}>Stock update</Text>
+                </View>
+                <Text style={styles.modalPageTitle} numberOfLines={2}>
+                  {editingItem?.name || "Edit Item"}
+                </Text>
+                <Text style={styles.modalPageSubtitle}>
+                  Add restock quantity and refresh delivery or expiry dates.
+                </Text>
+              </View>
+
+              <View style={styles.modalSummaryChipRow}>
+                <View style={styles.modalSummaryChip}>
+                  <MaterialCommunityIcons
+                    name="cube-outline"
+                    size={12}
+                    color={ChickIntelPalette.green1}
+                  />
+                  <Text style={styles.modalSummaryChipText} numberOfLines={1}>
+                    {editingItem?.type || "Inventory"}
+                  </Text>
+                </View>
+                <View style={styles.modalSummaryChip}>
+                  <MaterialCommunityIcons
+                    name="warehouse"
+                    size={12}
+                    color={ChickIntelPalette.green1}
+                  />
+                  <Text style={styles.modalSummaryChipText} numberOfLines={1}>
+                    {formatQuantityValue(editingItem?.qty ?? 0)}{" "}
+                    {editingItem?.unit || ""}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            <ScrollView
+              contentContainerStyle={[
+                styles.modalScrollContent,
+                { paddingBottom: insets.bottom + 24 },
+              ]}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+            >
+              <View style={styles.modalFormSection}>
+                <View style={styles.modalFormSectionHeader}>
+                  <MaterialCommunityIcons
+                    name="archive-check-outline"
+                    size={18}
+                    color={ChickIntelPalette.green1}
+                  />
+                  <Text style={styles.modalFormSectionTitle}>
+                    Current stock
+                  </Text>
+                </View>
+                <View style={styles.editStockSnapshot}>
+                  <View style={styles.editStockSnapshotIcon}>
+                    <MaterialCommunityIcons
+                      name="package-variant"
+                      size={22}
+                      color={ChickIntelPalette.green1}
+                    />
+                  </View>
+                  <View style={styles.editStockSnapshotCopy}>
+                    <Text style={styles.editStockSnapshotLabel}>
+                      Available now
+                    </Text>
+                    <Text style={styles.editStockSnapshotValue}>
+                      {formatQuantityValue(editingItem?.qty ?? 0)}{" "}
+                      {editingItem?.unit || ""}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+
+              <View style={styles.modalFormSection}>
+                <View style={styles.modalFormSectionHeader}>
+                  <MaterialCommunityIcons
+                    name="plus-box-outline"
+                    size={18}
+                    color={ChickIntelPalette.green1}
+                  />
+                  <Text style={styles.modalFormSectionTitle}>
+                    Restock amount
+                  </Text>
+                </View>
+                <ChickTextInput
+                  placeholder="Quantity to add"
+                  keyboardType="numeric"
+                  value={restockQty}
+                  onChangeText={setRestockQty}
+                  style={styles.compactInput}
+                />
+                <View style={styles.addModalInfoCallout}>
+                  <MaterialCommunityIcons
+                    name="information-outline"
+                    size={17}
+                    color={ChickIntelPalette.green1}
+                  />
+                  <Text style={styles.addModalInfoText}>
+                    Leave this blank to update dates without changing the
+                    quantity.
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.modalFormSection}>
+                <View style={styles.modalFormSectionHeader}>
+                  <MaterialCommunityIcons
+                    name="calendar-sync-outline"
+                    size={18}
+                    color={ChickIntelPalette.green1}
+                  />
+                  <Text style={styles.modalFormSectionTitle}>Stock dates</Text>
+                </View>
+
+                <TouchableOpacity
+                  style={styles.dateRow}
+                  onPress={() => setShowEditDeliveryDatePicker(true)}
+                  activeOpacity={0.85}
+                >
+                  <View style={styles.dateRowCopy}>
+                    <MaterialCommunityIcons
+                      name="calendar-blank-outline"
+                      size={18}
+                      color={ChickIntelPalette.green1}
+                    />
+                    <Text style={styles.dateRowText}>
+                      {editDeliveryDate
+                        ? `Delivery date: ${formatAppDate(editDeliveryDate)}`
+                        : "Delivery date"}
+                    </Text>
+                  </View>
+                  <MaterialCommunityIcons
+                    name="chevron-right"
+                    size={20}
+                    color={ChickIntelPalette.gray2}
+                  />
+                </TouchableOpacity>
+                {showEditDeliveryDatePicker && (
+                  <DateTimePicker
+                    value={editDeliveryDate || new Date()}
+                    mode="date"
+                    display="default"
+                    onChange={onEditDeliveryDateChange}
+                  />
+                )}
+
+                {editingItem && hasExpirationDate(editingItem.type) ? (
+                  <>
+                    <TouchableOpacity
+                      style={[styles.dateRow, styles.expirationDateRow]}
+                      onPress={() => setShowEditExpDatePicker(true)}
+                      activeOpacity={0.85}
+                    >
+                      <View style={styles.dateRowCopy}>
+                        <MaterialCommunityIcons
+                          name="calendar-clock-outline"
+                          size={18}
+                          color="#B45309"
+                        />
+                        <Text
+                          style={[
+                            styles.dateRowText,
+                            styles.expirationDateRowText,
+                          ]}
+                        >
+                          {editExpirationDate
+                            ? `Expiration date: ${formatAppDate(editExpirationDate)}`
+                            : "Expiration date"}
+                        </Text>
+                      </View>
+                      <MaterialCommunityIcons
+                        name="chevron-right"
+                        size={20}
+                        color="#B45309"
+                      />
+                    </TouchableOpacity>
+                    {showEditExpDatePicker && (
+                      <DateTimePicker
+                        value={editExpirationDate || new Date()}
+                        mode="date"
+                        display="default"
+                        onChange={onEditExpDateChange}
+                      />
+                    )}
+                    {editExpirationDate &&
+                    getExpirationStatus(editExpirationDate).isExpired ? (
+                      <View
+                        style={[
+                          styles.addModalInfoCallout,
+                          {
+                            backgroundColor: "rgba(220, 38, 38, 0.08)",
+                            borderColor: "rgba(220, 38, 38, 0.28)",
+                            marginTop: 6,
+                          },
+                        ]}
+                      >
+                        <MaterialCommunityIcons
+                          name="alert-circle"
+                          size={16}
+                          color="#DC2626"
+                        />
+                        <Text
+                          style={[
+                            styles.addModalInfoText,
+                            { color: "#B91C1C", fontWeight: "700" },
+                          ]}
+                        >
+                          Selected date marks this batch as expired!
+                        </Text>
+                      </View>
+                    ) : null}
+                  </>
+                ) : (
+                  <View style={styles.addModalInfoCallout}>
+                    <MaterialCommunityIcons
+                      name="information-outline"
+                      size={17}
+                      color={ChickIntelPalette.green1}
+                    />
+                    <Text style={styles.addModalInfoText}>
+                      This item type does not require an expiration date.
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              <View style={styles.modalActionRow}>
+                <TouchableOpacity
+                  style={styles.modalCancelButton}
+                  onPress={() => setEditModalVisible(false)}
+                  activeOpacity={0.8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Cancel stock update"
+                >
+                  <Text style={styles.modalCancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.modalSaveButton,
+                    { opacity: pressed ? 0.9 : 1 },
+                  ]}
+                  onPress={handleSaveChanges}
+                  accessibilityRole="button"
+                  accessibilityLabel="Save stock update changes"
+                >
+                  <Text style={styles.modalSaveButtonText}>Save Changes</Text>
+                </Pressable>
+              </View>
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </View>
+      </Modal>
+
       {/* Selection Modal (Generic) */}
       <ChickSelectionModal
         visible={selectionModal.visible}
@@ -1242,565 +1881,6 @@ export default function InventoryScreen() {
           setSelectionModal((prev) => ({ ...prev, visible: false }))
         }
       />
-
-      {/* Add New Item Modal */}
-      <Modal
-        visible={addModalVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setAddModalVisible(false)}
-      >
-        <KeyboardAvoidingView
-          style={styles.modalKeyboardArea}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          keyboardVerticalOffset={insets.top}
-        >
-          <View style={[styles.darkModalBackdrop, { paddingTop: insets.top }]}>
-            <View style={styles.darkModalContent}>
-              <View style={styles.addModalGrabber} />
-              <ScrollView
-                contentContainerStyle={styles.addModalScrollContent}
-                showsVerticalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
-                keyboardDismissMode="on-drag"
-              >
-                <View style={styles.addModalHero}>
-                  <View style={styles.addModalIconWrap}>
-                    <MaterialCommunityIcons
-                      name="package-variant-plus"
-                      size={26}
-                      color={ChickIntelPalette.green1}
-                    />
-                  </View>
-                  <View style={styles.addModalTitleStack}>
-                    <Text style={styles.addModalKicker}>Inventory stock</Text>
-                    <Text style={styles.darkModalTitle}>Add New Item</Text>
-                    <Text style={styles.addModalSubtitle}>
-                      Track quantity, unit, delivery date, and expiry details.
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.addModalQuickMetaRow}>
-                  <View style={styles.addModalMetaPill}>
-                    <MaterialCommunityIcons
-                      name="cube-outline"
-                      size={14}
-                      color={ChickIntelPalette.green1}
-                    />
-                    <Text style={styles.addModalMetaText}>
-                      {newItemType === "Choose type"
-                        ? "No type yet"
-                        : newItemType}
-                    </Text>
-                  </View>
-                  <View style={styles.addModalMetaPill}>
-                    <MaterialCommunityIcons
-                      name="scale-balance"
-                      size={14}
-                      color={ChickIntelPalette.green1}
-                    />
-                    <Text style={styles.addModalMetaText}>
-                      {newItemQty.trim() || "0"}{" "}
-                      {newItemUnit === "Choose Measurement unit"
-                        ? "unit"
-                        : newItemUnit}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.addModalSection}>
-                  <View style={styles.addModalSectionHeader}>
-                    <MaterialCommunityIcons
-                      name="clipboard-text-outline"
-                      size={18}
-                      color={ChickIntelPalette.green1}
-                    />
-                    <Text style={styles.addModalSectionTitle}>
-                      Item details
-                    </Text>
-                  </View>
-
-                  <ChickSelectRow
-                    label="Type"
-                    value={newItemType}
-                    placeholder="Choose type"
-                    rowStyle={styles.compactSelectRow}
-                    onPress={() =>
-                      setSelectionModal({
-                        visible: true,
-                        title: "Select Type",
-                        options: typeOptions,
-                        value: newItemType,
-                        onSelect: setNewItemType,
-                      })
-                    }
-                  />
-
-                  <ChickField label="Item name" style={styles.compactField}>
-                    <ChickTextInput
-                      placeholder="Enter item name"
-                      value={newItemName}
-                      onChangeText={setNewItemName}
-                      style={styles.compactInput}
-                    />
-                  </ChickField>
-                </View>
-
-                <View style={styles.addModalSection}>
-                  <View style={styles.addModalSectionHeader}>
-                    <MaterialCommunityIcons
-                      name="chart-box-outline"
-                      size={18}
-                      color={ChickIntelPalette.green1}
-                    />
-                    <Text style={styles.addModalSectionTitle}>
-                      Stock amount
-                    </Text>
-                  </View>
-
-                  <View style={styles.addModalTwoColumn}>
-                    <ChickField
-                      label="Qty"
-                      style={[styles.compactField, styles.addModalColumn]}
-                    >
-                      <ChickTextInput
-                        placeholder="Enter qty"
-                        keyboardType="numeric"
-                        value={newItemQty}
-                        onChangeText={setNewItemQty}
-                        style={styles.compactInput}
-                      />
-                    </ChickField>
-
-                    <View style={styles.addModalColumn}>
-                      <ChickSelectRow
-                        label="Unit"
-                        value={newItemUnit}
-                        placeholder="Choose Measurement unit"
-                        rowStyle={styles.compactSelectRow}
-                        onPress={() =>
-                          setSelectionModal({
-                            visible: true,
-                            title: "Select Unit",
-                            options: UNIT_OPTIONS,
-                            value: newItemUnit,
-                            onSelect: setNewItemUnit,
-                          })
-                        }
-                      />
-                    </View>
-                  </View>
-                </View>
-
-                <View style={styles.addModalSection}>
-                  <View style={styles.addModalSectionHeader}>
-                    <MaterialCommunityIcons
-                      name="calendar-month-outline"
-                      size={18}
-                      color={ChickIntelPalette.green1}
-                    />
-                    <Text style={styles.addModalSectionTitle}>Stock dates</Text>
-                  </View>
-
-                  <ChickField
-                    label="Date of purchased"
-                    style={styles.compactField}
-                  >
-                    <TouchableOpacity
-                      style={styles.dateRow}
-                      onPress={() => setShowDatePicker(true)}
-                      activeOpacity={0.85}
-                    >
-                      <View style={styles.dateRowCopy}>
-                        <MaterialCommunityIcons
-                          name="calendar-blank-outline"
-                          size={18}
-                          color={ChickIntelPalette.green1}
-                        />
-                        <Text style={styles.dateRowText}>
-                          {formatAppDate(newItemDate)}
-                        </Text>
-                      </View>
-                      <MaterialCommunityIcons
-                        name="chevron-right"
-                        size={20}
-                        color={ChickIntelPalette.gray2}
-                      />
-                    </TouchableOpacity>
-                    {showDatePicker && (
-                      <DateTimePicker
-                        value={newItemDate}
-                        mode="date"
-                        display="default"
-                        onChange={onDateChange}
-                      />
-                    )}
-                  </ChickField>
-
-                  {hasExpirationDate(newItemType) ? (
-                    <ChickField
-                      label="Expiration Date"
-                      style={styles.compactField}
-                    >
-                      <TouchableOpacity
-                        style={[styles.dateRow, styles.expirationDateRow]}
-                        onPress={() => setShowExpDatePicker(true)}
-                        activeOpacity={0.85}
-                      >
-                        <View style={styles.dateRowCopy}>
-                          <MaterialCommunityIcons
-                            name="calendar-clock-outline"
-                            size={18}
-                            color="#B45309"
-                          />
-                          <Text
-                            style={[
-                              styles.dateRowText,
-                              styles.expirationDateRowText,
-                            ]}
-                          >
-                            {newItemExpDate
-                              ? formatAppDate(newItemExpDate)
-                              : "Select expiration date"}
-                          </Text>
-                        </View>
-                        <MaterialCommunityIcons
-                          name="chevron-right"
-                          size={20}
-                          color="#B45309"
-                        />
-                      </TouchableOpacity>
-                      {showExpDatePicker && (
-                        <DateTimePicker
-                          value={newItemExpDate || new Date()}
-                          mode="date"
-                          display="default"
-                          onChange={onExpDateChange}
-                        />
-                      )}
-                    </ChickField>
-                  ) : (
-                    <View style={styles.addModalInfoCallout}>
-                      <MaterialCommunityIcons
-                        name="information-outline"
-                        size={17}
-                        color={ChickIntelPalette.green1}
-                      />
-                      <Text style={styles.addModalInfoText}>
-                        Expiration appears for feeds, medicines, vitamins, and
-                        supplements.
-                      </Text>
-                    </View>
-                  )}
-                </View>
-                <View
-                  style={[
-                    styles.darkModalFooter,
-                    { paddingBottom: insets.bottom + 20 },
-                  ]}
-                >
-                  <TouchableOpacity
-                    style={styles.darkBtnCancel}
-                    onPress={() => setAddModalVisible(false)}
-                  >
-                    <Text style={styles.darkBtnCancelText}>Cancel</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.darkBtnAdd}
-                    onPress={handleSaveNewItem}
-                  >
-                    <Text style={styles.darkBtnAddText}>Add</Text>
-                  </TouchableOpacity>
-                </View>
-              </ScrollView>
-            </View>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
-
-      {/* Edit Item Modal */}
-      <Modal
-        visible={editModalVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setEditModalVisible(false)}
-      >
-        <KeyboardAvoidingView
-          style={styles.modalKeyboardArea}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          keyboardVerticalOffset={insets.top}
-        >
-          <View style={[styles.darkModalBackdrop, { paddingTop: insets.top }]}>
-            <View style={styles.darkModalContent}>
-              <View style={styles.addModalGrabber} />
-              <ScrollView
-                contentContainerStyle={styles.addModalScrollContent}
-                showsVerticalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
-                keyboardDismissMode="on-drag"
-              >
-                <View style={[styles.addModalHero, styles.editModalHero]}>
-                  <View style={styles.addModalIconWrap}>
-                    <MaterialCommunityIcons
-                      name="package-variant-closed-check"
-                      size={26}
-                      color={ChickIntelPalette.green1}
-                    />
-                  </View>
-                  <View style={styles.addModalTitleStack}>
-                    <Text style={styles.addModalKicker}>Stock update</Text>
-                    <Text style={styles.darkModalTitle} numberOfLines={2}>
-                      {editingItem?.name || "Edit Item"}
-                    </Text>
-                    <Text style={styles.addModalSubtitle}>
-                      Add restock quantity and refresh delivery or expiry dates.
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.addModalQuickMetaRow}>
-                  <View style={styles.addModalMetaPill}>
-                    <MaterialCommunityIcons
-                      name="cube-outline"
-                      size={14}
-                      color={ChickIntelPalette.green1}
-                    />
-                    <Text style={styles.addModalMetaText}>
-                      {editingItem?.type || "Inventory"}
-                    </Text>
-                  </View>
-                  <View style={styles.addModalMetaPill}>
-                    <MaterialCommunityIcons
-                      name="warehouse"
-                      size={14}
-                      color={ChickIntelPalette.green1}
-                    />
-                    <Text style={styles.addModalMetaText}>
-                      {formatQuantityValue(editingItem?.qty ?? 0)}{" "}
-                      {editingItem?.unit || ""}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.addModalSection}>
-                  <View style={styles.addModalSectionHeader}>
-                    <MaterialCommunityIcons
-                      name="archive-check-outline"
-                      size={18}
-                      color={ChickIntelPalette.green1}
-                    />
-                    <Text style={styles.addModalSectionTitle}>
-                      Current stock
-                    </Text>
-                  </View>
-                  <View style={styles.editStockSnapshot}>
-                    <View style={styles.editStockSnapshotIcon}>
-                      <MaterialCommunityIcons
-                        name="package-variant"
-                        size={22}
-                        color={ChickIntelPalette.green1}
-                      />
-                    </View>
-                    <View style={styles.editStockSnapshotCopy}>
-                      <Text style={styles.editStockSnapshotLabel}>
-                        Available now
-                      </Text>
-                      <Text style={styles.editStockSnapshotValue}>
-                        {formatQuantityValue(editingItem?.qty ?? 0)}{" "}
-                        {editingItem?.unit || ""}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-
-                <View style={styles.addModalSection}>
-                  <View style={styles.addModalSectionHeader}>
-                    <MaterialCommunityIcons
-                      name="plus-box-outline"
-                      size={18}
-                      color={ChickIntelPalette.green1}
-                    />
-                    <Text style={styles.addModalSectionTitle}>
-                      Restock amount
-                    </Text>
-                  </View>
-                  <ChickField
-                    label="Quantity to add"
-                    style={styles.compactField}
-                  >
-                    <ChickTextInput
-                      placeholder="Enter quantity to add"
-                      keyboardType="numeric"
-                      value={restockQty}
-                      onChangeText={setRestockQty}
-                      style={styles.compactInput}
-                    />
-                  </ChickField>
-                  <View style={styles.addModalInfoCallout}>
-                    <MaterialCommunityIcons
-                      name="information-outline"
-                      size={17}
-                      color={ChickIntelPalette.green1}
-                    />
-                    <Text style={styles.addModalInfoText}>
-                      Leave this blank to update dates without changing the
-                      quantity.
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.addModalSection}>
-                  <View style={styles.addModalSectionHeader}>
-                    <MaterialCommunityIcons
-                      name="calendar-sync-outline"
-                      size={18}
-                      color={ChickIntelPalette.green1}
-                    />
-                    <Text style={styles.addModalSectionTitle}>Stock dates</Text>
-                  </View>
-
-                  <ChickField label="Delivery Date" style={styles.compactField}>
-                    <TouchableOpacity
-                      style={styles.dateRow}
-                      onPress={() => setShowEditDeliveryDatePicker(true)}
-                      activeOpacity={0.85}
-                    >
-                      <View style={styles.dateRowCopy}>
-                        <MaterialCommunityIcons
-                          name="calendar-blank-outline"
-                          size={18}
-                          color={ChickIntelPalette.green1}
-                        />
-                        <Text style={styles.dateRowText}>
-                          {formatAppDate(editDeliveryDate || new Date())}
-                        </Text>
-                      </View>
-                      <MaterialCommunityIcons
-                        name="chevron-right"
-                        size={20}
-                        color={ChickIntelPalette.gray2}
-                      />
-                    </TouchableOpacity>
-                    {showEditDeliveryDatePicker && (
-                      <DateTimePicker
-                        value={editDeliveryDate || new Date()}
-                        mode="date"
-                        display="default"
-                        onChange={onEditDeliveryDateChange}
-                      />
-                    )}
-                  </ChickField>
-
-                  {editingItem && hasExpirationDate(editingItem.type) ? (
-                    <ChickField
-                      label="Expiration Date"
-                      style={styles.compactField}
-                    >
-                      <TouchableOpacity
-                        style={[styles.dateRow, styles.expirationDateRow]}
-                        onPress={() => setShowEditExpDatePicker(true)}
-                        activeOpacity={0.85}
-                      >
-                        <View style={styles.dateRowCopy}>
-                          <MaterialCommunityIcons
-                            name="calendar-clock-outline"
-                            size={18}
-                            color="#B45309"
-                          />
-                          <Text
-                            style={[
-                              styles.dateRowText,
-                              styles.expirationDateRowText,
-                            ]}
-                          >
-                            {editExpirationDate
-                              ? formatAppDate(editExpirationDate)
-                              : "Select expiration date"}
-                          </Text>
-                        </View>
-                        <MaterialCommunityIcons
-                          name="chevron-right"
-                          size={20}
-                          color="#B45309"
-                        />
-                      </TouchableOpacity>
-                      {showEditExpDatePicker && (
-                        <DateTimePicker
-                          value={editExpirationDate || new Date()}
-                          mode="date"
-                          display="default"
-                          onChange={onEditExpDateChange}
-                        />
-                      )}
-                      {editExpirationDate &&
-                      getExpirationStatus(editExpirationDate).isExpired ? (
-                        <View
-                          style={[
-                            styles.addModalInfoCallout,
-                            {
-                              backgroundColor: "rgba(220, 38, 38, 0.08)",
-                              borderColor: "rgba(220, 38, 38, 0.28)",
-                              marginTop: 6,
-                            },
-                          ]}
-                        >
-                          <MaterialCommunityIcons
-                            name="alert-circle"
-                            size={16}
-                            color="#DC2626"
-                          />
-                          <Text
-                            style={[
-                              styles.addModalInfoText,
-                              { color: "#B91C1C", fontWeight: "700" },
-                            ]}
-                          >
-                            This item is past its expiration date! Please update
-                            the expiration date when restocking with a new
-                            batch.
-                          </Text>
-                        </View>
-                      ) : null}
-                    </ChickField>
-                  ) : (
-                    <View style={styles.addModalInfoCallout}>
-                      <MaterialCommunityIcons
-                        name="information-outline"
-                        size={17}
-                        color={ChickIntelPalette.green1}
-                      />
-                      <Text style={styles.addModalInfoText}>
-                        This item type does not require an expiration date.
-                      </Text>
-                    </View>
-                  )}
-                </View>
-
-                <View
-                  style={[
-                    styles.darkModalFooter,
-                    { paddingBottom: insets.bottom + 20 },
-                  ]}
-                >
-                  <TouchableOpacity
-                    style={styles.darkBtnCancel}
-                    onPress={() => setEditModalVisible(false)}
-                  >
-                    <Text style={styles.darkBtnCancelText}>Cancel</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.darkBtnAdd}
-                    onPress={handleSaveChanges}
-                  >
-                    <Text style={styles.darkBtnAddText}>Save Changes</Text>
-                  </TouchableOpacity>
-                </View>
-              </ScrollView>
-            </View>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
     </View>
   );
 }
@@ -1822,50 +1902,39 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
     marginTop: verticalScale(12),
     marginBottom: verticalScale(4),
-  },
-  tabScrollContent: {
-    flexGrow: 1,
+    width: "100%",
   },
   segmentWrap: {
     flexDirection: "row",
     backgroundColor: "rgba(255, 255, 255, 0.85)",
-    borderRadius: 14,
-    padding: 4,
-    gap: 4,
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.16)",
-    shadowColor: "#317667",
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
+    borderRadius: 12,
+    padding: 3,
+    gap: 3,
+    width: "100%",
   },
   segment: {
-    flexShrink: 0,
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     minHeight: verticalScale(38),
-    borderRadius: 10,
-    minWidth: scale(112),
-    paddingHorizontal: moderateScale(12),
-    gap: 4,
+    borderRadius: 9,
+    paddingHorizontal: moderateScale(2),
+    gap: 2,
   },
   segmentActive: {
     backgroundColor: ChickIntelPalette.green1,
-    shadowColor: "#317667",
-    shadowOpacity: 0.18,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
   },
   segmentInactive: {
     backgroundColor: "transparent",
   },
   segmentText: {
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(11.5),
+    fontSize: responsiveFontSize(11),
     fontWeight: "700",
-    lineHeight: 16,
+    lineHeight: 15,
     color: "#4A5452",
+    flexShrink: 1,
   },
   segmentTextActive: {
     color: "#FFFFFF",
@@ -1889,8 +1958,6 @@ const styles = StyleSheet.create({
   },
   tabEmptyInner: {
     backgroundColor: "rgba(255, 255, 255, 0.95)",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.18)",
     borderRadius: 14,
     paddingVertical: verticalScale(28),
     paddingHorizontal: moderateScale(20),
@@ -1982,15 +2049,14 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   tableSurface: {
-    borderWidth: 1,
-    borderRadius: 5,
+    borderRadius: 14,
     overflow: "hidden",
     backgroundColor: "rgba(255, 255, 255, 0.95)",
-    borderColor: "rgba(49, 118, 103, 0.22)",
   },
   tableSurfaceExpired: {
+    borderRadius: 14,
+    overflow: "hidden",
     backgroundColor: "rgba(255, 255, 255, 0.95)",
-    borderColor: "rgba(49, 118, 103, 0.22)",
   },
   tableSectionHeader: {
     flexDirection: "row",
@@ -2041,7 +2107,7 @@ const styles = StyleSheet.create({
     color: ChickIntelPalette.gray1,
   },
   tableSectionTitleExpired: {
-    color: ChickIntelPalette.gray1,
+    color: "#B91C1C",
   },
   tableSectionMeta: {
     fontFamily: ChickFont.sans,
@@ -2350,133 +2416,118 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(220, 38, 38, 0.1)",
   },
 
-  // Add Item Modal (Project Theme)
-  darkModalBackdrop: {
+  // Add Item & Stock Update Modal (Batch Profile Consistency)
+  modalScreen: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
-    justifyContent: "flex-end",
+    backgroundColor: ChickIntelPalette.light1,
   },
   modalKeyboardArea: {
     flex: 1,
   },
-  darkModalContent: {
-    flex: 1,
-    backgroundColor: ChickIntelPalette.light1,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    shadowColor: "#000",
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
-    shadowOffset: { width: scale(0), height: -5 },
-    elevation: 10,
+  modalHeaderContainer: {
+    paddingHorizontal: moderateScale(16),
+    gap: 12,
+    flexShrink: 0,
+    paddingBottom: 12,
   },
-  addModalGrabber: {
-    alignSelf: "center",
-    width: scale(42),
-    height: verticalScale(4),
-    borderRadius: 999,
-    marginTop: verticalScale(10),
-    marginBottom: verticalScale(2),
-    backgroundColor: "rgba(49, 118, 103, 0.22)",
-  },
-  addModalScrollContent: {
-    paddingHorizontal: moderateScale(18),
-    paddingTop: verticalScale(12),
-    paddingBottom: verticalScale(48),
-    gap: verticalScale(12),
-  },
-  addModalHero: {
+  modalTopBar: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    borderRadius: 18,
-    paddingHorizontal: moderateScale(14),
-    paddingVertical: verticalScale(14),
-    backgroundColor: "rgba(202, 227, 221, 0.38)",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.2)",
   },
-  editModalHero: {
-    backgroundColor: "rgba(156, 213, 201, 0.34)",
-  },
-  addModalIconWrap: {
-    width: scale(48),
-    height: verticalScale(48),
-    borderRadius: 16,
-    alignItems: "center",
+  modalBackButton: {
+    width: scale(42),
+    height: verticalScale(42),
+    borderRadius: 14,
+    backgroundColor: ChickIntelPalette.green1,
     justifyContent: "center",
-    backgroundColor: "rgba(254, 254, 254, 0.72)",
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.18)",
+    borderColor: "rgba(49, 118, 103, 0.25)",
+    shadowColor: "#317667",
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
+    shadowOffset: { width: scale(0), height: verticalScale(4) },
+    elevation: 4,
+    flexShrink: 0,
   },
-  addModalTitleStack: {
-    flex: 1,
+  modalTitleCard: {
+    borderRadius: 14,
+    paddingHorizontal: moderateScale(16),
+    paddingVertical: verticalScale(14),
+    backgroundColor: ChickIntelPalette.green1,
+    gap: 4,
   },
-  addModalKicker: {
+  modalKickerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  modalKickerText: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(11),
     fontWeight: "800",
     letterSpacing: 0.55,
     textTransform: "uppercase",
-    color: ChickIntelPalette.green1,
+    color: "#CAE3DD",
   },
-  darkModalTitle: {
+  modalPageTitle: {
     fontFamily: ChickFont.display,
-    fontSize: responsiveFontSize(22),
-    lineHeight: 28,
+    fontSize: responsiveFontSize(20),
+    lineHeight: 26,
     fontWeight: "800",
-    letterSpacing: -0.45,
-    color: ChickIntelPalette.gray1,
+    letterSpacing: -0.4,
+    color: "#FFFFFF",
   },
-  addModalSubtitle: {
+  modalPageSubtitle: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(12),
     lineHeight: 17,
-    fontWeight: "600",
-    color: ChickIntelPalette.gray2,
-    marginTop: verticalScale(2),
+    fontWeight: "500",
+    color: "rgba(255, 255, 255, 0.88)",
   },
-  addModalQuickMetaRow: {
+  modalSummaryChipRow: {
     flexDirection: "row",
-    gap: 8,
+    gap: 6,
   },
-  addModalMetaPill: {
+  modalSummaryChip: {
     flex: 1,
-    minHeight: verticalScale(34),
+    minHeight: verticalScale(26),
+    paddingVertical: verticalScale(3),
+    paddingHorizontal: moderateScale(6),
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
-    borderRadius: 999,
-    paddingHorizontal: moderateScale(10),
-    backgroundColor: "rgba(254, 254, 254, 0.66)",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.16)",
+    gap: 4,
+    borderRadius: 8,
+    backgroundColor: "rgba(254, 254, 254, 0.72)",
   },
-  addModalMetaText: {
+  modalSummaryChipText: {
     flexShrink: 1,
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(11),
-    fontWeight: "800",
+    fontSize: responsiveFontSize(10),
+    fontWeight: "700",
     color: ChickIntelPalette.gray1,
   },
-  addModalSection: {
+  modalScrollContent: {
+    paddingHorizontal: moderateScale(16),
+    gap: 12,
+    paddingTop: verticalScale(4),
+  },
+  modalFormSection: {
     gap: 10,
-    borderRadius: 18,
+    borderRadius: 16,
     paddingHorizontal: moderateScale(14),
     paddingVertical: verticalScale(14),
-    backgroundColor: "rgba(254, 254, 254, 0.78)",
-    borderWidth: 1,
-    borderColor: "rgba(67, 139, 123, 0.2)",
+    backgroundColor: "rgba(254, 254, 254, 0.92)",
   },
-  addModalSectionHeader: {
+  modalFormSectionHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 7,
+    gap: 8,
   },
-  addModalSectionTitle: {
+  modalFormSectionTitle: {
     fontFamily: ChickFont.display,
-    fontSize: responsiveFontSize(15),
+    fontSize: responsiveFontSize(14),
     fontWeight: "800",
     letterSpacing: -0.15,
     color: ChickIntelPalette.gray1,
@@ -2498,8 +2549,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: moderateScale(12),
     paddingVertical: verticalScale(10),
     backgroundColor: "rgba(202, 227, 221, 0.28)",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.14)",
   },
   addModalInfoText: {
     flex: 1,
@@ -2514,11 +2563,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
     borderRadius: 14,
-    paddingHorizontal: moderateScale(12),
+    paddingHorizontal: moderateScale(14),
     paddingVertical: verticalScale(12),
     backgroundColor: "rgba(202, 227, 221, 0.24)",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.14)",
   },
   editStockSnapshotIcon: {
     width: scale(42),
@@ -2598,45 +2645,47 @@ const styles = StyleSheet.create({
   expirationDateRowText: {
     color: "#B45309",
   },
-  darkModalFooter: {
+  modalActionRow: {
     flexDirection: "row",
-    justifyContent: "center",
     alignItems: "center",
-    paddingTop: verticalScale(6),
     gap: 12,
+    marginTop: verticalScale(4),
+    marginBottom: verticalScale(12),
   },
-  darkBtnCancel: {
+  modalCancelButton: {
     flex: 1,
-    backgroundColor: "rgba(254, 254, 254, 0.82)",
-    paddingVertical: verticalScale(13),
+    height: verticalScale(52),
     borderRadius: 14,
-    alignItems: "center",
+    backgroundColor: "rgba(254, 254, 254, 0.88)",
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.16)",
+    borderColor: "rgba(49, 118, 103, 0.18)",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  darkBtnCancelText: {
+  modalCancelButtonText: {
     color: ChickIntelPalette.gray1,
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(15),
-    fontWeight: "600",
+    fontWeight: "700",
   },
-  darkBtnAdd: {
+  modalSaveButton: {
     flex: 1,
-    backgroundColor: ChickIntelPalette.green1,
-    paddingVertical: verticalScale(13),
+    height: verticalScale(52),
     borderRadius: 14,
+    backgroundColor: ChickIntelPalette.green1,
     alignItems: "center",
+    justifyContent: "center",
     shadowColor: "#317667",
-    shadowOpacity: 0.18,
+    shadowOpacity: 0.2,
     shadowRadius: 10,
-    shadowOffset: { width: scale(0), height: verticalScale(5) },
+    shadowOffset: { width: scale(0), height: verticalScale(4) },
     elevation: 3,
   },
-  darkBtnAddText: {
+  modalSaveButtonText: {
     color: "#FFF",
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(15),
-    fontWeight: "600",
+    fontWeight: "700",
   },
   // Modern Card Grid Styles (no longer used, but kept for potential future reference)
   itemsGrid: {

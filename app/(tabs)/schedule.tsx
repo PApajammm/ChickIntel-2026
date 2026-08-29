@@ -936,7 +936,6 @@ export default function ScheduleScreen() {
                 styles.cardSurface,
                 {
                   backgroundColor: "rgba(255, 255, 255, 0.95)",
-                  borderColor: "rgba(49, 118, 103, 0.22)",
                 },
               ]}
             >
@@ -1188,7 +1187,6 @@ export default function ScheduleScreen() {
                 styles.cardSurface,
                 {
                   backgroundColor: "rgba(255, 255, 255, 0.95)",
-                  borderColor: "rgba(49, 118, 103, 0.22)",
                   paddingHorizontal: 16,
                   paddingVertical: 14,
                 },
@@ -1810,7 +1808,6 @@ const styles = StyleSheet.create({
   },
   cardSurface: {
     borderRadius: 10,
-    borderWidth: 1,
     paddingTop: 16,
     paddingBottom: 24,
     overflow: "hidden",
