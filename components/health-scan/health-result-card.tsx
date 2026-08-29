@@ -55,7 +55,7 @@ export function HealthResultCard({
   const accentColor = resultSeverity ? "#EF4444" : ChickIntelPalette.green1;
 
   return (
-    <BlurCard style={styles.card} borderRadius={10} intensity={20}>
+    <BlurCard style={styles.card} borderRadius={16} intensity={20}>
       <View style={styles.inner}>
         {/* Header Badge Row */}
         <View style={styles.headerTopRow}>
@@ -138,7 +138,7 @@ export function HealthResultCard({
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 10,
+    borderRadius: 16,
     overflow: "hidden",
     borderWidth: 1,
     borderColor: "rgba(49, 118, 103, 0.18)",

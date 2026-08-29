@@ -220,7 +220,7 @@ export default function HealthMonitoringIndexScreen() {
       const theme = getMonitoringStatusTheme(status, disease);
 
       return (
-        <BlurCard style={styles.card} borderRadius={10} intensity={20}>
+        <BlurCard style={styles.card} borderRadius={16} intensity={20}>
           <Pressable
             onPress={() =>
               router.push(`/(tabs)/health-monitoring/${item.id}` as any)
@@ -412,7 +412,7 @@ export default function HealthMonitoringIndexScreen() {
                 <MaterialCommunityIcons
                   name={tab === "Active" ? "heart-pulse" : "history"}
                   size={16}
-                  color={active ? "#FFFFFF" : "#4A5452"}
+                  color={active ? "#FFFFFF" : ChickIntelPalette.gray2}
                 />
                 <Text
                   style={[
@@ -571,7 +571,7 @@ const styles = StyleSheet.create({
   tabs: {
     flexDirection: "row",
     backgroundColor: "rgba(255, 255, 255, 0.85)",
-    borderRadius: 10,
+    borderRadius: 14,
     padding: 4,
     gap: 4,
     borderWidth: 1,
@@ -602,7 +602,7 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(13),
     fontWeight: "700",
-    color: "#4A5452",
+    color: ChickIntelPalette.gray2,
   },
   tabTextActive: {
     color: "#FFFFFF",
@@ -642,7 +642,6 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     shadowOffset: { width: scale(0), height: verticalScale(4) },
     elevation: 3,
-    borderRadius: 10,
     overflow: "hidden",
   },
   cardPressable: {

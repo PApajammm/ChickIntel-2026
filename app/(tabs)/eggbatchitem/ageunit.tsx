@@ -13,13 +13,11 @@ import {
     StyleSheet,
     Text,
     TextInput,
-    TouchableOpacity,
     View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { moderateScale, responsiveFontSize, scale, verticalScale } from "@/utils/responsive";
 
-import BackgroundGradient from "@/assets_imported/background-gradient.svg";
 import { ChickFont } from "@/constants/chick-fonts";
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
 import { useAuth } from "@/providers/auth-provider";
@@ -337,15 +335,6 @@ export default function EggBatchAgeUnitScreen() {
 
   return (
     <View style={styles.screen}>
-      <BackgroundGradient
-        width="110%"
-        height="110%"
-        preserveAspectRatio="xMidYMid slice"
-        style={[
-          StyleSheet.absoluteFill,
-          { transform: [{ scale: 1.08 }, { translateY: -14 }] },
-        ]}
-      />
       <StatusBar style="dark" />
       <KeyboardAvoidingView
         style={styles.keyboardArea}
@@ -364,50 +353,42 @@ export default function EggBatchAgeUnitScreen() {
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
         >
-          <View style={styles.topBar}>
-            <TouchableOpacity
+          <View style={styles.createHero}>
+            <Pressable
               onPress={() =>
-                router.canGoBack()
-                  ? router.back()
-                  : router.replace({
-                      pathname: "/(tabs)/profiles" as any,
-                      params: { mode: "egg" },
-                    })
+                router.replace({
+                  pathname: "/(tabs)/profiles" as any,
+                  params: { mode: "egg" },
+                })
               }
-              style={styles.backButton}
-              activeOpacity={0.8}
+              style={({ pressed }) => [
+                styles.createHeroIcon,
+                { opacity: pressed ? 0.75 : 1 },
+              ]}
               accessibilityRole="button"
               accessibilityLabel="Go back"
             >
               <MaterialCommunityIcons
                 name="arrow-left"
-                size={22}
-                color="#FFF"
+                size={24}
+                color={ChickIntelPalette.green1}
               />
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.titleCard}>
-            <View style={styles.kickerRow}>
-              <MaterialCommunityIcons
-                name="egg-outline"
-                size={15}
-                color="#CAE3DD"
-              />
-              <Text style={styles.kickerText}>Egg production</Text>
+            </Pressable>
+            <View style={styles.createHeroCopy}>
+              <Text style={styles.createHeroKicker}>Egg production</Text>
+              <Text style={styles.pageTitle}>Create Egg Batch</Text>
+              <Text style={styles.createHeroSubtitle}>
+                Connect this egg set to a chicken batch and track quantity,
+                line age, and color origin.
+              </Text>
             </View>
-            <Text style={styles.pageTitle}>Create Egg Batch</Text>
-            <Text style={styles.pageSubtitle}>
-              Connect this egg set to a chicken batch and track quantity,
-              line age, and color origin.
-            </Text>
           </View>
 
           <View style={styles.summaryChipRow}>
             <View style={styles.summaryChip}>
               <MaterialCommunityIcons
                 name="identifier"
-                size={12}
+                size={14}
                 color={ChickIntelPalette.green1}
               />
               <Text style={styles.summaryChipText}>#{batchNo || "Auto"}</Text>
@@ -415,7 +396,7 @@ export default function EggBatchAgeUnitScreen() {
             <View style={styles.summaryChip}>
               <MaterialCommunityIcons
                 name="egg"
-                size={12}
+                size={14}
                 color={ChickIntelPalette.green1}
               />
               <Text style={styles.summaryChipText}>{eggQty || "0"} eggs</Text>
@@ -436,8 +417,8 @@ export default function EggBatchAgeUnitScreen() {
             </View>
           </View>
 
-          {/* Form Sections */}
-          <View style={styles.formSection}>
+          <View style={styles.card}>
+            <View style={styles.formSection}>
               <View style={styles.formSectionHeader}>
                 <MaterialCommunityIcons
                   name="link-variant"
@@ -520,63 +501,56 @@ export default function EggBatchAgeUnitScreen() {
             <View style={styles.formSection}>
               <View style={styles.formSectionHeader}>
                 <MaterialCommunityIcons
-                  name="calendar-clock"
+                  name="calendar-clock-outline"
                   size={18}
                   color={ChickIntelPalette.green1}
                 />
                 <Text style={styles.formSectionTitle}>Age details</Text>
               </View>
 
-              <View style={styles.gridRow}>
-                <View style={styles.ageNumberCol}>
-                  <Text style={styles.fieldLabel}>No.</Text>
-                  <TextInput
-                    value={lineNo}
-                    onChangeText={(t) => setLineNo(t.replace(/[^0-9]/g, ""))}
-                    style={styles.input}
-                    keyboardType="number-pad"
-                    placeholder="12"
-                    textAlignVertical="center"
-                    placeholderTextColor="#899696"
-                  />
-                </View>
+              <View style={styles.field}>
+                <Text style={styles.label}>No. days or weeks old</Text>
+                <TextInput
+                  value={lineNo}
+                  onChangeText={(t) => setLineNo(t.replace(/[^0-9]/g, ""))}
+                  style={styles.input}
+                  keyboardType="number-pad"
+                  placeholder="12"
+                  placeholderTextColor="#899696"
+                />
+              </View>
 
-                <View style={styles.ageUnitCol}>
-                  <Text style={styles.fieldLabel}>Age unit</Text>
-                  <View style={styles.previewSegmentedContainer}>
-                    {ageUnitOptions.map((option) => {
-                      const active = ageUnit === option;
-                      return (
-                        <TouchableOpacity
-                          key={option}
-                          onPress={() => setAgeUnit(option)}
-                          activeOpacity={0.8}
+              <View style={styles.field}>
+                <Text style={styles.label}>Age Unit</Text>
+                <View style={styles.segmentWrap}>
+                  {ageUnitOptions.map((option) => {
+                    const active = ageUnit === option;
+                    return (
+                      <Pressable
+                        key={option}
+                        onPress={() => setAgeUnit(option)}
+                        style={[
+                          styles.segment,
+                          active
+                            ? styles.segmentActive
+                            : styles.segmentInactive,
+                        ]}
+                        accessibilityRole="button"
+                        accessibilityLabel={option}
+                      >
+                        <Text
                           style={[
-                            styles.previewSegmentedItem,
-                            active && styles.previewSegmentedItemActive,
+                            styles.segmentText,
+                            active
+                              ? styles.segmentTextActive
+                              : styles.segmentTextInactive,
                           ]}
                         >
-                          <MaterialCommunityIcons
-                            name={
-                              option === "Days old"
-                                ? "calendar-today"
-                                : "calendar-week"
-                            }
-                            size={14}
-                            color={active ? "#FFF" : "#4A5452"}
-                          />
-                          <Text
-                            style={[
-                              styles.previewSegmentedText,
-                              active && styles.previewSegmentedTextActive,
-                            ]}
-                          >
-                            {option}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
+                          {option}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
                 </View>
               </View>
             </View>
@@ -591,6 +565,7 @@ export default function EggBatchAgeUnitScreen() {
             >
               <Text style={styles.saveText}>Save Egg Batch</Text>
             </Pressable>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
 
@@ -657,82 +632,68 @@ const styles = StyleSheet.create({
     paddingHorizontal: moderateScale(16),
     gap: 12,
   },
-  topBar: {
+  createHero: {
     flexDirection: "row",
     alignItems: "center",
-  },
-  backButton: {
-    width: scale(42),
-    height: verticalScale(42),
-    borderRadius: 14,
-    backgroundColor: ChickIntelPalette.green1,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.25)",
-    shadowColor: "#317667",
-    shadowOpacity: 0.22,
-    shadowRadius: 10,
-    shadowOffset: { width: scale(0), height: verticalScale(4) },
-    elevation: 4,
-    flexShrink: 0,
-  },
-  titleCard: {
-    borderRadius: 10,
-    paddingHorizontal: moderateScale(16),
+    gap: 12,
+    borderRadius: 18,
+    paddingHorizontal: moderateScale(14),
     paddingVertical: verticalScale(14),
-    backgroundColor: ChickIntelPalette.green1,
+    backgroundColor: "rgba(202, 227, 221, 0.38)",
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.15)",
-    shadowColor: "#317667",
-    shadowOpacity: 0.22,
-    shadowRadius: 10,
-    shadowOffset: { width: scale(0), height: verticalScale(4) },
-    elevation: 4,
-    gap: 4,
+    borderColor: "rgba(49, 118, 103, 0.2)",
   },
-  kickerRow: {
-    flexDirection: "row",
+  createHeroIcon: {
+    width: scale(52),
+    height: verticalScale(52),
+    borderRadius: 17,
     alignItems: "center",
-    gap: 6,
+    justifyContent: "center",
+    backgroundColor: "rgba(254, 254, 254, 0.74)",
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.18)",
   },
-  kickerText: {
+  createHeroCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  createHeroKicker: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(11),
     fontWeight: "800",
     letterSpacing: 0.55,
     textTransform: "uppercase",
-    color: "#CAE3DD",
+    color: ChickIntelPalette.green1,
   },
   pageTitle: {
     fontFamily: ChickFont.display,
-    fontSize: responsiveFontSize(20),
-    lineHeight: 26,
+    fontSize: responsiveFontSize(22),
+    lineHeight: 28,
     fontWeight: "800",
-    letterSpacing: -0.4,
-    color: "#FFFFFF",
+    letterSpacing: -0.5,
+    color: ChickIntelPalette.gray1,
   },
-  pageSubtitle: {
+  createHeroSubtitle: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(12),
     lineHeight: 17,
-    fontWeight: "500",
-    color: "rgba(255, 255, 255, 0.88)",
+    fontWeight: "600",
+    color: ChickIntelPalette.gray2,
+    marginTop: verticalScale(2),
   },
   summaryChipRow: {
     flexDirection: "row",
-    gap: 6,
+    gap: 8,
   },
   summaryChip: {
     flex: 1,
-    minHeight: verticalScale(26),
-    paddingVertical: verticalScale(3),
-    paddingHorizontal: moderateScale(6),
+    minHeight: verticalScale(34),
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 4,
-    borderRadius: 8,
+    gap: 6,
+    borderRadius: 999,
+    paddingHorizontal: moderateScale(8),
     backgroundColor: "rgba(254, 254, 254, 0.72)",
     borderWidth: 1,
     borderColor: "rgba(49, 118, 103, 0.16)",
@@ -740,30 +701,33 @@ const styles = StyleSheet.create({
   summaryChipText: {
     flexShrink: 1,
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(10),
-    fontWeight: "700",
+    fontSize: responsiveFontSize(11),
+    fontWeight: "800",
     color: ChickIntelPalette.gray1,
   },
   summaryColorDot: {
-    width: scale(9),
-    height: verticalScale(9),
+    width: scale(12),
+    height: verticalScale(12),
     borderRadius: 999,
     borderWidth: 1,
     borderColor: "rgba(0,0,0,0.12)",
   },
+  card: {
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "rgba(49,118,103,0.18)",
+    backgroundColor: "rgba(254, 254, 254, 0.58)",
+    padding: moderateScale(12),
+    gap: 12,
+  },
   formSection: {
     gap: 10,
-    borderRadius: 10,
-    paddingHorizontal: moderateScale(14),
-    paddingVertical: verticalScale(14),
-    backgroundColor: "rgba(254, 254, 254, 0.92)",
+    borderRadius: 16,
+    paddingHorizontal: moderateScale(12),
+    paddingVertical: verticalScale(12),
+    backgroundColor: "rgba(254, 254, 254, 0.82)",
     borderWidth: 1,
     borderColor: "rgba(67, 139, 123, 0.18)",
-    shadowColor: "#317667",
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
   },
   formSectionHeader: {
     flexDirection: "row",
@@ -781,26 +745,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 10,
   },
-  gridRow: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  ageNumberCol: {
-    width: scale(72),
-    gap: 5,
-  },
-  ageUnitCol: {
+  halfInput: {
     flex: 1,
-    gap: 5,
+    gap: 6,
   },
   field: {
     gap: 6,
-  },
-  fieldLabel: {
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(12),
-    fontWeight: "600",
-    color: "#5E6666",
   },
   label: {
     fontFamily: ChickFont.sans,
@@ -825,36 +775,38 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.64)",
     color: ChickIntelPalette.gray2,
   },
-  previewSegmentedContainer: {
+  segmentWrap: {
     flexDirection: "row",
-    height: verticalScale(46),
-    backgroundColor: "rgba(49, 118, 103, 0.08)",
-    borderRadius: 8,
-    padding: 3,
-    gap: 3,
-    alignItems: "center",
+    borderRadius: 5,
+    backgroundColor: ChickIntelPalette.lightGreen,
+    padding: moderateScale(4),
+    borderWidth: 1,
+    borderColor: "rgba(49,118,103,0.2)",
   },
-  previewSegmentedItem: {
+  segment: {
     flex: 1,
-    height: "100%",
-    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 4,
-    borderRadius: 6,
+    paddingVertical: verticalScale(10),
+    borderRadius: 5,
   },
-  previewSegmentedItemActive: {
-    backgroundColor: ChickIntelPalette.green1,
+  segmentActive: {
+    backgroundColor: ChickIntelPalette.gray1,
   },
-  previewSegmentedText: {
+  segmentInactive: {
+    backgroundColor: "transparent",
+  },
+  segmentText: {
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(11),
+    fontSize: responsiveFontSize(13),
     fontWeight: "600",
-    color: "#4A5452",
+    letterSpacing: 0.1,
   },
-  previewSegmentedTextActive: {
-    color: "#FFFFFF",
-    fontWeight: "700",
+  segmentTextActive: {
+    color: ChickIntelPalette.light1,
+  },
+  segmentTextInactive: {
+    color: ChickIntelPalette.gray1,
   },
   select: {
     minHeight: verticalScale(44),
@@ -886,11 +838,11 @@ const styles = StyleSheet.create({
   },
   saveBtn: {
     height: verticalScale(52),
-    borderRadius: 14,
+    borderRadius: 999,
     backgroundColor: ChickIntelPalette.green1,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: verticalScale(4),
+    marginTop: 2,
     shadowColor: "#317667",
     shadowOpacity: 0.18,
     shadowRadius: 10,

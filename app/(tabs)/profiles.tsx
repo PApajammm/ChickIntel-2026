@@ -508,7 +508,7 @@ export default function ProfilesScreen() {
               <MaterialCommunityIcons
                 name="bird"
                 size={16}
-                color={mode === "chicken" ? "#FFFFFF" : "#4A5452"}
+                color={mode === "chicken" ? "#FFFFFF" : ChickIntelPalette.gray2}
               />
               <Text
                 style={[
@@ -531,7 +531,7 @@ export default function ProfilesScreen() {
               <MaterialCommunityIcons
                 name="egg-outline"
                 size={16}
-                color={mode === "egg" ? "#FFFFFF" : "#4A5452"}
+                color={mode === "egg" ? "#FFFFFF" : ChickIntelPalette.gray2}
               />
               <Text
                 style={[
@@ -578,7 +578,7 @@ export default function ProfilesScreen() {
               <BlurCard
                 key={item.id}
                 style={styles.card}
-                borderRadius={10}
+                borderRadius={16}
                 intensity={20}
               >
                 <View style={styles.cardMainContainer}>
@@ -665,8 +665,8 @@ export default function ProfilesScreen() {
                       <View style={styles.metricChipHeader}>
                         <MaterialCommunityIcons
                           name="gender-female"
-                          size={12}
-                          color="#8E9494"
+                          size={13}
+                          color="#111111"
                         />
                         <Text style={styles.metricChipLabel}>Females</Text>
                       </View>
@@ -679,8 +679,8 @@ export default function ProfilesScreen() {
                       <View style={styles.metricChipHeader}>
                         <MaterialCommunityIcons
                           name="gender-male"
-                          size={12}
-                          color="#8E9494"
+                          size={13}
+                          color="#111111"
                         />
                         <Text style={styles.metricChipLabel}>Males</Text>
                       </View>
@@ -693,8 +693,8 @@ export default function ProfilesScreen() {
                       <View style={styles.metricChipHeader}>
                         <MaterialCommunityIcons
                           name="calendar-clock"
-                          size={12}
-                          color="#8E9494"
+                          size={13}
+                          color="#111111"
                         />
                         <Text style={styles.metricChipLabel}>Age</Text>
                       </View>
@@ -707,8 +707,8 @@ export default function ProfilesScreen() {
                       <View style={styles.metricChipHeader}>
                         <MaterialCommunityIcons
                           name="shield-alert-outline"
-                          size={12}
-                          color="#8E9494"
+                          size={13}
+                          color="#111111"
                         />
                         <Text style={styles.metricChipLabel}>Isolation</Text>
                       </View>
@@ -721,8 +721,8 @@ export default function ProfilesScreen() {
                       <View style={styles.metricChipHeader}>
                         <MaterialCommunityIcons
                           name="heart-broken-outline"
-                          size={12}
-                          color="#8E9494"
+                          size={13}
+                          color="#111111"
                         />
                         <Text style={styles.metricChipLabel}>Loss</Text>
                       </View>
@@ -757,7 +757,7 @@ export default function ProfilesScreen() {
               <BlurCard
                 key={item.id}
                 style={styles.card}
-                borderRadius={10}
+                borderRadius={16}
                 intensity={20}
               >
                 <Pressable
@@ -814,8 +814,8 @@ export default function ProfilesScreen() {
                       <View style={styles.metricChipHeader}>
                         <MaterialCommunityIcons
                           name="layers-outline"
-                          size={12}
-                          color="#8E9494"
+                          size={14}
+                          color="#111111"
                         />
                         <Text style={styles.metricChipLabel}>
                           Total Batches
@@ -828,8 +828,8 @@ export default function ProfilesScreen() {
                       <View style={styles.metricChipHeader}>
                         <MaterialCommunityIcons
                           name="star-outline"
-                          size={12}
-                          color="#8E9494"
+                          size={14}
+                          color="#111111"
                         />
                         <Text style={styles.metricChipLabel}>
                           Fertility Rate
@@ -1233,7 +1233,7 @@ const styles = StyleSheet.create({
   segmentWrap: {
     flexDirection: "row",
     backgroundColor: "rgba(255, 255, 255, 0.85)",
-    borderRadius: 10,
+    borderRadius: 14,
     padding: 4,
     gap: 4,
     borderWidth: 1,
@@ -1268,13 +1268,13 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(13),
     fontWeight: "700",
     lineHeight: 18,
-    color: "#4A5452",
+    color: ChickIntelPalette.gray2,
   },
   segmentTextActive: {
     color: "#FFFFFF",
   },
   segmentTextInactive: {
-    color: "#4A5452",
+    color: ChickIntelPalette.gray2,
   },
   list: {
     gap: 10,
@@ -1301,7 +1301,6 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     shadowOffset: { width: scale(0), height: verticalScale(4) },
     elevation: 3,
-    borderRadius: 10,
     overflow: "hidden",
   },
   statusAccentBar: {
@@ -1318,7 +1317,7 @@ const styles = StyleSheet.create({
   cardHeaderRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-start",
+    alignItems: "center",
     gap: 8,
   },
   headerLeftStack: {
@@ -1357,7 +1356,6 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(11),
     lineHeight: 16,
     color: "rgba(51, 51, 51, 0.58)",
-    paddingBottom: verticalScale(15),
   },
   headerRightActions: {
     flexDirection: "row",
@@ -1472,9 +1470,9 @@ const styles = StyleSheet.create({
   },
   metricChipLabel: {
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(9),
+    fontSize: responsiveFontSize(10),
     fontWeight: "700",
-    color: "#8E9494",
+    color: "#5A6161",
     textTransform: "uppercase",
     letterSpacing: 0.2,
   },
@@ -1483,8 +1481,6 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(14),
     fontWeight: "800",
     color: ChickIntelPalette.gray1,
-    textAlign: "right",
-    paddingRight: moderateScale(10),
   },
   noteSummaryList: {
     marginTop: 6,
