@@ -19,7 +19,6 @@ import {
     StyleSheet,
     Text,
     TextInput,
-    TouchableOpacity,
     View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -354,69 +353,62 @@ export default function EggBatchColorScreen() {
         keyboardDismissMode="on-drag"
       >
         <View style={styles.headerRow}>
-          <View style={styles.headerLeftRow}>
-            <TouchableOpacity
+          <View style={styles.headerCopy}>
+            <Pressable
               onPress={() =>
-                router.canGoBack()
-                  ? router.back()
-                  : router.push({
-                      pathname: "/(tabs)/profiles" as any,
-                      params: { mode: "egg" },
-                    })
+                router.push({
+                  pathname: "/(tabs)/profiles" as any,
+                  params: { mode: "egg" },
+                })
               }
               accessibilityRole="button"
               accessibilityLabel="Back to egg batch profile"
-              style={styles.backButton}
-              activeOpacity={0.8}
+              style={styles.backInlineBtn}
             >
               <MaterialCommunityIcons
                 name="arrow-left"
-                size={22}
-                color="#FFF"
+                size={18}
+                color={ChickIntelPalette.gray1}
               />
-            </TouchableOpacity>
-            <View style={styles.headerTitleWrap}>
-              <Text style={styles.pageTitle}>Egg Batches per Color / Origin</Text>
-              <Text style={styles.subtitle}>
-                {colorName ? (
-                  colorName
-                ) : (
-                  <Text style={styles.subtitleMuted}>Selected color</Text>
-                )}{" "}
-                • {summaryMetrics.batchCount} batches • Fertility{" "}
-                {summaryMetrics.fertility}
-              </Text>
-            </View>
+            </Pressable>
+            <Text style={styles.pageTitle}>Egg Batches per Color / Origin</Text>
+            <Text style={styles.subtitle}>
+              {colorName ? (
+                colorName
+              ) : (
+                <Text style={styles.subtitleMuted}>Selected color</Text>
+              )}{" "}
+              • {summaryMetrics.batchCount} batches • Fertility{" "}
+              {summaryMetrics.fertility}
+            </Text>
           </View>
           <View style={styles.headerActions}>
             {hasSelectedEggs ? (
               <>
-                <TouchableOpacity
+                <Pressable
                   onPress={clearSelection}
-                  style={styles.headerCloseBtn}
+                  style={styles.headerActionBtn}
                   accessibilityRole="button"
                   accessibilityLabel="Clear selected egg batches"
-                  activeOpacity={0.8}
                 >
                   <MaterialCommunityIcons
                     name="close"
-                    size={22}
-                    color="#FFF"
+                    size={18}
+                    color={ChickIntelPalette.gray1}
                   />
-                </TouchableOpacity>
-                <TouchableOpacity
+                </Pressable>
+                <Pressable
                   onPress={confirmDeleteSelectedEggs}
-                  style={styles.headerDeleteBtn}
+                  style={[styles.headerActionBtn, styles.headerDeleteBtn]}
                   accessibilityRole="button"
                   accessibilityLabel="Delete selected egg batches"
-                  activeOpacity={0.8}
                 >
                   <MaterialCommunityIcons
                     name="trash-can-outline"
-                    size={22}
-                    color="#FFF"
+                    size={18}
+                    color="#B04B58"
                   />
-                </TouchableOpacity>
+                </Pressable>
               </>
             ) : null}
           </View>
@@ -450,7 +442,7 @@ export default function EggBatchColorScreen() {
                 <BlurCard
                   key={egg.id}
                   style={[styles.card, isSelected && styles.cardSelected]}
-                  borderRadius={10}
+                  borderRadius={16}
                   intensity={20}
                 >
                   <View style={styles.cardMainContainer}>
@@ -551,8 +543,8 @@ export default function EggBatchColorScreen() {
                         <View style={styles.metricChipHeader}>
                           <MaterialCommunityIcons
                             name="egg"
-                            size={12}
-                            color="#8E9494"
+                            size={13}
+                            color="#111111"
                           />
                           <Text style={styles.metricChipLabel}>Egg Qty</Text>
                         </View>
@@ -565,8 +557,8 @@ export default function EggBatchColorScreen() {
                         <View style={styles.metricChipHeader}>
                           <MaterialCommunityIcons
                             name="check-circle-outline"
-                            size={12}
-                            color="#8E9494"
+                            size={13}
+                            color="#111111"
                           />
                           <Text style={styles.metricChipLabel}>Hatched</Text>
                         </View>
@@ -579,8 +571,8 @@ export default function EggBatchColorScreen() {
                         <View style={styles.metricChipHeader}>
                           <MaterialCommunityIcons
                             name="timer-sand"
-                            size={12}
-                            color="#8E9494"
+                            size={13}
+                            color="#111111"
                           />
                           <Text style={styles.metricChipLabel}>Unhatched</Text>
                         </View>
@@ -593,8 +585,8 @@ export default function EggBatchColorScreen() {
                         <View style={styles.metricChipHeader}>
                           <MaterialCommunityIcons
                             name="egg-off-outline"
-                            size={12}
-                            color="#8E9494"
+                            size={13}
+                            color="#111111"
                           />
                           <Text style={styles.metricChipLabel}>Damaged</Text>
                         </View>
@@ -607,8 +599,8 @@ export default function EggBatchColorScreen() {
                         <View style={styles.metricChipHeader}>
                           <MaterialCommunityIcons
                             name="star-outline"
-                            size={12}
-                            color="#8E9494"
+                            size={13}
+                            color="#111111"
                           />
                           <Text style={styles.metricChipLabel}>
                             Fertility %
@@ -754,71 +746,45 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: 12,
   },
-  headerLeftRow: {
+  headerCopy: {
     flex: 1,
+    gap: 4,
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-  },
-  headerTitleWrap: {
-    flex: 1,
-    gap: 2,
+    flexWrap: "wrap",
+    columnGap: 8,
   },
   headerActions: {
     flexDirection: "row",
     gap: 8,
-    alignItems: "center",
+    paddingTop: 2,
   },
-  headerCloseBtn: {
-    width: scale(42),
-    height: verticalScale(42),
-    borderRadius: 14,
-    backgroundColor: ChickIntelPalette.green1,
-    justifyContent: "center",
-    alignItems: "center",
+  headerActionBtn: {
+    width: scale(34),
+    height: verticalScale(34),
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.25)",
-    shadowColor: "#317667",
-    shadowOpacity: 0.22,
-    shadowRadius: 10,
-    shadowOffset: { width: scale(0), height: verticalScale(4) },
-    elevation: 4,
-    flexShrink: 0,
+    borderColor: "rgba(49,118,103,0.18)",
+    backgroundColor: ChickIntelPalette.light1,
+    alignItems: "center",
+    justifyContent: "center",
   },
   headerDeleteBtn: {
-    width: scale(42),
-    height: verticalScale(42),
-    borderRadius: 14,
-    backgroundColor: "#DC2626",
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(220, 38, 38, 0.35)",
-    shadowColor: "#DC2626",
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    shadowOffset: { width: scale(0), height: verticalScale(4) },
-    elevation: 4,
-    flexShrink: 0,
+    borderColor: "rgba(176,75,88,0.2)",
+    backgroundColor: "rgba(176,75,88,0.08)",
   },
-  backButton: {
-    width: scale(42),
-    height: verticalScale(42),
-    borderRadius: 14,
-    backgroundColor: ChickIntelPalette.green1,
-    justifyContent: "center",
-    alignItems: "center",
+  backInlineBtn: {
+    width: scale(32),
+    height: verticalScale(32),
+    borderRadius: 5,
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.25)",
-    shadowColor: "#317667",
-    shadowOpacity: 0.22,
-    shadowRadius: 10,
-    shadowOffset: { width: scale(0), height: verticalScale(4) },
-    elevation: 4,
-    flexShrink: 0,
+    borderColor: "rgba(49,118,103,0.18)",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: ChickIntelPalette.light1,
   },
   pageTitle: {
     fontFamily: ChickFont.display,
@@ -873,7 +839,6 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     shadowOffset: { width: scale(0), height: verticalScale(4) },
     elevation: 3,
-    borderRadius: 10,
     overflow: "hidden",
   },
   cardSelected: {
@@ -894,7 +859,7 @@ const styles = StyleSheet.create({
   },
   cardTopRow: {
     flexDirection: "row",
-    alignItems: "flex-start",
+    alignItems: "center",
     justifyContent: "space-between",
     gap: 8,
   },
@@ -978,9 +943,9 @@ const styles = StyleSheet.create({
   },
   metricChipLabel: {
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(9),
+    fontSize: responsiveFontSize(10),
     fontWeight: "700",
-    color: "#8E9494",
+    color: "#5A6161",
     textTransform: "uppercase",
     letterSpacing: 0.2,
   },
@@ -989,8 +954,6 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(14),
     fontWeight: "800",
     color: ChickIntelPalette.gray1,
-    textAlign: "right",
-    paddingRight: moderateScale(10),
   },
   emptyCard: {
     borderRadius: 14,

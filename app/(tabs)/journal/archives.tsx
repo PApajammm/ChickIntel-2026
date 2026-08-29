@@ -133,19 +133,22 @@ export default function ArchivesScreen() {
           <Text style={styles.title}>Archives</Text>
 
           {entries.length > 0 && (
-            <TouchableOpacity
+            <Pressable
               onPress={() => setClearModalVisible(true)}
-              style={styles.clearHeaderBtn}
-              activeOpacity={0.8}
+              style={({ pressed }) => [
+                styles.clearHeaderBtn,
+                { opacity: pressed ? 0.75 : 1 },
+              ]}
               accessibilityRole="button"
               accessibilityLabel="Clear all archives"
             >
               <MaterialCommunityIcons
                 name="trash-can-outline"
-                size={22}
-                color="#FFF"
+                size={20}
+                color="#DC2626"
               />
-            </TouchableOpacity>
+              <Text style={styles.clearHeaderBtnText}>Clear All</Text>
+            </Pressable>
           )}
         </View>
 
@@ -285,20 +288,21 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   clearHeaderBtn: {
-    width: scale(42),
-    height: verticalScale(42),
-    borderRadius: 14,
-    backgroundColor: "#DC2626",
-    justifyContent: "center",
+    flexDirection: "row",
     alignItems: "center",
+    gap: 4,
+    backgroundColor: "#FEE2E2",
+    paddingHorizontal: moderateScale(10),
+    paddingVertical: verticalScale(6),
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: "rgba(220, 38, 38, 0.35)",
-    shadowColor: "#DC2626",
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    shadowOffset: { width: scale(0), height: verticalScale(4) },
-    elevation: 4,
-    flexShrink: 0,
+    borderColor: "rgba(220, 38, 38, 0.2)",
+  },
+  clearHeaderBtnText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(13),
+    fontWeight: "600",
+    color: "#DC2626",
   },
   sep: { height: verticalScale(10) },
   emptyContainer: {

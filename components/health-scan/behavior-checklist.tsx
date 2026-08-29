@@ -119,7 +119,6 @@ export function BehaviorChecklist({
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
-        nestedScrollEnabled={true}
       >
         {loading ? (
           <Text style={styles.emptyText}>Loading behaviors...</Text>
@@ -180,7 +179,7 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     paddingHorizontal: moderateScale(14),
     paddingTop: verticalScale(14),
-    paddingBottom: verticalScale(16),
+    paddingBottom: verticalScale(14),
     backgroundColor: "rgba(254, 254, 254, 0.92)",
     borderWidth: 1,
     borderColor: "rgba(67, 139, 123, 0.32)",
@@ -189,6 +188,7 @@ const styles = StyleSheet.create({
     shadowRadius: 14,
     shadowOffset: { width: scale(0), height: verticalScale(8) },
     elevation: 4,
+    maxHeight: verticalScale(520),
   },
   cardHeader: {
     fontFamily: ChickFont.display,
@@ -245,10 +245,10 @@ const styles = StyleSheet.create({
   },
   scroll: {
     flexGrow: 0,
-    maxHeight: verticalScale(350),
+    maxHeight: verticalScale(238),
   },
   scrollContent: {
-    paddingBottom: verticalScale(16),
+    paddingBottom: verticalScale(2),
     gap: 2,
   },
   row: {
@@ -307,7 +307,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     fontWeight: "700",
     color: ChickIntelPalette.gray1,
-    marginTop: verticalScale(20),
+    marginTop: verticalScale(10),
     marginBottom: verticalScale(6),
   },
   observationInput: {

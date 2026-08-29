@@ -1,8 +1,8 @@
 import { Pressable, StyleSheet, Text } from "react-native";
 
-import { ChickFont } from "@/constants/chick-fonts";
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
-import { responsiveFontSize, scale, verticalScale } from "@/utils/responsive";
+import { responsiveFontSize, verticalScale } from "@/utils/responsive";
+import { HealthTypography } from "@/constants/health-typography";
 
 export type HealthFlowFooterVariant = "next" | "save";
 
@@ -14,7 +14,7 @@ type HealthFlowFooterButtonProps = {
 };
 
 /**
- * Primary CTA styled after the Save Egg Batch button that reads “Next” on the input step and “Save” on the outcome step.
+ * Primary CTA that reads “Next” on the input step and “Save” on the outcome step.
  */
 export function HealthFlowFooterButton({
     variant,
@@ -30,7 +30,7 @@ export function HealthFlowFooterButton({
             disabled={disabled}
             style={({ pressed }) => [
                 styles.btn,
-                { opacity: disabled ? 0.45 : pressed ? 0.92 : 1 },
+                { opacity: disabled ? 0.45 : pressed ? 0.9 : 1 },
             ]}
             accessibilityRole="button"
             accessibilityLabel={resolvedLabel}
@@ -43,23 +43,18 @@ export function HealthFlowFooterButton({
 const styles = StyleSheet.create({
     btn: {
         alignSelf: "stretch",
-        height: verticalScale(52),
-        borderRadius: 14,
-        backgroundColor: ChickIntelPalette.green1,
         alignItems: "center",
         justifyContent: "center",
+        paddingVertical: verticalScale(15),
+        borderRadius: 999,
+        backgroundColor: ChickIntelPalette.gray1,
         marginTop: verticalScale(8),
-        shadowColor: "#317667",
-        shadowOpacity: 0.18,
-        shadowRadius: 10,
-        shadowOffset: { width: scale(0), height: verticalScale(5) },
-        elevation: 3,
     },
     btnText: {
-        fontFamily: ChickFont.sans,
-        fontSize: responsiveFontSize(14),
-        fontWeight: "700",
-        color: ChickIntelPalette.light1,
+        ...HealthTypography.bodyMedium,
+        fontSize: responsiveFontSize(16),
+        fontWeight: "600",
+        color: "#FFFFFF",
         letterSpacing: 0.25,
     },
 });

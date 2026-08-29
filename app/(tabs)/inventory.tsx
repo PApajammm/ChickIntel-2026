@@ -29,10 +29,9 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
     Alert,
-    Animated,
     KeyboardAvoidingView,
     Modal,
     Platform,
@@ -47,38 +46,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type InventoryItem = SupabaseInventoryItem & { baseQty?: number };
 
-const INVENTORY_TABS = [
-  { id: "equipment", label: "Equipment", icon: "tools" },
-  { id: "feeds", label: "Feeds", icon: "barley" },
-  { id: "medicine", label: "Medicine", icon: "pill" },
-  { id: "vitamins", label: "Vitamins", icon: "bottle-tonic-plus-outline" },
-] as const;
-
-type InventoryTabId = (typeof INVENTORY_TABS)[number]["id"];
-
-function getCategoryTab(categoryOrType?: string): InventoryTabId {
-  const norm = (categoryOrType || "").trim().toLowerCase();
-  if (norm.includes("feed")) return "feeds";
-  if (
-    norm.includes("medicin") ||
-    norm.includes("medicat") ||
-    norm.includes("vaccin")
-  ) {
-    return "medicine";
-  }
-  if (norm.includes("vitamin") || norm.includes("supplem")) {
-    return "vitamins";
-  }
-  return "equipment";
-}
-
-const defaultTypeForTab: Record<InventoryTabId, string> = {
-  equipment: "Equipment",
-  feeds: "Feeds",
-  medicine: "Medicine",
-  vitamins: "Vitamins",
-};
-
 const UNIT_OPTIONS = ["kg", "lbs", "box", "pcs", "ml", "vials"];
 const formatQuantityValue = (value: number) =>
   Number.isInteger(value) ? String(value) : value.toFixed(2);
@@ -89,242 +56,6 @@ const formatAppDate = (date?: Date | null) => {
   const day = String(date.getDate()).padStart(2, "0");
   const y = date.getFullYear();
   return `${m}/${day}/${y}`;
-};
-
-const ExpiredAlertBanner = ({
-  expirationSummary,
-  activeExpirationFilter,
-  setActiveExpirationFilter,
-  totalCount,
-}: {
-  expirationSummary: {
-    expiredCount: number;
-    expiringSoonCount: number;
-  };
-  activeExpirationFilter: "all" | "active" | "expired" | "expiring-soon";
-  setActiveExpirationFilter: (
-    filter: "all" | "active" | "expired" | "expiring-soon",
-  ) => void;
-  totalCount: number;
-}) => {
-  const blinkAnim = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    let isMounted = true;
-    let loopCount = 0;
-
-    const runLoop = () => {
-      if (!isMounted || loopCount >= 10) {
-        if (isMounted) {
-          Animated.timing(blinkAnim, {
-            toValue: 1,
-            duration: 300,
-            useNativeDriver: Platform.OS !== "web",
-          }).start();
-        }
-        return;
-      }
-
-      loopCount += 1;
-
-      Animated.sequence([
-        Animated.timing(blinkAnim, {
-          toValue: 0.1,
-          duration: 500,
-          useNativeDriver: Platform.OS !== "web",
-        }),
-        Animated.timing(blinkAnim, {
-          toValue: 1,
-          duration: 500,
-          useNativeDriver: Platform.OS !== "web",
-        }),
-      ]).start(({ finished }) => {
-        if (finished && isMounted) {
-          runLoop();
-        }
-      });
-    };
-
-    runLoop();
-
-    return () => {
-      isMounted = false;
-      blinkAnim.stopAnimation();
-    };
-  }, [blinkAnim]);
-
-  return (
-    <Animated.View
-      style={[
-        styles.expAlertCard,
-        {
-          opacity: blinkAnim.interpolate({
-            inputRange: [0.1, 1],
-            outputRange: [0.72, 1],
-          }),
-        },
-      ]}
-    >
-      <View
-        style={[
-          styles.expAlertCardInner,
-          expirationSummary.expiredCount > 0
-            ? styles.expAlertCardInnerDanger
-            : styles.expAlertCardInnerWarning,
-        ]}
-      >
-        <View style={styles.expAlertHeaderRow}>
-          <Animated.View
-            style={[
-              styles.expAlertIconWrap,
-              {
-                opacity: blinkAnim,
-                transform: [
-                  {
-                    scale: blinkAnim.interpolate({
-                      inputRange: [0.1, 1],
-                      outputRange: [0.88, 1.12],
-                    }),
-                  },
-                ],
-              },
-            ]}
-          >
-            <MaterialCommunityIcons
-              name={
-                expirationSummary.expiredCount > 0
-                  ? "alert-decagram"
-                  : "clock-alert"
-              }
-              size={41}
-              color={
-                expirationSummary.expiredCount > 0 ? "#EF4444" : "#F59E0B"
-              }
-            />
-          </Animated.View>
-          <View style={styles.expAlertHeaderCopy}>
-            <Text style={styles.expAlertTitle}>
-              {expirationSummary.expiredCount > 0
-                ? `${expirationSummary.expiredCount} Expired Item${expirationSummary.expiredCount === 1 ? "" : "s"} Detected!`
-                : "Supplies Expiring Soon"}
-            </Text>
-            <Text style={styles.expAlertSubtitle}>
-              {expirationSummary.expiredCount > 0
-                ? "Expired feed or medication should not be administered to your flock."
-                : `${expirationSummary.expiringSoonCount} item(s) will expire within 7 days. Plan your restock accordingly.`}
-            </Text>
-          </View>
-        </View>
-
-        {/* Filter Mini Tabs (matching Tasks Preview) */}
-        <View style={styles.previewSegmentedContainer}>
-          <TouchableOpacity
-            style={[
-              styles.previewSegmentedItem,
-              activeExpirationFilter === "all" &&
-                styles.previewSegmentedItemActive,
-            ]}
-            onPress={() => setActiveExpirationFilter("all")}
-            activeOpacity={0.8}
-          >
-            <MaterialCommunityIcons
-              name="layers-outline"
-              size={13}
-              color={
-                activeExpirationFilter === "all"
-                  ? "#FFFFFF"
-                  : "rgba(255, 255, 255, 0.65)"
-              }
-            />
-            <Text
-              style={[
-                styles.previewSegmentedText,
-                activeExpirationFilter === "all" &&
-                  styles.previewSegmentedTextActive,
-              ]}
-            >
-              All Items ({totalCount})
-            </Text>
-          </TouchableOpacity>
-
-          {expirationSummary.expiredCount > 0 && (
-            <TouchableOpacity
-              style={[
-                styles.previewSegmentedItem,
-                activeExpirationFilter === "expired" &&
-                  styles.previewSegmentedItemActive,
-              ]}
-              onPress={() =>
-                setActiveExpirationFilter(
-                  activeExpirationFilter === "expired"
-                    ? "all"
-                    : "expired",
-                )
-              }
-              activeOpacity={0.8}
-            >
-              <MaterialCommunityIcons
-                name="alert-circle-outline"
-                size={13}
-                color={
-                  activeExpirationFilter === "expired"
-                    ? "#EF4444"
-                    : "rgba(255, 255, 255, 0.65)"
-                }
-              />
-              <Text
-                style={[
-                  styles.previewSegmentedText,
-                  activeExpirationFilter === "expired"
-                    ? styles.previewSegmentedTextExpiredActive
-                    : null,
-                ]}
-              >
-                Expired ({expirationSummary.expiredCount})
-              </Text>
-            </TouchableOpacity>
-          )}
-
-          {expirationSummary.expiringSoonCount > 0 && (
-            <TouchableOpacity
-              style={[
-                styles.previewSegmentedItem,
-                activeExpirationFilter === "expiring-soon" &&
-                  styles.previewSegmentedItemActive,
-              ]}
-              onPress={() =>
-                setActiveExpirationFilter(
-                  activeExpirationFilter === "expiring-soon"
-                    ? "all"
-                    : "expiring-soon",
-                )
-              }
-              activeOpacity={0.8}
-            >
-              <MaterialCommunityIcons
-                name="clock-alert-outline"
-                size={13}
-                color={
-                  activeExpirationFilter === "expiring-soon"
-                    ? "#FCD34D"
-                    : "rgba(255, 255, 255, 0.65)"
-                }
-              />
-              <Text
-                style={[
-                  styles.previewSegmentedText,
-                  activeExpirationFilter === "expiring-soon" &&
-                    styles.previewSegmentedTextActive,
-                ]}
-              >
-                Expiring Soon ({expirationSummary.expiringSoonCount})
-              </Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
-    </Animated.View>
-  );
 };
 
 export default function InventoryScreen() {
@@ -342,7 +73,6 @@ export default function InventoryScreen() {
   } = useFarmData();
   const isDark = false;
 
-  const [selectedTab, setSelectedTab] = useState<InventoryTabId>("equipment");
   const [inventoryError, setInventoryError] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
@@ -541,44 +271,6 @@ export default function InventoryScreen() {
     };
   }, [effectiveItems, activeExpirationFilter]);
 
-  const tabAlerts = useMemo(() => {
-    const alerts: Record<
-      InventoryTabId,
-      { total: number; hasExpired: boolean }
-    > = {
-      equipment: { total: 0, hasExpired: false },
-      feeds: { total: 0, hasExpired: false },
-      medicine: { total: 0, hasExpired: false },
-      vitamins: { total: 0, hasExpired: false },
-    };
-
-    const now = new Date();
-    effectiveItems.forEach((item) => {
-      const tab = getCategoryTab(item.type);
-      alerts[tab].total += 1;
-      if (item.expirationDate) {
-        const meta = getExpirationStatus(item.expirationDate, now);
-        if (meta.isExpired) {
-          alerts[tab].hasExpired = true;
-        }
-      }
-    });
-
-    return alerts;
-  }, [effectiveItems]);
-
-  const currentTabGroups = useMemo(() => {
-    return activeCategoryGroups.filter(([groupTitle]) =>
-      getCategoryTab(groupTitle) === selectedTab,
-    );
-  }, [activeCategoryGroups, selectedTab]);
-
-  const currentTabExpiredItems = useMemo(() => {
-    return expiredItemsList.filter(
-      (item) => getCategoryTab(item.type) === selectedTab,
-    );
-  }, [expiredItemsList, selectedTab]);
-
   const toggleTypeSelection = (groupItems: InventoryItem[]) => {
     const ids = groupItems.map((item) => item.id);
     const allSelected =
@@ -713,19 +405,6 @@ export default function InventoryScreen() {
     groupItems: EffectiveInventoryItem[],
     isExpiredTable: boolean = false,
   ) => {
-    const selectedTabMeta = INVENTORY_TABS.find((t) => t.id === selectedTab);
-    const isCategoryTitle =
-      groupTitle.toLowerCase() === selectedTab.toLowerCase() ||
-      groupTitle.toLowerCase() ===
-        (selectedTabMeta?.label.toLowerCase() || "") ||
-      groupTitle.toLowerCase().startsWith("expired ");
-
-    const displayTitle = isExpiredTable
-      ? "Expired Stock"
-      : isCategoryTitle
-        ? "Active Stock"
-        : `Active Stock (${groupTitle})`;
-
     return (
       <BlurCard
         key={groupTitle}
@@ -748,28 +427,13 @@ export default function InventoryScreen() {
                 </View>
               ) : null}
               <View>
-                <Text
-                  style={[
-                    styles.tableSectionTitle,
-                    isExpiredTable && styles.tableSectionTitleExpired,
-                  ]}
-                >
-                  {displayTitle}
+                <Text style={styles.tableSectionTitle}>
+                  {groupTitle}
                 </Text>
               </View>
             </View>
-            <View
-              style={[
-                styles.tableMetaPill,
-                isExpiredTable && styles.tableMetaPillExpired,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.tableSectionMeta,
-                  isExpiredTable && styles.tableSectionMetaExpired,
-                ]}
-              >
+            <View style={styles.tableMetaPill}>
+              <Text style={styles.tableSectionMeta}>
                 {groupItems.length}{" "}
                 {isExpiredTable ? "expired " : ""}item
                 {groupItems.length === 1 ? "" : "s"}
@@ -1025,10 +689,7 @@ export default function InventoryScreen() {
         </View>
         <TouchableOpacity
           style={styles.addButton}
-          onPress={() => {
-            setNewItemType(defaultTypeForTab[selectedTab] || "Choose type");
-            setAddModalVisible(true);
-          }}
+          onPress={() => setAddModalVisible(true)}
           activeOpacity={0.8}
           accessibilityRole="button"
           accessibilityLabel="Add inventory item"
@@ -1047,63 +708,161 @@ export default function InventoryScreen() {
         keyboardDismissMode="on-drag"
       >
         <View style={styles.content}>
-          {/* Expiration Alert Summary Banner with Guaranteed Blinking Animation */}
+          {/* Expiration Alert Summary Banner */}
           {!loadingItems && !inventoryError && expirationSummary.hasAlerts ? (
-            <ExpiredAlertBanner
-              expirationSummary={expirationSummary}
-              activeExpirationFilter={activeExpirationFilter}
-              setActiveExpirationFilter={setActiveExpirationFilter}
-              totalCount={effectiveItems.length}
-            />
-          ) : null}
-
-          {/* 4 Category Tabs acting as the header/title for the dynamic tables below */}
-          <View style={styles.tabSectionHeader}>
-            <View style={styles.segmentWrap}>
-              {INVENTORY_TABS.map((tab) => {
-                const isActive = selectedTab === tab.id;
-                const hasExpired = tabAlerts[tab.id]?.hasExpired;
-                return (
-                  <Pressable
-                    key={tab.id}
-                    onPress={() => setSelectedTab(tab.id)}
+            <BlurCard
+              style={styles.expAlertCard}
+              borderRadius={16}
+              intensity={20}
+            >
+              <View
+                style={[
+                  styles.expAlertCardInner,
+                  expirationSummary.expiredCount > 0
+                    ? styles.expAlertCardInnerDanger
+                    : styles.expAlertCardInnerWarning,
+                ]}
+              >
+                <View style={styles.expAlertHeaderRow}>
+                  <View
                     style={[
-                      styles.segment,
-                      isActive ? styles.segmentActive : styles.segmentInactive,
+                      styles.expAlertIconWrap,
+                      expirationSummary.expiredCount > 0
+                        ? styles.expAlertIconWrapDanger
+                        : styles.expAlertIconWrapWarning,
                     ]}
-                    accessibilityRole="tab"
-                    accessibilityState={{ selected: isActive }}
-                    accessibilityLabel={`${tab.label} tab`}
                   >
                     <MaterialCommunityIcons
-                      name={tab.icon as any}
-                      size={15}
-                      color={isActive ? "#FFFFFF" : "#4A5452"}
+                      name={
+                        expirationSummary.expiredCount > 0
+                          ? "alert-decagram"
+                          : "clock-alert"
+                      }
+                      size={22}
+                      color={
+                        expirationSummary.expiredCount > 0
+                          ? "#DC2626"
+                          : "#D97706"
+                      }
                     />
+                  </View>
+                  <View style={styles.expAlertHeaderCopy}>
+                    <Text style={styles.expAlertTitle}>
+                      {expirationSummary.expiredCount > 0
+                        ? `${expirationSummary.expiredCount} Expired Item${expirationSummary.expiredCount === 1 ? "" : "s"} Detected!`
+                        : "Supplies Expiring Soon"}
+                    </Text>
+                    <Text style={styles.expAlertSubtitle}>
+                      {expirationSummary.expiredCount > 0
+                        ? "Expired feed or medication should not be administered to your flock."
+                        : `${expirationSummary.expiringSoonCount} item(s) will expire within 7 days. Plan your restock accordingly.`}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Filter Chips */}
+                <View style={styles.expFilterRow}>
+                  <TouchableOpacity
+                    style={[
+                      styles.expFilterChip,
+                      activeExpirationFilter === "all" &&
+                        styles.expFilterChipActive,
+                    ]}
+                    onPress={() => setActiveExpirationFilter("all")}
+                    activeOpacity={0.8}
+                  >
                     <Text
                       style={[
-                        styles.segmentText,
-                        isActive
-                          ? styles.segmentTextActive
-                          : styles.segmentTextInactive,
+                        styles.expFilterChipText,
+                        activeExpirationFilter === "all" &&
+                          styles.expFilterChipTextActive,
                       ]}
-                      numberOfLines={1}
                     >
-                      {tab.label}
+                      All Items ({effectiveItems.length})
                     </Text>
-                    {hasExpired ? (
-                      <View
-                        style={[
-                          styles.segmentAlertDot,
-                          isActive && styles.segmentAlertDotActive,
-                        ]}
+                  </TouchableOpacity>
+
+                  {expirationSummary.expiredCount > 0 && (
+                    <TouchableOpacity
+                      style={[
+                        styles.expFilterChip,
+                        styles.expFilterChipDanger,
+                        activeExpirationFilter === "expired" &&
+                          styles.expFilterChipDangerActive,
+                      ]}
+                      onPress={() =>
+                        setActiveExpirationFilter(
+                          activeExpirationFilter === "expired"
+                            ? "all"
+                            : "expired",
+                        )
+                      }
+                      activeOpacity={0.8}
+                    >
+                      <MaterialCommunityIcons
+                        name="alert-circle"
+                        size={13}
+                        color={
+                          activeExpirationFilter === "expired"
+                            ? "#FFF"
+                            : "#DC2626"
+                        }
                       />
-                    ) : null}
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
+                      <Text
+                        style={[
+                          styles.expFilterChipText,
+                          styles.expFilterChipTextDanger,
+                          activeExpirationFilter === "expired" &&
+                            styles.expFilterChipTextDangerActive,
+                        ]}
+                      >
+                        Expired ({expirationSummary.expiredCount})
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+
+                  {expirationSummary.expiringSoonCount > 0 && (
+                    <TouchableOpacity
+                      style={[
+                        styles.expFilterChip,
+                        styles.expFilterChipWarning,
+                        activeExpirationFilter === "expiring-soon" &&
+                          styles.expFilterChipWarningActive,
+                      ]}
+                      onPress={() =>
+                        setActiveExpirationFilter(
+                          activeExpirationFilter === "expiring-soon"
+                            ? "all"
+                            : "expiring-soon",
+                        )
+                      }
+                      activeOpacity={0.8}
+                    >
+                      <MaterialCommunityIcons
+                        name="clock-alert-outline"
+                        size={13}
+                        color={
+                          activeExpirationFilter === "expiring-soon"
+                            ? "#FFF"
+                            : "#D97706"
+                        }
+                      />
+                      <Text
+                        style={[
+                          styles.expFilterChipText,
+                          styles.expFilterChipTextWarning,
+                          activeExpirationFilter === "expiring-soon" &&
+                            styles.expFilterChipTextWarningActive,
+                        ]}
+                      >
+                        Expiring Soon ({expirationSummary.expiringSoonCount})
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+            </BlurCard>
+          ) : null}
 
           {loadingItems ? (
             <Text style={styles.emptyStateText}>Loading inventory...</Text>
@@ -1137,69 +896,17 @@ export default function InventoryScreen() {
             </View>
           ) : null}
 
-          {/* Active Category Tables for Selected Tab */}
+          {/* Regular Active Inventory Category Tables */}
           {!loadingItems && !inventoryError
-            ? currentTabGroups.map(([groupTitle, groupItems]) =>
+            ? activeCategoryGroups.map(([groupTitle, groupItems]) =>
                 renderInventoryTable(groupTitle, groupItems, false),
               )
             : null}
 
-          {/* Dedicated Expired Items Table for Selected Tab */}
-          {!loadingItems &&
-          !inventoryError &&
-          currentTabExpiredItems.length > 0
-            ? renderInventoryTable(
-                `Expired ${INVENTORY_TABS.find((t) => t.id === selectedTab)?.label || "Supplies"}`,
-                currentTabExpiredItems,
-                true,
-              )
+          {/* Dedicated Expired Items Table (Positioned Below Active Categories) */}
+          {!loadingItems && !inventoryError && expiredItemsList.length > 0
+            ? renderInventoryTable("Expired Supplies", expiredItemsList, true)
             : null}
-
-          {/* Tab Empty State when no items exist for this tab */}
-          {!loadingItems &&
-          !inventoryError &&
-          effectiveItems.length > 0 &&
-          currentTabGroups.length === 0 &&
-          currentTabExpiredItems.length === 0 ? (
-            <BlurCard
-              style={styles.tabEmptyCard}
-              borderRadius={14}
-              intensity={16}
-            >
-              <View style={styles.tabEmptyInner}>
-                <View style={styles.tabEmptyIconWrap}>
-                  <MaterialCommunityIcons
-                    name={
-                      INVENTORY_TABS.find((t) => t.id === selectedTab)?.icon as any
-                    }
-                    size={32}
-                    color={ChickIntelPalette.green1}
-                  />
-                </View>
-                <Text style={styles.tabEmptyTitle}>
-                  No {INVENTORY_TABS.find((t) => t.id === selectedTab)?.label} Items
-                </Text>
-                <Text style={styles.tabEmptySubtitle}>
-                  You don't have any items under this category yet.
-                </Text>
-                <TouchableOpacity
-                  style={styles.tabEmptyAddBtn}
-                  onPress={() => {
-                    setNewItemType(
-                      defaultTypeForTab[selectedTab] || "Choose type",
-                    );
-                    setAddModalVisible(true);
-                  }}
-                  activeOpacity={0.8}
-                >
-                  <MaterialCommunityIcons name="plus" size={16} color="#FFF" />
-                  <Text style={styles.tabEmptyAddBtnText}>
-                    Add {INVENTORY_TABS.find((t) => t.id === selectedTab)?.label}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </BlurCard>
-          ) : null}
         </View>
       </ScrollView>
 
@@ -1787,121 +1494,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: moderateScale(20),
-    marginTop: 4,
+    marginTop: 10,
     marginBottom: 8,
-  },
-  tabSectionHeader: {
-    backgroundColor: "transparent",
-    marginTop: verticalScale(12),
-    marginBottom: verticalScale(4),
-  },
-  segmentWrap: {
-    flexDirection: "row",
-    backgroundColor: "rgba(255, 255, 255, 0.85)",
-    borderRadius: 14,
-    padding: 4,
-    gap: 4,
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.16)",
-    shadowColor: "#317667",
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-  },
-  segment: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: verticalScale(38),
-    borderRadius: 10,
-    paddingHorizontal: moderateScale(4),
-    gap: 4,
-  },
-  segmentActive: {
-    backgroundColor: ChickIntelPalette.green1,
-    shadowColor: "#317667",
-    shadowOpacity: 0.18,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-  },
-  segmentInactive: {
-    backgroundColor: "transparent",
-  },
-  segmentText: {
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(11.5),
-    fontWeight: "700",
-    lineHeight: 16,
-    color: "#4A5452",
-  },
-  segmentTextActive: {
-    color: "#FFFFFF",
-  },
-  segmentTextInactive: {
-    color: "#4A5452",
-  },
-  segmentAlertDot: {
-    width: scale(6),
-    height: verticalScale(6),
-    borderRadius: 3,
-    backgroundColor: "#DC2626",
-    marginLeft: 1,
-  },
-  segmentAlertDotActive: {
-    backgroundColor: "#FFD2D2",
-  },
-  tabEmptyCard: {
-    overflow: "hidden",
-    marginTop: 12,
-  },
-  tabEmptyInner: {
-    backgroundColor: "rgba(255, 255, 255, 0.95)",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.18)",
-    borderRadius: 14,
-    paddingVertical: verticalScale(28),
-    paddingHorizontal: moderateScale(20),
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-  },
-  tabEmptyIconWrap: {
-    width: scale(52),
-    height: verticalScale(52),
-    borderRadius: 26,
-    backgroundColor: "rgba(49, 118, 103, 0.12)",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 4,
-  },
-  tabEmptyTitle: {
-    fontFamily: ChickFont.display,
-    fontSize: responsiveFontSize(16),
-    fontWeight: "700",
-    color: ChickIntelPalette.gray1,
-  },
-  tabEmptySubtitle: {
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(13),
-    color: ChickIntelPalette.gray2,
-    textAlign: "center",
-  },
-  tabEmptyAddBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: ChickIntelPalette.green1,
-    paddingHorizontal: moderateScale(14),
-    paddingVertical: verticalScale(8),
-    borderRadius: 10,
-    marginTop: 6,
-  },
-  tabEmptyAddBtnText: {
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(13),
-    fontWeight: "700",
-    color: "#FFFFFF",
   },
   screenTitle: {
     fontFamily: ChickFont.display,
@@ -1990,12 +1584,10 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   tableMetaPill: {
-    paddingHorizontal: moderateScale(9),
+    paddingHorizontal: moderateScale(8),
     paddingVertical: verticalScale(3),
-    borderRadius: 8,
-    backgroundColor: "rgba(49, 118, 103, 0.12)",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.22)",
+    borderRadius: 999,
+    backgroundColor: "rgba(255, 255, 255, 0.7)",
   },
   tableMetaPillExpired: {
     backgroundColor: "rgba(220, 38, 38, 0.12)",
@@ -2014,11 +1606,11 @@ const styles = StyleSheet.create({
   tableSectionMeta: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(12),
-    fontWeight: "700",
-    color: "#2C3333",
+    fontWeight: "600",
+    color: ChickIntelPalette.gray2,
   },
   tableSectionMetaExpired: {
-    color: "#991B1B",
+    color: "#B91C1C",
     fontWeight: "700",
   },
   tableInner: {
@@ -2113,20 +1705,21 @@ const styles = StyleSheet.create({
   },
   expAlertCard: {
     marginBottom: verticalScale(14),
-    borderRadius: 10,
     overflow: "hidden",
   },
   expAlertCardInner: {
     padding: moderateScale(14),
-    borderRadius: 10,
+    borderRadius: 16,
+    borderWidth: 1,
     gap: 12,
-    backgroundColor: "#262E2D",
   },
   expAlertCardInnerDanger: {
-    backgroundColor: "#262E2D",
+    backgroundColor: "rgba(254, 242, 242, 0.94)",
+    borderColor: "rgba(220, 38, 38, 0.28)",
   },
   expAlertCardInnerWarning: {
-    backgroundColor: "#262E2D",
+    backgroundColor: "rgba(254, 252, 232, 0.94)",
+    borderColor: "rgba(217, 119, 6, 0.28)",
   },
   expAlertHeaderRow: {
     flexDirection: "row",
@@ -2134,9 +1727,17 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   expAlertIconWrap: {
+    width: scale(40),
+    height: verticalScale(40),
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
-    paddingTop: verticalScale(2),
+  },
+  expAlertIconWrapDanger: {
+    backgroundColor: "rgba(220, 38, 38, 0.14)",
+  },
+  expAlertIconWrapWarning: {
+    backgroundColor: "rgba(217, 119, 6, 0.14)",
   },
   expAlertHeaderCopy: {
     flex: 1,
@@ -2146,49 +1747,75 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.display,
     fontSize: responsiveFontSize(15),
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: ChickIntelPalette.gray1,
     letterSpacing: -0.2,
   },
   expAlertSubtitle: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(12),
-    lineHeight: 17,
-    color: "rgba(255, 255, 255, 0.88)",
+    lineHeight: 16,
+    color: ChickIntelPalette.gray2,
     marginTop: 2,
-    fontWeight: "500",
   },
-  previewSegmentedContainer: {
+  expFilterRow: {
     flexDirection: "row",
-    backgroundColor: "rgba(0, 0, 0, 0.35)",
-    borderRadius: 8,
-    padding: 3,
-    gap: 3,
-    alignSelf: "flex-start",
+    flexWrap: "wrap",
+    gap: 8,
+    paddingTop: 4,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(0,0,0,0.06)",
   },
-  previewSegmentedItem: {
+  expFilterChip: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 5,
     paddingHorizontal: moderateScale(10),
-    paddingVertical: verticalScale(5),
-    borderRadius: 6,
+    paddingVertical: verticalScale(6),
+    borderRadius: 999,
+    backgroundColor: "rgba(255, 255, 255, 0.8)",
+    borderWidth: 1,
+    borderColor: "rgba(0, 0, 0, 0.08)",
   },
-  previewSegmentedItemActive: {
-    backgroundColor: "#3E4846",
+  expFilterChipActive: {
+    backgroundColor: ChickIntelPalette.green1,
+    borderColor: ChickIntelPalette.green1,
   },
-  previewSegmentedText: {
+  expFilterChipText: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(11),
-    fontWeight: "600",
-    color: "rgba(255, 255, 255, 0.65)",
-  },
-  previewSegmentedTextActive: {
-    color: "#FFFFFF",
     fontWeight: "700",
+    color: ChickIntelPalette.gray1,
   },
-  previewSegmentedTextExpiredActive: {
-    color: "#EF4444",
-    fontWeight: "700",
+  expFilterChipTextActive: {
+    color: "#FFF",
+  },
+  expFilterChipDanger: {
+    backgroundColor: "rgba(220, 38, 38, 0.08)",
+    borderColor: "rgba(220, 38, 38, 0.25)",
+  },
+  expFilterChipDangerActive: {
+    backgroundColor: "#DC2626",
+    borderColor: "#DC2626",
+  },
+  expFilterChipTextDanger: {
+    color: "#B91C1C",
+  },
+  expFilterChipTextDangerActive: {
+    color: "#FFF",
+  },
+  expFilterChipWarning: {
+    backgroundColor: "rgba(217, 119, 6, 0.08)",
+    borderColor: "rgba(217, 119, 6, 0.25)",
+  },
+  expFilterChipWarningActive: {
+    backgroundColor: "#D97706",
+    borderColor: "#D97706",
+  },
+  expFilterChipTextWarning: {
+    color: "#B45309",
+  },
+  expFilterChipTextWarningActive: {
+    color: "#FFF",
   },
   emptyFilterWrap: {
     alignItems: "center",
