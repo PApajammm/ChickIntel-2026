@@ -1277,6 +1277,7 @@ export default function ReportsScreen() {
     (sum, item) => sum + item.value,
     0
   );
+  const displayedSupplyTotal = report.supply.totalSlices ?? totalSupplyUsage;
 
   return (
     <SafeAreaView style={styles.screen} edges={["top"]}>
@@ -1413,7 +1414,7 @@ export default function ReportsScreen() {
               </View>
               <Text style={styles.kpiLabel}>Supply Usage</Text>
               <Text style={styles.kpiValue}>
-                {totalSupplyUsage.toLocaleString()}
+                {displayedSupplyTotal.toLocaleString()}
               </Text>
               <Text style={styles.kpiSubtext}>
                 {supplyType} items
@@ -1510,7 +1511,8 @@ export default function ReportsScreen() {
                 />
               </View>
 
-              {report.supply.slices && report.supply.slices.length > 0 ? (
+              {supplyType === "Feeds" ||
+              (report.supply.slices && report.supply.slices.length > 0) ? (
                 <View style={styles.chartWrapper}>
                   <DonutChart
                     slices={report.supply.slices}

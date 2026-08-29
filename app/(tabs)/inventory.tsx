@@ -47,37 +47,42 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type InventoryItem = SupabaseInventoryItem & { baseQty?: number };
 
-const INVENTORY_TABS = [
+const DEFAULT_INVENTORY_TABS = [
   { id: "equipment", label: "Equipment", icon: "tools" },
   { id: "feeds", label: "Feeds", icon: "barley" },
   { id: "medicine", label: "Medicine", icon: "pill" },
   { id: "vitamins", label: "Vitamins", icon: "bottle-tonic-plus-outline" },
 ] as const;
 
-type InventoryTabId = (typeof INVENTORY_TABS)[number]["id"];
+type InventoryTab = {
+  id: string;
+  label: string;
+  icon: string;
+};
+type InventoryTabId = string;
 
 function getCategoryTab(categoryOrType?: string): InventoryTabId {
-  const norm = (categoryOrType || "").trim().toLowerCase();
-  if (norm.includes("feed")) return "feeds";
-  if (
-    norm.includes("medicin") ||
-    norm.includes("medicat") ||
-    norm.includes("vaccin")
-  ) {
-    return "medicine";
-  }
-  if (norm.includes("vitamin") || norm.includes("supplem")) {
-    return "vitamins";
-  }
-  return "equipment";
+  return (categoryOrType || "").trim().toLowerCase() || "equipment";
 }
 
-const defaultTypeForTab: Record<InventoryTabId, string> = {
-  equipment: "Equipment",
-  feeds: "Feeds",
-  medicine: "Medicine",
-  vitamins: "Vitamins",
-};
+function getCategoryIcon(category: string) {
+  const normalized = category.trim().toLowerCase();
+  if (normalized.includes("feed")) return "barley";
+  if (normalized.includes("medicin") || normalized.includes("vaccin")) {
+    return "pill";
+  }
+  if (normalized.includes("vitamin") || normalized.includes("supplem")) {
+    return "bottle-tonic-plus-outline";
+  }
+  if (
+    normalized.includes("clean") ||
+    normalized.includes("sanit") ||
+    normalized.includes("wash")
+  ) {
+    return "spray-bottle";
+  }
+  return "package-variant";
+}
 
 const UNIT_OPTIONS = ["kg", "lbs", "box", "pcs", "ml", "vials"];
 const formatQuantityValue = (value: number) =>
@@ -197,9 +202,7 @@ const ExpiredAlertBanner = ({
                   : "clock-alert"
               }
               size={41}
-              color={
-                expirationSummary.expiredCount > 0 ? "#EF4444" : "#F59E0B"
-              }
+              color={expirationSummary.expiredCount > 0 ? "#EF4444" : "#F59E0B"}
             />
           </Animated.View>
           <View style={styles.expAlertHeaderCopy}>
@@ -256,9 +259,7 @@ const ExpiredAlertBanner = ({
               ]}
               onPress={() =>
                 setActiveExpirationFilter(
-                  activeExpirationFilter === "expired"
-                    ? "all"
-                    : "expired",
+                  activeExpirationFilter === "expired" ? "all" : "expired",
                 )
               }
               activeOpacity={0.8}
@@ -386,6 +387,34 @@ export default function InventoryScreen() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showExpDatePicker, setShowExpDatePicker] = useState(false);
 
+  const inventoryTabs = useMemo<InventoryTab[]>(() => {
+    const activeTypeNames = [
+      ...new Set(typeOptions.map((type) => type.trim()).filter(Boolean)),
+    ];
+
+    if (!activeTypeNames.length) {
+      return DEFAULT_INVENTORY_TABS.map((tab) => ({ ...tab }));
+    }
+
+    return activeTypeNames.map((label) => {
+      const defaultTab = DEFAULT_INVENTORY_TABS.find(
+        (tab) => tab.id === getCategoryTab(label),
+      );
+
+      return {
+        id: getCategoryTab(label),
+        label: defaultTab?.label ?? label,
+        icon: defaultTab?.icon ?? getCategoryIcon(label),
+      };
+    });
+  }, [typeOptions]);
+
+  useEffect(() => {
+    if (!inventoryTabs.some((tab) => tab.id === selectedTab)) {
+      setSelectedTab(inventoryTabs[0]?.id ?? "equipment");
+    }
+  }, [inventoryTabs, selectedTab]);
+
   // Edit Item Modal State
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
@@ -435,23 +464,25 @@ export default function InventoryScreen() {
     }, [refreshFarmData]),
   );
 
-  useEffect(() => {
-    let cancelled = false;
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
 
-    fetchInventoryCategoryOptions()
-      .then((options) => {
-        if (!cancelled) setTypeOptions(options);
-      })
-      .catch((error) => {
-        if (!cancelled) {
-          logError("Inventory category lookup load failed", error);
-        }
-      });
+      fetchInventoryCategoryOptions()
+        .then((options) => {
+          if (!cancelled) setTypeOptions(options);
+        })
+        .catch((error) => {
+          if (!cancelled) {
+            logError("Inventory category lookup load failed", error);
+          }
+        });
 
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+      return () => {
+        cancelled = true;
+      };
+    }, []),
+  );
 
   const toggleSelection = (id: string) => {
     const next = new Set(selectedIds);
@@ -542,19 +573,12 @@ export default function InventoryScreen() {
   }, [effectiveItems, activeExpirationFilter]);
 
   const tabAlerts = useMemo(() => {
-    const alerts: Record<
-      InventoryTabId,
-      { total: number; hasExpired: boolean }
-    > = {
-      equipment: { total: 0, hasExpired: false },
-      feeds: { total: 0, hasExpired: false },
-      medicine: { total: 0, hasExpired: false },
-      vitamins: { total: 0, hasExpired: false },
-    };
+    const alerts: Record<string, { total: number; hasExpired: boolean }> = {};
 
     const now = new Date();
     effectiveItems.forEach((item) => {
       const tab = getCategoryTab(item.type);
+      alerts[tab] ??= { total: 0, hasExpired: false };
       alerts[tab].total += 1;
       if (item.expirationDate) {
         const meta = getExpirationStatus(item.expirationDate, now);
@@ -568,8 +592,8 @@ export default function InventoryScreen() {
   }, [effectiveItems]);
 
   const currentTabGroups = useMemo(() => {
-    return activeCategoryGroups.filter(([groupTitle]) =>
-      getCategoryTab(groupTitle) === selectedTab,
+    return activeCategoryGroups.filter(
+      ([groupTitle]) => getCategoryTab(groupTitle) === selectedTab,
     );
   }, [activeCategoryGroups, selectedTab]);
 
@@ -713,7 +737,7 @@ export default function InventoryScreen() {
     groupItems: EffectiveInventoryItem[],
     isExpiredTable: boolean = false,
   ) => {
-    const selectedTabMeta = INVENTORY_TABS.find((t) => t.id === selectedTab);
+    const selectedTabMeta = inventoryTabs.find((t) => t.id === selectedTab);
     const isCategoryTitle =
       groupTitle.toLowerCase() === selectedTab.toLowerCase() ||
       groupTitle.toLowerCase() ===
@@ -770,8 +794,7 @@ export default function InventoryScreen() {
                   isExpiredTable && styles.tableSectionMetaExpired,
                 ]}
               >
-                {groupItems.length}{" "}
-                {isExpiredTable ? "expired " : ""}item
+                {groupItems.length} {isExpiredTable ? "expired " : ""}item
                 {groupItems.length === 1 ? "" : "s"}
               </Text>
             </View>
@@ -1015,29 +1038,24 @@ export default function InventoryScreen() {
             accessibilityRole="button"
             accessibilityLabel="Go back"
           >
-            <MaterialCommunityIcons
-              name="arrow-left"
-              size={22}
-              color="#FFF"
-            />
+            <MaterialCommunityIcons name="arrow-left" size={22} color="#FFF" />
           </TouchableOpacity>
           <Text style={styles.screenTitle}>Inventory</Text>
         </View>
         <TouchableOpacity
           style={styles.addButton}
           onPress={() => {
-            setNewItemType(defaultTypeForTab[selectedTab] || "Choose type");
+            setNewItemType(
+              inventoryTabs.find((tab) => tab.id === selectedTab)?.label ||
+                "Choose type",
+            );
             setAddModalVisible(true);
           }}
           activeOpacity={0.8}
           accessibilityRole="button"
           accessibilityLabel="Add inventory item"
         >
-          <MaterialCommunityIcons
-            name="plus"
-            size={24}
-            color="#FFF"
-          />
+          <MaterialCommunityIcons name="plus" size={24} color="#FFF" />
         </TouchableOpacity>
       </View>
 
@@ -1057,52 +1075,61 @@ export default function InventoryScreen() {
             />
           ) : null}
 
-          {/* 4 Category Tabs acting as the header/title for the dynamic tables below */}
+          {/* Scrollable category tabs for the dynamic tables below */}
           <View style={styles.tabSectionHeader}>
-            <View style={styles.segmentWrap}>
-              {INVENTORY_TABS.map((tab) => {
-                const isActive = selectedTab === tab.id;
-                const hasExpired = tabAlerts[tab.id]?.hasExpired;
-                return (
-                  <Pressable
-                    key={tab.id}
-                    onPress={() => setSelectedTab(tab.id)}
-                    style={[
-                      styles.segment,
-                      isActive ? styles.segmentActive : styles.segmentInactive,
-                    ]}
-                    accessibilityRole="tab"
-                    accessibilityState={{ selected: isActive }}
-                    accessibilityLabel={`${tab.label} tab`}
-                  >
-                    <MaterialCommunityIcons
-                      name={tab.icon as any}
-                      size={15}
-                      color={isActive ? "#FFFFFF" : "#4A5452"}
-                    />
-                    <Text
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.tabScrollContent}
+              keyboardShouldPersistTaps="handled"
+            >
+              <View style={styles.segmentWrap}>
+                {inventoryTabs.map((tab) => {
+                  const isActive = selectedTab === tab.id;
+                  const hasExpired = tabAlerts[tab.id]?.hasExpired;
+                  return (
+                    <Pressable
+                      key={tab.id}
+                      onPress={() => setSelectedTab(tab.id)}
                       style={[
-                        styles.segmentText,
+                        styles.segment,
                         isActive
-                          ? styles.segmentTextActive
-                          : styles.segmentTextInactive,
+                          ? styles.segmentActive
+                          : styles.segmentInactive,
                       ]}
-                      numberOfLines={1}
+                      accessibilityRole="tab"
+                      accessibilityState={{ selected: isActive }}
+                      accessibilityLabel={`${tab.label} tab`}
                     >
-                      {tab.label}
-                    </Text>
-                    {hasExpired ? (
-                      <View
-                        style={[
-                          styles.segmentAlertDot,
-                          isActive && styles.segmentAlertDotActive,
-                        ]}
+                      <MaterialCommunityIcons
+                        name={tab.icon as any}
+                        size={15}
+                        color={isActive ? "#FFFFFF" : "#4A5452"}
                       />
-                    ) : null}
-                  </Pressable>
-                );
-              })}
-            </View>
+                      <Text
+                        style={[
+                          styles.segmentText,
+                          isActive
+                            ? styles.segmentTextActive
+                            : styles.segmentTextInactive,
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {tab.label}
+                      </Text>
+                      {hasExpired ? (
+                        <View
+                          style={[
+                            styles.segmentAlertDot,
+                            isActive && styles.segmentAlertDotActive,
+                          ]}
+                        />
+                      ) : null}
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </ScrollView>
           </View>
 
           {loadingItems ? (
@@ -1145,11 +1172,9 @@ export default function InventoryScreen() {
             : null}
 
           {/* Dedicated Expired Items Table for Selected Tab */}
-          {!loadingItems &&
-          !inventoryError &&
-          currentTabExpiredItems.length > 0
+          {!loadingItems && !inventoryError && currentTabExpiredItems.length > 0
             ? renderInventoryTable(
-                `Expired ${INVENTORY_TABS.find((t) => t.id === selectedTab)?.label || "Supplies"}`,
+                `Expired ${inventoryTabs.find((t) => t.id === selectedTab)?.label || "Supplies"}`,
                 currentTabExpiredItems,
                 true,
               )
@@ -1170,14 +1195,16 @@ export default function InventoryScreen() {
                 <View style={styles.tabEmptyIconWrap}>
                   <MaterialCommunityIcons
                     name={
-                      INVENTORY_TABS.find((t) => t.id === selectedTab)?.icon as any
+                      inventoryTabs.find((t) => t.id === selectedTab)
+                        ?.icon as any
                     }
                     size={32}
                     color={ChickIntelPalette.green1}
                   />
                 </View>
                 <Text style={styles.tabEmptyTitle}>
-                  No {INVENTORY_TABS.find((t) => t.id === selectedTab)?.label} Items
+                  No {inventoryTabs.find((t) => t.id === selectedTab)?.label}{" "}
+                  Items
                 </Text>
                 <Text style={styles.tabEmptySubtitle}>
                   You don't have any items under this category yet.
@@ -1186,7 +1213,8 @@ export default function InventoryScreen() {
                   style={styles.tabEmptyAddBtn}
                   onPress={() => {
                     setNewItemType(
-                      defaultTypeForTab[selectedTab] || "Choose type",
+                      inventoryTabs.find((tab) => tab.id === selectedTab)
+                        ?.label || "Choose type",
                     );
                     setAddModalVisible(true);
                   }}
@@ -1194,7 +1222,7 @@ export default function InventoryScreen() {
                 >
                   <MaterialCommunityIcons name="plus" size={16} color="#FFF" />
                   <Text style={styles.tabEmptyAddBtnText}>
-                    Add {INVENTORY_TABS.find((t) => t.id === selectedTab)?.label}
+                    Add {inventoryTabs.find((t) => t.id === selectedTab)?.label}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -1795,6 +1823,9 @@ const styles = StyleSheet.create({
     marginTop: verticalScale(12),
     marginBottom: verticalScale(4),
   },
+  tabScrollContent: {
+    flexGrow: 1,
+  },
   segmentWrap: {
     flexDirection: "row",
     backgroundColor: "rgba(255, 255, 255, 0.85)",
@@ -1809,13 +1840,14 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
   },
   segment: {
-    flex: 1,
+    flexShrink: 0,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     minHeight: verticalScale(38),
     borderRadius: 10,
-    paddingHorizontal: moderateScale(4),
+    minWidth: scale(112),
+    paddingHorizontal: moderateScale(12),
     gap: 4,
   },
   segmentActive: {

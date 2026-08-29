@@ -111,6 +111,13 @@ function startOfMonth(date: Date) {
   return next;
 }
 
+function localDateKey(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 function clampToNonNegative(value: number) {
   return value > 0 ? value : 0;
 }
@@ -306,7 +313,9 @@ function buildChickenProductionSnapshot(
       : 0;
     const killedCount = Math.max(batchKilled, monitoringDeceased);
 
-    const activeInRow = clampToNonNegative(totalBirds - isolatedCount - killedCount);
+    const activeInRow = clampToNonNegative(
+      totalBirds - isolatedCount - killedCount,
+    );
     active += activeInRow;
     isolated += isolatedCount;
     lost += killedCount;
@@ -385,14 +394,11 @@ function buildTimeBuckets(overview: ReportOverview, now: Date) {
     });
   }
 
-  const length =
-    overview === "Monthly"
-      ? new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
-      : 7;
+  const length = overview === "Monthly" ? 30 : 7;
   return Array.from({ length }, (_, index) => {
     const date = startOfDay(addDays(now, -(length - 1 - index)));
     return {
-      key: date.toISOString().slice(0, 10),
+      key: localDateKey(date),
       label: formatBarLabel(date, overview),
       total: 0,
     };
@@ -420,7 +426,7 @@ function buildSupplySnapshot(
     const key =
       overview === "Annually"
         ? `${createdAt.getFullYear()}-${createdAt.getMonth() + 1}`
-        : createdAt.toISOString().slice(0, 10);
+        : localDateKey(createdAt);
     const index = bucketIndex.get(key);
 
     if (index === undefined) {
@@ -509,58 +515,49 @@ function buildSupplySnapshot(
       },
     ];
   } else if (supplyType === "Feeds") {
-    let layerCount = 0;
-    let growerCount = 0;
-    let pelletCount = 0;
+    const feedTotals = new Map<string, number>();
 
     filteredRows.forEach((row) => {
-      const typeStr = (row.item_type ?? "").toLowerCase();
-      const nameStr = (row.item_name ?? "").toLowerCase();
-      const combined = `${typeStr} ${nameStr}`;
-      const qty = Number(row.qty ?? 0);
-
-      if (
-        combined.includes("layer") ||
-        combined.includes("mash") ||
-        combined.includes("egg") ||
-        combined.includes("production")
-      ) {
-        layerCount += qty;
-      } else if (
-        combined.includes("grower") ||
-        combined.includes("starter") ||
-        combined.includes("chick") ||
-        combined.includes("brooder") ||
-        combined.includes("developer")
-      ) {
-        growerCount += qty;
-      } else {
-        pelletCount += qty;
-      }
+      const label = row.item_name?.trim() || row.item_type.trim() || "Unnamed feed";
+      feedTotals.set(label, (feedTotals.get(label) ?? 0) + Number(row.qty ?? 0));
     });
 
-    totalSlices = layerCount + growerCount + pelletCount;
+    const rankedFeeds = [...feedTotals.entries()]
+      .sort(([, leftTotal], [, rightTotal]) => rightTotal - leftTotal)
+      .slice(0, 5);
+    const displayedTotal = rankedFeeds.reduce((sum, [, count]) => sum + count, 0);
+    const allFeedsTotal = filteredRows.reduce(
+      (sum, row) => sum + Number(row.qty ?? 0),
+      0,
+    );
+    const remainder = allFeedsTotal - displayedTotal;
 
-    slices = [
-      {
-        label: "layer & production feeds",
-        count: layerCount,
-        color: DONUT_COLORS[0],
-        displayPercent: toDisplayPercent(layerCount, totalSlices),
-      },
-      {
-        label: "grower & starter feeds",
-        count: growerCount,
-        color: DONUT_COLORS[1],
-        displayPercent: toDisplayPercent(growerCount, totalSlices),
-      },
-      {
-        label: "pellets & finisher feeds",
-        count: pelletCount,
-        color: DONUT_COLORS[2],
-        displayPercent: toDisplayPercent(pelletCount, totalSlices),
-      },
-    ];
+    slices = rankedFeeds.length
+      ? rankedFeeds.map(([label, count], index) => ({
+          label,
+          count,
+          color: DONUT_COLORS[index % DONUT_COLORS.length],
+          displayPercent: toDisplayPercent(count, allFeedsTotal),
+        }))
+      : [
+          {
+            label: "No feed records",
+            count: 0,
+            color: DONUT_COLORS[0],
+            displayPercent: "0%",
+          },
+        ];
+
+    if (remainder > 0) {
+      slices.push({
+        label: "Other feeds",
+        count: remainder,
+        color: DONUT_COLORS[slices.length % DONUT_COLORS.length],
+        displayPercent: toDisplayPercent(remainder, allFeedsTotal),
+      });
+    }
+
+    totalSlices = allFeedsTotal;
   }
 
   return {
