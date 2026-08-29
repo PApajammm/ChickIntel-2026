@@ -786,7 +786,7 @@ export default function InventoryScreen() {
           {!loadingItems && !inventoryError && expirationSummary.hasAlerts ? (
             <BlurCard
               style={styles.expAlertCard}
-              borderRadius={16}
+              borderRadius={10}
               intensity={20}
             >
               <View
@@ -1996,7 +1996,7 @@ const styles = StyleSheet.create({
   },
   expAlertCardInner: {
     padding: moderateScale(14),
-    borderRadius: 16,
+    borderRadius: 10,
     borderWidth: 1,
     gap: 12,
   },

@@ -450,7 +450,7 @@ export default function EggBatchColorScreen() {
                 <BlurCard
                   key={egg.id}
                   style={[styles.card, isSelected && styles.cardSelected]}
-                  borderRadius={16}
+                  borderRadius={10}
                   intensity={20}
                 >
                   <View style={styles.cardMainContainer}>
@@ -551,8 +551,8 @@ export default function EggBatchColorScreen() {
                         <View style={styles.metricChipHeader}>
                           <MaterialCommunityIcons
                             name="egg"
-                            size={13}
-                            color="#111111"
+                            size={12}
+                            color="#8E9494"
                           />
                           <Text style={styles.metricChipLabel}>Egg Qty</Text>
                         </View>
@@ -565,8 +565,8 @@ export default function EggBatchColorScreen() {
                         <View style={styles.metricChipHeader}>
                           <MaterialCommunityIcons
                             name="check-circle-outline"
-                            size={13}
-                            color="#111111"
+                            size={12}
+                            color="#8E9494"
                           />
                           <Text style={styles.metricChipLabel}>Hatched</Text>
                         </View>
@@ -579,8 +579,8 @@ export default function EggBatchColorScreen() {
                         <View style={styles.metricChipHeader}>
                           <MaterialCommunityIcons
                             name="timer-sand"
-                            size={13}
-                            color="#111111"
+                            size={12}
+                            color="#8E9494"
                           />
                           <Text style={styles.metricChipLabel}>Unhatched</Text>
                         </View>
@@ -593,8 +593,8 @@ export default function EggBatchColorScreen() {
                         <View style={styles.metricChipHeader}>
                           <MaterialCommunityIcons
                             name="egg-off-outline"
-                            size={13}
-                            color="#111111"
+                            size={12}
+                            color="#8E9494"
                           />
                           <Text style={styles.metricChipLabel}>Damaged</Text>
                         </View>
@@ -607,8 +607,8 @@ export default function EggBatchColorScreen() {
                         <View style={styles.metricChipHeader}>
                           <MaterialCommunityIcons
                             name="star-outline"
-                            size={13}
-                            color="#111111"
+                            size={12}
+                            color="#8E9494"
                           />
                           <Text style={styles.metricChipLabel}>
                             Fertility %
@@ -873,6 +873,7 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     shadowOffset: { width: scale(0), height: verticalScale(4) },
     elevation: 3,
+    borderRadius: 10,
     overflow: "hidden",
   },
   cardSelected: {
@@ -893,7 +894,7 @@ const styles = StyleSheet.create({
   },
   cardTopRow: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "space-between",
     gap: 8,
   },
@@ -977,9 +978,9 @@ const styles = StyleSheet.create({
   },
   metricChipLabel: {
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(10),
+    fontSize: responsiveFontSize(9),
     fontWeight: "700",
-    color: "#5A6161",
+    color: "#8E9494",
     textTransform: "uppercase",
     letterSpacing: 0.2,
   },
@@ -988,6 +989,8 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(14),
     fontWeight: "800",
     color: ChickIntelPalette.gray1,
+    textAlign: "right",
+    paddingRight: moderateScale(10),
   },
   emptyCard: {
     borderRadius: 14,

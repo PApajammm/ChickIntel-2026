@@ -179,7 +179,7 @@ export const JournalLogCard = memo(function JournalLogCard({
             >
                 <BlurCard
                     style={[styles.card, selected ? styles.cardSelected : null]}
-                    borderRadius={16}
+                    borderRadius={10}
                     intensity={20}
                 >
                     <Pressable
@@ -471,6 +471,7 @@ const styles = StyleSheet.create({
         shadowRadius: 10,
         shadowOffset: { width: scale(0), height: verticalScale(4) },
         elevation: 3,
+        borderRadius: 10,
         overflow: "hidden",
     },
     cardSelected: {

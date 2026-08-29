@@ -1233,7 +1233,7 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   titleCard: {
-    borderRadius: 14,
+    borderRadius: 10,
     paddingHorizontal: moderateScale(16),
     paddingVertical: verticalScale(14),
     backgroundColor: ChickIntelPalette.green1,
@@ -1347,7 +1347,7 @@ const styles = StyleSheet.create({
   },
   formSection: {
     gap: 10,
-    borderRadius: 16,
+    borderRadius: 10,
     paddingHorizontal: moderateScale(14),
     paddingVertical: verticalScale(14),
     backgroundColor: "rgba(254, 254, 254, 0.92)",

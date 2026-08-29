@@ -68,7 +68,7 @@ export function HealthInputSummaryCard({
   }, [photoUri]);
 
   return (
-    <BlurCard style={styles.card} borderRadius={16} intensity={20}>
+    <BlurCard style={styles.card} borderRadius={10} intensity={20}>
       <View style={styles.inner}>
         <View style={styles.headerRow}>
           <View style={styles.liveBadge}>
@@ -159,7 +159,7 @@ export function HealthInputSummaryCard({
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 16,
+    borderRadius: 10,
     overflow: "hidden",
     borderWidth: 1,
     borderColor: "rgba(49, 118, 103, 0.18)",

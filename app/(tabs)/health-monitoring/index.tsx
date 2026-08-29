@@ -220,7 +220,7 @@ export default function HealthMonitoringIndexScreen() {
       const theme = getMonitoringStatusTheme(status, disease);
 
       return (
-        <BlurCard style={styles.card} borderRadius={16} intensity={20}>
+        <BlurCard style={styles.card} borderRadius={10} intensity={20}>
           <Pressable
             onPress={() =>
               router.push(`/(tabs)/health-monitoring/${item.id}` as any)
@@ -571,7 +571,7 @@ const styles = StyleSheet.create({
   tabs: {
     flexDirection: "row",
     backgroundColor: "rgba(255, 255, 255, 0.85)",
-    borderRadius: 14,
+    borderRadius: 10,
     padding: 4,
     gap: 4,
     borderWidth: 1,
@@ -642,6 +642,7 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     shadowOffset: { width: scale(0), height: verticalScale(4) },
     elevation: 3,
+    borderRadius: 10,
     overflow: "hidden",
   },
   cardPressable: {
