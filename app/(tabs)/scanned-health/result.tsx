@@ -1,3 +1,9 @@
+import {
+    moderateScale,
+    responsiveFontSize,
+    scale,
+    verticalScale,
+} from "@/utils/responsive";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -16,8 +22,10 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
-import { moderateScale, responsiveFontSize, scale, verticalScale } from "@/utils/responsive";
+import {
+    SafeAreaView,
+    useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
 import BackgroundGradient from "@/assets_imported/background-gradient.svg";
 import { HealthFlowFooterButton } from "@/components/health-scan/health-flow-footer-button";
@@ -40,6 +48,7 @@ import {
 } from "@/utils/health-image-inference";
 import { logError, logStep } from "@/utils/logger";
 import { fetchFarmBatches } from "@/utils/supabase-batches";
+import { mapBehaviorIdsToLabels } from "@/utils/supabase-behaviors";
 import {
     detectDiseaseFromClassifierLabel,
     type MatchedDisease,
@@ -52,7 +61,6 @@ import {
     formatChtTag,
     getNextChtNumber,
 } from "@/utils/supabase-health-monitoring";
-import { mapBehaviorIdsToLabels } from "@/utils/supabase-behaviors";
 
 const TAB_BAR_OFFSET = 55;
 
@@ -367,11 +375,12 @@ export default function ScannedHealthResultScreen() {
         logError("Health scan save failed", error, {
           monitoringRescan: isMonitoringRescan,
         });
-        const errorMessage = error instanceof Error 
-          ? error.message 
-          : typeof error === "object" && error !== null && "message" in error 
-            ? (error as any).message 
-            : JSON.stringify(error);
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : typeof error === "object" && error !== null && "message" in error
+              ? (error as any).message
+              : JSON.stringify(error);
 
         if (isMonitoringRescan) {
           setUpdateError(
@@ -504,310 +513,334 @@ export default function ScannedHealthResultScreen() {
       />
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
         <StatusBar style="dark" />
-        
+
         {/* Pinned Top Header */}
         <View style={styles.fixedHeader}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() =>
-              router.canGoBack() ? router.back() : router.replace("/(tabs)")
-            }
-            activeOpacity={0.8}
-            accessibilityRole="button"
-            accessibilityLabel="Go back"
-          >
-            <MaterialCommunityIcons
-              name="arrow-left"
-              size={22}
-              color="#FFF"
-            />
-          </TouchableOpacity>
-          <Text style={styles.pageTitle}>
-            {isMonitoringRescan ? "Update Health Scan" : "Scanned Health Result"}
+          <View style={styles.headerTitleRow}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() =>
+                router.canGoBack() ? router.back() : router.replace("/(tabs)")
+              }
+              activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
+            >
+              <MaterialCommunityIcons
+                name="arrow-left"
+                size={22}
+                color="#FFF"
+              />
+            </TouchableOpacity>
+            <View style={styles.titleWrap}>
+              <Text style={styles.pageTitle}>
+                {isMonitoringRescan
+                  ? "Update Health Scan"
+                  : "Scanned Health Result"}
+              </Text>
+            </View>
+          </View>
+          <Text style={styles.pageSubtitle}>
+            {isAnalyzingImage
+              ? "Analyzing the captured image before finalizing the report."
+              : isMonitoringRescan
+                ? `This update will be added to ${chtTag || "this chicken"}'s record. Previous scans are kept.`
+                : "Saved behaviors and outcome summary in one clear report."}
           </Text>
         </View>
-        <Text style={styles.pageSubtitle}>
-          {isAnalyzingImage
-            ? "Analyzing the captured image before finalizing the report."
-            : isMonitoringRescan
-              ? `This update will be added to ${chtTag || "this chicken"}'s record. Previous scans are kept.`
-              : "Saved behaviors and outcome summary in one clear report."}
-        </Text>
-      </View>
 
-      <ScrollView
-        contentContainerStyle={[
-          styles.scroll,
-          { paddingTop: 8, paddingBottom: insets.bottom + TAB_BAR_OFFSET + 28 },
-        ]}
-        showsVerticalScrollIndicator={false}
-      >
-
-        {isAnalyzingImage ? (
-          <View style={styles.analysisLoadingCard}>
-            <ActivityIndicator size="small" color={ChickIntelPalette.green1} />
-            <View style={styles.analysisLoadingTextWrap}>
-              <Text style={styles.analysisLoadingTitle}>
-                Analyzing photo & inferring symptoms...
-              </Text>
-              <Text style={styles.analysisLoadingSub}>
-                Please Wait.......
-              </Text>
-            </View>
-          </View>
-        ) : null}
-
-        <HealthInputSummaryCard
-          photoUri={photoUri}
-          detectedIllness={resolvedDetectedIllness}
-          detectionDescription={resultDescription}
-          capturedAt={capturedAt}
-          captureWidth={captureWidth}
-          captureHeight={captureHeight}
-          selectedLabels={selectedLabels}
-          additionalObservation={additionalObservation}
-          showKicker={false}
-        />
-
-        <View style={styles.cardSpacer} />
-
-        <HealthResultCard
-          resultSeverity={resultSeverity}
-          diseaseName={resolvedDetectedIllness}
-          resultSummary={resolvedDetectedIllness}
-          resultDescription={resultDescription}
-          recommendationText={treatmentText}
-          treatmentSteps={treatmentSteps}
-          actionStatus={imageMatchedDisease?.status ?? ""}
-          durationValue={imageMatchedDisease?.recoveryDuration ?? ""}
-        />
-
-        <HealthFlowFooterButton
-          variant="save"
-          label={isMonitoringRescan ? "Update record" : undefined}
-          onPress={onSave}
-          disabled={isAnalyzingImage || isSaving}
-        />
-      </ScrollView>
-
-      {/* Save dialog with optional Add to Health Monitoring */}
-      <Modal visible={saveDialogVisible} transparent animationType="fade">
-        <View style={styles.modalBg}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalHeader}>
-              <View style={styles.modalHeaderTitleRow}>
-                <View style={styles.modalHeaderIconBadge}>
-                  <MaterialCommunityIcons
-                    name="check-circle-outline"
-                    size={20}
-                    color="#FFFFFF"
-                  />
-                </View>
-                <Text style={styles.modalHeaderTitle}>Health Log Saved</Text>
-              </View>
-              <Text style={styles.modalHeaderSubtitle}>
-                The report has been safely added to your Behavior Journal.
-              </Text>
-            </View>
-
-            <View style={styles.modalBodyWrap}>
-              {canMonitor && savedHealthLogId && (
-                <Pressable
-                  style={[styles.monitorBtn, chtLoading && { opacity: 0.7 }]}
-                  onPress={openChtDialog}
-                  disabled={chtLoading}
-                >
-                  {chtLoading ? (
-                    <ActivityIndicator size="small" color="#FFF" />
-                  ) : (
-                    <MaterialCommunityIcons
-                      name="heart-pulse"
-                      size={18}
-                      color="#FFF"
-                    />
-                  )}
-                  <Text style={styles.monitorBtnText}>
-                    Add to Health Monitoring
-                  </Text>
-                </Pressable>
-              )}
-
-              <Pressable
-                style={styles.modalBtn}
-                onPress={() => {
-                  setSaveDialogVisible(false);
-                  router.replace("/(tabs)/journal");
-                }}
-              >
-                <Text style={styles.modalBtnText}>Go to Behavior Journal</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* CHT Tag editor dialog */}
-      <Modal visible={chtDialogVisible} transparent animationType="fade">
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        <ScrollView
+          contentContainerStyle={[
+            styles.scroll,
+            {
+              paddingTop: 8,
+              paddingBottom: insets.bottom + TAB_BAR_OFFSET + 28,
+            },
+          ]}
+          showsVerticalScrollIndicator={false}
         >
+          {isAnalyzingImage ? (
+            <View style={styles.analysisLoadingCard}>
+              <ActivityIndicator
+                size="small"
+                color={ChickIntelPalette.green1}
+              />
+              <View style={styles.analysisLoadingTextWrap}>
+                <Text style={styles.analysisLoadingTitle}>
+                  Analyzing photo & inferring symptoms...
+                </Text>
+                <Text style={styles.analysisLoadingSub}>
+                  Please Wait.......
+                </Text>
+              </View>
+            </View>
+          ) : null}
+
+          <HealthInputSummaryCard
+            photoUri={photoUri}
+            detectedIllness={resolvedDetectedIllness}
+            detectionDescription={resultDescription}
+            capturedAt={capturedAt}
+            captureWidth={captureWidth}
+            captureHeight={captureHeight}
+            selectedLabels={selectedLabels}
+            additionalObservation={additionalObservation}
+            showKicker={false}
+          />
+
+          <View style={styles.cardSpacer} />
+
+          <HealthResultCard
+            resultSeverity={resultSeverity}
+            diseaseName={resolvedDetectedIllness}
+            resultSummary={resolvedDetectedIllness}
+            resultDescription={resultDescription}
+            recommendationText={treatmentText}
+            treatmentSteps={treatmentSteps}
+            actionStatus={imageMatchedDisease?.status ?? ""}
+            durationValue={imageMatchedDisease?.recoveryDuration ?? ""}
+          />
+
+          <HealthFlowFooterButton
+            variant="save"
+            label={isMonitoringRescan ? "Update record" : undefined}
+            onPress={onSave}
+            disabled={isAnalyzingImage || isSaving}
+          />
+        </ScrollView>
+
+        {/* Save dialog with optional Add to Health Monitoring */}
+        <Modal visible={saveDialogVisible} transparent animationType="fade">
           <View style={styles.modalBg}>
             <View style={styles.modalCard}>
               <View style={styles.modalHeader}>
                 <View style={styles.modalHeaderTitleRow}>
                   <View style={styles.modalHeaderIconBadge}>
                     <MaterialCommunityIcons
-                      name="tag-outline"
+                      name="check-circle-outline"
                       size={20}
                       color="#FFFFFF"
                     />
                   </View>
-                  <Text style={styles.modalHeaderTitle}>Chicken Health Tag</Text>
+                  <Text style={styles.modalHeaderTitle}>Health Log Saved</Text>
                 </View>
                 <Text style={styles.modalHeaderSubtitle}>
-                  Assign a unique tag & batch profile for health monitoring.
+                  The report has been safely added to your Behavior Journal.
                 </Text>
               </View>
 
               <View style={styles.modalBodyWrap}>
-                <View style={styles.chtFieldWrap}>
-                  <ChickSelectRow
-                    label="Batch No."
-                    value={selectedBatchLabel}
-                    placeholder="Select batch"
-                    selectedColor={
-                      availableBatches.find((entry) => entry.id === selectedBatchNo)
-                        ?.colorHex
-                    }
-                    onPress={() => {
-                      if (availableBatches.length === 0) {
-                        setChtError(
-                          "No batches found. Add a chicken batch in Batch Profile first.",
-                        );
-                        return;
-                      }
-                      setBatchPickerVisible(true);
-                    }}
-                    style={styles.chtSelectField}
-                    rowStyle={styles.chtSelectRow}
-                  />
-                </View>
-
-                <View style={styles.chtInputCard}>
-                  <Text style={styles.chtInputLabel}>CHICHECK HEALTH TAG</Text>
-                  <View style={styles.chtRow}>
-                    <Text style={styles.chtPrefix}>CHT-</Text>
-                    <TextInput
-                      style={styles.chtInput}
-                      value={chtNumber}
-                      onChangeText={(text) => {
-                        setChtNumber(text.replace(/\D/g, ""));
-                        setChtError("");
-                      }}
-                      keyboardType="number-pad"
-                      maxLength={4}
-                      placeholder="0001"
-                      placeholderTextColor={ChickIntelPalette.gray2}
-                    />
-                  </View>
-                </View>
-
-                {chtError ? (
-                  <Text style={styles.chtErrorText}>{chtError}</Text>
-                ) : null}
-
-                <View style={styles.chtBtnRow}>
+                {canMonitor && savedHealthLogId && (
                   <Pressable
-                    style={styles.chtCancelBtn}
-                    onPress={() => {
-                      setChtDialogVisible(false);
-                      setChtError("");
-                    }}
-                    disabled={chtLoading}
-                  >
-                    <Text style={styles.chtCancelBtnText}>Cancel</Text>
-                  </Pressable>
-                  <Pressable
-                    style={[styles.chtConfirmBtn, chtLoading && { opacity: 0.7 }]}
-                    onPress={confirmCht}
+                    style={[styles.monitorBtn, chtLoading && { opacity: 0.7 }]}
+                    onPress={openChtDialog}
                     disabled={chtLoading}
                   >
                     {chtLoading ? (
                       <ActivityIndicator size="small" color="#FFF" />
-                    ) : null}
-                    <Text style={styles.chtConfirmBtnText}>Save Monitoring</Text>
+                    ) : (
+                      <MaterialCommunityIcons
+                        name="heart-pulse"
+                        size={18}
+                        color="#FFF"
+                      />
+                    )}
+                    <Text style={styles.monitorBtnText}>
+                      Add to Health Monitoring
+                    </Text>
                   </Pressable>
-                </View>
+                )}
+
+                <Pressable
+                  style={styles.modalBtn}
+                  onPress={() => {
+                    setSaveDialogVisible(false);
+                    router.replace("/(tabs)/journal");
+                  }}
+                >
+                  <Text style={styles.modalBtnText}>
+                    Go to Behavior Journal
+                  </Text>
+                </Pressable>
               </View>
             </View>
           </View>
-        </KeyboardAvoidingView>
-      </Modal>
+        </Modal>
 
-      <ChickSelectionModal
-        visible={batchPickerVisible}
-        title="Select Batch No."
-        options={batchOptionLabels}
-        value={selectedBatchLabel}
-        optionColors={batchOptionColors}
-        onSelect={handleBatchOptionSelect}
-        onClose={() => setBatchPickerVisible(false)}
-      />
+        {/* CHT Tag editor dialog */}
+        <Modal visible={chtDialogVisible} transparent animationType="fade">
+          <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+          >
+            <View style={styles.modalBg}>
+              <View style={styles.modalCard}>
+                <View style={styles.modalHeader}>
+                  <View style={styles.modalHeaderTitleRow}>
+                    <View style={styles.modalHeaderIconBadge}>
+                      <MaterialCommunityIcons
+                        name="tag-outline"
+                        size={20}
+                        color="#FFFFFF"
+                      />
+                    </View>
+                    <Text style={styles.modalHeaderTitle}>
+                      Chicken Health Tag
+                    </Text>
+                  </View>
+                  <Text style={styles.modalHeaderSubtitle}>
+                    Assign a unique tag & batch profile for health monitoring.
+                  </Text>
+                </View>
 
-      <Modal
-        visible={updateSuccessVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setUpdateSuccessVisible(false)}
-      >
-        <View style={styles.modalBg}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Health scan updated</Text>
-            <Text style={styles.modalBody}>
-              {chtTag
-                ? `${chtTag}'s monitoring record now shows this latest scan. Earlier scans are still saved in the history.`
-                : "This chicken's monitoring record now shows the latest scan. Earlier scans are still saved in the history."}
-            </Text>
-            <Pressable
-              style={styles.modalBtn}
-              onPress={() => {
-                setUpdateSuccessVisible(false);
-                router.replace({
-                  pathname: `/(tabs)/health-monitoring/${monitoringId}` as any,
-                  params: {
-                    refresh: Date.now().toString(),
-                  },
-                } as any);
-              }}
-            >
-              <Text style={styles.modalBtnText}>Back to Health Monitoring</Text>
-            </Pressable>
+                <View style={styles.modalBodyWrap}>
+                  <View style={styles.chtFieldWrap}>
+                    <ChickSelectRow
+                      label="Batch No."
+                      value={selectedBatchLabel}
+                      placeholder="Select batch"
+                      selectedColor={
+                        availableBatches.find(
+                          (entry) => entry.id === selectedBatchNo,
+                        )?.colorHex
+                      }
+                      onPress={() => {
+                        if (availableBatches.length === 0) {
+                          setChtError(
+                            "No batches found. Add a chicken batch in Batch Profile first.",
+                          );
+                          return;
+                        }
+                        setBatchPickerVisible(true);
+                      }}
+                      style={styles.chtSelectField}
+                      rowStyle={styles.chtSelectRow}
+                    />
+                  </View>
+
+                  <View style={styles.chtInputCard}>
+                    <Text style={styles.chtInputLabel}>
+                      CHICHECK HEALTH TAG
+                    </Text>
+                    <View style={styles.chtRow}>
+                      <Text style={styles.chtPrefix}>CHT-</Text>
+                      <TextInput
+                        style={styles.chtInput}
+                        value={chtNumber}
+                        onChangeText={(text) => {
+                          setChtNumber(text.replace(/\D/g, ""));
+                          setChtError("");
+                        }}
+                        keyboardType="number-pad"
+                        maxLength={4}
+                        placeholder="0001"
+                        placeholderTextColor={ChickIntelPalette.gray2}
+                      />
+                    </View>
+                  </View>
+
+                  {chtError ? (
+                    <Text style={styles.chtErrorText}>{chtError}</Text>
+                  ) : null}
+
+                  <View style={styles.chtBtnRow}>
+                    <Pressable
+                      style={styles.chtCancelBtn}
+                      onPress={() => {
+                        setChtDialogVisible(false);
+                        setChtError("");
+                      }}
+                      disabled={chtLoading}
+                    >
+                      <Text style={styles.chtCancelBtnText}>Cancel</Text>
+                    </Pressable>
+                    <Pressable
+                      style={[
+                        styles.chtConfirmBtn,
+                        chtLoading && { opacity: 0.7 },
+                      ]}
+                      onPress={confirmCht}
+                      disabled={chtLoading}
+                    >
+                      {chtLoading ? (
+                        <ActivityIndicator size="small" color="#FFF" />
+                      ) : null}
+                      <Text style={styles.chtConfirmBtnText}>
+                        Save Monitoring
+                      </Text>
+                    </Pressable>
+                  </View>
+                </View>
+              </View>
+            </View>
+          </KeyboardAvoidingView>
+        </Modal>
+
+        <ChickSelectionModal
+          visible={batchPickerVisible}
+          title="Select Batch No."
+          options={batchOptionLabels}
+          value={selectedBatchLabel}
+          optionColors={batchOptionColors}
+          onSelect={handleBatchOptionSelect}
+          onClose={() => setBatchPickerVisible(false)}
+        />
+
+        <Modal
+          visible={updateSuccessVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setUpdateSuccessVisible(false)}
+        >
+          <View style={styles.modalBg}>
+            <View style={styles.modalCard}>
+              <Text style={styles.modalTitle}>Health scan updated</Text>
+              <Text style={styles.modalBody}>
+                {chtTag
+                  ? `${chtTag}'s monitoring record now shows this latest scan. Earlier scans are still saved in the history.`
+                  : "This chicken's monitoring record now shows the latest scan. Earlier scans are still saved in the history."}
+              </Text>
+              <Pressable
+                style={styles.modalBtn}
+                onPress={() => {
+                  setUpdateSuccessVisible(false);
+                  router.replace({
+                    pathname:
+                      `/(tabs)/health-monitoring/${monitoringId}` as any,
+                    params: {
+                      refresh: Date.now().toString(),
+                    },
+                  } as any);
+                }}
+              >
+                <Text style={styles.modalBtnText}>
+                  Back to Health Monitoring
+                </Text>
+              </Pressable>
+            </View>
           </View>
-        </View>
-      </Modal>
+        </Modal>
 
-      <Modal
-        visible={updateError !== null}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setUpdateError(null)}
-      >
-        <View style={styles.modalBg}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Update failed</Text>
-            <Text style={styles.modalBody}>{updateError}</Text>
-            <Pressable
-              style={styles.modalBtn}
-              onPress={() => setUpdateError(null)}
-            >
-              <Text style={styles.modalBtnText}>OK</Text>
-            </Pressable>
+        <Modal
+          visible={updateError !== null}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setUpdateError(null)}
+        >
+          <View style={styles.modalBg}>
+            <View style={styles.modalCard}>
+              <Text style={styles.modalTitle}>Update failed</Text>
+              <Text style={styles.modalBody}>{updateError}</Text>
+              <Pressable
+                style={styles.modalBtn}
+                onPress={() => setUpdateError(null)}
+              >
+                <Text style={styles.modalBtnText}>OK</Text>
+              </Pressable>
+            </View>
           </View>
-        </View>
-      </Modal>
-    </SafeAreaView>
+        </Modal>
+      </SafeAreaView>
     </View>
   );
 }
@@ -823,6 +856,15 @@ const styles = StyleSheet.create({
   fixedHeader: {
     paddingHorizontal: moderateScale(16),
     paddingTop: 8,
+  },
+  headerTitleRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+  },
+  titleWrap: {
+    flex: 1,
+    minWidth: 0,
   },
   scroll: {
     paddingHorizontal: moderateScale(16),

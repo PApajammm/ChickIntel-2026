@@ -163,6 +163,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   resultPill: {
+    flexShrink: 1,
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
@@ -181,6 +182,7 @@ const styles = StyleSheet.create({
     borderColor: "rgba(49, 118, 103, 0.22)",
   },
   resultTag: {
+    flexShrink: 1,
     fontFamily: ChickFont.display,
     fontSize: responsiveFontSize(11),
     fontWeight: "800",
@@ -188,6 +190,7 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   statusBadge: {
+    flexShrink: 1,
     paddingHorizontal: moderateScale(8),
     paddingVertical: verticalScale(3),
     borderRadius: 8,
@@ -196,6 +199,7 @@ const styles = StyleSheet.create({
     borderColor: "rgba(49, 118, 103, 0.14)",
   },
   statusBadgeText: {
+    flexShrink: 1,
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(11),
     fontWeight: "700",

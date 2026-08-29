@@ -114,11 +114,9 @@ export function HealthInputSummaryCard({
 
           <View style={styles.copyStack}>
             <Text style={styles.blockLabel}>AI Diagnostic Detection</Text>
-            <Text style={styles.detailHeadline} numberOfLines={3}>
-              {detectedIllness}
-            </Text>
+            <Text style={styles.detailHeadline}>{detectedIllness}</Text>
             {detectionDescription ? (
-              <Text style={styles.detailDescription} numberOfLines={4}>
+              <Text style={styles.detailDescription}>
                 {detectionDescription}
               </Text>
             ) : null}

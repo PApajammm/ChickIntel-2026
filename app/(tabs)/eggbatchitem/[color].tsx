@@ -357,12 +357,10 @@ export default function EggBatchColorScreen() {
           <View style={styles.headerLeftRow}>
             <TouchableOpacity
               onPress={() =>
-                router.canGoBack()
-                  ? router.back()
-                  : router.push({
-                      pathname: "/(tabs)/profiles" as any,
-                      params: { mode: "egg" },
-                    })
+                router.replace({
+                  pathname: "/(tabs)/profiles" as any,
+                  params: { mode: "egg" },
+                })
               }
               accessibilityRole="button"
               accessibilityLabel="Back to egg batch profile"
@@ -376,7 +374,9 @@ export default function EggBatchColorScreen() {
               />
             </TouchableOpacity>
             <View style={styles.headerTitleWrap}>
-              <Text style={styles.pageTitle}>Egg Batches per Color / Origin</Text>
+              <Text style={styles.pageTitle}>
+                Egg Batches per Color / Origin
+              </Text>
               <Text style={styles.subtitle}>
                 {colorName ? (
                   colorName
@@ -398,11 +398,7 @@ export default function EggBatchColorScreen() {
                   accessibilityLabel="Clear selected egg batches"
                   activeOpacity={0.8}
                 >
-                  <MaterialCommunityIcons
-                    name="close"
-                    size={22}
-                    color="#FFF"
-                  />
+                  <MaterialCommunityIcons name="close" size={22} color="#FFF" />
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={confirmDeleteSelectedEggs}

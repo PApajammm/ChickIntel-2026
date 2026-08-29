@@ -2,37 +2,39 @@ import BackgroundGradient from "@/assets_imported/background-gradient.svg";
 import { BlurCard } from "@/components/ui/blur-card";
 import { ChickFont } from "@/constants/chick-fonts";
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
-import { ReportsCardTheme, ReportsPageTheme } from "@/constants/reports-theme";
-import { useColorScheme } from "@/hooks/use-color-scheme";
+import { ReportsPageTheme } from "@/constants/reports-theme";
 import { useAuth } from "@/providers/auth-provider";
 import {
-  moderateScale,
-  responsiveFontSize,
-  scale,
-  verticalScale,
+    moderateScale,
+    responsiveFontSize,
+    scale,
+    verticalScale,
 } from "@/utils/responsive";
 import { fetchFarmEggBatches } from "@/utils/supabase-egg-batches";
 import {
-  fetchEggFertilityReportSnapshot,
-  type EggFertilityReportSnapshot,
-  type ReportDonutSlice,
-  type ReportOverview,
+    fetchEggFertilityReportSnapshot,
+    type EggFertilityReportSnapshot,
+    type ReportDonutSlice,
+    type ReportOverview,
 } from "@/utils/supabase-reports";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Print from "expo-print";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Modal,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+    SafeAreaView,
+    useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import Svg, { Circle, G } from "react-native-svg";
 
 type PeriodOption = "7 Days" | "30 Days" | "12 Months";
@@ -515,7 +517,8 @@ function DonutChart({
 
       <View style={styles.breakdownList}>
         {slices.map((slice) => {
-          const percentVal = total > 0 ? Math.round((slice.count / total) * 100) : 0;
+          const percentVal =
+            total > 0 ? Math.round((slice.count / total) * 100) : 0;
           return (
             <View key={slice.label} style={styles.breakdownRowContainer}>
               <View style={styles.breakdownRowHeader}>
@@ -783,7 +786,10 @@ export default function EggFertilityReportScreen() {
             <TouchableOpacity
               style={styles.backButton}
               onPress={() =>
-                router.canGoBack() ? router.back() : router.replace("/(tabs)")
+                router.replace({
+                  pathname: "/(tabs)/profiles" as any,
+                  params: { mode: "egg" },
+                })
               }
               activeOpacity={0.8}
               accessibilityRole="button"
@@ -797,7 +803,9 @@ export default function EggFertilityReportScreen() {
             </TouchableOpacity>
             <View style={styles.headerCopy}>
               <Text style={styles.screenTitle}>Egg Fertility Report</Text>
-              <Text style={styles.headerSubtitle} numberOfLines={1}>{scopeLabel}</Text>
+              <Text style={styles.headerSubtitle} numberOfLines={1}>
+                {scopeLabel}
+              </Text>
             </View>
           </View>
           <TouchableOpacity
@@ -880,7 +888,6 @@ export default function EggFertilityReportScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-
         {loading ? (
           <View style={styles.statusRow}>
             <ActivityIndicator color={ChickIntelPalette.green1} />
@@ -901,7 +908,9 @@ export default function EggFertilityReportScreen() {
               />
             </View>
             <Text style={styles.kpiLabel}>Fertility Rate</Text>
-            <Text style={[styles.kpiValue, { color: ChickIntelPalette.green1 }]}>
+            <Text
+              style={[styles.kpiValue, { color: ChickIntelPalette.green1 }]}
+            >
               {report.fertilityRate}%
             </Text>
             <Text style={styles.kpiSubtext}>Fertile Egg Ratio</Text>
@@ -973,7 +982,9 @@ export default function EggFertilityReportScreen() {
                     color={ChickIntelPalette.green1}
                   />
                 </View>
-                <Text style={styles.insightTitle}>Fertility Operational Insight</Text>
+                <Text style={styles.insightTitle}>
+                  Fertility Operational Insight
+                </Text>
               </View>
               <Text style={styles.insightBodyText}>{report.analyticsText}</Text>
             </View>

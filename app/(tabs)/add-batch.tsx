@@ -1,8 +1,8 @@
 import {
-    moderateScale,
-    responsiveFontSize,
-    scale,
-    verticalScale,
+  moderateScale,
+  responsiveFontSize,
+  scale,
+  verticalScale,
 } from "@/utils/responsive";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import Slider from "@react-native-community/slider";
@@ -13,26 +13,26 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useMemo, useRef, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
-    useWindowDimensions,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+  useWindowDimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import BackgroundGradient from "@/assets_imported/background-gradient.svg";
 import {
-    CameraViewport,
-    type CameraViewportRef,
+  CameraViewport,
+  type CameraViewportRef,
 } from "@/components/scanner/camera-viewport";
 import { ScannerShutter } from "@/components/scanner/scanner-shutter";
 import { ViewfinderOverlay } from "@/components/scanner/viewfinder-overlay";
@@ -40,9 +40,9 @@ import { ChickFont } from "@/constants/chick-fonts";
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
 import { useAuth } from "@/providers/auth-provider";
 import {
-    inferBreedFromImage,
-    isNonChickenClassifierLabel,
-    mapBreedPredictionToAttributes,
+  inferBreedFromImage,
+  isNonChickenClassifierLabel,
+  mapBreedPredictionToAttributes,
 } from "@/utils/breed-image-inference";
 import { logError, logStep } from "@/utils/logger";
 import { addRecentBreedScan } from "@/utils/recent-breed-scans";
@@ -402,27 +402,20 @@ export default function AddBatchScreen() {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={insets.top}
       >
-        <ScrollView
-          contentContainerStyle={[
+        <View
+          style={[
             styles.content,
-            {
-              paddingTop: insets.top + 10,
-              paddingBottom: insets.bottom + TAB_BAR_OFFSET + 24,
-            },
+            styles.pinnedHeader,
+            { paddingTop: insets.top + 10 },
           ]}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
         >
           <View style={styles.topBar}>
             <TouchableOpacity
               onPress={() =>
-                router.canGoBack()
-                  ? router.back()
-                  : router.replace({
-                      pathname: "/(tabs)/profiles" as any,
-                      params: { mode: "chicken" },
-                    })
+                router.replace({
+                  pathname: "/(tabs)/profiles" as any,
+                  params: { mode: "chicken" },
+                })
               }
               style={styles.backButton}
               activeOpacity={0.8}
@@ -478,284 +471,296 @@ export default function AddBatchScreen() {
                 color={ChickIntelPalette.green1}
               />
               <Text style={styles.summaryChipText}>
-                {totalCount || "0"} birds
+                {totalCount || "0"} Chicken
               </Text>
             </View>
           </View>
+        </View>
 
+        <ScrollView
+          contentContainerStyle={[
+            styles.content,
+            {
+              paddingBottom: insets.bottom + TAB_BAR_OFFSET + 24,
+            },
+          ]}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+        >
           {/* Form Sections */}
           <View style={styles.formSection}>
-              <View style={styles.formSectionHeader}>
-                <MaterialCommunityIcons
-                  name="tag-multiple-outline"
-                  size={18}
-                  color={ChickIntelPalette.green1}
-                />
-                <Text style={styles.formSectionTitle}>Batch identity</Text>
-              </View>
-
-              <View style={styles.gridRow}>
-                <View style={styles.halfField}>
-                  <Text style={styles.fieldLabel}>Batch No.</Text>
-                  <TextInput
-                    value={batchNo}
-                    editable={false}
-                    selectTextOnFocus={false}
-                    placeholder="Auto-generated"
-                    style={[styles.input, styles.inputDisabled]}
-                    textAlignVertical="center"
-                    placeholderTextColor="#8F9696"
-                  />
-                </View>
-                <View style={styles.halfField}>
-                  <Text style={styles.fieldLabel}>Batch Color</Text>
-                  <Pressable
-                    onPress={() => setColorModalOpen(true)}
-                    style={styles.colorDropdownButton}
-                    accessibilityRole="button"
-                    accessibilityLabel="Select Batch Color"
-                  >
-                    <View style={styles.colorDropdownLeft}>
-                      <View
-                        style={[
-                          styles.colorDropdownSwatch,
-                          { backgroundColor: selectedColor.hex },
-                        ]}
-                      />
-                      <Text style={styles.colorDropdownText} numberOfLines={1}>
-                        {selectedColor.name}
-                      </Text>
-                    </View>
-                    <MaterialCommunityIcons
-                      name="chevron-down"
-                      size={20}
-                      color={ChickIntelPalette.gray1}
-                    />
-                  </Pressable>
-                  {usedBatchColorNames.length ? (
-                    <Text style={styles.colorHint}>
-                      Colors used by active batches are disabled.
-                    </Text>
-                  ) : null}
-                </View>
-              </View>
+            <View style={styles.formSectionHeader}>
+              <MaterialCommunityIcons
+                name="tag-multiple-outline"
+                size={18}
+                color={ChickIntelPalette.green1}
+              />
+              <Text style={styles.formSectionTitle}>Batch identity</Text>
             </View>
 
-            <View style={styles.formSection}>
-              <View style={styles.formSectionHeader}>
-                <MaterialCommunityIcons
-                  name="calendar-heart"
-                  size={18}
-                  color={ChickIntelPalette.green1}
-                />
-                <Text style={styles.formSectionTitle}>Age and breed</Text>
-              </View>
-
-              <View style={styles.gridRow}>
-                <View style={styles.ageNumberCol}>
-                  <Text style={styles.fieldLabel}>No.</Text>
-                  <TextInput
-                    value={durationCount}
-                    onChangeText={(v) =>
-                      setDurationCount(v.replace(/[^0-9]/g, ""))
-                    }
-                    placeholder="1"
-                    keyboardType="number-pad"
-                    style={styles.input}
-                    textAlignVertical="center"
-                    placeholderTextColor="#8F9696"
-                  />
-                </View>
-                <View style={styles.ageUnitCol}>
-                  <Text style={styles.fieldLabel}>Age unit</Text>
-                  <View style={styles.previewSegmentedContainer}>
-                    {AGE_UNIT_OPTIONS.map((option) => {
-                      const active = ageUnit === option;
-                      return (
-                        <TouchableOpacity
-                          key={option}
-                          onPress={() => setAgeUnit(option)}
-                          activeOpacity={0.8}
-                          style={[
-                            styles.previewSegmentedItem,
-                            active && styles.previewSegmentedItemActive,
-                          ]}
-                        >
-                          <MaterialCommunityIcons
-                            name={
-                              option === "Days old"
-                                ? "calendar-today"
-                                : "calendar-week"
-                            }
-                            size={14}
-                            color={active ? "#FFF" : "#4A5452"}
-                          />
-                          <Text
-                            style={[
-                              styles.previewSegmentedText,
-                              active && styles.previewSegmentedTextActive,
-                            ]}
-                          >
-                            {option}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                </View>
-              </View>
-
-              <View>
-                <Text style={styles.fieldLabel}>Breed</Text>
-                <View style={styles.breedSelectRow}>
-                  <Pressable
-                    onPress={() => setBreedModalOpen(true)}
-                    style={[styles.select, styles.breedSelect]}
-                    accessibilityRole="button"
-                    accessibilityLabel="Choose breed"
-                  >
-                    <Text
-                      style={[
-                        styles.selectText,
-                        !breed && styles.selectTextPlaceholder,
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {breed || "Select breed"}
-                    </Text>
-                    <MaterialCommunityIcons
-                      name="chevron-down"
-                      size={20}
-                      color={ChickIntelPalette.gray2}
-                    />
-                  </Pressable>
-                  <Pressable
-                    onPress={() => {
-                      setBreedCameraReady(false);
-                      setBreedScannerOpen(true);
-                    }}
-                    style={({ pressed }) => [
-                      styles.breedCameraButton,
-                      { opacity: pressed ? 0.82 : 1 },
-                    ]}
-                    accessibilityRole="button"
-                    accessibilityLabel="Scan breed using camera"
-                  >
-                    <MaterialCommunityIcons
-                      name="camera-outline"
-                      size={22}
-                      color="#FFFFFF"
-                    />
-                  </Pressable>
-                </View>
-              </View>
-            </View>
-
-            <View style={styles.formSection}>
-              <View style={styles.formSectionHeader}>
-                <MaterialCommunityIcons
-                  name="account-group-outline"
-                  size={18}
-                  color={ChickIntelPalette.green1}
-                />
-                <Text style={styles.formSectionTitle}>Bird count</Text>
-              </View>
-
-              <View>
-                <Text style={styles.fieldLabel}>Total</Text>
+            <View style={styles.gridRow}>
+              <View style={styles.halfField}>
+                <Text style={styles.fieldLabel}>Batch No.</Text>
                 <TextInput
-                  value={totalCount}
-                  onChangeText={onChangeTotalCount}
-                  placeholder="100"
+                  value={batchNo}
+                  editable={false}
+                  selectTextOnFocus={false}
+                  placeholder="Auto-generated"
+                  style={[styles.input, styles.inputDisabled]}
+                  textAlignVertical="center"
+                  placeholderTextColor="#8F9696"
+                />
+              </View>
+              <View style={styles.halfField}>
+                <Text style={styles.fieldLabel}>Batch Color</Text>
+                <Pressable
+                  onPress={() => setColorModalOpen(true)}
+                  style={styles.colorDropdownButton}
+                  accessibilityRole="button"
+                  accessibilityLabel="Select Batch Color"
+                >
+                  <View style={styles.colorDropdownLeft}>
+                    <View
+                      style={[
+                        styles.colorDropdownSwatch,
+                        { backgroundColor: selectedColor.hex },
+                      ]}
+                    />
+                    <Text style={styles.colorDropdownText} numberOfLines={1}>
+                      {selectedColor.name}
+                    </Text>
+                  </View>
+                  <MaterialCommunityIcons
+                    name="chevron-down"
+                    size={20}
+                    color={ChickIntelPalette.gray1}
+                  />
+                </Pressable>
+                {usedBatchColorNames.length ? (
+                  <Text style={styles.colorHint}>
+                    Colors used by active batches are disabled.
+                  </Text>
+                ) : null}
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.formSection}>
+            <View style={styles.formSectionHeader}>
+              <MaterialCommunityIcons
+                name="calendar-heart"
+                size={18}
+                color={ChickIntelPalette.green1}
+              />
+              <Text style={styles.formSectionTitle}>Age and breed</Text>
+            </View>
+
+            <View style={styles.gridRow}>
+              <View style={styles.ageNumberCol}>
+                <Text style={styles.fieldLabel}>No.</Text>
+                <TextInput
+                  value={durationCount}
+                  onChangeText={(v) =>
+                    setDurationCount(v.replace(/[^0-9]/g, ""))
+                  }
+                  placeholder="1"
                   keyboardType="number-pad"
                   style={styles.input}
                   textAlignVertical="center"
                   placeholderTextColor="#8F9696"
                 />
               </View>
-
-              <View style={styles.resultRow}>
-                <View style={styles.resultField}>
-                  <Text style={styles.resultLabel}>Male</Text>
-                  <TextInput
-                    value={maleCount}
-                    onChangeText={onChangeMaleCount}
-                    keyboardType="number-pad"
-                    style={styles.resultInput}
-                    textAlignVertical="center"
-                    placeholderTextColor="#8F9696"
-                  />
-                </View>
-                <View style={styles.resultField}>
-                  <Text style={styles.resultLabel}>Female</Text>
-                  <TextInput
-                    value={femaleCount}
-                    onChangeText={onChangeFemaleCount}
-                    keyboardType="number-pad"
-                    style={styles.resultInput}
-                    textAlignVertical="center"
-                    placeholderTextColor="#8F9696"
-                  />
+              <View style={styles.ageUnitCol}>
+                <Text style={styles.fieldLabel}>Age unit</Text>
+                <View style={styles.previewSegmentedContainer}>
+                  {AGE_UNIT_OPTIONS.map((option) => {
+                    const active = ageUnit === option;
+                    return (
+                      <TouchableOpacity
+                        key={option}
+                        onPress={() => setAgeUnit(option)}
+                        activeOpacity={0.8}
+                        style={[
+                          styles.previewSegmentedItem,
+                          active && styles.previewSegmentedItemActive,
+                        ]}
+                      >
+                        <MaterialCommunityIcons
+                          name={
+                            option === "Days old"
+                              ? "calendar-today"
+                              : "calendar-week"
+                          }
+                          size={14}
+                          color={active ? "#FFF" : "#4A5452"}
+                        />
+                        <Text
+                          style={[
+                            styles.previewSegmentedText,
+                            active && styles.previewSegmentedTextActive,
+                          ]}
+                        >
+                          {option}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
               </View>
             </View>
 
-            <Pressable
-              onPress={() => {
-                if (!breed.trim()) {
-                  Alert.alert(
-                    "Breed required",
-                    "Select a breed before saving.",
-                  );
-                  return;
-                }
+            <View>
+              <Text style={styles.fieldLabel}>Breed</Text>
+              <View style={styles.breedSelectRow}>
+                <Pressable
+                  onPress={() => setBreedModalOpen(true)}
+                  style={[styles.select, styles.breedSelect]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Choose breed"
+                >
+                  <Text
+                    style={[
+                      styles.selectText,
+                      !breed && styles.selectTextPlaceholder,
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {breed || "Select breed"}
+                  </Text>
+                  <MaterialCommunityIcons
+                    name="chevron-down"
+                    size={20}
+                    color={ChickIntelPalette.gray2}
+                  />
+                </Pressable>
+                <Pressable
+                  onPress={() => {
+                    setBreedCameraReady(false);
+                    setBreedScannerOpen(true);
+                  }}
+                  style={({ pressed }) => [
+                    styles.breedCameraButton,
+                    { opacity: pressed ? 0.82 : 1 },
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Scan breed using camera"
+                >
+                  <MaterialCommunityIcons
+                    name="camera-outline"
+                    size={22}
+                    color="#FFFFFF"
+                  />
+                </Pressable>
+              </View>
+            </View>
+          </View>
 
-                if (!activeFarm?.id) {
-                  Alert.alert("Farm missing", "No active farm was found.");
-                  return;
-                }
+          <View style={styles.formSection}>
+            <View style={styles.formSectionHeader}>
+              <MaterialCommunityIcons
+                name="account-group-outline"
+                size={18}
+                color={ChickIntelPalette.green1}
+              />
+              <Text style={styles.formSectionTitle}>Bird count</Text>
+            </View>
 
-                const generatedBatchNo = batchNo.trim() || getNextBatchNo([]);
-                const newBatch = {
-                  id: generatedBatchNo,
-                  breed: breed || "Unknown",
-                  femaleCount: Number.parseInt(femaleCount || "0", 10) || 0,
-                  maleCount: Number.parseInt(maleCount || "0", 10) || 0,
-                  ageLabel: `${durationCount || "0"} ${ageUnit.toLowerCase()}`,
-                  isolatedCount: 0,
-                  killedCount: 0,
-                  colorName: selectedColor.name,
-                  colorHex: selectedColor.hex,
-                };
+            <View>
+              <Text style={styles.fieldLabel}>Total</Text>
+              <TextInput
+                value={totalCount}
+                onChangeText={onChangeTotalCount}
+                placeholder="100"
+                keyboardType="number-pad"
+                style={styles.input}
+                textAlignVertical="center"
+                placeholderTextColor="#8F9696"
+              />
+            </View>
 
-                createFarmBatch(activeFarm.id, newBatch)
-                  .then(() => {
-                    logStep("Add batch saved to Supabase", {
-                      farmId: activeFarm.id,
-                      batchNo: newBatch.id,
-                    });
-                    router.push({ pathname: "/(tabs)/profiles" as any, params: { mode } });
-                  })
-                  .catch((error) => {
-                    Alert.alert(
-                      "Save failed",
-                      "Unable to save the batch right now.",
-                    );
-                    logError("Add batch save failed", error, {
-                      farmId: activeFarm.id,
-                      batchNo: newBatch.id,
-                    });
+            <View style={styles.resultRow}>
+              <View style={styles.resultField}>
+                <Text style={styles.resultLabel}>Male</Text>
+                <TextInput
+                  value={maleCount}
+                  onChangeText={onChangeMaleCount}
+                  keyboardType="number-pad"
+                  style={styles.resultInput}
+                  textAlignVertical="center"
+                  placeholderTextColor="#8F9696"
+                />
+              </View>
+              <View style={styles.resultField}>
+                <Text style={styles.resultLabel}>Female</Text>
+                <TextInput
+                  value={femaleCount}
+                  onChangeText={onChangeFemaleCount}
+                  keyboardType="number-pad"
+                  style={styles.resultInput}
+                  textAlignVertical="center"
+                  placeholderTextColor="#8F9696"
+                />
+              </View>
+            </View>
+          </View>
+
+          <Pressable
+            onPress={() => {
+              if (!breed.trim()) {
+                Alert.alert("Breed required", "Select a breed before saving.");
+                return;
+              }
+
+              if (!activeFarm?.id) {
+                Alert.alert("Farm missing", "No active farm was found.");
+                return;
+              }
+
+              const generatedBatchNo = batchNo.trim() || getNextBatchNo([]);
+              const newBatch = {
+                id: generatedBatchNo,
+                breed: breed || "Unknown",
+                femaleCount: Number.parseInt(femaleCount || "0", 10) || 0,
+                maleCount: Number.parseInt(maleCount || "0", 10) || 0,
+                ageLabel: `${durationCount || "0"} ${ageUnit.toLowerCase()}`,
+                isolatedCount: 0,
+                killedCount: 0,
+                colorName: selectedColor.name,
+                colorHex: selectedColor.hex,
+              };
+
+              createFarmBatch(activeFarm.id, newBatch)
+                .then(() => {
+                  logStep("Add batch saved to Supabase", {
+                    farmId: activeFarm.id,
+                    batchNo: newBatch.id,
                   });
-              }}
-              style={({ pressed }) => [
-                styles.saveButton,
-                { opacity: pressed ? 0.9 : 1 },
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel="Save batch record"
-            >
-              <Text style={styles.saveText}>Save Record</Text>
-            </Pressable>
+                  router.push({
+                    pathname: "/(tabs)/profiles" as any,
+                    params: { mode },
+                  });
+                })
+                .catch((error) => {
+                  Alert.alert(
+                    "Save failed",
+                    "Unable to save the batch right now.",
+                  );
+                  logError("Add batch save failed", error, {
+                    farmId: activeFarm.id,
+                    batchNo: newBatch.id,
+                  });
+                });
+            }}
+            style={({ pressed }) => [
+              styles.saveButton,
+              { opacity: pressed ? 0.9 : 1 },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Save batch record"
+          >
+            <Text style={styles.saveText}>Save Record</Text>
+          </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>
 
@@ -1211,6 +1216,10 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: moderateScale(16),
     gap: 12,
+  },
+  pinnedHeader: {
+    flexShrink: 0,
+    paddingBottom: 12,
   },
   topBar: {
     flexDirection: "row",

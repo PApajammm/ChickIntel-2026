@@ -1,23 +1,28 @@
+import {
+  moderateScale,
+  responsiveFontSize,
+  scale,
+  verticalScale,
+} from "@/utils/responsive";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { moderateScale, responsiveFontSize, scale, verticalScale } from "@/utils/responsive";
 
 import BackgroundGradient from "@/assets_imported/background-gradient.svg";
 import { ChickFont } from "@/constants/chick-fonts";
@@ -27,8 +32,8 @@ import type { BatchItem } from "@/utils/batch-store";
 import { logError } from "@/utils/logger";
 import { fetchFarmBatches } from "@/utils/supabase-batches";
 import {
-    createFarmEggBatch,
-    fetchFarmEggBatches,
+  createFarmEggBatch,
+  fetchFarmEggBatches,
 } from "@/utils/supabase-egg-batches";
 
 type BatchColorOption = {
@@ -221,7 +226,9 @@ export default function EggBatchAgeUnitScreen() {
       return;
     }
 
-    const matchingOption = batchColors.find((option) => option.id === requested);
+    const matchingOption = batchColors.find(
+      (option) => option.id === requested,
+    );
     if (matchingOption) {
       setSelectedColorId(requested);
     } else {
@@ -232,7 +239,7 @@ export default function EggBatchAgeUnitScreen() {
   const selectedBatchColor = useMemo(
     () =>
       selectedColorId
-        ? batchColors.find((option) => option.id === selectedColorId) ?? null
+        ? (batchColors.find((option) => option.id === selectedColorId) ?? null)
         : null,
     [batchColors, selectedColorId],
   );
@@ -352,27 +359,20 @@ export default function EggBatchAgeUnitScreen() {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={insets.top}
       >
-        <ScrollView
-          contentContainerStyle={[
+        <View
+          style={[
             styles.content,
-            {
-              paddingTop: insets.top + 10,
-              paddingBottom: insets.bottom + 96,
-            },
+            styles.pinnedHeader,
+            { paddingTop: insets.top + 10 },
           ]}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
         >
           <View style={styles.topBar}>
             <TouchableOpacity
               onPress={() =>
-                router.canGoBack()
-                  ? router.back()
-                  : router.replace({
-                      pathname: "/(tabs)/profiles" as any,
-                      params: { mode: "egg" },
-                    })
+                router.replace({
+                  pathname: "/(tabs)/profiles" as any,
+                  params: { mode: "egg" },
+                })
               }
               style={styles.backButton}
               activeOpacity={0.8}
@@ -398,8 +398,8 @@ export default function EggBatchAgeUnitScreen() {
             </View>
             <Text style={styles.pageTitle}>Create Egg Batch</Text>
             <Text style={styles.pageSubtitle}>
-              Connect this egg set to a chicken batch and track quantity,
-              line age, and color origin.
+              Connect this egg set to a chicken batch and track quantity, line
+              age, and color origin.
             </Text>
           </View>
 
@@ -435,162 +435,174 @@ export default function EggBatchAgeUnitScreen() {
               </Text>
             </View>
           </View>
+        </View>
 
+        <ScrollView
+          contentContainerStyle={[
+            styles.content,
+            {
+              paddingBottom: insets.bottom + 96,
+            },
+          ]}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+        >
           {/* Form Sections */}
           <View style={styles.formSection}>
-              <View style={styles.formSectionHeader}>
-                <MaterialCommunityIcons
-                  name="link-variant"
-                  size={18}
-                  color={ChickIntelPalette.green1}
-                />
-                <Text style={styles.formSectionTitle}>Batch source</Text>
-              </View>
-
-              <View style={styles.field}>
-                <Text style={styles.label}>Batch Color</Text>
-                <Pressable
-                  onPress={() => setColorMenuVisible(true)}
-                  style={({ pressed }) => [
-                    styles.select,
-                    { opacity: pressed ? 0.9 : 1 },
-                  ]}
-                  accessibilityRole="button"
-                >
-                  <View style={styles.selectLeft}>
-                    <View
-                      style={[
-                        styles.colorDot,
-                        {
-                          backgroundColor:
-                            selectedBatchColor?.colorHex ??
-                            ChickIntelPalette.gray2,
-                        },
-                      ]}
-                    />
-                    <Text style={styles.selectText}>
-                      {selectedBatchColor?.label ??
-                        "Choose from live chicken colors"}
-                    </Text>
-                  </View>
-                  <MaterialCommunityIcons
-                    name="chevron-down"
-                    size={20}
-                    color={ChickIntelPalette.gray2}
-                  />
-                </Pressable>
-              </View>
-
-              <View style={styles.field}>
-                <Text style={styles.label}>Batch No.</Text>
-                <TextInput
-                  value={batchNo}
-                  editable={false}
-                  selectTextOnFocus={false}
-                  style={[styles.input, styles.inputDisabled]}
-                  placeholder="Auto-generated"
-                  placeholderTextColor="#899696"
-                />
-              </View>
+            <View style={styles.formSectionHeader}>
+              <MaterialCommunityIcons
+                name="link-variant"
+                size={18}
+                color={ChickIntelPalette.green1}
+              />
+              <Text style={styles.formSectionTitle}>Batch source</Text>
             </View>
 
-            <View style={styles.formSection}>
-              <View style={styles.formSectionHeader}>
+            <View style={styles.field}>
+              <Text style={styles.label}>Batch Color</Text>
+              <Pressable
+                onPress={() => setColorMenuVisible(true)}
+                style={({ pressed }) => [
+                  styles.select,
+                  { opacity: pressed ? 0.9 : 1 },
+                ]}
+                accessibilityRole="button"
+              >
+                <View style={styles.selectLeft}>
+                  <View
+                    style={[
+                      styles.colorDot,
+                      {
+                        backgroundColor:
+                          selectedBatchColor?.colorHex ??
+                          ChickIntelPalette.gray2,
+                      },
+                    ]}
+                  />
+                  <Text style={styles.selectText}>
+                    {selectedBatchColor?.label ??
+                      "Choose from live chicken colors"}
+                  </Text>
+                </View>
                 <MaterialCommunityIcons
-                  name="basket-outline"
-                  size={18}
-                  color={ChickIntelPalette.green1}
+                  name="chevron-down"
+                  size={20}
+                  color={ChickIntelPalette.gray2}
                 />
-                <Text style={styles.formSectionTitle}>Egg count</Text>
-              </View>
+              </Pressable>
+            </View>
 
-              <View style={styles.field}>
-                <Text style={styles.label}>Egg Qty.</Text>
+            <View style={styles.field}>
+              <Text style={styles.label}>Batch No.</Text>
+              <TextInput
+                value={batchNo}
+                editable={false}
+                selectTextOnFocus={false}
+                style={[styles.input, styles.inputDisabled]}
+                placeholder="Auto-generated"
+                placeholderTextColor="#899696"
+              />
+            </View>
+          </View>
+
+          <View style={styles.formSection}>
+            <View style={styles.formSectionHeader}>
+              <MaterialCommunityIcons
+                name="basket-outline"
+                size={18}
+                color={ChickIntelPalette.green1}
+              />
+              <Text style={styles.formSectionTitle}>Egg count</Text>
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.label}>Egg Qty.</Text>
+              <TextInput
+                value={eggQty}
+                onChangeText={(t) => setEggQty(t.replace(/[^0-9]/g, ""))}
+                style={styles.input}
+                keyboardType="number-pad"
+                placeholder="120"
+                placeholderTextColor="#899696"
+              />
+            </View>
+          </View>
+
+          <View style={styles.formSection}>
+            <View style={styles.formSectionHeader}>
+              <MaterialCommunityIcons
+                name="calendar-clock"
+                size={18}
+                color={ChickIntelPalette.green1}
+              />
+              <Text style={styles.formSectionTitle}>Age details</Text>
+            </View>
+
+            <View style={styles.gridRow}>
+              <View style={styles.ageNumberCol}>
+                <Text style={styles.fieldLabel}>No.</Text>
                 <TextInput
-                  value={eggQty}
-                  onChangeText={(t) => setEggQty(t.replace(/[^0-9]/g, ""))}
+                  value={lineNo}
+                  onChangeText={(t) => setLineNo(t.replace(/[^0-9]/g, ""))}
                   style={styles.input}
                   keyboardType="number-pad"
-                  placeholder="120"
+                  placeholder="12"
+                  textAlignVertical="center"
                   placeholderTextColor="#899696"
                 />
               </View>
-            </View>
 
-            <View style={styles.formSection}>
-              <View style={styles.formSectionHeader}>
-                <MaterialCommunityIcons
-                  name="calendar-clock"
-                  size={18}
-                  color={ChickIntelPalette.green1}
-                />
-                <Text style={styles.formSectionTitle}>Age details</Text>
-              </View>
-
-              <View style={styles.gridRow}>
-                <View style={styles.ageNumberCol}>
-                  <Text style={styles.fieldLabel}>No.</Text>
-                  <TextInput
-                    value={lineNo}
-                    onChangeText={(t) => setLineNo(t.replace(/[^0-9]/g, ""))}
-                    style={styles.input}
-                    keyboardType="number-pad"
-                    placeholder="12"
-                    textAlignVertical="center"
-                    placeholderTextColor="#899696"
-                  />
-                </View>
-
-                <View style={styles.ageUnitCol}>
-                  <Text style={styles.fieldLabel}>Age unit</Text>
-                  <View style={styles.previewSegmentedContainer}>
-                    {ageUnitOptions.map((option) => {
-                      const active = ageUnit === option;
-                      return (
-                        <TouchableOpacity
-                          key={option}
-                          onPress={() => setAgeUnit(option)}
-                          activeOpacity={0.8}
+              <View style={styles.ageUnitCol}>
+                <Text style={styles.fieldLabel}>Age unit</Text>
+                <View style={styles.previewSegmentedContainer}>
+                  {ageUnitOptions.map((option) => {
+                    const active = ageUnit === option;
+                    return (
+                      <TouchableOpacity
+                        key={option}
+                        onPress={() => setAgeUnit(option)}
+                        activeOpacity={0.8}
+                        style={[
+                          styles.previewSegmentedItem,
+                          active && styles.previewSegmentedItemActive,
+                        ]}
+                      >
+                        <MaterialCommunityIcons
+                          name={
+                            option === "Days old"
+                              ? "calendar-today"
+                              : "calendar-week"
+                          }
+                          size={14}
+                          color={active ? "#FFF" : "#4A5452"}
+                        />
+                        <Text
                           style={[
-                            styles.previewSegmentedItem,
-                            active && styles.previewSegmentedItemActive,
+                            styles.previewSegmentedText,
+                            active && styles.previewSegmentedTextActive,
                           ]}
                         >
-                          <MaterialCommunityIcons
-                            name={
-                              option === "Days old"
-                                ? "calendar-today"
-                                : "calendar-week"
-                            }
-                            size={14}
-                            color={active ? "#FFF" : "#4A5452"}
-                          />
-                          <Text
-                            style={[
-                              styles.previewSegmentedText,
-                              active && styles.previewSegmentedTextActive,
-                            ]}
-                          >
-                            {option}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
+                          {option}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
               </View>
             </View>
+          </View>
 
-            <Pressable
-              onPress={saveEgg}
-              style={({ pressed }) => [
-                styles.saveBtn,
-                { opacity: pressed ? 0.92 : 1 },
-              ]}
-              accessibilityRole="button"
-            >
-              <Text style={styles.saveText}>Save Egg Batch</Text>
-            </Pressable>
+          <Pressable
+            onPress={saveEgg}
+            style={({ pressed }) => [
+              styles.saveBtn,
+              { opacity: pressed ? 0.92 : 1 },
+            ]}
+            accessibilityRole="button"
+          >
+            <Text style={styles.saveText}>Save Egg Batch</Text>
+          </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>
 
@@ -656,6 +668,10 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: moderateScale(16),
     gap: 12,
+  },
+  pinnedHeader: {
+    flexShrink: 0,
+    paddingBottom: 12,
   },
   topBar: {
     flexDirection: "row",
