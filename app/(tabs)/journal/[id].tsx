@@ -163,19 +163,6 @@ export default function JournalDetailScreen() {
                 ]}
                 showsVerticalScrollIndicator={false}
             >
-                {/* Behavior Section - Primary Focus */}
-                {behaviorLabels.length > 0 && (
-                    <View style={styles.behaviorSection}>
-                        <Text style={styles.sectionLabel}>Selected Behaviors</Text>
-                        <View style={styles.behaviorChips}>
-                            {behaviorLabels.map((label, index) => (
-                                <View key={`${label}-${index}`} style={styles.behaviorChip}>
-                                    <Text style={styles.behaviorChipText}>{label}</Text>
-                                </View>
-                            ))}
-                        </View>
-                    </View>
-                )}
 
                 {entry.additionalObservation ? (
                     <View style={styles.behaviorSection}>
