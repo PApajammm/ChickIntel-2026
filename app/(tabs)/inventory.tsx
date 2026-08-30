@@ -880,7 +880,12 @@ export default function InventoryScreen() {
               </Text>
             </View>
           </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            bounces={false}
+            contentContainerStyle={styles.tableScrollContent}
+          >
             <View style={styles.tableInner}>
               <View style={styles.headerRow}>
                 <View style={[styles.colName, styles.headerCell]}>
@@ -893,7 +898,13 @@ export default function InventoryScreen() {
                     {isExpiredTable ? "Remaining Stock" : "Live Usage"}
                   </Text>
                 </View>
-                <View style={[styles.colActions, styles.headerCell]}>
+                <View
+                  style={[
+                    styles.colActions,
+                    styles.headerCell,
+                    { justifyContent: "center" },
+                  ]}
+                >
                   <Text style={styles.headerText}>Action</Text>
                 </View>
               </View>
@@ -931,7 +942,6 @@ export default function InventoryScreen() {
                             styles.rowTextMain,
                             expMeta?.isExpired && styles.rowTextMainExpired,
                           ]}
-                          numberOfLines={1}
                         >
                           {normalizeItemName(item.name, item.type)}
                         </Text>
@@ -973,7 +983,13 @@ export default function InventoryScreen() {
                         ) : null}
                       </View>
                     </View>
-                    <View style={[styles.colStatus, styles.cell]}>
+                    <View
+                      style={[
+                        styles.colStatus,
+                        styles.cell,
+                        styles.colStatusCell,
+                      ]}
+                    >
                       {isExpiredTable ? (
                         <View style={styles.stockStatusWrap}>
                           <View style={styles.quarantinePill}>
@@ -983,10 +999,10 @@ export default function InventoryScreen() {
                               color="#DC2626"
                             />
                             <Text style={styles.quarantinePillText}>
-                              Quarantined
+                              For disposal
                             </Text>
                           </View>
-                          <Text style={styles.expiredQtyText}>
+                          <Text style={styles.expiredQtyText} numberOfLines={1}>
                             {formatQuantityValue(item.remainingQty)} {item.unit}{" "}
                             to dispose/restock
                           </Text>
@@ -1016,6 +1032,7 @@ export default function InventoryScreen() {
                                   color: stockMeta.textColor,
                                 },
                               ]}
+                              numberOfLines={1}
                             >
                               {stockMeta.label} - {item.statusPercent}% left
                             </Text>
@@ -1038,6 +1055,7 @@ export default function InventoryScreen() {
                                 color: stockMeta.textColor,
                               },
                             ]}
+                            numberOfLines={1}
                           >
                             {formatQuantityValue(item.remainingQty)}/
                             {formatQuantityValue(item.baseQty)} {item.unit}{" "}
@@ -1062,10 +1080,7 @@ export default function InventoryScreen() {
                           </TouchableOpacity>
                         )}
                         <TouchableOpacity
-                          style={[
-                            styles.actionBtn,
-                            isExpiredTable && styles.actionBtnTrashExpired,
-                          ]}
+                          style={styles.actionBtn}
                           onPress={async () => {
                             if (!activeFarm?.id) return;
                             try {
@@ -2154,7 +2169,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   content: {
-    paddingHorizontal: moderateScale(20),
+    paddingHorizontal: moderateScale(16),
   },
   tableContainer: {
     overflow: "hidden",
@@ -2231,29 +2246,35 @@ const styles = StyleSheet.create({
     color: "#991B1B",
     fontWeight: "700",
   },
+  tableScrollContent: {
+    minWidth: "100%",
+  },
   tableInner: {
-    minWidth: scale(440),
+    width: "100%",
+    minWidth: scale(310),
   },
   headerRow: {
     flexDirection: "row",
+    alignItems: "center",
     backgroundColor: "#2D6A4F",
-    paddingVertical: verticalScale(10),
+    paddingVertical: verticalScale(9),
     borderTopLeftRadius: 5,
     borderTopRightRadius: 5,
+    width: "100%",
   },
   headerRowExpired: {
     backgroundColor: "#2D6A4F",
   },
   headerCell: {
-    justifyContent: "center",
-    paddingHorizontal: moderateScale(10),
+    justifyContent: "flex-start",
+    paddingHorizontal: moderateScale(6),
     flexDirection: "row",
     alignItems: "center",
   },
   headerText: {
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(13),
-    fontWeight: "600",
+    fontSize: responsiveFontSize(12),
+    fontWeight: "700",
     color: "#FFF",
   },
   sortIcon: {
@@ -2261,8 +2282,10 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: "row",
-    paddingVertical: verticalScale(12),
+    alignItems: "center",
+    paddingVertical: verticalScale(10),
     backgroundColor: "transparent",
+    width: "100%",
   },
   rowBorder: {
     borderBottomWidth: 1,
@@ -2270,39 +2293,57 @@ const styles = StyleSheet.create({
   },
   cell: {
     justifyContent: "center",
-    paddingHorizontal: moderateScale(8),
+    paddingHorizontal: moderateScale(6),
     flexDirection: "row",
     alignItems: "center",
   },
   rowTextMain: {
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(13),
+    fontSize: responsiveFontSize(12),
+    fontWeight: "700",
     color: ChickIntelPalette.gray1,
+    flexShrink: 1,
   },
   rowTextMuted: {
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(12),
+    fontSize: responsiveFontSize(11),
     color: "#666",
     fontStyle: "italic",
   },
   emptyStateText: {
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(14),
-    lineHeight: 20,
+    fontSize: responsiveFontSize(13),
+    lineHeight: 18,
     color: ChickIntelPalette.gray2,
     textAlign: "center",
     paddingVertical: verticalScale(10),
   },
 
-  // Column Widths — scaled for different screen sizes
+  // Column Widths — fixed anchor widths + flex status to guarantee rock-solid alignment across all rows
   colSelection: { width: scale(40), justifyContent: "center" },
   colType: { width: scale(90), justifyContent: "space-between" },
-  colName: { width: scale(150), justifyContent: "flex-start" },
+  colName: {
+    width: scale(112),
+    justifyContent: "flex-start",
+  },
   colQty: { width: scale(54), justifyContent: "flex-start" },
   colUnit: { width: scale(54), justifyContent: "flex-start" },
   colDate: { width: scale(96), justifyContent: "flex-start" },
-  colStatus: { width: scale(180), justifyContent: "flex-start" },
-  colActions: { width: scale(92), justifyContent: "flex-start" },
+  colStatus: {
+    flex: 1,
+    minWidth: scale(145),
+    justifyContent: "flex-start",
+  },
+  colStatusCell: {
+    flexDirection: "column",
+    alignItems: "flex-start",
+    justifyContent: "center",
+  },
+  colActions: {
+    width: scale(72),
+    justifyContent: "center",
+    alignItems: "center",
+  },
 
   itemDateStack: {
     flexDirection: "column",
@@ -2312,13 +2353,13 @@ const styles = StyleSheet.create({
   },
   dateSimpleText: {
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(11),
+    fontSize: responsiveFontSize(10),
     color: "rgba(51, 51, 51, 0.65)",
     fontWeight: "500",
   },
   expSimpleText: {
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(11),
+    fontSize: responsiveFontSize(10),
     fontWeight: "700",
   },
   expAlertCard: {
@@ -2426,8 +2467,9 @@ const styles = StyleSheet.create({
   itemNameHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 4,
     flexWrap: "wrap",
+    width: "100%",
   },
   rowTextMainExpired: {
     color: ChickIntelPalette.gray1,
@@ -2454,39 +2496,43 @@ const styles = StyleSheet.create({
 
   stockPrimaryText: {
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(12),
-    fontWeight: "700",
+    fontSize: responsiveFontSize(10),
+    fontWeight: "600",
     color: ChickIntelPalette.gray1,
+    textAlign: "left",
+    alignSelf: "flex-start",
   },
   stockStatusWrap: {
     width: "100%",
-    gap: 6,
+    alignItems: "flex-start",
+    gap: 4,
   },
   stockBadge: {
     flexDirection: "row",
     alignItems: "center",
     alignSelf: "flex-start",
     borderRadius: 999,
-    paddingHorizontal: moderateScale(8),
-    paddingVertical: verticalScale(4),
-    gap: 6,
+    paddingHorizontal: moderateScale(6),
+    paddingVertical: verticalScale(2.5),
+    gap: 4,
   },
   stockBadgeDot: {
-    width: scale(8),
-    height: verticalScale(8),
+    width: scale(6),
+    height: verticalScale(6),
     borderRadius: 999,
   },
   stockBadgeText: {
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(11),
+    fontSize: responsiveFontSize(9.5),
     fontWeight: "700",
   },
   stockBarTrack: {
     width: "100%",
-    height: verticalScale(8),
+    height: verticalScale(6),
     borderRadius: 999,
     backgroundColor: "rgba(0,0,0,0.08)",
     overflow: "hidden",
+    alignSelf: "flex-start",
   },
   stockBarFill: {
     height: "100%",
@@ -2498,35 +2544,36 @@ const styles = StyleSheet.create({
     alignItems: "center",
     alignSelf: "flex-start",
     backgroundColor: "rgba(220, 38, 38, 0.12)",
-    paddingHorizontal: moderateScale(8),
-    paddingVertical: verticalScale(3),
-    borderRadius: 6,
-    gap: 4,
+    paddingHorizontal: moderateScale(6),
+    paddingVertical: verticalScale(2),
+    borderRadius: 5,
+    gap: 3,
   },
   quarantinePillText: {
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(11),
+    fontSize: responsiveFontSize(9.5),
     fontWeight: "700",
     color: "#DC2626",
+    textAlign: "left",
   },
   expiredQtyText: {
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(11),
+    fontSize: responsiveFontSize(9.5),
     fontWeight: "600",
     color: ChickIntelPalette.gray1,
+    textAlign: "left",
+    alignSelf: "flex-start",
   },
 
   actionsContainer: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    justifyContent: "center",
+    gap: 3,
   },
   actionBtn: {
-    padding: moderateScale(4),
-    borderRadius: 8,
-  },
-  actionBtnTrashExpired: {
-    backgroundColor: "rgba(220, 38, 38, 0.1)",
+    padding: moderateScale(3),
+    borderRadius: 6,
   },
 
   // Add Item & Stock Update Modal (Batch Profile Consistency)
