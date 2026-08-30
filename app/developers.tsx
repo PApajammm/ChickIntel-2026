@@ -1,22 +1,22 @@
-import React, { useRef, useState, useEffect, useCallback } from "react";
+import { FontAwesome6, MaterialCommunityIcons } from "@expo/vector-icons";
+import { BlurView } from "expo-blur";
+import { Image } from "expo-image";
+import { useRouter } from "expo-router";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
+  Animated,
+  Dimensions,
+  Easing,
+  Linking,
+  Modal,
+  PanResponder,
+  Platform,
+  Pressable,
   StyleSheet,
   Text,
   View,
-  Animated,
-  Dimensions,
-  PanResponder,
-  Pressable,
-  Modal,
-  Linking,
-  Platform,
-  Easing,
 } from "react-native";
-import { Image } from "expo-image";
-import { BlurView } from "expo-blur";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { MaterialCommunityIcons, FontAwesome6 } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
 
 import BackgroundGradient from "@/assets_imported/background-gradient.svg";
 import { ChickFont } from "@/constants/chick-fonts";
@@ -163,7 +163,10 @@ function create3DInterpolations(cardIndex: number, animValue: Animated.Value) {
     translateYRange.push(RADIUS_Y * -cosTheta);
 
     const normalizedDepth = (cosTheta + 1) / 2;
-    scaleRange.push(0.68 + 0.38 * normalizedDepth);
+    const baseScale = 0.68 + 0.38 * normalizedDepth;
+    // Reduce dimension of unhovered avatar cards by 10%, smoothly easing to 1.0 at front
+    const unhoveredDimFactor = 0.90 + 0.10 * Math.pow(normalizedDepth, 3);
+    scaleRange.push(baseScale * unhoveredDimFactor);
     opacityRange.push(0.20 + 0.80 * normalizedDepth);
 
     // Front card has 0 dark overlay; non-centered / background cards ramp up to 0.96 darkness (10% darker)
@@ -246,11 +249,16 @@ export default function DevelopersScreen() {
     return () => animValue.removeListener(listener);
   }, [animValue]);
 
-  // Auto-hover / auto-swipe state: 3 loops of 4 cards = 12 steps
+  // Auto-hover / auto-swipe state: 5 loops of 4 cards = 20 steps
   const autoStepCount = useRef(0);
   const autoTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const initialTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const stopAutoPlay = useCallback(() => {
+    if (initialTimerRef.current) {
+      clearTimeout(initialTimerRef.current);
+      initialTimerRef.current = null;
+    }
     if (autoTimerRef.current) {
       clearInterval(autoTimerRef.current);
       autoTimerRef.current = null;
@@ -261,18 +269,18 @@ export default function DevelopersScreen() {
     (targetStep: number, isAuto = false) => {
       currentStep.current = targetStep;
       if (isAuto) {
-        // Fluid, ultra-smooth cinematic deceleration for auto-hover
+        // Fast, fluid cinematic deceleration for auto-carousel
         Animated.timing(animValue, {
           toValue: targetStep,
-          duration: 950,
+          duration: 600,
           easing: Easing.bezier(0.25, 1, 0.5, 1),
           useNativeDriver: true,
         }).start();
       } else {
         Animated.spring(animValue, {
           toValue: targetStep,
-          friction: 8,
-          tension: 40,
+          friction: 7,
+          tension: 50,
           useNativeDriver: true,
         }).start();
       }
@@ -280,19 +288,26 @@ export default function DevelopersScreen() {
     [animValue],
   );
 
-  // Automatic gentle swiping at medium speed (~2.8s per card), completing exactly 3 full loops (12 cards)
+  // Automatic swiping: faster initial trigger (~900ms), brisk interval (~1.8s), max 5 full loops (20 steps)
   useEffect(() => {
-    const MAX_AUTO_STEPS = NUM_ITEMS * 3;
-    const AUTO_INTERVAL_MS = 2800;
+    const MAX_AUTO_STEPS = NUM_ITEMS * 5;
+    const INITIAL_DELAY_MS = 900;
+    const AUTO_INTERVAL_MS = 1800;
 
-    autoTimerRef.current = setInterval(() => {
-      if (autoStepCount.current >= MAX_AUTO_STEPS) {
-        stopAutoPlay();
-        return;
-      }
+    initialTimerRef.current = setTimeout(() => {
+      if (autoStepCount.current >= MAX_AUTO_STEPS) return;
       autoStepCount.current += 1;
       rotateToStep(currentStep.current + 1, true);
-    }, AUTO_INTERVAL_MS);
+
+      autoTimerRef.current = setInterval(() => {
+        if (autoStepCount.current >= MAX_AUTO_STEPS) {
+          stopAutoPlay();
+          return;
+        }
+        autoStepCount.current += 1;
+        rotateToStep(currentStep.current + 1, true);
+      }, AUTO_INTERVAL_MS);
+    }, INITIAL_DELAY_MS);
 
     return () => {
       stopAutoPlay();
@@ -657,20 +672,20 @@ const styles = StyleSheet.create({
   },
   appTitle: {
     fontFamily: ChickFont.display,
-    fontSize: responsiveFontSize(17),
+    fontSize: responsiveFontSize(20.4),
     fontWeight: "700",
     color: "#2b2b2b",
     marginBottom: 2,
   },
   appVersion: {
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(12),
+    fontSize: responsiveFontSize(14.4),
     fontWeight: "600",
     color: "#4a4a4a",
   },
   sectionTitle: {
     fontFamily: ChickFont.display,
-    fontSize: responsiveFontSize(20),
+    fontSize: responsiveFontSize(24),
     fontWeight: "800",
     color: ChickIntelPalette.gray1,
     letterSpacing: 0.8,
@@ -857,6 +872,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginTop: verticalScale(6),
     paddingHorizontal: moderateScale(16),
+    paddingBottom: verticalScale(65),
   },
   contactTitle: {
     fontFamily: ChickFont.display,
