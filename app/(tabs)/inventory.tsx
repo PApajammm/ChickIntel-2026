@@ -1,10 +1,9 @@
 import BackgroundGradient from "@/assets_imported/background-gradient.svg";
 import { BlurCard } from "@/components/ui/blur-card";
 import {
-    ChickField,
-    ChickSelectionModal,
-    ChickSelectRow,
-    ChickTextInput,
+  ChickSelectionModal,
+  ChickSelectRow,
+  ChickTextInput
 } from "@/components/ui/chick-form";
 import { ChickFont } from "@/constants/chick-fonts";
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
@@ -13,15 +12,15 @@ import { useAuth } from "@/providers/auth-provider";
 import { useFarmData } from "@/providers/farm-data-provider";
 import { logError } from "@/utils/logger";
 import {
-    moderateScale,
-    responsiveFontSize,
-    scale,
-    verticalScale,
+  moderateScale,
+  responsiveFontSize,
+  scale,
+  verticalScale,
 } from "@/utils/responsive";
 import {
-    getExpirationStatus,
-    getStockSeverityMeta,
-    type EffectiveInventoryItem,
+  getExpirationStatus,
+  getStockSeverityMeta,
+  type EffectiveInventoryItem,
 } from "@/utils/stock-alerts";
 import type { SupabaseInventoryItem } from "@/utils/supabase-inventory";
 import { fetchInventoryCategoryOptions } from "@/utils/supabase-lookups";
@@ -33,17 +32,17 @@ import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native";
 import {
-    Alert,
-    Animated,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  Animated,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -249,7 +248,7 @@ const ExpiredAlertBanner = ({
             style={[
               styles.previewSegmentedItem,
               activeExpirationFilter === "all" &&
-                styles.previewSegmentedItemActive,
+              styles.previewSegmentedItemActive,
             ]}
             onPress={() => setActiveExpirationFilter("all")}
             activeOpacity={0.8}
@@ -267,7 +266,7 @@ const ExpiredAlertBanner = ({
               style={[
                 styles.previewSegmentedText,
                 activeExpirationFilter === "all" &&
-                  styles.previewSegmentedTextActive,
+                styles.previewSegmentedTextActive,
               ]}
             >
               All Items ({totalCount})
@@ -279,7 +278,7 @@ const ExpiredAlertBanner = ({
               style={[
                 styles.previewSegmentedItem,
                 activeExpirationFilter === "expired" &&
-                  styles.previewSegmentedItemActive,
+                styles.previewSegmentedItemActive,
               ]}
               onPress={() =>
                 setActiveExpirationFilter(
@@ -315,7 +314,7 @@ const ExpiredAlertBanner = ({
               style={[
                 styles.previewSegmentedItem,
                 activeExpirationFilter === "expiring-soon" &&
-                  styles.previewSegmentedItemActive,
+                styles.previewSegmentedItemActive,
               ]}
               onPress={() =>
                 setActiveExpirationFilter(
@@ -339,7 +338,7 @@ const ExpiredAlertBanner = ({
                 style={[
                   styles.previewSegmentedText,
                   activeExpirationFilter === "expiring-soon" &&
-                    styles.previewSegmentedTextActive,
+                  styles.previewSegmentedTextActive,
                 ]}
               >
                 Expiring Soon ({expirationSummary.expiringSoonCount})
@@ -383,7 +382,7 @@ export default function InventoryScreen() {
     title: "",
     options: [],
     value: "",
-    onSelect: () => {},
+    onSelect: () => { },
   });
 
   const hasExpirationDate = (type: string) => {
@@ -738,7 +737,7 @@ export default function InventoryScreen() {
         qty: parsedQty,
         unit:
           newItemUnit === "Choose Measurement unit" ||
-          newItemUnit === "Measurement unit"
+            newItemUnit === "Measurement unit"
             ? "pcs"
             : newItemUnit,
         purchasedDate: newItemDate,
@@ -825,7 +824,7 @@ export default function InventoryScreen() {
     const isCategoryTitle =
       groupTitle.toLowerCase() === selectedTab.toLowerCase() ||
       groupTitle.toLowerCase() ===
-        (selectedTabMeta?.label.toLowerCase() || "") ||
+      (selectedTabMeta?.label.toLowerCase() || "") ||
       groupTitle.toLowerCase().startsWith("expired ");
 
     const displayTitle = isExpiredTable
@@ -963,11 +962,11 @@ export default function InventoryScreen() {
                           >
                             Exp: {formatAppDate(item.expirationDate)}
                             {expMeta.isExpired &&
-                            expMeta.daysRemaining !== null &&
-                            expMeta.daysRemaining < 0
+                              expMeta.daysRemaining !== null &&
+                              expMeta.daysRemaining < 0
                               ? ` (${Math.abs(expMeta.daysRemaining)}d ago)`
                               : expMeta.isExpiringSoon &&
-                                  expMeta.daysRemaining !== null
+                                expMeta.daysRemaining !== null
                                 ? ` (${expMeta.daysRemaining}d left)`
                                 : ""}
                           </Text>
@@ -1057,8 +1056,8 @@ export default function InventoryScreen() {
                           >
                             <MaterialCommunityIcons
                               name="pencil-outline"
-                              size={18}
-                              color="#2F80ED"
+                              size={23}
+                              color={ChickIntelPalette.gray1}
                             />
                           </TouchableOpacity>
                         )}
@@ -1082,7 +1081,7 @@ export default function InventoryScreen() {
                         >
                           <MaterialCommunityIcons
                             name="trash-can-outline"
-                            size={18}
+                            size={23}
                             color="#DC2626"
                           />
                         </TouchableOpacity>
@@ -1130,7 +1129,7 @@ export default function InventoryScreen() {
           onPress={() => {
             setNewItemType(
               inventoryTabs.find((tab) => tab.id === selectedTab)?.label ||
-                "Select Category",
+              "Select Category",
             );
             setAddModalVisible(true);
           }}
@@ -1262,10 +1261,10 @@ export default function InventoryScreen() {
             <Text style={styles.emptyStateText}>No inventory items yet.</Text>
           ) : null}
           {!loadingItems &&
-          !inventoryError &&
-          effectiveItems.length > 0 &&
-          activeCategoryGroups.length === 0 &&
-          expiredItemsList.length === 0 ? (
+            !inventoryError &&
+            effectiveItems.length > 0 &&
+            activeCategoryGroups.length === 0 &&
+            expiredItemsList.length === 0 ? (
             <View style={styles.emptyFilterWrap}>
               <MaterialCommunityIcons
                 name="filter-variant-remove"
@@ -1287,25 +1286,25 @@ export default function InventoryScreen() {
           {/* Active Category Tables for Selected Tab */}
           {!loadingItems && !inventoryError
             ? currentTabGroups.map(([groupTitle, groupItems]) =>
-                renderInventoryTable(groupTitle, groupItems, false),
-              )
+              renderInventoryTable(groupTitle, groupItems, false),
+            )
             : null}
 
           {/* Dedicated Expired Items Table for Selected Tab */}
           {!loadingItems && !inventoryError && currentTabExpiredItems.length > 0
             ? renderInventoryTable(
-                `Expired ${inventoryTabs.find((t) => t.id === selectedTab)?.label || "Supplies"}`,
-                currentTabExpiredItems,
-                true,
-              )
+              `Expired ${inventoryTabs.find((t) => t.id === selectedTab)?.label || "Supplies"}`,
+              currentTabExpiredItems,
+              true,
+            )
             : null}
 
           {/* Tab Empty State when no items exist for this tab */}
           {!loadingItems &&
-          !inventoryError &&
-          effectiveItems.length > 0 &&
-          currentTabGroups.length === 0 &&
-          currentTabExpiredItems.length === 0 ? (
+            !inventoryError &&
+            effectiveItems.length > 0 &&
+            currentTabGroups.length === 0 &&
+            currentTabExpiredItems.length === 0 ? (
             <BlurCard
               style={styles.tabEmptyCard}
               borderRadius={14}
@@ -1419,7 +1418,7 @@ export default function InventoryScreen() {
                   />
                   <Text style={styles.modalSummaryChipText} numberOfLines={1}>
                     {newItemType === "Select Category" ||
-                    newItemType === "Choose type"
+                      newItemType === "Choose type"
                       ? "No category yet"
                       : newItemType}
                   </Text>
@@ -1433,7 +1432,7 @@ export default function InventoryScreen() {
                   <Text style={styles.modalSummaryChipText} numberOfLines={1}>
                     {newItemQty.trim() || "0"}{" "}
                     {newItemUnit === "Measurement unit" ||
-                    newItemUnit === "Choose Measurement unit"
+                      newItemUnit === "Choose Measurement unit"
                       ? "unit"
                       : newItemUnit}
                   </Text>
@@ -1888,7 +1887,7 @@ export default function InventoryScreen() {
                       />
                     )}
                     {editExpirationDate &&
-                    getExpirationStatus(editExpirationDate).isExpired ? (
+                      getExpirationStatus(editExpirationDate).isExpired ? (
                       <View
                         style={[
                           styles.addModalInfoCallout,
@@ -2303,7 +2302,7 @@ const styles = StyleSheet.create({
   colUnit: { width: scale(54), justifyContent: "flex-start" },
   colDate: { width: scale(96), justifyContent: "flex-start" },
   colStatus: { width: scale(180), justifyContent: "flex-start" },
-  colActions: { width: scale(76), justifyContent: "flex-start" },
+  colActions: { width: scale(92), justifyContent: "flex-start" },
 
   itemDateStack: {
     flexDirection: "column",
@@ -2519,10 +2518,11 @@ const styles = StyleSheet.create({
 
   actionsContainer: {
     flexDirection: "row",
-    gap: 8,
+    alignItems: "center",
+    gap: 6,
   },
   actionBtn: {
-    padding: moderateScale(6),
+    padding: moderateScale(4),
     borderRadius: 8,
   },
   actionBtnTrashExpired: {
