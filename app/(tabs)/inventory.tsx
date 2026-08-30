@@ -2033,12 +2033,12 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: "rgba(45, 106, 79, 0.22)",
+    backgroundColor: "rgba(51, 51, 51, 0.25)",
   },
   paginationDotActive: {
     width: 16,
     borderRadius: 3,
-    backgroundColor: ChickIntelPalette.green1,
+    backgroundColor: ChickIntelPalette.gray1,
   },
   segmentText: {
     fontFamily: ChickFont.sans,
