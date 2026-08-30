@@ -36,13 +36,13 @@ const DEVELOPERS = [
   {
     id: "1",
     name: "CANLAS, HANNA JEAN",
-    role: "Document Specialist",
+    role: "Document/Analyst",
     avatar: require("@/assets/images/team/CANLAS.png"),
   },
   {
     id: "2",
     name: "ESGUERRA, ANGEL ROSE",
-    role: "Document Specialist",
+    role: "Document/Tester",
     avatar: require("@/assets/images/team/ESGUERRA.png"),
   },
   {
@@ -351,7 +351,7 @@ export default function DevelopersScreen() {
           </Pressable>
           <View style={styles.titleContainer}>
             <Text style={styles.appTitle}>ChickIntel App 2026</Text>
-            <Text style={styles.appVersion}>Version 1.0.7</Text>
+            <Text style={styles.appVersion}>Version 1.0.8</Text>
           </View>
         </View>
 
@@ -800,18 +800,18 @@ const styles = StyleSheet.create({
   roleChip: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 3,
+    gap: 3.5,
     paddingHorizontal: moderateScale(6),
     paddingVertical: verticalScale(1.5),
     borderRadius: 6,
-    backgroundColor: "rgba(110, 231, 183, 0.12)",
+    backgroundColor: "transparent",
     borderWidth: 1,
-    borderColor: "rgba(110, 231, 183, 0.25)",
+    borderColor: "rgba(255, 255, 255, 0.12)",
     alignSelf: "flex-start",
   },
   roleChipActive: {
-    backgroundColor: "rgba(110, 231, 183, 0.2)",
-    borderColor: "rgba(110, 231, 183, 0.45)",
+    backgroundColor: "transparent",
+    borderColor: "rgba(110, 231, 183, 0.25)",
   },
   roleText: {
     fontFamily: ChickFont.sans,
@@ -841,15 +841,15 @@ const styles = StyleSheet.create({
   },
   activeDot: {
     width: 24,
-    backgroundColor: ChickIntelPalette.green1,
-    shadowColor: ChickIntelPalette.green1,
+    backgroundColor: ChickIntelPalette.gray1,
+    shadowColor: ChickIntelPalette.gray1,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
   },
   inactiveDot: {
     width: 7,
-    backgroundColor: "rgba(49, 118, 103, 0.28)",
+    backgroundColor: "rgba(51, 51, 51, 0.28)",
   },
   contactSection: {
     width: "100%",
