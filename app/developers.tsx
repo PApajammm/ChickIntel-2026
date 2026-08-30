@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, useCallback } from "react";
 import {
   StyleSheet,
   Text,
@@ -9,8 +9,11 @@ import {
   Pressable,
   Modal,
   Linking,
+  Platform,
+  Easing,
 } from "react-native";
 import { Image } from "expo-image";
+import { BlurView } from "expo-blur";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialCommunityIcons, FontAwesome6 } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -21,20 +24,46 @@ import { ChickIntelPalette } from "@/constants/chickintel-palette";
 import { moderateScale, responsiveFontSize, scale, verticalScale } from "@/utils/responsive";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const CARD_WIDTH = Math.min(SCREEN_WIDTH * 0.64, 250);
-const RADIUS_X = SCREEN_WIDTH * 0.33;
-const RADIUS_Y = 14;
-const DRAG_SENSITIVITY = 130;
+const CARD_WIDTH = Math.round(Math.min(SCREEN_WIDTH * 0.46, 175)); // Decreased by 30% from 250
+const RADIUS_X = SCREEN_WIDTH * 0.31;
+const RADIUS_Y = 12;
+const DRAG_SENSITIVITY = 110;
 
 const NAV_BTN_SIZE = 44;
 const CONTACT_BTN_SIZE = Math.round(NAV_BTN_SIZE * 0.88); // Decreased by 30% from original 55px
 
 const DEVELOPERS = [
-  { id: "1", name: "CANLAS, HANNA JEAN", avatar: require("@/assets/images/team/CANLAS.jpg") },
-  { id: "2", name: "ESGUERRA, ANGEL ROSE", avatar: require("@/assets/images/team/ESGUERRA.jpg") },
-  { id: "3", name: "MADERA, JO ANN", avatar: require("@/assets/images/team/MADERA.jpg") },
-  { id: "4", name: "REYES, RALPH ZAIMON JAE", avatar: require("@/assets/images/team/REYES.jpg") },
+  {
+    id: "1",
+    name: "CANLAS, HANNA JEAN",
+    role: "Document Specialist",
+    avatar: require("@/assets/images/team/CANLAS.png"),
+  },
+  {
+    id: "2",
+    name: "ESGUERRA, ANGEL ROSE",
+    role: "Document Specialist",
+    avatar: require("@/assets/images/team/ESGUERRA.png"),
+  },
+  {
+    id: "3",
+    name: "MADERA, JO ANN",
+    role: "FrontEnd Dev/UXUI",
+    avatar: require("@/assets/images/team/MADERA.png"),
+  },
+  {
+    id: "4",
+    name: "REYES, RALPH ZAIMON JAE",
+    role: "BackEnd Dev",
+    avatar: require("@/assets/images/team/REYES.png"),
+  },
 ];
+
+const getRoleIcon = (role: string) => {
+  if (role.includes("FrontEnd")) return "laptop";
+  if (role.includes("BackEnd")) return "server-network";
+  return "file-document-outline";
+};
 
 type ContactChannel = {
   id: string;
@@ -135,10 +164,10 @@ function create3DInterpolations(cardIndex: number, animValue: Animated.Value) {
 
     const normalizedDepth = (cosTheta + 1) / 2;
     scaleRange.push(0.68 + 0.38 * normalizedDepth);
-    opacityRange.push(0.35 + 0.65 * normalizedDepth);
+    opacityRange.push(0.20 + 0.80 * normalizedDepth);
 
-    // Front card has 0 dark overlay; non-centered / background cards ramp up to 0.76 darkness
-    const darkAmount = Math.max(0, 1 - Math.pow(normalizedDepth, 2)) * 0.76;
+    // Front card has 0 dark overlay; non-centered / background cards ramp up to 0.96 darkness (10% darker)
+    const darkAmount = Math.max(0, 1 - Math.pow(normalizedDepth, 2)) * 0.96;
     darkOverlayRange.push(darkAmount);
 
     const deg = Math.round(sinTheta * -22);
@@ -217,29 +246,65 @@ export default function DevelopersScreen() {
     return () => animValue.removeListener(listener);
   }, [animValue]);
 
-  const rotateToStep = (targetStep: number) => {
-    currentStep.current = targetStep;
-    Animated.spring(animValue, {
-      toValue: targetStep,
-      friction: 7,
-      tension: 45,
-      useNativeDriver: true,
-    }).start();
-  };
+  // Auto-hover / auto-swipe state: 3 loops of 4 cards = 12 steps
+  const autoStepCount = useRef(0);
+  const autoTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const handlePrev = () => {
-    rotateToStep(currentStep.current - 1);
-  };
+  const stopAutoPlay = useCallback(() => {
+    if (autoTimerRef.current) {
+      clearInterval(autoTimerRef.current);
+      autoTimerRef.current = null;
+    }
+  }, []);
 
-  const handleNext = () => {
-    rotateToStep(currentStep.current + 1);
-  };
+  const rotateToStep = useCallback(
+    (targetStep: number, isAuto = false) => {
+      currentStep.current = targetStep;
+      if (isAuto) {
+        // Fluid, ultra-smooth cinematic deceleration for auto-hover
+        Animated.timing(animValue, {
+          toValue: targetStep,
+          duration: 950,
+          easing: Easing.bezier(0.25, 1, 0.5, 1),
+          useNativeDriver: true,
+        }).start();
+      } else {
+        Animated.spring(animValue, {
+          toValue: targetStep,
+          friction: 8,
+          tension: 40,
+          useNativeDriver: true,
+        }).start();
+      }
+    },
+    [animValue],
+  );
+
+  // Automatic gentle swiping at medium speed (~2.8s per card), completing exactly 3 full loops (12 cards)
+  useEffect(() => {
+    const MAX_AUTO_STEPS = NUM_ITEMS * 3;
+    const AUTO_INTERVAL_MS = 2800;
+
+    autoTimerRef.current = setInterval(() => {
+      if (autoStepCount.current >= MAX_AUTO_STEPS) {
+        stopAutoPlay();
+        return;
+      }
+      autoStepCount.current += 1;
+      rotateToStep(currentStep.current + 1, true);
+    }, AUTO_INTERVAL_MS);
+
+    return () => {
+      stopAutoPlay();
+    };
+  }, [stopAutoPlay, rotateToStep]);
 
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: (_, gestureState) => Math.abs(gestureState.dx) > 5,
       onPanResponderGrant: () => {
+        stopAutoPlay();
         animValue.stopAnimation();
       },
       onPanResponderMove: (_, gestureState) => {
@@ -286,7 +351,7 @@ export default function DevelopersScreen() {
           </Pressable>
           <View style={styles.titleContainer}>
             <Text style={styles.appTitle}>ChickIntel App 2026</Text>
-            <Text style={styles.appVersion}>Version 1.0.5</Text>
+            <Text style={styles.appVersion}>Version 1.0.7</Text>
           </View>
         </View>
 
@@ -313,33 +378,83 @@ export default function DevelopersScreen() {
                     animatedStyles.cardStyle,
                   ]}
                 >
-                  {/* Glassmorphic Aesthetic Card */}
+                  {/* Modern Glassmorphic Card */}
                   <View style={[styles.cardBox, isFront && styles.activeCardBox]}>
-                    {/* Top Decorative Header Accent */}
-                    <View style={styles.cardHeaderAccent}>
-                      <View style={styles.accentDot} />
-                      <View style={styles.accentLine} />
-                      <MaterialCommunityIcons
-                        name="star-four-points"
-                        size={12}
-                        color={ChickIntelPalette.green1}
+                    {/* Glassmorphism Frosted Blur Backdrop */}
+                    <View style={styles.blurBackdropWrap} pointerEvents="none">
+                      <BlurView
+                        intensity={isFront ? (Platform.OS === "ios" ? 45 : 32) : (Platform.OS === "ios" ? 28 : 18)}
+                        tint="dark"
+                        style={StyleSheet.absoluteFill}
                       />
                     </View>
 
+                    {/* Top Header: Position Title Badge */}
+                    <View style={styles.cardHeader}>
+                      <View
+                        style={[
+                          styles.roleChip,
+                          isFront && styles.roleChipActive,
+                        ]}
+                      >
+                        <MaterialCommunityIcons
+                          name={getRoleIcon(dev.role) as any}
+                          size={10}
+                          color={isFront ? "#6EE7B7" : "#A7F3D0"}
+                        />
+                        <Text
+                          style={[
+                            styles.roleText,
+                            isFront && styles.roleTextActive,
+                          ]}
+                        >
+                          {dev.role}
+                        </Text>
+                      </View>
+                    </View>
+
                     {/* Framed Avatar Image - Anchored to TOP so hair/head is never cut */}
-                    <View style={styles.imageWrapper}>
+                    <View
+                      style={[
+                        styles.imageWrapper,
+                        isFront && styles.imageWrapperActive,
+                      ]}
+                    >
                       <Image
                         source={dev.avatar}
                         style={styles.avatarImage}
                         contentFit="cover"
                         contentPosition="top"
+                        blurRadius={
+                          isFront ? 0 : Platform.OS === "ios" ? 14 : 10
+                        }
                       />
                       <View style={styles.imageInnerGlow} />
+
+                      {/* Extra Frosted Blur Overlay for Inactive Background Avatars */}
+                      {!isFront && (
+                        <BlurView
+                          intensity={Platform.OS === "ios" ? 24 : 16}
+                          tint="dark"
+                          style={StyleSheet.absoluteFill}
+                          pointerEvents="none"
+                        />
+                      )}
                     </View>
 
-                    {/* Developer Name Capsule */}
-                    <View style={styles.nameCapsule}>
-                      <Text style={styles.devName} numberOfLines={2}>
+                    {/* Developer Name Plate */}
+                    <View
+                      style={[
+                        styles.namePlate,
+                        isFront && styles.activeNamePlate,
+                      ]}
+                    >
+                      <Text
+                        style={styles.devName}
+                        numberOfLines={1}
+                        adjustsFontSizeToFit
+                        minimumFontScale={0.85}
+                      >
                         {dev.name}
                       </Text>
                     </View>
@@ -358,47 +473,32 @@ export default function DevelopersScreen() {
             })}
           </View>
 
-          {/* Carousel Rotation Controls & Indicators */}
-          <View style={styles.controlsRow}>
-          <Pressable
-            onPress={handlePrev}
-            style={({ pressed }) => [styles.navBtn, pressed && styles.navBtnPressed]}
-            hitSlop={12}
-          >
-            <MaterialCommunityIcons name="chevron-left" size={26} color="#FFFFFF" />
-          </Pressable>
-
-          {/* Dots */}
-          <View style={styles.dotsContainer}>
-            {DEVELOPERS.map((_, idx) => (
-              <Pressable
-                key={idx}
-                onPress={() => {
-                  const currentMod = ((currentStep.current % NUM_ITEMS) + NUM_ITEMS) % NUM_ITEMS;
-                  let diff = idx - currentMod;
-                  if (diff > NUM_ITEMS / 2) diff -= NUM_ITEMS;
-                  if (diff < -NUM_ITEMS / 2) diff += NUM_ITEMS;
-                  rotateToStep(currentStep.current + diff);
-                }}
-              >
-                <View
-                  style={[
-                    styles.dot,
-                    activeCardIndex === idx ? styles.activeDot : styles.inactiveDot,
-                  ]}
-                />
-              </Pressable>
-            ))}
+          {/* Pagination Indicators (Swipable Carousel) */}
+          <View style={styles.paginationRow}>
+            <View style={styles.dotsContainer}>
+              {DEVELOPERS.map((_, idx) => (
+                <Pressable
+                  key={idx}
+                  onPress={() => {
+                    stopAutoPlay();
+                    const currentMod = ((currentStep.current % NUM_ITEMS) + NUM_ITEMS) % NUM_ITEMS;
+                    let diff = idx - currentMod;
+                    if (diff > NUM_ITEMS / 2) diff -= NUM_ITEMS;
+                    if (diff < -NUM_ITEMS / 2) diff += NUM_ITEMS;
+                    rotateToStep(currentStep.current + diff);
+                  }}
+                  hitSlop={8}
+                >
+                  <View
+                    style={[
+                      styles.dot,
+                      activeCardIndex === idx ? styles.activeDot : styles.inactiveDot,
+                    ]}
+                  />
+                </Pressable>
+              ))}
+            </View>
           </View>
-
-          <Pressable
-            onPress={handleNext}
-            style={({ pressed }) => [styles.navBtn, pressed && styles.navBtnPressed]}
-            hitSlop={12}
-          >
-            <MaterialCommunityIcons name="chevron-right" size={26} color="#FFFFFF" />
-          </Pressable>
-        </View>
         </View>
 
         {/* Contact Details Channels (Dark Gray with Palette Orange Icons) */}
@@ -570,12 +670,13 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontFamily: ChickFont.display,
-    fontSize: responsiveFontSize(22),
+    fontSize: responsiveFontSize(20),
     fontWeight: "800",
     color: ChickIntelPalette.gray1,
     letterSpacing: 0.8,
     marginTop: 0,
-    marginBottom: verticalScale(36), // 2.25rem (36px) spacing above the carousel cards
+    paddingBottom: 10,
+    marginBottom: verticalScale(22),
   },
   carouselWrapper: {
     flex: 1,
@@ -585,7 +686,7 @@ const styles = StyleSheet.create({
   },
   carouselStage: {
     width: SCREEN_WIDTH,
-    height: verticalScale(296),
+    height: verticalScale(266), // Increased by 20% from 222
     alignItems: "center",
     justifyContent: "center",
     position: "relative",
@@ -593,70 +694,68 @@ const styles = StyleSheet.create({
   cardContainer: {
     position: "absolute",
     width: CARD_WIDTH,
-    height: verticalScale(290),
+    height: verticalScale(260), // Increased by 20% from 216
     alignItems: "center",
     justifyContent: "center",
+  },
+  blurBackdropWrap: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 18,
+    overflow: "hidden",
   },
   cardBox: {
     width: "100%",
     height: "100%",
-    backgroundColor: "rgba(255, 255, 255, 0.88)",
-    borderRadius: 24,
-    padding: moderateScale(11),
+    backgroundColor: "rgba(16, 24, 21, 0.65)",
+    borderRadius: 18,
+    padding: moderateScale(8),
     borderWidth: 1.5,
-    borderColor: "rgba(255, 255, 255, 0.95)",
-    shadowColor: ChickIntelPalette.green1,
+    borderColor: "rgba(255, 255, 255, 0.14)",
+    shadowColor: "#000000",
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.14,
+    shadowOpacity: 0.35,
     shadowRadius: 12,
     elevation: 6,
     alignItems: "center",
     justifyContent: "space-between",
   },
   activeCardBox: {
-    borderColor: ChickIntelPalette.mediumGreen,
-    borderWidth: 2,
-    shadowColor: ChickIntelPalette.green1,
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.28,
+    borderColor: "rgba(110, 231, 183, 0.6)",
+    borderWidth: 1.8,
+    shadowColor: "#10B981",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.38,
     shadowRadius: 18,
-    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    elevation: 12,
+    backgroundColor: "rgba(10, 18, 15, 0.8)",
   },
   cardDarkOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(16, 38, 33, 0.78)",
-    borderRadius: 24,
+    backgroundColor: "rgba(1, 4, 3, 0.94)",
+    borderRadius: 18,
   },
-  cardHeaderAccent: {
+  cardHeader: {
     width: "100%",
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: moderateScale(6),
-    paddingBottom: moderateScale(4),
-  },
-  accentDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: ChickIntelPalette.green2,
-  },
-  accentLine: {
-    flex: 1,
-    height: 1.5,
-    backgroundColor: "rgba(67, 139, 123, 0.2)",
-    marginHorizontal: 8,
-    borderRadius: 1,
+    justifyContent: "flex-start",
+    paddingHorizontal: moderateScale(2),
+    paddingBottom: 5,
+    zIndex: 4,
   },
   imageWrapper: {
     width: "100%",
     flex: 1,
-    borderRadius: 18,
+    borderRadius: 13,
     overflow: "hidden",
-    backgroundColor: ChickIntelPalette.lightGreen,
-    borderWidth: 1.5,
-    borderColor: "rgba(202, 227, 221, 0.8)",
+    backgroundColor: "rgba(255, 255, 255, 0.04)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.09)",
     position: "relative",
+  },
+  imageWrapperActive: {
+    borderColor: "rgba(110, 231, 183, 0.22)",
+    backgroundColor: "rgba(255, 255, 255, 0.06)",
   },
   avatarImage: {
     width: "100%",
@@ -664,59 +763,72 @@ const styles = StyleSheet.create({
   },
   imageInnerGlow: {
     ...StyleSheet.absoluteFillObject,
-    borderRadius: 18,
+    borderRadius: 13,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.35)",
+    borderColor: "rgba(255, 255, 255, 0.06)",
   },
-  nameCapsule: {
+  namePlate: {
     width: "100%",
-    paddingVertical: moderateScale(9),
-    paddingHorizontal: moderateScale(8),
+    paddingVertical: moderateScale(6),
+    paddingHorizontal: moderateScale(6),
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: ChickIntelPalette.green1,
-    borderRadius: 16,
-    marginTop: moderateScale(8),
-    shadowColor: ChickIntelPalette.green1,
-    shadowOffset: { width: 0, height: 4 },
+    backgroundColor: "rgba(18, 30, 26, 0.82)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.11)",
+    borderRadius: 12,
+    marginTop: moderateScale(6),
+    zIndex: 4,
+  },
+  activeNamePlate: {
+    backgroundColor: "rgba(20, 38, 32, 0.92)",
+    borderColor: "rgba(110, 231, 183, 0.35)",
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.25,
-    shadowRadius: 6,
+    shadowRadius: 5,
     elevation: 3,
   },
   devName: {
     fontFamily: ChickFont.display,
-    fontSize: responsiveFontSize(13),
+    fontSize: responsiveFontSize(11),
     fontWeight: "800",
     color: "#FFFFFF",
     textAlign: "center",
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
-  controlsRow: {
+  roleChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    paddingHorizontal: moderateScale(6),
+    paddingVertical: verticalScale(1.5),
+    borderRadius: 6,
+    backgroundColor: "rgba(110, 231, 183, 0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(110, 231, 183, 0.25)",
+    alignSelf: "flex-start",
+  },
+  roleChipActive: {
+    backgroundColor: "rgba(110, 231, 183, 0.2)",
+    borderColor: "rgba(110, 231, 183, 0.45)",
+  },
+  roleText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(8.5),
+    fontWeight: "700",
+    color: "#A7F3D0",
+    letterSpacing: 0.2,
+  },
+  roleTextActive: {
+    color: "#6EE7B7",
+  },
+  paginationRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: moderateScale(18),
-    marginTop: verticalScale(20),
+    marginTop: verticalScale(18),
     marginBottom: verticalScale(12),
-  },
-  navBtn: {
-    width: NAV_BTN_SIZE,
-    height: NAV_BTN_SIZE,
-    borderRadius: NAV_BTN_SIZE / 2,
-    backgroundColor: ChickIntelPalette.green1,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: ChickIntelPalette.green1,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 5,
-    borderWidth: 1.5,
-    borderColor: ChickIntelPalette.green2,
-  },
-  navBtnPressed: {
-    backgroundColor: ChickIntelPalette.green2,
-    transform: [{ scale: 0.92 }],
   },
   dotsContainer: {
     flexDirection: "row",
