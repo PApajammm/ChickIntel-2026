@@ -31,6 +31,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native";
 import {
     Alert,
     Animated,
@@ -440,6 +441,49 @@ export default function InventoryScreen() {
       setSelectedTab(inventoryTabs[0]?.id ?? "equipment");
     }
   }, [inventoryTabs, selectedTab]);
+
+  // Category Tabs Horizontal Scroll & Pagination Dots State
+  const tabScrollRef = useRef<ScrollView>(null);
+  const [tabBarWidth, setTabBarWidth] = useState(0);
+  const [tabScrollX, setTabScrollX] = useState(0);
+  const [tabMaxScroll, setTabMaxScroll] = useState(0);
+
+  const totalTabPages = useMemo(() => {
+    return Math.max(1, Math.ceil(inventoryTabs.length / 4));
+  }, [inventoryTabs.length]);
+
+  const activeTabPageIndex = useMemo(() => {
+    if (totalTabPages <= 1 || tabMaxScroll <= 0) return 0;
+    const progress = Math.max(0, Math.min(1, tabScrollX / tabMaxScroll));
+    return Math.min(totalTabPages - 1, Math.round(progress * (totalTabPages - 1)));
+  }, [tabScrollX, tabMaxScroll, totalTabPages]);
+
+  // When >4 categories exist, size each item so exactly 4 tabs fit in the visible container
+  const tabItemWidth = useMemo(() => {
+    if (tabBarWidth <= 0) return undefined;
+    // 3px padding on each side (6px total) and 3px gap between 4 visible items (3 * 3px = 9px)
+    return Math.floor((tabBarWidth - 15) / 4);
+  }, [tabBarWidth]);
+
+  const handleTabScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const { contentOffset, layoutMeasurement, contentSize } = event.nativeEvent;
+      const x = contentOffset.x;
+      const maxScroll = Math.max(0, contentSize.width - layoutMeasurement.width);
+      setTabScrollX(x);
+      setTabMaxScroll(maxScroll);
+    },
+    [],
+  );
+
+  const handleTabContentSizeChange = useCallback(
+    (contentWidth: number) => {
+      if (tabBarWidth > 0) {
+        setTabMaxScroll(Math.max(0, contentWidth - tabBarWidth));
+      }
+    },
+    [tabBarWidth],
+  );
 
   // Edit Item Modal State
   const [editModalVisible, setEditModalVisible] = useState(false);
@@ -1114,56 +1158,98 @@ export default function InventoryScreen() {
             />
           ) : null}
 
-          {/* Category tabs fitting full screen width */}
+          {/* Category tabs container with 4 default visible tabs & pagination dots if >4 */}
           <View style={styles.tabSectionHeader}>
-            <View style={styles.segmentWrap}>
-              {inventoryTabs.map((tab) => {
-                const isActive = selectedTab === tab.id;
-                const hasExpired = tabAlerts[tab.id]?.hasExpired;
-                return (
-                  <Pressable
-                    key={tab.id}
-                    onPress={() => setSelectedTab(tab.id)}
-                    style={[
-                      styles.segment,
-                      isActive
-                        ? styles.segmentActive
-                        : styles.segmentInactive,
-                    ]}
-                    accessibilityRole="tab"
-                    accessibilityState={{ selected: isActive }}
-                    accessibilityLabel={`${tab.label} tab`}
-                  >
-                    <MaterialCommunityIcons
-                      name={tab.icon as any}
-                      size={13}
-                      color={isActive ? "#FFFFFF" : "#4A5452"}
-                    />
-                    <Text
+            <View
+              style={styles.segmentWrap}
+              onLayout={(e) => {
+                const w = e.nativeEvent.layout.width;
+                if (w > 0 && Math.abs(w - tabBarWidth) > 1) {
+                  setTabBarWidth(w);
+                }
+              }}
+            >
+              <ScrollView
+                ref={tabScrollRef}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                scrollEventThrottle={16}
+                onScroll={handleTabScroll}
+                onContentSizeChange={handleTabContentSizeChange}
+                contentContainerStyle={[
+                  styles.segmentScrollContent,
+                  inventoryTabs.length <= 4 && styles.segmentScrollContentGrow,
+                ]}
+              >
+                {inventoryTabs.map((tab) => {
+                  const isActive = selectedTab === tab.id;
+                  const hasExpired = tabAlerts[tab.id]?.hasExpired;
+                  return (
+                    <Pressable
+                      key={tab.id}
+                      onPress={() => setSelectedTab(tab.id)}
                       style={[
-                        styles.segmentText,
+                        styles.segment,
+                        inventoryTabs.length > 4 && tabItemWidth
+                          ? { width: tabItemWidth }
+                          : styles.segmentFlex,
                         isActive
-                          ? styles.segmentTextActive
-                          : styles.segmentTextInactive,
+                          ? styles.segmentActive
+                          : styles.segmentInactive,
                       ]}
-                      numberOfLines={1}
-                      adjustsFontSizeToFit
-                      minimumFontScale={0.8}
+                      accessibilityRole="tab"
+                      accessibilityState={{ selected: isActive }}
+                      accessibilityLabel={`${tab.label} tab`}
                     >
-                      {tab.label}
-                    </Text>
-                    {hasExpired ? (
-                      <View
-                        style={[
-                          styles.segmentAlertDot,
-                          isActive && styles.segmentAlertDotActive,
-                        ]}
+                      <MaterialCommunityIcons
+                        name={tab.icon as any}
+                        size={13}
+                        color={isActive ? "#FFFFFF" : "#4A5452"}
                       />
-                    ) : null}
-                  </Pressable>
-                );
-              })}
+                      <Text
+                        style={[
+                          styles.segmentText,
+                          isActive
+                            ? styles.segmentTextActive
+                            : styles.segmentTextInactive,
+                        ]}
+                        numberOfLines={1}
+                        adjustsFontSizeToFit
+                        minimumFontScale={0.8}
+                      >
+                        {tab.label}
+                      </Text>
+                      {hasExpired ? (
+                        <View
+                          style={[
+                            styles.segmentAlertDot,
+                            isActive && styles.segmentAlertDotActive,
+                          ]}
+                        />
+                      ) : null}
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
             </View>
+
+            {/* Subtle pagination indicator dots beneath tabs */}
+            {inventoryTabs.length > 4 && totalTabPages > 1 ? (
+              <View style={styles.paginationDotsContainer}>
+                {Array.from({ length: totalTabPages }).map((_, idx) => {
+                  const isDotActive = activeTabPageIndex === idx;
+                  return (
+                    <View
+                      key={idx}
+                      style={[
+                        styles.paginationDot,
+                        isDotActive && styles.paginationDotActive,
+                      ]}
+                    />
+                  );
+                })}
+              </View>
+            ) : null}
           </View>
 
           {loadingItems ? (
@@ -1905,15 +1991,21 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   segmentWrap: {
-    flexDirection: "row",
     backgroundColor: "rgba(255, 255, 255, 0.85)",
     borderRadius: 12,
     padding: 3,
-    gap: 3,
     width: "100%",
+    overflow: "hidden",
+  },
+  segmentScrollContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+  },
+  segmentScrollContentGrow: {
+    flexGrow: 1,
   },
   segment: {
-    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -1922,11 +2014,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: moderateScale(2),
     gap: 2,
   },
+  segmentFlex: {
+    flex: 1,
+  },
   segmentActive: {
     backgroundColor: ChickIntelPalette.green1,
   },
   segmentInactive: {
     backgroundColor: "transparent",
+  },
+  paginationDotsContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 5,
+    marginTop: verticalScale(6),
+  },
+  paginationDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "rgba(45, 106, 79, 0.22)",
+  },
+  paginationDotActive: {
+    width: 16,
+    borderRadius: 3,
+    backgroundColor: ChickIntelPalette.green1,
   },
   segmentText: {
     fontFamily: ChickFont.sans,
