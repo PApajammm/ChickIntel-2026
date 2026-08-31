@@ -1,8 +1,9 @@
+import BackgroundGradient from "@/assets_imported/background-gradient.svg";
 import {
-    moderateScale,
-    responsiveFontSize,
-    scale,
-    verticalScale,
+  moderateScale,
+  responsiveFontSize,
+  scale,
+  verticalScale,
 } from "@/utils/responsive";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import Slider from "@react-native-community/slider";
@@ -13,24 +14,24 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useMemo, useRef, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
-    useWindowDimensions,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+  useWindowDimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
-    CameraViewport,
-    type CameraViewportRef,
+  CameraViewport,
+  type CameraViewportRef,
 } from "@/components/scanner/camera-viewport";
 import { ScannerShutter } from "@/components/scanner/scanner-shutter";
 import { ViewfinderOverlay } from "@/components/scanner/viewfinder-overlay";
@@ -38,9 +39,9 @@ import { ChickFont } from "@/constants/chick-fonts";
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
 import { useAuth } from "@/providers/auth-provider";
 import {
-    inferBreedFromImage,
-    isNonChickenClassifierLabel,
-    mapBreedPredictionToAttributes,
+  inferBreedFromImage,
+  isNonChickenClassifierLabel,
+  mapBreedPredictionToAttributes,
 } from "@/utils/breed-image-inference";
 import { logError, logStep } from "@/utils/logger";
 import { addRecentBreedScan } from "@/utils/recent-breed-scans";
@@ -385,25 +386,23 @@ export default function AddBatchScreen() {
 
   return (
     <View style={styles.screen}>
+      <BackgroundGradient
+        width="110%"
+        height="110%"
+        preserveAspectRatio="xMidYMid slice"
+        style={[
+          StyleSheet.absoluteFill,
+          { transform: [{ scale: 1.08 }, { translateY: -14 }] },
+        ]}
+      />
       <StatusBar style="dark" />
       <KeyboardAvoidingView
         style={styles.keyboardArea}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={insets.top}
       >
-        <ScrollView
-          contentContainerStyle={[
-            styles.content,
-            {
-              paddingTop: insets.top + 10,
-              paddingBottom: insets.bottom + TAB_BAR_OFFSET + 24,
-            },
-          ]}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
-        >
-          <View style={styles.createHero}>
+        <View style={[styles.pinnedHeader, { paddingTop: insets.top + 10 }]}>
+          <View style={styles.topBar}>
             <Pressable
               onPress={() =>
                 router.replace({
@@ -412,33 +411,37 @@ export default function AddBatchScreen() {
                 })
               }
               style={({ pressed }) => [
-                styles.createHeroIcon,
-                { opacity: pressed ? 0.75 : 1 },
+                styles.backButton,
+                { opacity: pressed ? 0.82 : 1 },
               ]}
               accessibilityRole="button"
               accessibilityLabel="Go back"
             >
               <MaterialCommunityIcons
                 name="arrow-left"
-                size={24}
-                color={ChickIntelPalette.green1}
+                size={22}
+                color="#FFF"
               />
             </Pressable>
-            <View style={styles.createHeroCopy}>
-              <Text style={styles.createHeroKicker}>Chicken profile</Text>
-              <Text style={styles.pageTitle}>{pageTitle}</Text>
-              <Text style={styles.createHeroSubtitle}>
-                Register a flock group with its tag color, age, breed, and sex
-                count.
-              </Text>
+          </View>
+
+          <View style={styles.titleCard}>
+            <View style={styles.kickerRow}>
+              <MaterialCommunityIcons name="bird" size={15} color="#CAE3DD" />
+              <Text style={styles.kickerText}>Chicken profile</Text>
             </View>
+            <Text style={styles.pageTitle}>{pageTitle}</Text>
+            <Text style={styles.createHeroSubtitle}>
+              Register a flock group with its tag color, age, breed, and sex
+              count.
+            </Text>
           </View>
 
           <View style={styles.summaryChipRow}>
             <View style={styles.summaryChip}>
               <MaterialCommunityIcons
                 name="identifier"
-                size={14}
+                size={12}
                 color={ChickIntelPalette.green1}
               />
               <Text style={styles.summaryChipText}>#{batchNo || "Auto"}</Text>
@@ -455,7 +458,7 @@ export default function AddBatchScreen() {
             <View style={styles.summaryChip}>
               <MaterialCommunityIcons
                 name="counter"
-                size={14}
+                size={12}
                 color={ChickIntelPalette.green1}
               />
               <Text style={styles.summaryChipText}>
@@ -463,7 +466,19 @@ export default function AddBatchScreen() {
               </Text>
             </View>
           </View>
+        </View>
 
+        <ScrollView
+          contentContainerStyle={[
+            styles.content,
+            {
+              paddingBottom: insets.bottom + TAB_BAR_OFFSET + 24,
+            },
+          ]}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+        >
           <View style={styles.formCard}>
             <View style={styles.formSection}>
               <View style={styles.formSectionHeader}>
@@ -1025,7 +1040,7 @@ export default function AddBatchScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: ChickIntelPalette.light1,
+    backgroundColor: "transparent",
   },
   colorDropdownButton: {
     height: verticalScale(46),
@@ -1182,38 +1197,52 @@ const styles = StyleSheet.create({
     paddingHorizontal: moderateScale(16),
     gap: 12,
   },
-  createHero: {
+  pinnedHeader: {
+    flexShrink: 0,
+    paddingBottom: 12,
+    paddingHorizontal: moderateScale(16),
+    backgroundColor: "transparent",
+  },
+  topBar: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    borderRadius: 18,
-    paddingHorizontal: moderateScale(14),
-    paddingVertical: verticalScale(14),
-    backgroundColor: "rgba(202, 227, 221, 0.38)",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.2)",
   },
-  createHeroIcon: {
-    width: scale(52),
-    height: verticalScale(52),
-    borderRadius: 17,
-    alignItems: "center",
+  backButton: {
+    width: scale(42),
+    height: verticalScale(42),
+    borderRadius: 14,
+    backgroundColor: ChickIntelPalette.green1,
     justifyContent: "center",
-    backgroundColor: "rgba(254, 254, 254, 0.74)",
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.18)",
+    borderColor: "rgba(49, 118, 103, 0.25)",
+    shadowColor: "#317667",
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
+    shadowOffset: { width: scale(0), height: verticalScale(4) },
+    elevation: 4,
+    flexShrink: 0,
   },
-  createHeroCopy: {
-    flex: 1,
-    minWidth: 0,
+  titleCard: {
+    marginTop: verticalScale(10),
+    borderRadius: 10,
+    paddingHorizontal: moderateScale(16),
+    paddingVertical: verticalScale(14),
+    backgroundColor: ChickIntelPalette.green1,
+    gap: 4,
   },
-  createHeroKicker: {
+  kickerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  kickerText: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(11),
     fontWeight: "800",
     letterSpacing: 0.55,
     textTransform: "uppercase",
-    color: ChickIntelPalette.green1,
+    color: "#CAE3DD",
   },
   pageTitle: {
     fontFamily: ChickFont.display,
@@ -1221,29 +1250,30 @@ const styles = StyleSheet.create({
     lineHeight: 28,
     fontWeight: "800",
     letterSpacing: -0.5,
-    color: ChickIntelPalette.gray1,
+    color: "#FFFFFF",
   },
   createHeroSubtitle: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(12),
     lineHeight: 17,
-    fontWeight: "600",
-    color: ChickIntelPalette.gray2,
+    fontWeight: "500",
+    color: "rgba(255, 255, 255, 0.88)",
     marginTop: verticalScale(2),
   },
   summaryChipRow: {
     flexDirection: "row",
-    gap: 8,
+    gap: 6,
+    marginTop: verticalScale(8),
   },
   summaryChip: {
     flex: 1,
-    minHeight: verticalScale(34),
+    minHeight: verticalScale(30),
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
-    borderRadius: 999,
-    paddingHorizontal: moderateScale(8),
+    gap: 4,
+    borderRadius: 8,
+    paddingHorizontal: moderateScale(6),
     backgroundColor: "rgba(254, 254, 254, 0.72)",
     borderWidth: 1,
     borderColor: "rgba(49, 118, 103, 0.16)",
@@ -1251,13 +1281,13 @@ const styles = StyleSheet.create({
   summaryChipText: {
     flexShrink: 1,
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(11),
-    fontWeight: "800",
+    fontSize: responsiveFontSize(10),
+    fontWeight: "700",
     color: ChickIntelPalette.gray1,
   },
   summaryColorDot: {
-    width: scale(12),
-    height: verticalScale(12),
+    width: scale(9),
+    height: verticalScale(9),
     borderRadius: 999,
     borderWidth: 1,
     borderColor: "rgba(0,0,0,0.12)",
@@ -1299,7 +1329,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: "rgba(49,118,103,0.18)",
-    backgroundColor: "rgba(254, 254, 254, 0.58)",
+    backgroundColor: "rgba(254, 254, 254, 0.72)",
     padding: moderateScale(12),
     gap: 12,
   },

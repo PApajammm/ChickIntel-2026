@@ -464,8 +464,8 @@ export default function ProfilesScreen() {
             >
               <MaterialCommunityIcons
                 name="arrow-left"
-                size={20}
-                color={ChickIntelPalette.gray1}
+                size={22}
+                color="#FFF"
               />
             </Pressable>
 
@@ -491,7 +491,7 @@ export default function ProfilesScreen() {
               <MaterialCommunityIcons
                 name="chart-donut"
                 size={18}
-                color={ChickIntelPalette.gray1}
+                color="#FFF"
               />
             </Pressable>
           ) : null}
@@ -1223,34 +1223,40 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   eggAnalyticsIconButton: {
-    width: scale(36),
-    height: verticalScale(36),
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "rgba(49,118,103,0.18)",
-    backgroundColor: "rgba(255,255,255,0.58)",
-    alignItems: "center",
+    width: scale(42),
+    height: verticalScale(42),
+    borderRadius: 14,
+    backgroundColor: ChickIntelPalette.green1,
     justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.25)",
+    shadowColor: "#317667",
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
+    shadowOffset: { width: scale(0), height: verticalScale(4) },
+    elevation: 4,
     flexShrink: 0,
   },
   segmentWrap: {
     flexDirection: "row",
-    padding: 3,
-    borderRadius: 12,
-    backgroundColor: "rgba(255, 255, 255, 0.18)",
+    backgroundColor: "rgba(255, 255, 255, 0.85)",
+    borderRadius: 10,
+    padding: 4,
+    gap: 4,
     borderWidth: 1,
-    borderColor: "rgba(67, 139, 123, 0.16)",
+    borderColor: "rgba(49, 118, 103, 0.12)",
   },
   segment: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    minHeight: verticalScale(40),
-    borderRadius: 9,
-    paddingHorizontal: moderateScale(8),
+    minHeight: verticalScale(38),
+    borderRadius: 10,
+    paddingHorizontal: moderateScale(10),
   },
   segmentActive: {
-    backgroundColor: "rgba(49, 118, 103, 0.14)",
+    backgroundColor: ChickIntelPalette.green1,
   },
   segmentInactive: {
     backgroundColor: "transparent",
@@ -1260,12 +1266,13 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(13),
     fontWeight: "700",
     lineHeight: 18,
+    color: "#4A5452",
   },
   segmentTextActive: {
-    color: ChickIntelPalette.green1,
+    color: "#FFFFFF",
   },
   segmentTextInactive: {
-    color: "rgba(51, 51, 51, 0.58)",
+    color: "#4A5452",
   },
   list: {
     gap: 10,
@@ -1386,14 +1393,19 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   backButton: {
-    width: scale(40),
-    height: verticalScale(40),
-    borderRadius: 10,
-    alignItems: "center",
+    width: scale(42),
+    height: verticalScale(42),
+    borderRadius: 14,
+    backgroundColor: ChickIntelPalette.green1,
     justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.6)",
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: "rgba(49,118,103,0.12)",
+    borderColor: "rgba(49, 118, 103, 0.25)",
+    shadowColor: "#317667",
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
+    shadowOffset: { width: scale(0), height: verticalScale(4) },
+    elevation: 4,
     flexShrink: 0,
   },
   iconCluster: {
