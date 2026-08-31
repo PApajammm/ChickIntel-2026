@@ -26,7 +26,7 @@
         "android.permission.POST_NOTIFICATIONS"
       ],
       "package": "com.chickintel.app",
-      "versionCode": 7
+      "versionCode": 9
     },
     "web": {
       "output": "static",
@@ -65,6 +65,15 @@
       "expo-font",
       "expo-web-browser"
     ],
+    "updates": {
+      "enabled": true,
+      "checkAutomatically": "NEVER",
+      "fallbackToCacheTimeout": 30000,
+      "url": "https://u.expo.dev/8283a1dd-e69b-41f1-9cd5-211270c5e351"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true

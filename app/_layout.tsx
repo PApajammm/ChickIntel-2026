@@ -1,8 +1,11 @@
+import { useColorScheme } from "@/hooks/use-color-scheme";
 import { AuthProvider } from "@/providers/auth-provider";
 import { FarmDataProvider } from "@/providers/farm-data-provider";
 import { StockAlertProvider } from "@/providers/stock-alert-provider";
-import { useColorScheme } from "@/hooks/use-color-scheme";
-import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native";
+import {
+    DefaultTheme,
+    ThemeProvider
+} from "@react-navigation/native";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
@@ -10,6 +13,7 @@ import { useEffect } from "react";
 import "react-native-reanimated";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
+import { OtaUpdatePrompt } from "@/components/ota-update-prompt";
 import { initLogger } from "@/utils/logger";
 
 SplashScreen.preventAutoHideAsync().catch(() => null);
@@ -60,6 +64,7 @@ export default function RootLayout() {
                   }}
                 />
               </Stack>
+              <OtaUpdatePrompt />
               <StatusBar style="dark" />
             </ThemeProvider>
           </StockAlertProvider>

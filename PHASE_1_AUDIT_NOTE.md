@@ -86,6 +86,8 @@ Important constraints:
 Configure:
 
 1. expo-updates if it is missing.
+   - **Use the Expo SDK 54 compatible version, not blindly the newest version.**
+   - Verify dependency compatibility after installation.
 2. EAS Update configuration.
 3. The correct Expo project association.
 4. The production update channel.
@@ -101,6 +103,7 @@ Important:
 - Do not overwrite existing EAS profiles unless necessary.
 - Do not remove existing build configuration.
 - Do not build the APK yet.
+- Use the Expo-recommended dependency installation method for the current Expo SDK 54 project.
 
 After making the changes:
 
