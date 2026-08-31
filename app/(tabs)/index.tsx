@@ -21,6 +21,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   useWindowDimensions,
   View,
 } from "react-native";
@@ -56,6 +57,7 @@ import {
   getFeaturedBreedCards,
   type FeaturedBreedCard,
 } from "@/utils/recent-breed-scans";
+import { fetchFarmBatches } from "@/utils/supabase-batches";
 import {
   moderateScale,
   responsiveFontSize,
@@ -170,8 +172,8 @@ export default function HomeScreen() {
   /** Quick-action SVG size: ~1.8× previous 34px icon size, scaled */
   const QUICK_ACTION_ICON_SIZE = Math.round(rms(45) * 1.8);
 
-  const featureCardWidth = Math.min(width * 0.56, rs(228));
-  const featureCardGap = rms(10);
+  const featureCardWidth = Math.min(width * 0.65, rs(252));
+  const featureCardGap = rms(12);
   const snapInterval = featureCardWidth + featureCardGap;
   const sideInset = Math.max((width - featureCardWidth) / 2, rms(18));
   const scrollX = useRef(new Animated.Value(0)).current;
@@ -219,6 +221,11 @@ export default function HomeScreen() {
   const [featuredCards, setFeaturedCards] = useState<FeaturedBreedCard[]>(() =>
     getFeaturedBreedCards(),
   );
+  const [flockCountsByBreed, setFlockCountsByBreed] = useState<
+    Record<string, number>
+  >({});
+  const [selectedBreedForModal, setSelectedBreedForModal] =
+    useState<FeaturedBreedCard | null>(null);
   const [todayLabel, setTodayLabel] = useState(formatTodayLabel);
   const [periodByTitle, setPeriodByTitle] = useState<Record<string, string>>({
     "Total Birds": "30 days",
@@ -305,13 +312,45 @@ export default function HomeScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      let active = true;
       const nextCards = getFeaturedBreedCards();
       setFeaturedCards(nextCards);
       logStep("Home featured cards refreshed", {
         source: "in_memory_recent_scans",
         cards: nextCards.length,
       });
-    }, []),
+
+      if (activeFarm?.id) {
+        void fetchFarmBatches(activeFarm.id)
+          .then((batches) => {
+            if (!active) return;
+            const counts: Record<string, number> = {};
+            for (const batch of batches) {
+              const bName = (batch.breed || "").trim().toLowerCase();
+              const total = (batch.femaleCount || 0) + (batch.maleCount || 0);
+              if (bName.includes("silkie")) {
+                counts["Silkie"] = (counts["Silkie"] || 0) + total;
+              } else if (
+                bName.includes("rhode island") ||
+                bName.includes("rir")
+              ) {
+                counts["Rhode Island Red"] =
+                  (counts["Rhode Island Red"] || 0) + total;
+              } else if (batch.breed) {
+                counts[batch.breed] = (counts[batch.breed] || 0) + total;
+              }
+            }
+            setFlockCountsByBreed(counts);
+          })
+          .catch((err) => {
+            logError("Failed to fetch farm batches for breed cards", err);
+          });
+      }
+
+      return () => {
+        active = false;
+      };
+    }, [activeFarm?.id]),
   );
 
   const fetchKpis = useCallback(async (): Promise<KpiCardData[]> => {
@@ -612,7 +651,6 @@ export default function HomeScreen() {
                   styles.kpiCard,
                   {
                     width: dynamicKpiCardWidth,
-                    borderColor: withAlpha(colors.border, 0.25),
                   },
                 ]}
                 borderRadius={10}
@@ -709,12 +747,7 @@ export default function HomeScreen() {
         </ScrollView>
 
         <BlurCard
-          style={[
-            styles.quickActionsCard,
-            {
-              borderColor: withAlpha(ChickIntelPalette.green2, 0.33),
-            },
-          ]}
+          style={styles.quickActionsCard}
           borderRadius={10}
           intensity={18}
         >
@@ -868,6 +901,8 @@ export default function HomeScreen() {
               extrapolate: "clamp",
             });
 
+            const flockCount = flockCountsByBreed[item.breedName] ?? 0;
+
             return (
               <Animated.View
                 style={[
@@ -889,6 +924,12 @@ export default function HomeScreen() {
                     },
                   ]}
                 >
+                  <Pressable
+                    style={styles.featureCardPressable}
+                    onPress={() => setSelectedBreedForModal(item)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`View ${item.breedName} breed details and farm statistics`}
+                  >
                   <Animated.View
                     style={[
                       styles.featureImageShell,
@@ -902,22 +943,83 @@ export default function HomeScreen() {
                       style={styles.featureImage}
                       contentFit="cover"
                     />
+                    <View style={styles.featureOverlayGradient} />
                   </Animated.View>
+
+                  {/* Top Badges Bar: Live Flock Count (left) & Egg Yield (right) */}
+                  <View style={styles.featureTopRow}>
+                    <View
+                      style={[
+                        styles.flockBadge,
+                        flockCount > 0
+                          ? styles.flockBadgeActive
+                          : styles.flockBadgeEmpty,
+                      ]}
+                    >
+                      <View
+                        style={[
+                          styles.flockBadgeDot,
+                          flockCount > 0
+                            ? styles.flockBadgeDotActive
+                            : styles.flockBadgeDotEmpty,
+                        ]}
+                      />
+                      <Text style={styles.flockBadgeText}>
+                        {flockCount > 0 ? `${flockCount} in Flock` : "0 in Flock"}
+                      </Text>
+                    </View>
+
+                    {item.eggProduction ? (
+                      <View style={styles.eggYieldBadge}>
+                        <MaterialCommunityIcons
+                          name="egg-outline"
+                          size={11}
+                          color="#FEF08A"
+                        />
+                        <Text style={styles.eggYieldBadgeText} numberOfLines={1}>
+                          {item.eggProduction}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
+
+                  {/* Bottom Information Card Overlay */}
                   <Animated.View
                     style={[styles.featureCopy, { opacity: contentOpacity }]}
                   >
-                    <Text style={styles.featureEyebrow}>
-                      {item.isDefault ? "Default Breed" : "Recent Scan"}
+                    <View style={styles.featureHeaderRow}>
+                      <Text style={styles.featureTitle} numberOfLines={1}>
+                        {item.breedName}
+                      </Text>
+                      <View style={styles.purposePill}>
+                        <Text style={styles.purposePillText} numberOfLines={1}>
+                          {item.purpose || (item.isDefault ? "Default" : "Scanned")}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <Text style={styles.featureTraitsLine} numberOfLines={1}>
+                      🛡️ {item.hardiness || item.traits.slice(0, 2).join(" • ")}
                     </Text>
-                    <Text style={styles.featureTitle} numberOfLines={1}>
-                      {item.breedName}
-                    </Text>
-                    <Text style={styles.featureDetail} numberOfLines={2}>
-                      {item.detail}
-                    </Text>
+
+                    <View style={styles.triviaBox}>
+                      <Text style={styles.triviaText} numberOfLines={2}>
+                        {item.dailyTrivia || item.detail}
+                      </Text>
+                    </View>
+
+                    <View style={styles.tapHintRow}>
+                      <Text style={styles.tapHintText}>Tap for breed guide & specs</Text>
+                      <MaterialCommunityIcons
+                        name="chevron-right"
+                        size={12}
+                        color="rgba(255, 255, 255, 0.75)"
+                      />
+                    </View>
                   </Animated.View>
-                </Animated.View>
+                </Pressable>
               </Animated.View>
+            </Animated.View>
             );
           }}
         />
@@ -929,6 +1031,215 @@ export default function HomeScreen() {
         bottom={fabBottom}
         accessibilityLabel="Open scanner"
       />
+
+      <Modal
+        visible={selectedBreedForModal !== null}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setSelectedBreedForModal(null)}
+      >
+        <Pressable
+          style={styles.modalBackdrop}
+          onPress={() => setSelectedBreedForModal(null)}
+        >
+          <Pressable
+            style={styles.breedModalCard}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.breedModalScrollContent}
+            >
+              {/* Header Image Banner */}
+              <View style={styles.breedModalImageContainer}>
+                {selectedBreedForModal && (
+                  <Image
+                    source={selectedBreedForModal.image}
+                    style={styles.breedModalImage}
+                    contentFit="cover"
+                  />
+                )}
+                <TouchableOpacity
+                  style={styles.breedModalCloseBtn}
+                  onPress={() => setSelectedBreedForModal(null)}
+                  accessibilityLabel="Close breed modal"
+                >
+                  <MaterialCommunityIcons name="close" size={20} color="#FFF" />
+                </TouchableOpacity>
+
+                <View style={styles.breedModalImageOverlay}>
+                  <Text style={styles.breedModalTitle}>
+                    {selectedBreedForModal?.breedName}
+                  </Text>
+                  <Text style={styles.breedModalSubtitle}>
+                    {selectedBreedForModal?.purpose} •{" "}
+                    {selectedBreedForModal?.hardiness}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Farm Census Section */}
+              <View style={styles.censusBanner}>
+                <View style={styles.censusIconWrap}>
+                  <MaterialCommunityIcons
+                    name="counter"
+                    size={22}
+                    color="#2D6A4F"
+                  />
+                </View>
+                <View style={styles.censusTextWrap}>
+                  <Text style={styles.censusHeading}>Live Farm Flock Count</Text>
+                  <Text style={styles.censusValue}>
+                    {(selectedBreedForModal &&
+                      flockCountsByBreed[selectedBreedForModal.breedName]) ||
+                      0}{" "}
+                    Birds Recorded in Batches
+                  </Text>
+                </View>
+              </View>
+
+              {/* Specs Grid */}
+              <Text style={styles.modalSectionTitle}>Breed Specifications</Text>
+              <View style={styles.specsGrid}>
+                <View style={styles.specBox}>
+                  <MaterialCommunityIcons
+                    name="egg"
+                    size={16}
+                    color="#D97706"
+                  />
+                  <Text style={styles.specBoxLabel}>Egg Yield</Text>
+                  <Text style={styles.specBoxValue} numberOfLines={1}>
+                    {selectedBreedForModal?.eggProduction}
+                  </Text>
+                </View>
+
+                <View style={styles.specBox}>
+                  <MaterialCommunityIcons
+                    name="palette-outline"
+                    size={16}
+                    color="#8B5CF6"
+                  />
+                  <Text style={styles.specBoxLabel}>Egg Color</Text>
+                  <Text style={styles.specBoxValue} numberOfLines={1}>
+                    {selectedBreedForModal?.metadata?.eggColor ||
+                      "Brown / Cream"}
+                  </Text>
+                </View>
+
+                <View style={styles.specBox}>
+                  <MaterialCommunityIcons
+                    name="weight"
+                    size={16}
+                    color="#059669"
+                  />
+                  <Text style={styles.specBoxLabel}>Adult Weight</Text>
+                  <Text style={styles.specBoxValue} numberOfLines={1}>
+                    {selectedBreedForModal?.metadata?.weight || "5.0 - 8.0 lbs"}
+                  </Text>
+                </View>
+
+                <View style={styles.specBox}>
+                  <MaterialCommunityIcons
+                    name="heart-pulse"
+                    size={16}
+                    color="#DC2626"
+                  />
+                  <Text style={styles.specBoxLabel}>Temperament</Text>
+                  <Text style={styles.specBoxValue} numberOfLines={1}>
+                    {selectedBreedForModal?.metadata?.temperament?.split(
+                      " ",
+                    )[0] || "Docile"}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Farmer Pro-Tip & Trivia */}
+              <View style={styles.triviaSection}>
+                <View style={styles.triviaHeaderRow}>
+                  <MaterialCommunityIcons
+                    name="lightbulb-on"
+                    size={18}
+                    color="#D97706"
+                  />
+                  <Text style={styles.triviaSectionTitle}>Farmer Pro-Tip</Text>
+                </View>
+                <Text style={styles.triviaSectionContent}>
+                  {selectedBreedForModal?.dailyTrivia}
+                </Text>
+              </View>
+
+              {/* Care & Nutrition Advice */}
+              <View style={styles.infoCard}>
+                <View style={styles.infoHeaderRow}>
+                  <MaterialCommunityIcons
+                    name="home-outline"
+                    size={18}
+                    color="#2D6A4F"
+                  />
+                  <Text style={styles.infoCardTitle}>
+                    Housing & Environment
+                  </Text>
+                </View>
+                <Text style={styles.infoCardBody}>
+                  {selectedBreedForModal?.metadata?.careAdvice ||
+                    "Provide clean water, dry bedding, and sheltered roosting spaces."}
+                </Text>
+              </View>
+
+              {/* Health & Scanner Watch-out */}
+              <View style={styles.healthWatchCard}>
+                <View style={styles.infoHeaderRow}>
+                  <MaterialCommunityIcons
+                    name="shield-alert-outline"
+                    size={18}
+                    color="#B91C1C"
+                  />
+                  <Text style={styles.healthWatchTitle}>
+                    Health Scanner Watch-Out
+                  </Text>
+                </View>
+                <Text style={styles.healthWatchBody}>
+                  {selectedBreedForModal?.metadata?.healthWatch ||
+                    "Monitor regularly for parasites, respiratory signs, and plumage vigor."}
+                </Text>
+              </View>
+
+              {/* Action Buttons */}
+              <View style={styles.modalActionsRow}>
+                <TouchableOpacity
+                  style={styles.modalScannerBtn}
+                  onPress={() => {
+                    setSelectedBreedForModal(null);
+                    void openScannerWithPermission();
+                  }}
+                >
+                  <MaterialCommunityIcons
+                    name="camera"
+                    size={18}
+                    color="#FFF"
+                  />
+                  <Text style={styles.modalScannerBtnText}>Scan Breed</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.modalBatchesBtn}
+                  onPress={() => {
+                    setSelectedBreedForModal(null);
+                    router.push("/profiles");
+                  }}
+                >
+                  <MaterialCommunityIcons
+                    name="clipboard-list-outline"
+                    size={18}
+                    color="#2D6A4F"
+                  />
+                  <Text style={styles.modalBatchesBtnText}>Batches</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       <Modal
         visible={periodPickerFor !== null}
@@ -1193,17 +1504,21 @@ const styles = StyleSheet.create({
     paddingBottom: 6,
   },
   featureCardWrap: {
-    borderRadius: 10,
+    borderRadius: 12,
   },
   featureCard: {
-    height: verticalScale(175),
-    borderRadius: 10,
+    height: verticalScale(215),
+    borderRadius: 12,
     overflow: "hidden",
     shadowOpacity: 0.28,
     shadowRadius: 16,
     shadowOffset: { width: scale(0), height: verticalScale(8) },
     elevation: 8,
     backgroundColor: "#1B2A1E",
+  },
+  featureCardPressable: {
+    flex: 1,
+    position: "relative",
   },
   featureImageShell: {
     ...StyleSheet.absoluteFillObject,
@@ -1214,38 +1529,386 @@ const styles = StyleSheet.create({
   },
   featureOverlayGradient: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0, 0, 0, 0.15)",
+    backgroundColor: "rgba(10, 20, 14, 0.40)",
   },
-  featureEyebrow: {
+  featureTopRow: {
+    position: "absolute",
+    top: 10,
+    left: 10,
+    right: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    zIndex: 2,
+  },
+  flockBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: moderateScale(8),
+    paddingVertical: verticalScale(3),
+    borderRadius: 999,
+    gap: 5,
+  },
+  flockBadgeActive: {
+    backgroundColor: "rgba(22, 101, 52, 0.88)",
+    borderWidth: 1,
+    borderColor: "rgba(74, 222, 128, 0.45)",
+  },
+  flockBadgeEmpty: {
+    backgroundColor: "rgba(20, 30, 25, 0.72)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.2)",
+  },
+  flockBadgeDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  flockBadgeDotActive: {
+    backgroundColor: "#4ADE80",
+  },
+  flockBadgeDotEmpty: {
+    backgroundColor: "rgba(255, 255, 255, 0.5)",
+  },
+  flockBadgeText: {
     fontFamily: ChickFont.sans,
-    color: "#FFFFFF",
     fontSize: responsiveFontSize(10),
     fontWeight: "700",
-    letterSpacing: 0.6,
-    textTransform: "uppercase",
-    opacity: 0.9,
+    color: "#FFFFFF",
+  },
+  eggYieldBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.65)",
+    paddingHorizontal: moderateScale(7),
+    paddingVertical: verticalScale(3),
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(254, 240, 138, 0.3)",
+    gap: 3,
+  },
+  eggYieldBadgeText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(9.5),
+    fontWeight: "700",
+    color: "#FEF08A",
   },
   featureCopy: {
     position: "absolute",
-    left: 14,
-    right: 14,
-    bottom: 14,
-    gap: 2,
+    left: 10,
+    right: 10,
+    bottom: 10,
+    backgroundColor: "rgba(15, 25, 18, 0.82)",
+    borderRadius: 10,
+    paddingHorizontal: moderateScale(10),
+    paddingVertical: verticalScale(7),
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.12)",
+    gap: 3,
+  },
+  featureHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   featureTitle: {
     fontFamily: ChickFont.display,
     color: "#FFFFFF",
-    fontSize: responsiveFontSize(18),
-    lineHeight: 22,
+    fontSize: responsiveFontSize(15),
     fontWeight: "700",
-    letterSpacing: -0.2,
+    flexShrink: 1,
   },
-  featureDetail: {
+  purposePill: {
+    backgroundColor: "rgba(45, 106, 79, 0.75)",
+    paddingHorizontal: moderateScale(6),
+    paddingVertical: verticalScale(1.5),
+    borderRadius: 4,
+  },
+  purposePillText: {
     fontFamily: ChickFont.sans,
-    color: "rgba(255, 255, 255, 0.88)",
-    fontSize: responsiveFontSize(12),
-    lineHeight: 16,
+    fontSize: responsiveFontSize(8.5),
+    fontWeight: "700",
+    color: "#E2FBE8",
+    textTransform: "uppercase",
+  },
+  featureTraitsLine: {
+    fontFamily: ChickFont.sans,
+    color: "#D1E7DD",
+    fontSize: responsiveFontSize(10),
+    fontWeight: "600",
+  },
+  triviaBox: {
+    backgroundColor: "rgba(0, 0, 0, 0.35)",
+    borderRadius: 6,
+    paddingHorizontal: moderateScale(6),
+    paddingVertical: verticalScale(3),
+    marginTop: 1,
+  },
+  triviaText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(9.5),
+    color: "rgba(255, 255, 255, 0.92)",
+    lineHeight: 13,
+    fontStyle: "italic",
+  },
+  tapHintRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: 2,
+    marginTop: 1,
+  },
+  tapHintText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(8.5),
+    color: "rgba(255, 255, 255, 0.75)",
     fontWeight: "500",
+  },
+
+  // Breed Guide Modal Styles
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    justifyContent: "flex-end",
+  },
+  breedModalCard: {
+    backgroundColor: "#FDFDFD",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: "86%",
+    overflow: "hidden",
+  },
+  breedModalScrollContent: {
+    paddingBottom: verticalScale(30),
+  },
+  breedModalImageContainer: {
+    height: verticalScale(160),
+    width: "100%",
+    position: "relative",
+  },
+  breedModalImage: {
+    width: "100%",
+    height: "100%",
+  },
+  breedModalCloseBtn: {
+    position: "absolute",
+    top: 14,
+    right: 14,
+    backgroundColor: "rgba(0, 0, 0, 0.55)",
+    borderRadius: 999,
+    padding: 6,
+    zIndex: 10,
+  },
+  breedModalImageOverlay: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: moderateScale(16),
+    paddingVertical: verticalScale(10),
+    backgroundColor: "rgba(10, 20, 14, 0.65)",
+  },
+  breedModalTitle: {
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(20),
+    fontWeight: "800",
+    color: "#FFFFFF",
+  },
+  breedModalSubtitle: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12),
+    color: "#A7F3D0",
+    fontWeight: "600",
+  },
+  censusBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#EBF5F0",
+    marginHorizontal: moderateScale(16),
+    marginTop: verticalScale(14),
+    paddingHorizontal: moderateScale(14),
+    paddingVertical: verticalScale(10),
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(45, 106, 79, 0.2)",
+    gap: 12,
+  },
+  censusIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#D1E7DD",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  censusTextWrap: {
+    flex: 1,
+  },
+  censusHeading: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(11),
+    color: "#2D6A4F",
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  censusValue: {
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(14),
+    color: "#1B4332",
+    fontWeight: "700",
+  },
+  modalSectionTitle: {
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(14),
+    fontWeight: "700",
+    color: ChickIntelPalette.gray1,
+    marginHorizontal: moderateScale(16),
+    marginTop: verticalScale(14),
+    marginBottom: verticalScale(6),
+  },
+  specsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginHorizontal: moderateScale(16),
+    gap: 8,
+  },
+  specBox: {
+    width: "48%",
+    backgroundColor: "#F7F9F8",
+    paddingHorizontal: moderateScale(10),
+    paddingVertical: verticalScale(8),
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.06)",
+    gap: 2,
+  },
+  specBoxLabel: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(10),
+    color: "#666",
+    fontWeight: "500",
+  },
+  specBoxValue: {
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(12),
+    color: ChickIntelPalette.gray1,
+    fontWeight: "700",
+  },
+  triviaSection: {
+    marginHorizontal: moderateScale(16),
+    marginTop: verticalScale(12),
+    backgroundColor: "#FFFBEB",
+    borderRadius: 10,
+    padding: moderateScale(12),
+    borderWidth: 1,
+    borderColor: "#FDE68A",
+  },
+  triviaHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 4,
+  },
+  triviaSectionTitle: {
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(12),
+    fontWeight: "700",
+    color: "#92400E",
+  },
+  triviaSectionContent: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(11),
+    color: "#78350F",
+    lineHeight: 16,
+  },
+  infoCard: {
+    marginHorizontal: moderateScale(16),
+    marginTop: verticalScale(10),
+    backgroundColor: "#F4F9F6",
+    borderRadius: 10,
+    padding: moderateScale(12),
+    borderWidth: 1,
+    borderColor: "#D1E7DD",
+  },
+  infoHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 4,
+  },
+  infoCardTitle: {
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(12),
+    fontWeight: "700",
+    color: "#1B4332",
+  },
+  infoCardBody: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(11),
+    color: "#2D6A4F",
+    lineHeight: 16,
+  },
+  healthWatchCard: {
+    marginHorizontal: moderateScale(16),
+    marginTop: verticalScale(10),
+    backgroundColor: "#FEF2F2",
+    borderRadius: 10,
+    padding: moderateScale(12),
+    borderWidth: 1,
+    borderColor: "#FECACA",
+  },
+  healthWatchTitle: {
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(12),
+    fontWeight: "700",
+    color: "#991B1B",
+  },
+  healthWatchBody: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(11),
+    color: "#7F1D1D",
+    lineHeight: 16,
+  },
+  modalActionsRow: {
+    flexDirection: "row",
+    marginHorizontal: moderateScale(16),
+    marginTop: verticalScale(16),
+    gap: 10,
+  },
+  modalScannerBtn: {
+    flex: 1.2,
+    backgroundColor: "#2D6A4F",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: verticalScale(12),
+    borderRadius: 12,
+    gap: 6,
+  },
+  modalScannerBtnText: {
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(13),
+    fontWeight: "700",
+    color: "#FFF",
+  },
+  modalBatchesBtn: {
+    flex: 1,
+    backgroundColor: "#E8F3EE",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: verticalScale(12),
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#2D6A4F",
+    gap: 6,
+  },
+  modalBatchesBtnText: {
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(13),
+    fontWeight: "700",
+    color: "#2D6A4F",
   },
   periodModalBackdrop: {
     flex: 1,

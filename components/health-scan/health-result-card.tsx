@@ -140,14 +140,7 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: 10,
     overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.18)",
     backgroundColor: "rgba(255, 255, 255, 0.95)",
-    shadowColor: "#317667",
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    shadowOffset: { width: scale(0), height: verticalScale(4) },
-    elevation: 3,
     position: "relative",
   },
   inner: {

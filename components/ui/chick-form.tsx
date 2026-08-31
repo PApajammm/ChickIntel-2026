@@ -73,7 +73,7 @@ export function ChickTextInput({
 }
 
 type ChickSelectRowProps = {
-  label: string;
+  label?: string;
   value: string;
   placeholder?: string;
   onPress: () => void;
@@ -99,7 +99,9 @@ export function ChickSelectRow({
 
   return (
     <View style={[styles.field, style]}>
-      <Text style={[ChickForm.label, labelStyle]}>{label}</Text>
+      {label ? (
+        <Text style={[ChickForm.label, labelStyle]}>{label}</Text>
+      ) : null}
       <Pressable
         onPress={onPress}
         style={({ pressed }) => [
