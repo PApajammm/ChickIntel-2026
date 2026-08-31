@@ -894,14 +894,18 @@ function SegmentedPills<T extends string>({
   selected,
   onSelect,
   icons,
+  containerStyle,
+  itemStyle,
 }: {
   options: T[];
   selected: T;
   onSelect: (opt: T) => void;
   icons?: Record<string, keyof typeof MaterialCommunityIcons.glyphMap>;
+  containerStyle?: any;
+  itemStyle?: any;
 }) {
   return (
-    <View style={styles.segmentedContainer}>
+    <View style={[styles.segmentedContainer, containerStyle]}>
       {options.map((opt) => {
         const active = opt === selected;
         const iconName = icons?.[opt];
@@ -910,12 +914,16 @@ function SegmentedPills<T extends string>({
             key={opt}
             onPress={() => onSelect(opt)}
             activeOpacity={0.8}
-            style={[styles.segmentedItem, active && styles.segmentedItemActive]}
+            style={[
+              styles.segmentedItem,
+              itemStyle,
+              active && styles.segmentedItemActive,
+            ]}
           >
             {iconName && (
               <MaterialCommunityIcons
                 name={iconName}
-                size={14}
+                size={13}
                 color={active ? "#FFF" : "#4A5452"}
               />
             )}
@@ -924,6 +932,7 @@ function SegmentedPills<T extends string>({
                 styles.segmentedText,
                 active && styles.segmentedTextActive,
               ]}
+              numberOfLines={1}
             >
               {opt}
             </Text>
@@ -1330,11 +1339,13 @@ export default function ReportsScreen() {
 
           {/* Timeframe Filter Bar */}
           <View style={styles.timeframeBarContainer}>
-            <Text style={styles.timeframeLabel}>Timeframe Filter:</Text>
+            <Text style={styles.timeframeLabel}>Timeframe:</Text>
             <SegmentedPills
               options={OVERVIEW_OPTIONS}
               selected={overview}
               onSelect={(val) => setOverview(val)}
+              containerStyle={styles.timeframePillsContainer}
+              itemStyle={styles.timeframePillItem}
               icons={{
                 Weekly: "calendar-week",
                 Monthly: "calendar-month",
@@ -1412,12 +1423,12 @@ export default function ReportsScreen() {
                   color={ChickIntelPalette.green1}
                 />
               </View>
-              <Text style={styles.kpiLabel}>Supply Usage</Text>
+              <Text style={styles.kpiLabel}>Consumed Supply</Text>
               <Text style={styles.kpiValue}>
                 {displayedSupplyTotal.toLocaleString()}
               </Text>
               <Text style={styles.kpiSubtext}>
-                {supplyType} items
+                {supplyType} units consumed
               </Text>
             </View>
           </View>
@@ -1617,17 +1628,28 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     backgroundColor: "rgba(255, 255, 255, 0.85)",
     borderRadius: 14,
-    paddingHorizontal: moderateScale(12),
-    paddingVertical: verticalScale(8),
-    gap: 8,
+    paddingHorizontal: moderateScale(10),
+    paddingVertical: verticalScale(6),
+    gap: moderateScale(6),
   },
   timeframeLabel: {
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(11),
+    fontSize: responsiveFontSize(10.5),
     fontWeight: "700",
     color: ChickIntelPalette.gray1,
     textTransform: "uppercase",
-    letterSpacing: 0.4,
+    letterSpacing: 0.3,
+  },
+  timeframePillsContainer: {
+    flex: 1,
+    justifyContent: "space-between",
+  },
+  timeframePillItem: {
+    flex: 1,
+    justifyContent: "center",
+    paddingHorizontal: moderateScale(4),
+    paddingVertical: verticalScale(5),
+    gap: 3,
   },
   segmentedContainer: {
     flexDirection: "row",
@@ -1639,8 +1661,9 @@ const styles = StyleSheet.create({
   segmentedItem: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: 4,
-    paddingHorizontal: moderateScale(10),
+    paddingHorizontal: moderateScale(8),
     paddingVertical: verticalScale(6),
     borderRadius: 8,
   },
@@ -1649,7 +1672,7 @@ const styles = StyleSheet.create({
   },
   segmentedText: {
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(11),
+    fontSize: responsiveFontSize(10.5),
     fontWeight: "600",
     color: ChickIntelPalette.gray1,
   },

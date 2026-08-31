@@ -1,5 +1,14 @@
 import { supabase } from "@/lib/supabase";
 import { getEggMetricWindow } from "@/utils/egg-metric-windows";
+import { isTaskLinkedToInventoryItem } from "@/utils/stock-alerts";
+import {
+  fetchScheduleTaskCompletions,
+  fetchScheduleTasks,
+  formatScheduleDateKey,
+  scheduleTaskMatchesDate,
+  type SupabaseScheduleTask,
+  type SupabaseScheduleTaskCompletion,
+} from "@/utils/supabase-schedule";
 
 export type ReportOverview = "Weekly" | "Monthly" | "Annually";
 export type ReportProductionType = "Eggs" | "Chickens";
@@ -70,9 +79,12 @@ type BatchReportRow = {
 };
 
 type InventoryReportRow = {
+  id: string;
   item_type: string;
   item_name?: string | null;
   qty: number;
+  purchased_date?: string | null;
+  delivered_date?: string | null;
   created_at: string;
 };
 
@@ -366,7 +378,10 @@ function isVitaminOrMedInventory(itemType: string) {
   return (
     normalized.includes("vitamin") ||
     normalized.includes("med") ||
-    normalized.includes("medicine")
+    normalized.includes("medicine") ||
+    normalized.includes("vaccin") ||
+    normalized.includes("antibiotic") ||
+    normalized.includes("supplement")
   );
 }
 
@@ -405,35 +420,133 @@ function buildTimeBuckets(overview: ReportOverview, now: Date) {
   });
 }
 
+type ConsumedItemRecord = {
+  itemId: string;
+  name: string;
+  type: string;
+  amount: number;
+  dateKey: string;
+  date: Date;
+};
+
 function buildSupplySnapshot(
-  rows: InventoryReportRow[],
+  inventoryRows: InventoryReportRow[],
+  tasks: SupabaseScheduleTask[],
+  completions: SupabaseScheduleTaskCompletion[],
   overview: ReportOverview,
   supplyType: ReportSupplyType,
+  windowStart: Date,
   now: Date,
 ) {
-  const filteredRows = rows.filter((row) =>
-    supplyType === "Feeds"
-      ? isFeedInventory(row.item_type)
-      : isVitaminOrMedInventory(row.item_type),
-  );
+  const isTargetSupply = supplyType === "Feeds" ? isFeedInventory : isVitaminOrMedInventory;
+
+  // Filter inventory items matching the supply type
+  const targetInventory = inventoryRows.filter((row) => isTargetSupply(row.item_type));
+
+  // Map completions to fast lookup: taskId -> Set of completed occurrence dates
+  const completionsByTaskId = new Map<string, Set<string>>();
+  completions.forEach((c) => {
+    const set = completionsByTaskId.get(c.taskId) ?? new Set<string>();
+    set.add(c.completionDate);
+    completionsByTaskId.set(c.taskId, set);
+  });
+
+  const consumptionRecords: ConsumedItemRecord[] = [];
+
+  // 1. Calculate consumption from completed tasks linked to inventory items
+  targetInventory.forEach((item) => {
+    const linkedTasks = tasks.filter(
+      (task) =>
+        isTaskLinkedToInventoryItem(task, { id: item.id, name: item.item_name || "", type: item.item_type }) &&
+        (task.feedDailyAmount ?? 0) > 0,
+    );
+
+    const itemStartDate = new Date(
+      item.delivered_date || item.purchased_date || item.created_at,
+    );
+    itemStartDate.setHours(0, 0, 0, 0);
+
+    linkedTasks.forEach((task) => {
+      const taskAmount = Number(task.feedDailyAmount ?? 0);
+      if (taskAmount <= 0) return;
+
+      const completedDates = completionsByTaskId.get(task.id);
+      if (!completedDates || completedDates.size === 0) return;
+
+      // Check occurrences within the active report timeframe window
+      const cursor = new Date(Math.max(itemStartDate.getTime(), windowStart.getTime()));
+      cursor.setHours(0, 0, 0, 0);
+
+      while (cursor.getTime() <= now.getTime()) {
+        const dateKey = formatScheduleDateKey(cursor);
+        if (completedDates.has(dateKey) && scheduleTaskMatchesDate(task, cursor)) {
+          consumptionRecords.push({
+            itemId: item.id,
+            name: item.item_name || item.item_type || "Supply Item",
+            type: item.item_type,
+            amount: taskAmount,
+            dateKey: dateKey,
+            date: new Date(cursor),
+          });
+        }
+        cursor.setDate(cursor.getDate() + 1);
+      }
+    });
+  });
+
+  // 2. Also check completed tasks that have feedDailyAmount and matching category even if not tied to a specific inventory ID
+  tasks.forEach((task) => {
+    const taskAmount = Number(task.feedDailyAmount ?? 0);
+    if (taskAmount <= 0) return;
+
+    const taskCategoryOrName = `${task.category || ""} ${task.feedInventoryItemName || ""} ${task.title || ""}`;
+    const matchesCategory = isTargetSupply(taskCategoryOrName);
+    if (!matchesCategory) return;
+
+    // Avoid double counting if already linked to a known target inventory item
+    const alreadyLinked = targetInventory.some((item) =>
+      isTaskLinkedToInventoryItem(task, { id: item.id, name: item.item_name || "", type: item.item_type }),
+    );
+    if (alreadyLinked) return;
+
+    const completedDates = completionsByTaskId.get(task.id);
+    if (!completedDates || completedDates.size === 0) return;
+
+    const cursor = new Date(windowStart);
+    cursor.setHours(0, 0, 0, 0);
+
+    while (cursor.getTime() <= now.getTime()) {
+      const dateKey = formatScheduleDateKey(cursor);
+      if (completedDates.has(dateKey) && scheduleTaskMatchesDate(task, cursor)) {
+        consumptionRecords.push({
+          itemId: task.id,
+          name: task.feedInventoryItemName || task.title,
+          type: supplyType === "Feeds" ? "Feeds" : "Vitamins & Meds",
+          amount: taskAmount,
+          dateKey: dateKey,
+          date: new Date(cursor),
+        });
+      }
+      cursor.setDate(cursor.getDate() + 1);
+    }
+  });
+
+  // Build time buckets for the trend bar chart
   const buckets = buildTimeBuckets(overview, now);
   const bucketIndex = new Map(
     buckets.map((bucket, index) => [bucket.key, index]),
   );
 
-  filteredRows.forEach((row) => {
-    const createdAt = new Date(row.created_at);
+  consumptionRecords.forEach((record) => {
     const key =
       overview === "Annually"
-        ? `${createdAt.getFullYear()}-${createdAt.getMonth() + 1}`
-        : localDateKey(createdAt);
+        ? `${record.date.getFullYear()}-${record.date.getMonth() + 1}`
+        : record.dateKey;
     const index = bucketIndex.get(key);
 
-    if (index === undefined) {
-      return;
+    if (index !== undefined) {
+      buckets[index].total += record.amount;
     }
-
-    buckets[index].total += Number(row.qty);
   });
 
   const highestValue = buckets.reduce(
@@ -448,12 +561,12 @@ function buildSupplySnapshot(
     highlight: bucket.total === highestValue && highestValue > 0,
   }));
 
-  const total = bars.reduce((sum, bar) => sum + bar.value, 0);
+  const totalConsumed = bars.reduce((sum, bar) => sum + bar.value, 0);
   const peakBar = bars.find((bar) => bar.highlight);
   const analyticsText =
-    total === 0
-      ? `No ${supplyType.toLowerCase()} inventory additions were recorded for ${formatOverviewWindow(overview)}.`
-      : `${supplyType} inventory additions totaled ${total.toFixed(2)} units for ${formatOverviewWindow(overview)}. The highest recorded day or month was ${peakBar?.label ?? "N/A"} at ${peakBar?.value.toFixed(2) ?? "0.00"} units.`;
+    totalConsumed === 0
+      ? `No ${supplyType.toLowerCase()} consumption was recorded from schedule tasks for ${formatOverviewWindow(overview)}.`
+      : `${supplyType} consumption totaled ${totalConsumed.toFixed(2)} units across completed schedule tasks for ${formatOverviewWindow(overview)}. Peak usage period was ${peakBar?.label ?? "N/A"} with ${peakBar?.value.toFixed(2) ?? "0.00"} units consumed.`;
 
   let slices: ReportDonutSlice[] | undefined;
   let totalSlices: number | undefined;
@@ -463,11 +576,11 @@ function buildSupplySnapshot(
     let medsCount = 0;
     let vaccinesCount = 0;
 
-    filteredRows.forEach((row) => {
-      const typeStr = (row.item_type ?? "").toLowerCase();
-      const nameStr = (row.item_name ?? "").toLowerCase();
+    consumptionRecords.forEach((record) => {
+      const typeStr = (record.type ?? "").toLowerCase();
+      const nameStr = (record.name ?? "").toLowerCase();
       const combined = `${typeStr} ${nameStr}`;
-      const qty = Number(row.qty ?? 0);
+      const qty = Number(record.amount ?? 0);
 
       if (
         combined.includes("vitamin") ||
@@ -497,19 +610,19 @@ function buildSupplySnapshot(
     slices = [
       {
         label: "vitamins & supplements",
-        count: vitaminsCount,
+        count: Number(vitaminsCount.toFixed(2)),
         color: DONUT_COLORS[0],
         displayPercent: toDisplayPercent(vitaminsCount, totalSlices),
       },
       {
         label: "medications & treatments",
-        count: medsCount,
+        count: Number(medsCount.toFixed(2)),
         color: DONUT_COLORS[1],
         displayPercent: toDisplayPercent(medsCount, totalSlices),
       },
       {
         label: "vaccines & prevention",
-        count: vaccinesCount,
+        count: Number(vaccinesCount.toFixed(2)),
         color: DONUT_COLORS[2],
         displayPercent: toDisplayPercent(vaccinesCount, totalSlices),
       },
@@ -517,17 +630,17 @@ function buildSupplySnapshot(
   } else if (supplyType === "Feeds") {
     const feedTotals = new Map<string, number>();
 
-    filteredRows.forEach((row) => {
-      const label = row.item_name?.trim() || row.item_type.trim() || "Unnamed feed";
-      feedTotals.set(label, (feedTotals.get(label) ?? 0) + Number(row.qty ?? 0));
+    consumptionRecords.forEach((record) => {
+      const label = record.name?.trim() || "Feed Supply";
+      feedTotals.set(label, (feedTotals.get(label) ?? 0) + Number(record.amount ?? 0));
     });
 
     const rankedFeeds = [...feedTotals.entries()]
       .sort(([, leftTotal], [, rightTotal]) => rightTotal - leftTotal)
       .slice(0, 5);
     const displayedTotal = rankedFeeds.reduce((sum, [, count]) => sum + count, 0);
-    const allFeedsTotal = filteredRows.reduce(
-      (sum, row) => sum + Number(row.qty ?? 0),
+    const allFeedsTotal = consumptionRecords.reduce(
+      (sum, r) => sum + Number(r.amount ?? 0),
       0,
     );
     const remainder = allFeedsTotal - displayedTotal;
@@ -535,13 +648,13 @@ function buildSupplySnapshot(
     slices = rankedFeeds.length
       ? rankedFeeds.map(([label, count], index) => ({
           label,
-          count,
+          count: Number(count.toFixed(2)),
           color: DONUT_COLORS[index % DONUT_COLORS.length],
           displayPercent: toDisplayPercent(count, allFeedsTotal),
         }))
       : [
           {
-            label: "No feed records",
+            label: "No feed consumption",
             count: 0,
             color: DONUT_COLORS[0],
             displayPercent: "0%",
@@ -551,17 +664,17 @@ function buildSupplySnapshot(
     if (remainder > 0) {
       slices.push({
         label: "Other feeds",
-        count: remainder,
+        count: Number(remainder.toFixed(2)),
         color: DONUT_COLORS[slices.length % DONUT_COLORS.length],
         displayPercent: toDisplayPercent(remainder, allFeedsTotal),
       });
     }
 
-    totalSlices = allFeedsTotal;
+    totalSlices = Number(allFeedsTotal.toFixed(2));
   }
 
   return {
-    title: `${supplyType} Inventory Activity`,
+    title: `${supplyType} Consumption Activity`,
     bars,
     maxY: toNiceAxisMax(highestValue),
     slices,
@@ -577,15 +690,18 @@ export async function fetchFarmReportSnapshot(input: {
   supplyType: ReportSupplyType;
 }) {
   const now = new Date();
-  const reportStart = getProductionWindowStart(
+  const windowStart = getProductionWindowStart(
     input.overview,
     now,
-  ).toISOString();
+  );
+  const reportStart = windowStart.toISOString();
 
   const [
     { data: eggRows, error: eggError },
     { data: batchRows, error: batchError },
     { data: inventoryRows, error: inventoryError },
+    tasks,
+    completions,
     { data: deceasedRows },
   ] = await Promise.all([
     supabase
@@ -603,9 +719,10 @@ export async function fetchFarmReportSnapshot(input: {
       .eq("farm_id", input.farmId),
     supabase
       .from("inventory_items")
-      .select("item_type, item_name, qty, created_at")
-      .eq("farm_id", input.farmId)
-      .gte("created_at", reportStart),
+      .select("id, item_type, item_name, qty, purchased_date, delivered_date, created_at")
+      .eq("farm_id", input.farmId),
+    fetchScheduleTasks(input.farmId).catch(() => [] as SupabaseScheduleTask[]),
+    fetchScheduleTaskCompletions(input.farmId).catch(() => [] as SupabaseScheduleTaskCompletion[]),
     supabase
       .from("health_monitoring")
       .select("batch_no, monitoring_status")
@@ -621,24 +738,25 @@ export async function fetchFarmReportSnapshot(input: {
     input.productionType === "Eggs"
       ? buildEggProductionSnapshot(
           ((eggRows ?? []) as EggBatchReportRow[]).filter((row) =>
-            isWithinWindow(row.created_at, new Date(reportStart), now),
+            isWithinWindow(row.created_at, windowStart, now),
           ),
           input.overview,
         )
       : buildChickenProductionSnapshot(
           ((batchRows ?? []) as BatchReportRow[]).filter((row) =>
-            isWithinWindow(row.created_at, new Date(reportStart), now),
+            isWithinWindow(row.created_at, windowStart, now),
           ),
           input.overview,
           (deceasedRows ?? []) as { batch_no?: string | null }[],
         );
 
   const supply = buildSupplySnapshot(
-    ((inventoryRows ?? []) as InventoryReportRow[]).filter((row) =>
-      isWithinWindow(row.created_at, new Date(reportStart), now),
-    ),
+    (inventoryRows ?? []) as InventoryReportRow[],
+    tasks,
+    completions,
     input.overview,
     input.supplyType,
+    windowStart,
     now,
   );
 
