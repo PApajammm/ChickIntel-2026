@@ -4,26 +4,26 @@ import { useCameraPermissions } from "expo-camera";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import {
-    useCallback,
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
-    type ComponentType,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentType,
 } from "react";
 import {
-    Alert,
-    Animated,
-    Easing,
-    Modal,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    useWindowDimensions,
-    View,
+  Alert,
+  Animated,
+  Easing,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -46,23 +46,23 @@ import { getFarmColors } from "@/constants/farm-theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuth } from "@/providers/auth-provider";
 import {
-    fetchHomeKpiSnapshot,
-    formatBirdAdditionTrend,
-    formatConsumptionTrend,
-    formatKpiTrend,
-    type HomeKpiPeriod,
+  fetchHomeKpiSnapshot,
+  formatBirdAdditionTrend,
+  formatConsumptionTrend,
+  formatKpiTrend,
+  type HomeKpiPeriod,
 } from "@/utils/home-kpis";
 import { logError, logStep } from "@/utils/logger";
 import {
-    getFeaturedBreedCards,
-    type FeaturedBreedCard,
+  getFeaturedBreedCards,
+  type FeaturedBreedCard,
 } from "@/utils/recent-breed-scans";
 import {
-    moderateScale,
-    responsiveFontSize,
-    scale,
-    useResponsiveMetrics,
-    verticalScale,
+  moderateScale,
+  responsiveFontSize,
+  scale,
+  useResponsiveMetrics,
+  verticalScale,
 } from "@/utils/responsive";
 import { fetchFarmBatches } from "@/utils/supabase-batches";
 
