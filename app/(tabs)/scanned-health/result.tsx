@@ -535,8 +535,8 @@ export default function ScannedHealthResultScreen() {
             <View style={styles.titleWrap}>
               <Text style={styles.pageTitle}>
                 {isMonitoringRescan
-                  ? "Update Health Scan"
-                  : "Scanned Health Result"}
+                  ? "Update Behavior Check"
+                  : "Behavior Check Result"}
               </Text>
             </View>
           </View>
@@ -544,8 +544,8 @@ export default function ScannedHealthResultScreen() {
             {isAnalyzingImage
               ? "Analyzing the captured image before finalizing the report."
               : isMonitoringRescan
-                ? `This update will be added to ${chtTag || "this chicken"}'s record. Previous scans are kept.`
-                : "Saved behaviors and outcome summary in one clear report."}
+                ? `This update will be added to ${chtTag || "this chicken"}'s record. Previous notes are kept.`
+                : "Behavior cues, health context, and notes in one clear journal entry."}
           </Text>
         </View>
 
@@ -622,10 +622,13 @@ export default function ScannedHealthResultScreen() {
                       color="#FFFFFF"
                     />
                   </View>
-                  <Text style={styles.modalHeaderTitle}>Health Log Saved</Text>
+                  <Text style={styles.modalHeaderTitle}>
+                    Behavior Check Saved
+                  </Text>
                 </View>
                 <Text style={styles.modalHeaderSubtitle}>
-                  The report has been safely added to your Behavior Journal.
+                  The chicken behavior note has been saved to your Behavior
+                  Journal.
                 </Text>
               </View>
 

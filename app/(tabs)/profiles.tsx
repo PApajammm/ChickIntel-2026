@@ -1,8 +1,8 @@
 import {
-  moderateScale,
-  responsiveFontSize,
-  scale,
-  verticalScale,
+    moderateScale,
+    responsiveFontSize,
+    scale,
+    verticalScale,
 } from "@/utils/responsive";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
@@ -10,21 +10,20 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  Alert,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Alert,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
 } from "react-native";
 import {
-  SafeAreaView,
-  useSafeAreaInsets,
+    SafeAreaView,
+    useSafeAreaInsets,
 } from "react-native-safe-area-context";
 
 import BackgroundGradient from "@/assets_imported/background-gradient.svg";
@@ -36,19 +35,19 @@ import { getFarmColors } from "@/constants/farm-theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuth } from "@/providers/auth-provider";
 import {
-  type BatchItem,
-  type EggBatchItem,
-  formatEggFertilityPercent,
+    type BatchItem,
+    type EggBatchItem,
+    formatEggFertilityPercent,
 } from "@/utils/batch-store";
 import { logError, logStep } from "@/utils/logger";
 import {
-  deleteFarmBatch,
-  fetchFarmBatches,
-  updateFarmBatch,
+    deleteFarmBatch,
+    fetchFarmBatches,
+    updateFarmBatch,
 } from "@/utils/supabase-batches";
 import {
-  fetchFarmEggBatches,
-  updateFarmEggBatch,
+    fetchFarmEggBatches,
+    updateFarmEggBatch,
 } from "@/utils/supabase-egg-batches";
 
 const TAB_BAR_OFFSET = 55;
@@ -452,29 +451,33 @@ export default function ProfilesScreen() {
       <View style={styles.fixedHeader}>
         <View style={styles.pageHeaderRow}>
           <View style={styles.headerLeftRow}>
-            <TouchableOpacity
-              style={styles.backButton}
+            <Pressable
+              style={({ pressed }) => [
+                styles.backButton,
+                { opacity: pressed ? 0.75 : 1 },
+              ]}
               onPress={() =>
                 router.canGoBack() ? router.back() : router.replace("/(tabs)")
               }
-              activeOpacity={0.8}
               accessibilityRole="button"
               accessibilityLabel="Go back"
             >
               <MaterialCommunityIcons
                 name="arrow-left"
-                size={22}
-                color="#FFF"
+                size={20}
+                color={ChickIntelPalette.gray1}
               />
-            </TouchableOpacity>
+            </Pressable>
 
             <Text style={[styles.pageTitle, { color: colors.text }]}>
-              {mode === "chicken" ? "Batch Profile (chicken)" : "Batch Profile (eggs)"}
+              {mode === "chicken"
+                ? "Batch Profile (chicken)"
+                : "Batch Profile (eggs)"}
             </Text>
           </View>
 
           {mode === "egg" ? (
-            <TouchableOpacity
+            <Pressable
               onPress={() =>
                 router.push({
                   pathname: "/(tabs)/egg-fertility-report" as any,
@@ -482,16 +485,15 @@ export default function ProfilesScreen() {
                 })
               }
               style={styles.eggAnalyticsIconButton}
-              activeOpacity={0.8}
               accessibilityRole="button"
               accessibilityLabel="Open egg fertility report"
             >
               <MaterialCommunityIcons
                 name="chart-donut"
-                size={22}
-                color="#FFF"
+                size={18}
+                color={ChickIntelPalette.gray1}
               />
-            </TouchableOpacity>
+            </Pressable>
           ) : null}
         </View>
         <View style={styles.segmentStickyHeader}>
@@ -505,11 +507,6 @@ export default function ProfilesScreen() {
                   : styles.segmentInactive,
               ]}
             >
-              <MaterialCommunityIcons
-                name="bird"
-                size={16}
-                color={mode === "chicken" ? "#FFFFFF" : "#4A5452"}
-              />
               <Text
                 style={[
                   styles.segmentText,
@@ -528,11 +525,6 @@ export default function ProfilesScreen() {
                 mode === "egg" ? styles.segmentActive : styles.segmentInactive,
               ]}
             >
-              <MaterialCommunityIcons
-                name="egg-outline"
-                size={16}
-                color={mode === "egg" ? "#FFFFFF" : "#4A5452"}
-              />
               <Text
                 style={[
                   styles.segmentText,
@@ -578,7 +570,7 @@ export default function ProfilesScreen() {
               <BlurCard
                 key={item.id}
                 style={styles.card}
-                borderRadius={10}
+                borderRadius={16}
                 intensity={20}
               >
                 <View style={styles.cardMainContainer}>
@@ -665,8 +657,8 @@ export default function ProfilesScreen() {
                       <View style={styles.metricChipHeader}>
                         <MaterialCommunityIcons
                           name="gender-female"
-                          size={12}
-                          color="#8E9494"
+                          size={13}
+                          color="#111111"
                         />
                         <Text style={styles.metricChipLabel}>Females</Text>
                       </View>
@@ -679,8 +671,8 @@ export default function ProfilesScreen() {
                       <View style={styles.metricChipHeader}>
                         <MaterialCommunityIcons
                           name="gender-male"
-                          size={12}
-                          color="#8E9494"
+                          size={13}
+                          color="#111111"
                         />
                         <Text style={styles.metricChipLabel}>Males</Text>
                       </View>
@@ -693,8 +685,8 @@ export default function ProfilesScreen() {
                       <View style={styles.metricChipHeader}>
                         <MaterialCommunityIcons
                           name="calendar-clock"
-                          size={12}
-                          color="#8E9494"
+                          size={13}
+                          color="#111111"
                         />
                         <Text style={styles.metricChipLabel}>Age</Text>
                       </View>
@@ -707,8 +699,8 @@ export default function ProfilesScreen() {
                       <View style={styles.metricChipHeader}>
                         <MaterialCommunityIcons
                           name="shield-alert-outline"
-                          size={12}
-                          color="#8E9494"
+                          size={13}
+                          color="#111111"
                         />
                         <Text style={styles.metricChipLabel}>Isolation</Text>
                       </View>
@@ -721,8 +713,8 @@ export default function ProfilesScreen() {
                       <View style={styles.metricChipHeader}>
                         <MaterialCommunityIcons
                           name="heart-broken-outline"
-                          size={12}
-                          color="#8E9494"
+                          size={13}
+                          color="#111111"
                         />
                         <Text style={styles.metricChipLabel}>Loss</Text>
                       </View>
@@ -757,7 +749,7 @@ export default function ProfilesScreen() {
               <BlurCard
                 key={item.id}
                 style={styles.card}
-                borderRadius={10}
+                borderRadius={16}
                 intensity={20}
               >
                 <Pressable
@@ -814,8 +806,8 @@ export default function ProfilesScreen() {
                       <View style={styles.metricChipHeader}>
                         <MaterialCommunityIcons
                           name="layers-outline"
-                          size={12}
-                          color="#8E9494"
+                          size={14}
+                          color="#111111"
                         />
                         <Text style={styles.metricChipLabel}>
                           Total Batches
@@ -828,8 +820,8 @@ export default function ProfilesScreen() {
                       <View style={styles.metricChipHeader}>
                         <MaterialCommunityIcons
                           name="star-outline"
-                          size={12}
-                          color="#8E9494"
+                          size={14}
+                          color="#111111"
                         />
                         <Text style={styles.metricChipLabel}>
                           Fertility Rate
@@ -1230,35 +1222,35 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
     paddingVertical: 6,
   },
+  eggAnalyticsIconButton: {
+    width: scale(36),
+    height: verticalScale(36),
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(49,118,103,0.18)",
+    backgroundColor: "rgba(255,255,255,0.58)",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
   segmentWrap: {
     flexDirection: "row",
-    backgroundColor: "rgba(255, 255, 255, 0.85)",
-    borderRadius: 10,
-    padding: 4,
-    gap: 4,
+    padding: 3,
+    borderRadius: 12,
+    backgroundColor: "rgba(255, 255, 255, 0.18)",
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.16)",
-    shadowColor: "#317667",
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
+    borderColor: "rgba(67, 139, 123, 0.16)",
   },
   segment: {
     flex: 1,
-    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    minHeight: verticalScale(38),
-    borderRadius: 10,
-    paddingHorizontal: moderateScale(10),
-    gap: 6,
+    minHeight: verticalScale(40),
+    borderRadius: 9,
+    paddingHorizontal: moderateScale(8),
   },
   segmentActive: {
-    backgroundColor: ChickIntelPalette.green1,
-    shadowColor: "#317667",
-    shadowOpacity: 0.18,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
+    backgroundColor: "rgba(49, 118, 103, 0.14)",
   },
   segmentInactive: {
     backgroundColor: "transparent",
@@ -1268,13 +1260,12 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(13),
     fontWeight: "700",
     lineHeight: 18,
-    color: "#4A5452",
   },
   segmentTextActive: {
-    color: "#FFFFFF",
+    color: ChickIntelPalette.green1,
   },
   segmentTextInactive: {
-    color: "#4A5452",
+    color: "rgba(51, 51, 51, 0.58)",
   },
   list: {
     gap: 10,
@@ -1293,8 +1284,14 @@ const styles = StyleSheet.create({
     paddingRight: 16,
     paddingTop: 14,
     paddingBottom: 14,
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.18)",
     backgroundColor: "rgba(255, 255, 255, 0.94)",
-    borderRadius: 10,
+    shadowColor: "#317667",
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: scale(0), height: verticalScale(4) },
+    elevation: 3,
     overflow: "hidden",
   },
   statusAccentBar: {
@@ -1311,7 +1308,7 @@ const styles = StyleSheet.create({
   cardHeaderRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-start",
+    alignItems: "center",
     gap: 8,
   },
   headerLeftStack: {
@@ -1350,7 +1347,6 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(11),
     lineHeight: 16,
     color: "rgba(51, 51, 51, 0.58)",
-    paddingBottom: verticalScale(15),
   },
   headerRightActions: {
     flexDirection: "row",
@@ -1390,35 +1386,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   backButton: {
-    width: scale(42),
-    height: verticalScale(42),
-    borderRadius: 14,
-    backgroundColor: ChickIntelPalette.green1,
-    justifyContent: "center",
+    width: scale(40),
+    height: verticalScale(40),
+    borderRadius: 10,
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.25)",
-    shadowColor: "#317667",
-    shadowOpacity: 0.22,
-    shadowRadius: 10,
-    shadowOffset: { width: scale(0), height: verticalScale(4) },
-    elevation: 4,
-    flexShrink: 0,
-  },
-  eggAnalyticsIconButton: {
-    width: scale(42),
-    height: verticalScale(42),
-    borderRadius: 14,
-    backgroundColor: ChickIntelPalette.green1,
     justifyContent: "center",
-    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.6)",
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.25)",
-    shadowColor: "#317667",
-    shadowOpacity: 0.22,
-    shadowRadius: 10,
-    shadowOffset: { width: scale(0), height: verticalScale(4) },
-    elevation: 4,
+    borderColor: "rgba(49,118,103,0.12)",
     flexShrink: 0,
   },
   iconCluster: {
@@ -1465,9 +1440,9 @@ const styles = StyleSheet.create({
   },
   metricChipLabel: {
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(9),
+    fontSize: responsiveFontSize(10),
     fontWeight: "700",
-    color: "#8E9494",
+    color: "#5A6161",
     textTransform: "uppercase",
     letterSpacing: 0.2,
   },
@@ -1476,8 +1451,6 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(14),
     fontWeight: "800",
     color: ChickIntelPalette.gray1,
-    textAlign: "right",
-    paddingRight: moderateScale(10),
   },
   noteSummaryList: {
     marginTop: 6,
@@ -1485,6 +1458,8 @@ const styles = StyleSheet.create({
   },
   noteSummaryCard: {
     borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.16)",
     backgroundColor: "rgba(202, 227, 221, 0.25)",
     paddingHorizontal: moderateScale(10),
     paddingVertical: verticalScale(8),

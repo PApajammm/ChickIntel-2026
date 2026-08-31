@@ -4,26 +4,26 @@ import { useCameraPermissions } from "expo-camera";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ComponentType,
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+    type ComponentType,
 } from "react";
 import {
-  Alert,
-  Animated,
-  Easing,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  useWindowDimensions,
-  View,
+    Alert,
+    Animated,
+    Easing,
+    Modal,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    useWindowDimensions,
+    View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -46,25 +46,25 @@ import { getFarmColors } from "@/constants/farm-theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuth } from "@/providers/auth-provider";
 import {
-  fetchHomeKpiSnapshot,
-  formatBirdAdditionTrend,
-  formatConsumptionTrend,
-  formatKpiTrend,
-  type HomeKpiPeriod,
+    fetchHomeKpiSnapshot,
+    formatBirdAdditionTrend,
+    formatConsumptionTrend,
+    formatKpiTrend,
+    type HomeKpiPeriod,
 } from "@/utils/home-kpis";
 import { logError, logStep } from "@/utils/logger";
 import {
-  getFeaturedBreedCards,
-  type FeaturedBreedCard,
+    getFeaturedBreedCards,
+    type FeaturedBreedCard,
 } from "@/utils/recent-breed-scans";
-import { fetchFarmBatches } from "@/utils/supabase-batches";
 import {
-  moderateScale,
-  responsiveFontSize,
-  scale,
-  useResponsiveMetrics,
-  verticalScale,
+    moderateScale,
+    responsiveFontSize,
+    scale,
+    useResponsiveMetrics,
+    verticalScale,
 } from "@/utils/responsive";
+import { fetchFarmBatches } from "@/utils/supabase-batches";
 
 type KpiCardData = {
   title: string;
@@ -133,9 +133,9 @@ function hexToRgba(hex: string, alpha = 1) {
   const bigint =
     h.length === 3
       ? h
-        .split("")
-        .map((c) => c + c)
-        .join("")
+          .split("")
+          .map((c) => c + c)
+          .join("")
       : h;
 
   const n = parseInt(bigint, 16);
@@ -204,7 +204,7 @@ export default function HomeScreen() {
           useNativeDriver: false,
         }),
       ]),
-      { iterations: 5 }
+      { iterations: 5 },
     ).start();
   }, [roleAnim]);
 
@@ -626,7 +626,7 @@ export default function HomeScreen() {
                   textShadowColor: "rgba(49, 118, 103, 0.5)",
                   textShadowOffset: { width: 0, height: 0 },
                   textShadowRadius: 8,
-                }
+                },
               ]}
             >
               {roleLabel}
@@ -755,13 +755,19 @@ export default function HomeScreen() {
             <Pressable
               style={styles.viewAllBtn}
               onPress={() => setIsQuickActionsExpanded(!isQuickActionsExpanded)}
-              accessibilityLabel={isQuickActionsExpanded ? "View Less" : "View All"}
+              accessibilityLabel={
+                isQuickActionsExpanded ? "View Less" : "View All"
+              }
             >
               <Text style={styles.viewAllText}>
                 {isQuickActionsExpanded ? "View Less" : "View All"}
               </Text>
               <MaterialCommunityIcons
-                name={isQuickActionsExpanded ? "arrow-down-circle-outline" : "arrow-right-circle-outline"}
+                name={
+                  isQuickActionsExpanded
+                    ? "arrow-down-circle-outline"
+                    : "arrow-right-circle-outline"
+                }
                 size={22}
                 color={ChickIntelPalette.green1}
               />
@@ -792,7 +798,10 @@ export default function HomeScreen() {
             pointerEvents="none"
           />
           <View style={styles.quickActionsGrid}>
-            {(isQuickActionsExpanded ? quickActions : quickActions.slice(0, 6)).map((item) => {
+            {(isQuickActionsExpanded
+              ? quickActions
+              : quickActions.slice(0, 6)
+            ).map((item) => {
               const Icon = item.Icon;
               return (
                 <Pressable
@@ -930,96 +939,108 @@ export default function HomeScreen() {
                     accessibilityRole="button"
                     accessibilityLabel={`View ${item.breedName} breed details and farm statistics`}
                   >
-                  <Animated.View
-                    style={[
-                      styles.featureImageShell,
-                      {
-                        transform: [{ scale: imageScale }],
-                      },
-                    ]}
-                  >
-                    <Image
-                      source={item.image}
-                      style={styles.featureImage}
-                      contentFit="cover"
-                    />
-                    <View style={styles.featureOverlayGradient} />
-                  </Animated.View>
-
-                  {/* Top Badges Bar: Live Flock Count (left) & Egg Yield (right) */}
-                  <View style={styles.featureTopRow}>
-                    <View
+                    <Animated.View
                       style={[
-                        styles.flockBadge,
-                        flockCount > 0
-                          ? styles.flockBadgeActive
-                          : styles.flockBadgeEmpty,
+                        styles.featureImageShell,
+                        {
+                          transform: [{ scale: imageScale }],
+                        },
                       ]}
                     >
+                      <Image
+                        source={item.image}
+                        style={styles.featureImage}
+                        contentFit="cover"
+                      />
+                      <View style={styles.featureOverlayGradient} />
+                    </Animated.View>
+
+                    {/* Top Badges Bar: Live Flock Count (left) & Egg Yield (right) */}
+                    <View style={styles.featureTopRow}>
                       <View
                         style={[
-                          styles.flockBadgeDot,
+                          styles.flockBadge,
                           flockCount > 0
-                            ? styles.flockBadgeDotActive
-                            : styles.flockBadgeDotEmpty,
+                            ? styles.flockBadgeActive
+                            : styles.flockBadgeEmpty,
                         ]}
-                      />
-                      <Text style={styles.flockBadgeText}>
-                        {flockCount > 0 ? `${flockCount} in Flock` : "0 in Flock"}
-                      </Text>
-                    </View>
-
-                    {item.eggProduction ? (
-                      <View style={styles.eggYieldBadge}>
-                        <MaterialCommunityIcons
-                          name="egg-outline"
-                          size={11}
-                          color="#FEF08A"
+                      >
+                        <View
+                          style={[
+                            styles.flockBadgeDot,
+                            flockCount > 0
+                              ? styles.flockBadgeDotActive
+                              : styles.flockBadgeDotEmpty,
+                          ]}
                         />
-                        <Text style={styles.eggYieldBadgeText} numberOfLines={1}>
-                          {item.eggProduction}
+                        <Text style={styles.flockBadgeText}>
+                          {flockCount > 0
+                            ? `${flockCount} in Flock`
+                            : "0 in Flock"}
                         </Text>
                       </View>
-                    ) : null}
-                  </View>
 
-                  {/* Bottom Information Card Overlay */}
-                  <Animated.View
-                    style={[styles.featureCopy, { opacity: contentOpacity }]}
-                  >
-                    <View style={styles.featureHeaderRow}>
-                      <Text style={styles.featureTitle} numberOfLines={1}>
-                        {item.breedName}
+                      {item.eggProduction ? (
+                        <View style={styles.eggYieldBadge}>
+                          <MaterialCommunityIcons
+                            name="egg-outline"
+                            size={11}
+                            color="#FEF08A"
+                          />
+                          <Text
+                            style={styles.eggYieldBadgeText}
+                            numberOfLines={1}
+                          >
+                            {item.eggProduction}
+                          </Text>
+                        </View>
+                      ) : null}
+                    </View>
+
+                    {/* Bottom Information Card Overlay */}
+                    <Animated.View
+                      style={[styles.featureCopy, { opacity: contentOpacity }]}
+                    >
+                      <View style={styles.featureHeaderRow}>
+                        <Text style={styles.featureTitle} numberOfLines={1}>
+                          {item.breedName}
+                        </Text>
+                        <View style={styles.purposePill}>
+                          <Text
+                            style={styles.purposePillText}
+                            numberOfLines={1}
+                          >
+                            {item.purpose ||
+                              (item.isDefault ? "Default" : "Scanned")}
+                          </Text>
+                        </View>
+                      </View>
+
+                      <Text style={styles.featureTraitsLine} numberOfLines={1}>
+                        🛡️{" "}
+                        {item.hardiness || item.traits.slice(0, 2).join(" • ")}
                       </Text>
-                      <View style={styles.purposePill}>
-                        <Text style={styles.purposePillText} numberOfLines={1}>
-                          {item.purpose || (item.isDefault ? "Default" : "Scanned")}
+
+                      <View style={styles.triviaBox}>
+                        <Text style={styles.triviaText} numberOfLines={2}>
+                          {item.dailyTrivia || item.detail}
                         </Text>
                       </View>
-                    </View>
 
-                    <Text style={styles.featureTraitsLine} numberOfLines={1}>
-                      🛡️ {item.hardiness || item.traits.slice(0, 2).join(" • ")}
-                    </Text>
-
-                    <View style={styles.triviaBox}>
-                      <Text style={styles.triviaText} numberOfLines={2}>
-                        {item.dailyTrivia || item.detail}
-                      </Text>
-                    </View>
-
-                    <View style={styles.tapHintRow}>
-                      <Text style={styles.tapHintText}>Tap for breed guide & specs</Text>
-                      <MaterialCommunityIcons
-                        name="chevron-right"
-                        size={12}
-                        color="rgba(255, 255, 255, 0.75)"
-                      />
-                    </View>
-                  </Animated.View>
-                </Pressable>
+                      <View style={styles.tapHintRow}>
+                        <Text style={styles.tapHintText}>
+                          Tap for breed guide & specs
+                        </Text>
+                        <MaterialCommunityIcons
+                          name="chevron-right"
+                          size={12}
+                          color="rgba(255, 255, 255, 0.75)"
+                        />
+                      </View>
+                    </Animated.View>
+                  </Pressable>
+                </Animated.View>
               </Animated.View>
-            </Animated.View>
             );
           }}
         />
@@ -1048,6 +1069,9 @@ export default function HomeScreen() {
           >
             <ScrollView
               showsVerticalScrollIndicator={false}
+              stickyHeaderIndices={[0]}
+              nestedScrollEnabled={Platform.OS === "android"}
+              bounces={true}
               contentContainerStyle={styles.breedModalScrollContent}
             >
               {/* Header Image Banner */}
@@ -1088,7 +1112,9 @@ export default function HomeScreen() {
                   />
                 </View>
                 <View style={styles.censusTextWrap}>
-                  <Text style={styles.censusHeading}>Live Farm Flock Count</Text>
+                  <Text style={styles.censusHeading}>
+                    Live Farm Flock Count
+                  </Text>
                   <Text style={styles.censusValue}>
                     {(selectedBreedForModal &&
                       flockCountsByBreed[selectedBreedForModal.breedName]) ||
@@ -1675,6 +1701,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FDFDFD",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
+    height: "86%",
     maxHeight: "86%",
     overflow: "hidden",
   },
@@ -1685,6 +1712,8 @@ const styles = StyleSheet.create({
     height: verticalScale(160),
     width: "100%",
     position: "relative",
+    zIndex: 10,
+    elevation: 10,
   },
   breedModalImage: {
     width: "100%",

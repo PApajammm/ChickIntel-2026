@@ -4,21 +4,23 @@ import {
     scale,
     verticalScale,
 } from "@/utils/responsive";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useMemo, useState } from "react";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
 import {
     KeyboardAvoidingView,
     Platform,
-    Pressable,
     ScrollView,
     StyleSheet,
     Text,
     TouchableOpacity,
-    View,
+    View
 } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+    SafeAreaView,
+    useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
 import BackgroundGradient from "@/assets_imported/background-gradient.svg";
 import { BehaviorChecklist } from "@/components/health-scan/behavior-checklist";
@@ -162,71 +164,78 @@ export default function ScannedHealthInputScreen() {
         />
         <SafeAreaView style={styles.safeArea} edges={["top"]}>
           <StatusBar style="dark" />
-          
+
           {/* Pinned Top Header */}
           <View style={styles.fixedHeader}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() =>
-                router.canGoBack() ? router.back() : router.replace("/(tabs)")
-              }
-              activeOpacity={0.8}
-              accessibilityRole="button"
-              accessibilityLabel="Go back"
+            <View
+              style={{ flexDirection: "row", alignItems: "center", gap: 10 }}
             >
-              <MaterialCommunityIcons
-                name="arrow-left"
-                size={22}
-                color="#FFF"
-              />
-            </TouchableOpacity>
-            <Text style={styles.pageTitle}>
-              {isMonitoringRescan ? "Update Health Scan" : "Scanned Health"}
+              <TouchableOpacity
+                style={styles.backButton}
+                onPress={() =>
+                  router.canGoBack() ? router.back() : router.replace("/(tabs)")
+                }
+                activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel="Go back"
+              >
+                <MaterialCommunityIcons
+                  name="arrow-left"
+                  size={22}
+                  color="#FFF"
+                />
+              </TouchableOpacity>
+              <Text style={styles.pageTitle}>
+                {isMonitoringRescan
+                  ? "Update Behavior Check"
+                  : "Behavior Check"}
+              </Text>
+            </View>
+            <Text style={styles.pageSubtitle}>
+              {isMonitoringRescan
+                ? `Confirm behaviors for ${chtTag || "this chicken"}. The same monitoring record will be updated.`
+                : "Track the chicken’s behavior and add notes before saving the journal entry."}
             </Text>
           </View>
-          <Text style={styles.pageSubtitle}>
-            {isMonitoringRescan
-              ? `Confirm behaviors for ${chtTag || "this chicken"}. The same monitoring record will be updated.`
-              : "Confirm what you're seeing before generating the result."}
-          </Text>
-        </View>
 
-        <ScrollView
-          contentContainerStyle={[
-            styles.scroll,
-            { paddingTop: 8, paddingBottom: insets.bottom + TAB_BAR_OFFSET + 28 },
-          ]}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
-        >
-          <HealthInputSummaryCard
-            photoUri={photoUri}
-            detectedIllness={detectedIllness}
-            capturedAt={capturedAt}
-            captureWidth={captureWidth}
-            captureHeight={captureHeight}
-          />
+          <ScrollView
+            contentContainerStyle={[
+              styles.scroll,
+              {
+                paddingTop: 8,
+                paddingBottom: insets.bottom + TAB_BAR_OFFSET + 28,
+              },
+            ]}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+          >
+            <HealthInputSummaryCard
+              photoUri={photoUri}
+              detectedIllness={detectedIllness}
+              capturedAt={capturedAt}
+              captureWidth={captureWidth}
+              captureHeight={captureHeight}
+            />
 
-          <View style={styles.gap} />
+            <View style={styles.gap} />
 
-          <BehaviorChecklist
-            items={filteredBehaviors}
-            categories={categories}
-            searchQuery={searchQuery}
-            activeCategoryId={activeCategoryId}
-            additionalObservation={additionalObservation}
-            loading={behaviorsLoading}
-            selectedIds={selected}
-            onSearchChange={setSearchQuery}
-            onCategoryChange={setActiveCategoryId}
-            onObservationChange={setAdditionalObservation}
-            onToggle={toggle}
-          />
+            <BehaviorChecklist
+              items={filteredBehaviors}
+              categories={categories}
+              searchQuery={searchQuery}
+              activeCategoryId={activeCategoryId}
+              additionalObservation={additionalObservation}
+              loading={behaviorsLoading}
+              selectedIds={selected}
+              onSearchChange={setSearchQuery}
+              onCategoryChange={setActiveCategoryId}
+              onObservationChange={setAdditionalObservation}
+              onToggle={toggle}
+            />
 
-          <HealthFlowFooterButton variant="next" onPress={goNext} />
-        </ScrollView>
+            <HealthFlowFooterButton variant="next" onPress={goNext} />
+          </ScrollView>
         </SafeAreaView>
       </View>
     </KeyboardAvoidingView>
