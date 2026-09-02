@@ -366,7 +366,7 @@ export default function DevelopersScreen() {
           </Pressable>
           <View style={styles.titleContainer}>
             <Text style={styles.appTitle}>ChickIntel App 2026</Text>
-            <Text style={styles.appVersion}>Version 1.0.8</Text>
+            <Text style={styles.appVersion}>Version 1.0.9</Text>
           </View>
         </View>
 
