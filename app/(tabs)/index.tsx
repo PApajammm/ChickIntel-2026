@@ -810,7 +810,7 @@ export default function HomeScreen() {
             {displayKpis.map((item) => {
               const Artwork = item.Artwork;
               return (
-                <BlurCard
+                <View
                   key={item.title}
                   style={[
                     styles.kpiCard,
@@ -818,19 +818,7 @@ export default function HomeScreen() {
                       width: dynamicKpiCardWidth,
                     },
                   ]}
-                  borderRadius={10}
-                  intensity={18}
                 >
-                  <View
-                    style={[
-                      styles.kpiTint,
-                      {
-                        backgroundColor: withAlpha(colors[item.background], 0.22),
-                      },
-                    ]}
-                    pointerEvents="none"
-                  />
-
                   <View style={styles.kpiTopRow}>
                     <Text
                       style={[
@@ -906,7 +894,7 @@ export default function HomeScreen() {
                       height={dynamicKpiArtworkSize}
                     />
                   </View>
-                </BlurCard>
+                </View>
               );
             })}
           </ScrollView>
@@ -929,11 +917,7 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        <BlurCard
-          style={styles.quickActionsCard}
-          borderRadius={10}
-          intensity={18}
-        >
+        <View style={styles.quickActionsCard}>
           <View style={styles.quickActionsHeader}>
             <Pressable
               style={styles.viewAllBtn}
@@ -971,15 +955,6 @@ export default function HomeScreen() {
               </Animated.View>
             </Animated.View>
           </View>
-          <View
-            style={[
-              styles.quickActionsTint,
-              {
-                backgroundColor: withAlpha(ChickIntelPalette.mediumGreen, 0.2),
-              },
-            ]}
-            pointerEvents="none"
-          />
           <View style={styles.quickActionsGrid}>
             {(isQuickActionsExpanded
               ? quickActions
@@ -1031,7 +1006,7 @@ export default function HomeScreen() {
               );
             })}
           </View>
-        </BlurCard>
+        </View>
 
         <Animated.FlatList
           horizontal
@@ -1594,10 +1569,13 @@ const styles = StyleSheet.create({
     backgroundColor: ChickIntelPalette.green1,
   },
   kpiCard: {
+    backgroundColor: "#FBF0E4",
+    borderRadius: 10,
     minHeight: verticalScale(170),
     paddingHorizontal: moderateScale(14),
     paddingTop: verticalScale(14),
     paddingBottom: verticalScale(12),
+    position: "relative",
     overflow: "hidden",
   },
   kpiTint: {
@@ -1662,11 +1640,13 @@ const styles = StyleSheet.create({
   },
   kpiArtworkWrap: {
     position: "absolute",
-    right: 2,
-    bottom: -2,
+    right: moderateScale(22),
+    bottom: verticalScale(18),
     opacity: 0.95,
   },
   quickActionsCard: {
+    backgroundColor: "#EAF6F3",
+    borderRadius: 10,
     paddingTop: verticalScale(12),
     paddingBottom: verticalScale(12),
     paddingHorizontal: moderateScale(12),
