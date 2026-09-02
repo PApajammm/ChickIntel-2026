@@ -24,6 +24,8 @@ import {
     TouchableOpacity,
     useWindowDimensions,
     View,
+    type NativeScrollEvent,
+    type NativeSyntheticEvent,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -233,6 +235,153 @@ export default function HomeScreen() {
     "Feeds Consumed": "7 days",
   });
   const [periodPickerFor, setPeriodPickerFor] = useState<string | null>(null);
+
+  // KPI Carousel State & Smooth Back-and-Forth Animation (5 loops)
+  const [activeKpiIndex, setActiveKpiIndex] = useState(0);
+  const [isScreenFocused, setIsScreenFocused] = useState(true);
+  const kpiScrollRef = useRef<ScrollView>(null);
+  const currentScrollXRef = useRef(0);
+  const maxScrollXRef = useRef(0);
+  const scrollWidthRef = useRef(0);
+  const isUserInteractingRef = useRef(false);
+  const userInteractionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  const directionRef = useRef<1 | -1>(1);
+  const loopCountRef = useRef(0);
+  const kpiTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      setIsScreenFocused(true);
+      return () => {
+        setIsScreenFocused(false);
+        if (animationFrameRef.current) {
+          cancelAnimationFrame(animationFrameRef.current);
+        }
+      };
+    }, []),
+  );
+
+  const kpiStep = dynamicKpiCardWidth + moderateScale(12);
+
+  const smoothScrollTo = useCallback(
+    (targetX: number, duration = 650) => {
+      const clampedTarget = Math.max(
+        0,
+        Math.min(targetX, maxScrollXRef.current || targetX),
+      );
+      const startX = currentScrollXRef.current;
+      const distance = clampedTarget - startX;
+      if (Math.abs(distance) < 1) return;
+
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+
+      const startTime = Date.now();
+      const easeInOutCubic = (t: number) =>
+        t < 0.5 ? 4 * t * t * t : (t - 1) * (2 * t - 2) * (2 * t - 2) + 1;
+
+      const animate = () => {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased = easeInOutCubic(progress);
+        const nextX = startX + distance * eased;
+
+        kpiScrollRef.current?.scrollTo({ x: nextX, animated: false });
+
+        if (progress < 1) {
+          animationFrameRef.current = requestAnimationFrame(animate);
+        }
+      };
+
+      animationFrameRef.current = requestAnimationFrame(animate);
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (!isScreenFocused || periodPickerFor) return;
+
+    kpiTimerRef.current = setInterval(() => {
+      if (isUserInteractingRef.current) return;
+      if (loopCountRef.current >= 3) {
+        if (kpiTimerRef.current) clearInterval(kpiTimerRef.current);
+        return;
+      }
+
+      setActiveKpiIndex((prevIndex) => {
+        let nextIndex = prevIndex + directionRef.current;
+        const maxIndex = (kpiCards.length || 3) - 1;
+
+        if (nextIndex >= maxIndex) {
+          nextIndex = maxIndex;
+          directionRef.current = -1;
+        } else if (nextIndex <= 0) {
+          nextIndex = 0;
+          directionRef.current = 1;
+          loopCountRef.current += 1;
+        }
+
+        smoothScrollTo(nextIndex * kpiStep, 650);
+        return nextIndex;
+      });
+    }, 2800);
+
+    return () => {
+      if (kpiTimerRef.current) clearInterval(kpiTimerRef.current);
+    };
+  }, [isScreenFocused, periodPickerFor, kpiCards.length, kpiStep, smoothScrollTo]);
+
+  useEffect(() => {
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+      if (userInteractionTimeoutRef.current) {
+        clearTimeout(userInteractionTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const handleKpiDotPress = (index: number) => {
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+    }
+    setActiveKpiIndex(index);
+    smoothScrollTo(index * kpiStep, 500);
+  };
+
+  const handleKpiScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const offsetX = e.nativeEvent.contentOffset.x;
+    currentScrollXRef.current = offsetX;
+    const index = Math.min(
+      Math.max(Math.round(offsetX / kpiStep), 0),
+      (kpiCards.length || 3) - 1,
+    );
+    if (index !== activeKpiIndex) {
+      setActiveKpiIndex(index);
+    }
+  };
+
+  const startKpiInteraction = () => {
+    isUserInteractingRef.current = true;
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+    }
+    if (userInteractionTimeoutRef.current) {
+      clearTimeout(userInteractionTimeoutRef.current);
+    }
+  };
+
+  const endKpiInteraction = () => {
+    if (userInteractionTimeoutRef.current) {
+      clearTimeout(userInteractionTimeoutRef.current);
+    }
+    userInteractionTimeoutRef.current = setTimeout(() => {
+      isUserInteractingRef.current = false;
+    }, 2500);
+  };
 
   useEffect(() => {
     logStep("HomeScreen mounted", { screen: "tabs/index" });
@@ -639,61 +788,53 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
         style={styles.scroll}
       >
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.kpiRow}
-        >
-          {displayKpis.map((item) => {
-            const Artwork = item.Artwork;
-            return (
-              <BlurCard
-                key={item.title}
-                style={[
-                  styles.kpiCard,
-                  {
-                    width: dynamicKpiCardWidth,
-                  },
-                ]}
-                borderRadius={10}
-                intensity={18}
-              >
-                <View
+        <View style={styles.kpiCarouselContainer}>
+          <ScrollView
+            ref={kpiScrollRef}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.kpiRow}
+            scrollEventThrottle={16}
+            onScroll={handleKpiScroll}
+            onLayout={(e) => {
+              scrollWidthRef.current = e.nativeEvent.layout.width;
+            }}
+            onContentSizeChange={(w) => {
+              maxScrollXRef.current = Math.max(0, w - scrollWidthRef.current);
+            }}
+            onTouchStart={startKpiInteraction}
+            onScrollBeginDrag={startKpiInteraction}
+            onScrollEndDrag={endKpiInteraction}
+            onMomentumScrollEnd={endKpiInteraction}
+          >
+            {displayKpis.map((item) => {
+              const Artwork = item.Artwork;
+              return (
+                <BlurCard
+                  key={item.title}
                   style={[
-                    styles.kpiTint,
+                    styles.kpiCard,
                     {
-                      backgroundColor: withAlpha(colors[item.background], 0.22),
+                      width: dynamicKpiCardWidth,
                     },
                   ]}
-                  pointerEvents="none"
-                />
-
-                <View style={styles.kpiTopRow}>
-                  <Text
+                  borderRadius={10}
+                  intensity={18}
+                >
+                  <View
                     style={[
-                      styles.kpiLabelCompact,
-                      { color: colors.textMuted },
-                    ]}
-                    numberOfLines={1}
-                    adjustsFontSizeToFit
-                    minimumFontScale={0.8}
-                    maxFontSizeMultiplier={1.2}
-                  >
-                    {item.title}
-                  </Text>
-                  <Pressable
-                    onPress={() => setPeriodPickerFor(item.title)}
-                    style={[
-                      styles.periodChip,
+                      styles.kpiTint,
                       {
-                        backgroundColor: withAlpha(colors.surface, 0.38),
-                        borderColor: withAlpha(colors.border, 0.3),
+                        backgroundColor: withAlpha(colors[item.background], 0.22),
                       },
                     ]}
-                  >
+                    pointerEvents="none"
+                  />
+
+                  <View style={styles.kpiTopRow}>
                     <Text
                       style={[
-                        styles.periodChipText,
+                        styles.kpiLabelCompact,
                         { color: colors.textMuted },
                       ]}
                       numberOfLines={1}
@@ -701,52 +842,92 @@ export default function HomeScreen() {
                       minimumFontScale={0.8}
                       maxFontSizeMultiplier={1.2}
                     >
-                      {item.period}
+                      {item.title}
                     </Text>
-                    <MaterialCommunityIcons
-                      name="chevron-down"
-                      size={14}
-                      color={colors.textMuted}
+                    <Pressable
+                      onPress={() => setPeriodPickerFor(item.title)}
+                      style={[
+                        styles.periodChip,
+                        {
+                          backgroundColor: withAlpha(colors.surface, 0.38),
+                          borderColor: withAlpha(colors.border, 0.3),
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.periodChipText,
+                          { color: colors.textMuted },
+                        ]}
+                        numberOfLines={1}
+                        adjustsFontSizeToFit
+                        minimumFontScale={0.8}
+                        maxFontSizeMultiplier={1.2}
+                      >
+                        {item.period}
+                      </Text>
+                      <MaterialCommunityIcons
+                        name="chevron-down"
+                        size={14}
+                        color={colors.textMuted}
+                      />
+                    </Pressable>
+                  </View>
+
+                  <View
+                    style={[
+                      styles.kpiBody,
+                      { paddingRight: Math.floor(dynamicKpiArtworkSize * 0.45) },
+                    ]}
+                  >
+                    <Text
+                      style={[styles.kpiValue, { color: colors.text }]}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.6}
+                      maxFontSizeMultiplier={1.25}
+                    >
+                      {item.value}
+                    </Text>
+                    <Text
+                      style={[styles.kpiTrend, { color: colors.textMuted }]}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.8}
+                      maxFontSizeMultiplier={1.2}
+                    >
+                      {item.trend}
+                    </Text>
+                  </View>
+
+                  <View style={styles.kpiArtworkWrap} pointerEvents="none">
+                    <Artwork
+                      width={dynamicKpiArtworkSize}
+                      height={dynamicKpiArtworkSize}
                     />
-                  </Pressable>
-                </View>
+                  </View>
+                </BlurCard>
+              );
+            })}
+          </ScrollView>
 
-                <View
-                  style={[
-                    styles.kpiBody,
-                    { paddingRight: Math.floor(dynamicKpiArtworkSize * 0.45) },
-                  ]}
-                >
-                  <Text
-                    style={[styles.kpiValue, { color: colors.text }]}
-                    numberOfLines={1}
-                    adjustsFontSizeToFit
-                    minimumFontScale={0.6}
-                    maxFontSizeMultiplier={1.25}
-                  >
-                    {item.value}
-                  </Text>
-                  <Text
-                    style={[styles.kpiTrend, { color: colors.textMuted }]}
-                    numberOfLines={1}
-                    adjustsFontSizeToFit
-                    minimumFontScale={0.8}
-                    maxFontSizeMultiplier={1.2}
-                  >
-                    {item.trend}
-                  </Text>
-                </View>
-
-                <View style={styles.kpiArtworkWrap} pointerEvents="none">
-                  <Artwork
-                    width={dynamicKpiArtworkSize}
-                    height={dynamicKpiArtworkSize}
-                  />
-                </View>
-              </BlurCard>
-            );
-          })}
-        </ScrollView>
+          {/* Animated Carousel Pagination Dots */}
+          <View style={styles.kpiPaginationRow}>
+            {displayKpis.map((item, index) => {
+              const isActive = index === activeKpiIndex;
+              return (
+                <Pressable
+                  key={item.title}
+                  onPress={() => handleKpiDotPress(index)}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Scroll to ${item.title}`}
+                  style={[styles.kpiDot, isActive && styles.kpiDotActive]}
+                />
+              );
+            })}
+          </View>
+        </View>
 
         <BlurCard
           style={styles.quickActionsCard}
@@ -1386,10 +1567,31 @@ const styles = StyleSheet.create({
     maxWidth: "58%",
     color: "#FFFFFF",
   },
+  kpiCarouselContainer: {
+    marginBottom: verticalScale(2),
+  },
   kpiRow: {
     flexDirection: "row",
     gap: moderateScale(12),
     paddingHorizontal: moderateScale(4),
+  },
+  kpiPaginationRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    marginTop: verticalScale(10),
+  },
+  kpiDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "rgba(49, 118, 103, 0.22)",
+  },
+  kpiDotActive: {
+    width: 18,
+    borderRadius: 3,
+    backgroundColor: ChickIntelPalette.green1,
   },
   kpiCard: {
     minHeight: verticalScale(170),
@@ -1835,7 +2037,7 @@ const styles = StyleSheet.create({
   triviaSection: {
     marginHorizontal: moderateScale(16),
     marginTop: verticalScale(12),
-    backgroundColor: "#FFFBEB",
+    backgroundColor: "transparent",
     borderRadius: 10,
     padding: moderateScale(12),
     borderWidth: 1,
@@ -1862,7 +2064,7 @@ const styles = StyleSheet.create({
   infoCard: {
     marginHorizontal: moderateScale(16),
     marginTop: verticalScale(10),
-    backgroundColor: "#F4F9F6",
+    backgroundColor: "transparent",
     borderRadius: 10,
     padding: moderateScale(12),
     borderWidth: 1,
@@ -1889,7 +2091,7 @@ const styles = StyleSheet.create({
   healthWatchCard: {
     marginHorizontal: moderateScale(16),
     marginTop: verticalScale(10),
-    backgroundColor: "#FEF2F2",
+    backgroundColor: "transparent",
     borderRadius: 10,
     padding: moderateScale(12),
     borderWidth: 1,

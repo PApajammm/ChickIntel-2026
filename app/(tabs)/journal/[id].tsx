@@ -9,6 +9,8 @@ import { moderateScale, responsiveFontSize, scale, verticalScale } from "@/utils
 import BackgroundGradient from "@/assets_imported/background-gradient.svg";
 import { HealthInputSummaryCard } from "@/components/health-scan/health-input-summary-card";
 import { HealthResultCard } from "@/components/health-scan/health-result-card";
+import { BlurCard } from "@/components/ui/blur-card";
+import { ChipList } from "@/components/ui/chip-list";
 import { ChickFont } from "@/constants/chick-fonts";
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
 import { HealthTypography } from "@/constants/health-typography";
@@ -163,22 +165,48 @@ export default function JournalDetailScreen() {
                 ]}
                 showsVerticalScrollIndicator={false}
             >
+                {/* Observed Behaviors Header Card */}
+                <BlurCard style={styles.observedBehaviorsCard} borderRadius={10} intensity={20}>
+                    <View style={styles.observedBehaviorsInner}>
+                        <View style={styles.observedHeaderRow}>
+                            <View style={styles.observedTitleGroup}>
+                                <MaterialCommunityIcons
+                                    name="eye-check-outline"
+                                    size={16}
+                                    color={ChickIntelPalette.green1}
+                                />
+                                <Text style={styles.observedHeaderLabel}>
+                                    OBSERVED BEHAVIORS
+                                </Text>
+                            </View>
+                            {behaviorLabels.length > 0 ? (
+                                <View style={styles.observedCountBadge}>
+                                    <Text style={styles.observedCountText}>
+                                        {behaviorLabels.length} {behaviorLabels.length === 1 ? "trait" : "traits"}
+                                    </Text>
+                                </View>
+                            ) : null}
+                        </View>
 
-                {entry.additionalObservation ? (
-                    <View style={styles.behaviorSection}>
-                        <Text style={styles.sectionLabel}>Additional Observation</Text>
-                        <Text style={styles.observationText}>
-                            {entry.additionalObservation}
-                        </Text>
+                        {behaviorLabels.length > 0 ? (
+                            <View style={styles.observedChipsWrap}>
+                                <ChipList labels={behaviorLabels} />
+                            </View>
+                        ) : (
+                            <Text style={styles.noBehaviorsText}>
+                                No observed behaviors recorded
+                            </Text>
+                        )}
                     </View>
-                ) : null}
+                </BlurCard>
+
+                <View style={styles.cardSpacer} />
 
                 {/* Disease Information - Supporting Information */}
                 <HealthInputSummaryCard
                     photoUri={entry.photoUri}
                     detectedIllness={entry.detectedIllness}
                     detectionDescription={diseaseDetails?.description}
-                    selectedLabels={behaviorLabels}
                     additionalObservation={entry.additionalObservation}
                 />
 
@@ -290,6 +318,58 @@ const styles = StyleSheet.create({
     },
     cardSpacer: {
         height: verticalScale(8),
+    },
+    observedBehaviorsCard: {
+        borderRadius: 10,
+        overflow: "hidden",
+        backgroundColor: "rgba(255, 255, 255, 0.95)",
+        borderWidth: 1,
+        borderColor: "rgba(49, 118, 103, 0.16)",
+        position: "relative",
+    },
+    observedBehaviorsInner: {
+        paddingHorizontal: moderateScale(16),
+        paddingVertical: verticalScale(14),
+        gap: 10,
+    },
+    observedHeaderRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+    },
+    observedTitleGroup: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 6,
+    },
+    observedHeaderLabel: {
+        fontFamily: ChickFont.display,
+        fontSize: responsiveFontSize(13),
+        fontWeight: "800",
+        color: ChickIntelPalette.green1,
+        letterSpacing: 0.3,
+        textTransform: "uppercase",
+    },
+    observedCountBadge: {
+        backgroundColor: "rgba(49, 118, 103, 0.12)",
+        paddingHorizontal: moderateScale(8),
+        paddingVertical: verticalScale(2),
+        borderRadius: 6,
+    },
+    observedCountText: {
+        fontFamily: ChickFont.sans,
+        fontSize: responsiveFontSize(11),
+        fontWeight: "700",
+        color: ChickIntelPalette.green1,
+    },
+    observedChipsWrap: {
+        marginTop: 2,
+    },
+    noBehaviorsText: {
+        fontFamily: ChickFont.sans,
+        fontSize: responsiveFontSize(13),
+        color: ChickIntelPalette.gray2,
+        fontStyle: "italic",
     },
     behaviorSection: {
         backgroundColor: "rgba(202, 227, 221, 0.4)",
