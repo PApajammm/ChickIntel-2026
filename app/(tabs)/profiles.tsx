@@ -657,8 +657,8 @@ export default function ProfilesScreen() {
                       <View style={styles.metricChipHeader}>
                         <MaterialCommunityIcons
                           name="gender-female"
-                          size={13}
-                          color="#111111"
+                          size={12}
+                          color="#8E9494"
                         />
                         <Text style={styles.metricChipLabel}>Females</Text>
                       </View>
@@ -671,8 +671,8 @@ export default function ProfilesScreen() {
                       <View style={styles.metricChipHeader}>
                         <MaterialCommunityIcons
                           name="gender-male"
-                          size={13}
-                          color="#111111"
+                          size={12}
+                          color="#8E9494"
                         />
                         <Text style={styles.metricChipLabel}>Males</Text>
                       </View>
@@ -685,8 +685,8 @@ export default function ProfilesScreen() {
                       <View style={styles.metricChipHeader}>
                         <MaterialCommunityIcons
                           name="calendar-clock"
-                          size={13}
-                          color="#111111"
+                          size={12}
+                          color="#8E9494"
                         />
                         <Text style={styles.metricChipLabel}>Age</Text>
                       </View>
@@ -699,8 +699,8 @@ export default function ProfilesScreen() {
                       <View style={styles.metricChipHeader}>
                         <MaterialCommunityIcons
                           name="shield-alert-outline"
-                          size={13}
-                          color="#111111"
+                          size={12}
+                          color="#8E9494"
                         />
                         <Text style={styles.metricChipLabel}>Isolation</Text>
                       </View>
@@ -713,8 +713,8 @@ export default function ProfilesScreen() {
                       <View style={styles.metricChipHeader}>
                         <MaterialCommunityIcons
                           name="heart-broken-outline"
-                          size={13}
-                          color="#111111"
+                          size={12}
+                          color="#8E9494"
                         />
                         <Text style={styles.metricChipLabel}>Loss</Text>
                       </View>
@@ -806,8 +806,8 @@ export default function ProfilesScreen() {
                       <View style={styles.metricChipHeader}>
                         <MaterialCommunityIcons
                           name="layers-outline"
-                          size={14}
-                          color="#111111"
+                          size={12}
+                          color="#8E9494"
                         />
                         <Text style={styles.metricChipLabel}>
                           Total Batches
@@ -820,8 +820,8 @@ export default function ProfilesScreen() {
                       <View style={styles.metricChipHeader}>
                         <MaterialCommunityIcons
                           name="star-outline"
-                          size={14}
-                          color="#111111"
+                          size={12}
+                          color="#8E9494"
                         />
                         <Text style={styles.metricChipLabel}>
                           Fertility Rate
@@ -1315,7 +1315,7 @@ const styles = StyleSheet.create({
   cardHeaderRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: 8,
   },
   headerLeftStack: {
@@ -1329,6 +1329,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(49, 118, 103, 0.12)",
     paddingHorizontal: moderateScale(8),
     paddingVertical: verticalScale(3),
+    minHeight: verticalScale(28),
     borderRadius: 8,
     borderWidth: 1,
     borderColor: "rgba(49, 118, 103, 0.22)",
@@ -1354,6 +1355,7 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(11),
     lineHeight: 16,
     color: "rgba(51, 51, 51, 0.58)",
+    paddingBottom: verticalScale(10),
   },
   headerRightActions: {
     flexDirection: "row",
@@ -1367,6 +1369,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(244, 248, 247, 0.9)",
     paddingHorizontal: moderateScale(8),
     paddingVertical: verticalScale(3),
+    minHeight: verticalScale(28),
     borderRadius: 8,
     borderWidth: 1,
     borderColor: "rgba(49, 118, 103, 0.18)",
@@ -1383,8 +1386,8 @@ const styles = StyleSheet.create({
     color: ChickIntelPalette.gray1,
   },
   actionIconBtn: {
-    width: scale(30),
-    height: verticalScale(30),
+    width: scale(28),
+    height: verticalScale(28),
     borderRadius: 8,
     backgroundColor: "rgba(244, 248, 247, 0.9)",
     borderWidth: 1,
@@ -1452,9 +1455,9 @@ const styles = StyleSheet.create({
   },
   metricChipLabel: {
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(10),
+    fontSize: responsiveFontSize(9),
     fontWeight: "700",
-    color: "#5A6161",
+    color: "#8E9494",
     textTransform: "uppercase",
     letterSpacing: 0.2,
   },
@@ -1463,6 +1466,8 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(14),
     fontWeight: "800",
     color: ChickIntelPalette.gray1,
+    textAlign: "right",
+    paddingRight: moderateScale(10),
   },
   noteSummaryList: {
     marginTop: 6,
