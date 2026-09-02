@@ -52,9 +52,7 @@ export function ChickTabBar({ onLogoutPress, ..._rest }: ChickTabBarProps) {
     }
   }
 
-  const inactiveColor = isScanner
-    ? ChickIntelPalette.gray1
-    : colors.textMuted;
+  const inactiveColor = colors.textMuted;
   const activeColor = colors.primary;
 
   return (
@@ -62,12 +60,8 @@ export function ChickTabBar({ onLogoutPress, ..._rest }: ChickTabBarProps) {
       style={[
         styles.wrap,
         {
-          backgroundColor: isScanner
-            ? "transparent"
-            : ChickIntelPalette.light1,
-          borderTopColor: isScanner
-            ? "transparent"
-            : ChickIntelPalette.lightGreen,
+          backgroundColor: ChickIntelPalette.light1,
+          borderTopColor: ChickIntelPalette.lightGreen,
           paddingBottom: Math.max(insets.bottom, 6),
         },
       ]}
