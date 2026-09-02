@@ -770,13 +770,17 @@ export default function EggFertilityReportScreen() {
     : "rgba(255, 255, 255, 0.6)";
 
   return (
-    <SafeAreaView style={styles.screen} edges={["top"]}>
+    <View style={styles.screen}>
       <BackgroundGradient
-        width="100%"
-        height="100%"
+        width="110%"
+        height="110%"
         preserveAspectRatio="xMidYMid slice"
-        style={StyleSheet.absoluteFill}
+        style={[
+          StyleSheet.absoluteFill,
+          { transform: [{ scale: 1.08 }, { translateY: -14 }] },
+        ]}
       />
+      <SafeAreaView style={styles.safeArea} edges={["top"]}>
 
       {/* Pinned Top Header & Controls */}
       <View style={styles.fixedHeader}>
@@ -1072,7 +1076,8 @@ export default function EggFertilityReportScreen() {
           </Pressable>
         </Pressable>
       </Modal>
-    </SafeAreaView>
+      </SafeAreaView>
+    </View>
   );
 }
 
@@ -1080,6 +1085,9 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: ReportsPageTheme.screenBackground,
+  },
+  safeArea: {
+    flex: 1,
   },
   fixedHeader: {
     paddingHorizontal: ReportsPageTheme.contentPaddingHorizontal,

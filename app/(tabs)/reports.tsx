@@ -1289,15 +1289,18 @@ export default function ReportsScreen() {
   const displayedSupplyTotal = report.supply.totalSlices ?? totalSupplyUsage;
 
   return (
-    <SafeAreaView style={styles.screen} edges={["top"]}>
+    <View style={styles.screen}>
       <BackgroundGradient
-        width="100%"
-        height="100%"
+        width="110%"
+        height="110%"
         preserveAspectRatio="xMidYMid slice"
-        style={StyleSheet.absoluteFill}
+        style={[
+          StyleSheet.absoluteFill,
+          { transform: [{ scale: 1.08 }, { translateY: -14 }] },
+        ]}
       />
-
-      <View style={styles.viewShot}>
+      <SafeAreaView style={styles.safeArea} edges={["top"]}>
+        <View style={styles.viewShot}>
         {/* Pinned Top Header */}
         <View style={styles.fixedHeader}>
           <View style={styles.header}>
@@ -1565,7 +1568,8 @@ export default function ReportsScreen() {
         onPrintReport={handlePrintReport}
         printingReport={printingReport}
       />
-    </SafeAreaView>
+      </SafeAreaView>
+    </View>
   );
 }
 
@@ -1573,6 +1577,9 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: ReportsPageTheme.screenBackground,
+  },
+  safeArea: {
+    flex: 1,
   },
   fixedHeader: {
     paddingHorizontal: ReportsPageTheme.contentPaddingHorizontal,
