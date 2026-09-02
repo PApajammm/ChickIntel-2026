@@ -4,26 +4,26 @@ import { useCameraPermissions } from "expo-camera";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ComponentType,
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+    type ComponentType,
 } from "react";
 import {
-  Alert,
-  Animated,
-  Easing,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  useWindowDimensions,
-  View,
+    Alert,
+    Animated,
+    Easing,
+    Modal,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    useWindowDimensions,
+    View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -46,23 +46,23 @@ import { getFarmColors } from "@/constants/farm-theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuth } from "@/providers/auth-provider";
 import {
-  fetchHomeKpiSnapshot,
-  formatBirdAdditionTrend,
-  formatConsumptionTrend,
-  formatKpiTrend,
-  type HomeKpiPeriod,
+    fetchHomeKpiSnapshot,
+    formatBirdAdditionTrend,
+    formatConsumptionTrend,
+    formatKpiTrend,
+    type HomeKpiPeriod,
 } from "@/utils/home-kpis";
 import { logError, logStep } from "@/utils/logger";
 import {
-  getFeaturedBreedCards,
-  type FeaturedBreedCard,
+    getFeaturedBreedCards,
+    type FeaturedBreedCard,
 } from "@/utils/recent-breed-scans";
 import {
-  moderateScale,
-  responsiveFontSize,
-  scale,
-  useResponsiveMetrics,
-  verticalScale,
+    moderateScale,
+    responsiveFontSize,
+    scale,
+    useResponsiveMetrics,
+    verticalScale,
 } from "@/utils/responsive";
 import { fetchFarmBatches } from "@/utils/supabase-batches";
 
@@ -601,17 +601,7 @@ export default function HomeScreen() {
         ]}
       />
 
-      <ScrollView
-        contentContainerStyle={[
-          styles.content,
-          {
-            paddingTop: insets.top + 12,
-            paddingBottom: insets.bottom + TAB_BAR_OFFSET + 98,
-          },
-        ]}
-        showsVerticalScrollIndicator={false}
-        style={styles.scroll}
-      >
+      <View style={[styles.headerPinned, { paddingTop: insets.top + 12 }]}>
         <View style={styles.headerRow}>
           <View style={styles.headerTitleWrap}>
             <Text style={[styles.greeting, { color: colors.text }]}>
@@ -636,7 +626,19 @@ export default function HomeScreen() {
             {todayLabel}
           </Text>
         </View>
+      </View>
 
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          {
+            paddingTop: 14,
+            paddingBottom: insets.bottom + TAB_BAR_OFFSET + 98,
+          },
+        ]}
+        showsVerticalScrollIndicator={false}
+        style={styles.scroll}
+      >
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -1059,49 +1061,45 @@ export default function HomeScreen() {
         animationType="slide"
         onRequestClose={() => setSelectedBreedForModal(null)}
       >
-        <Pressable
-          style={styles.modalBackdrop}
-          onPress={() => setSelectedBreedForModal(null)}
-        >
+        <View style={styles.modalBackdrop}>
           <Pressable
-            style={styles.breedModalCard}
-            onPress={(e) => e.stopPropagation()}
-          >
+            style={styles.modalBackdropDismiss}
+            onPress={() => setSelectedBreedForModal(null)}
+            accessibilityLabel="Close breed details"
+          />
+          <View style={styles.breedModalCard}>
+            <View style={styles.breedModalImageContainer}>
+              {selectedBreedForModal && (
+                <Image
+                  source={selectedBreedForModal.image}
+                  style={styles.breedModalImage}
+                  contentFit="cover"
+                />
+              )}
+              <TouchableOpacity
+                style={styles.breedModalCloseBtn}
+                onPress={() => setSelectedBreedForModal(null)}
+                accessibilityLabel="Close breed modal"
+              >
+                <MaterialCommunityIcons name="close" size={20} color="#FFF" />
+              </TouchableOpacity>
+
+              <View style={styles.breedModalImageOverlay}>
+                <Text style={styles.breedModalTitle}>
+                  {selectedBreedForModal?.breedName}
+                </Text>
+                <Text style={styles.breedModalSubtitle}>
+                  {selectedBreedForModal?.purpose} •{" "}
+                  {selectedBreedForModal?.hardiness}
+                </Text>
+              </View>
+            </View>
+
             <ScrollView
               showsVerticalScrollIndicator={false}
-              stickyHeaderIndices={[0]}
-              nestedScrollEnabled={Platform.OS === "android"}
-              bounces={true}
+              style={styles.breedModalScroll}
               contentContainerStyle={styles.breedModalScrollContent}
             >
-              {/* Header Image Banner */}
-              <View style={styles.breedModalImageContainer}>
-                {selectedBreedForModal && (
-                  <Image
-                    source={selectedBreedForModal.image}
-                    style={styles.breedModalImage}
-                    contentFit="cover"
-                  />
-                )}
-                <TouchableOpacity
-                  style={styles.breedModalCloseBtn}
-                  onPress={() => setSelectedBreedForModal(null)}
-                  accessibilityLabel="Close breed modal"
-                >
-                  <MaterialCommunityIcons name="close" size={20} color="#FFF" />
-                </TouchableOpacity>
-
-                <View style={styles.breedModalImageOverlay}>
-                  <Text style={styles.breedModalTitle}>
-                    {selectedBreedForModal?.breedName}
-                  </Text>
-                  <Text style={styles.breedModalSubtitle}>
-                    {selectedBreedForModal?.purpose} •{" "}
-                    {selectedBreedForModal?.hardiness}
-                  </Text>
-                </View>
-              </View>
-
               {/* Farm Census Section */}
               <View style={styles.censusBanner}>
                 <View style={styles.censusIconWrap}>
@@ -1263,8 +1261,8 @@ export default function HomeScreen() {
                 </TouchableOpacity>
               </View>
             </ScrollView>
-          </Pressable>
-        </Pressable>
+          </View>
+        </View>
       </Modal>
 
       <Modal
@@ -1348,6 +1346,10 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: moderateScale(18),
     gap: 14,
+  },
+  headerPinned: {
+    paddingHorizontal: moderateScale(18),
+    backgroundColor: "transparent",
   },
   headerRow: {
     flexDirection: "row",
@@ -1697,6 +1699,9 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0, 0, 0, 0.6)",
     justifyContent: "flex-end",
   },
+  modalBackdropDismiss: {
+    ...StyleSheet.absoluteFillObject,
+  },
   breedModalCard: {
     backgroundColor: "#FDFDFD",
     borderTopLeftRadius: 24,
@@ -1704,6 +1709,9 @@ const styles = StyleSheet.create({
     height: "86%",
     maxHeight: "86%",
     overflow: "hidden",
+  },
+  breedModalScroll: {
+    flex: 1,
   },
   breedModalScrollContent: {
     paddingBottom: verticalScale(30),
