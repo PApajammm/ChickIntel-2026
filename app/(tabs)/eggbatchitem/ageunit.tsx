@@ -455,7 +455,7 @@ export default function EggBatchAgeUnitScreen() {
           contentContainerStyle={[
             styles.content,
             {
-              paddingBottom: insets.bottom + 96,
+              paddingBottom: 15,
             },
           ]}
           showsVerticalScrollIndicator={false}

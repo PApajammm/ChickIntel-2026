@@ -31,10 +31,7 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import {
-    SafeAreaView,
-    useSafeAreaInsets,
-} from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Circle, G } from "react-native-svg";
 
 type PeriodOption = "7 Days" | "30 Days" | "12 Months";
@@ -555,7 +552,6 @@ function DonutChart({
 }
 
 export default function EggFertilityReportScreen() {
-  const insets = useSafeAreaInsets();
   const router = useRouter();
   const { activeFarm, profile } = useAuth();
   const isDark = false;
@@ -781,301 +777,309 @@ export default function EggFertilityReportScreen() {
         ]}
       />
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
-
-      {/* Pinned Top Header & Controls */}
-      <View style={styles.fixedHeader}>
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
+        {/* Pinned Top Header & Controls */}
+        <View style={styles.fixedHeader}>
+          {/* Header */}
+          <View style={styles.header}>
+            <View style={styles.headerLeft}>
+              <TouchableOpacity
+                style={styles.backButton}
+                onPress={() =>
+                  router.replace({
+                    pathname: "/(tabs)/profiles" as any,
+                    params: { mode: "egg" },
+                  })
+                }
+                activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel="Go back"
+              >
+                <MaterialCommunityIcons
+                  name="arrow-left"
+                  size={22}
+                  color="#FFF"
+                />
+              </TouchableOpacity>
+              <View style={styles.headerCopy}>
+                <Text style={styles.screenTitle}>Egg Fertility Report</Text>
+                <Text style={styles.headerSubtitle} numberOfLines={1}>
+                  {scopeLabel}
+                </Text>
+              </View>
+            </View>
             <TouchableOpacity
-              style={styles.backButton}
-              onPress={() =>
-                router.replace({
-                  pathname: "/(tabs)/profiles" as any,
-                  params: { mode: "egg" },
-                })
-              }
+              style={styles.printButton}
+              onPress={handlePrint}
               activeOpacity={0.8}
-              accessibilityRole="button"
-              accessibilityLabel="Go back"
             >
               <MaterialCommunityIcons
-                name="arrow-left"
+                name="printer-outline"
                 size={22}
                 color="#FFF"
               />
             </TouchableOpacity>
-            <View style={styles.headerCopy}>
-              <Text style={styles.screenTitle}>Egg Fertility Report</Text>
-              <Text style={styles.headerSubtitle} numberOfLines={1}>
-                {scopeLabel}
-              </Text>
-            </View>
           </View>
-          <TouchableOpacity
-            style={styles.printButton}
-            onPress={handlePrint}
-            activeOpacity={0.8}
+
+          {/* Batch Scope Selector Card */}
+          <Pressable
+            onPress={() => setScopeModalVisible(true)}
+            style={styles.scopeDropdown}
           >
-            <MaterialCommunityIcons
-              name="printer-outline"
-              size={22}
-              color="#FFF"
-            />
-          </TouchableOpacity>
-        </View>
-
-        {/* Batch Scope Selector Card */}
-        <Pressable
-          onPress={() => setScopeModalVisible(true)}
-          style={styles.scopeDropdown}
-        >
-          <Text style={styles.scopeDropdownLabel}>Filter Batch Scope:</Text>
-          <View style={styles.scopeDropdownValueRow}>
-            {selectedScope.key === "overall" ? (
-              <Text style={styles.scopeDropdownValueText}>
-                Overall Egg Fertility Rate
-              </Text>
-            ) : (
-              <View style={styles.scopeDropdownSelected}>
-                <View
-                  style={[
-                    styles.scopeDropdownPill,
-                    { backgroundColor: scopeHex },
-                  ]}
-                />
-                <Text style={styles.scopeDropdownValueText} numberOfLines={1}>
-                  {selectedScope.label}
+            <Text style={styles.scopeDropdownLabel}>Filter Batch Scope:</Text>
+            <View style={styles.scopeDropdownValueRow}>
+              {selectedScope.key === "overall" ? (
+                <Text style={styles.scopeDropdownValueText}>
+                  Overall Egg Fertility Rate
                 </Text>
-              </View>
-            )}
-            <MaterialCommunityIcons
-              name="chevron-down"
-              size={20}
-              color={ChickIntelPalette.gray1}
-            />
-          </View>
-        </Pressable>
+              ) : (
+                <View style={styles.scopeDropdownSelected}>
+                  <View
+                    style={[
+                      styles.scopeDropdownPill,
+                      { backgroundColor: scopeHex },
+                    ]}
+                  />
+                  <Text style={styles.scopeDropdownValueText} numberOfLines={1}>
+                    {selectedScope.label}
+                  </Text>
+                </View>
+              )}
+              <MaterialCommunityIcons
+                name="chevron-down"
+                size={20}
+                color={ChickIntelPalette.gray1}
+              />
+            </View>
+          </Pressable>
 
-        {/* Timeframe Filter Segment */}
-        <View style={styles.periodBarContainer}>
-          <Text style={styles.periodLabel}>Period:</Text>
-          <View style={styles.periodSegmented}>
-            {PERIOD_OPTIONS.map((entry) => (
-              <TouchableOpacity
-                key={entry}
-                onPress={() => setPeriod(entry)}
-                style={[
-                  styles.periodItem,
-                  period === entry ? styles.periodItemActive : null,
-                ]}
-                activeOpacity={0.8}
-              >
-                <Text
+          {/* Timeframe Filter Segment */}
+          <View style={styles.periodBarContainer}>
+            <Text style={styles.periodLabel}>Period:</Text>
+            <View style={styles.periodSegmented}>
+              {PERIOD_OPTIONS.map((entry) => (
+                <TouchableOpacity
+                  key={entry}
+                  onPress={() => setPeriod(entry)}
                   style={[
-                    styles.periodText,
-                    period === entry ? styles.periodTextActive : null,
+                    styles.periodItem,
+                    period === entry ? styles.periodItemActive : null,
                   ]}
+                  activeOpacity={0.8}
                 >
-                  {entry}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-      </View>
-
-      <ScrollView
-        contentContainerStyle={[
-          styles.content,
-          { paddingTop: 10, paddingBottom: insets.bottom + 110 },
-        ]}
-        showsVerticalScrollIndicator={false}
-      >
-        {loading ? (
-          <View style={styles.statusRow}>
-            <ActivityIndicator color={ChickIntelPalette.green1} />
-            <Text style={styles.statusText}>Updating fertility metrics...</Text>
-          </View>
-        ) : null}
-
-        {error ? <Text style={styles.errorText}>{error}</Text> : null}
-
-        {/* At-a-Glance KPI Cards Row */}
-        <View style={styles.kpiGrid}>
-          <View style={styles.kpiCard}>
-            <View style={styles.kpiIconWrap}>
-              <MaterialCommunityIcons
-                name="heart-pulse"
-                size={16}
-                color={ChickIntelPalette.green1}
-              />
+                  <Text
+                    style={[
+                      styles.periodText,
+                      period === entry ? styles.periodTextActive : null,
+                    ]}
+                  >
+                    {entry}
+                  </Text>
+                </TouchableOpacity>
+              ))}
             </View>
-            <Text style={styles.kpiLabel}>Fertility Rate</Text>
-            <Text
-              style={[styles.kpiValue, { color: ChickIntelPalette.green1 }]}
-            >
-              {report.fertilityRate}%
-            </Text>
-            <Text style={styles.kpiSubtext}>Fertile Egg Ratio</Text>
-          </View>
-
-          <View style={styles.kpiCard}>
-            <View style={styles.kpiIconWrap}>
-              <MaterialCommunityIcons
-                name="egg-outline"
-                size={16}
-                color={ChickIntelPalette.green1}
-              />
-            </View>
-            <Text style={styles.kpiLabel}>Hatch Rate</Text>
-            <Text style={styles.kpiValue}>{report.productionRate}%</Text>
-            <Text style={styles.kpiSubtext}>Hatched Outcomes</Text>
-          </View>
-
-          <View style={styles.kpiCard}>
-            <View style={styles.kpiIconWrap}>
-              <MaterialCommunityIcons
-                name="egg-outline"
-                size={16}
-                color={ChickIntelPalette.green1}
-              />
-            </View>
-            <Text style={styles.kpiLabel}>Total Eggs</Text>
-            <Text style={styles.kpiValue}>
-              {report.totalEggs.toLocaleString()}
-            </Text>
-            <Text style={styles.kpiSubtext}>Batch Quantity</Text>
           </View>
         </View>
 
-        {/* Donut & Breakdown Card */}
-        <BlurCard
-          style={[styles.glassCard, isDark && styles.glassCardDark]}
-          borderRadius={20}
-          intensity={18}
-          transparent
+        <ScrollView
+          contentContainerStyle={[
+            styles.content,
+            { paddingTop: 10, paddingBottom: 15 },
+          ]}
+          showsVerticalScrollIndicator={false}
         >
-          <View
-            style={[
-              styles.cardSurface,
-              { backgroundColor: "transparent", borderColor: glassBorder },
-            ]}
-          >
-            <View style={styles.cardHeaderRow}>
-              <View style={styles.cardIconBadge}>
+          {loading ? (
+            <View style={styles.statusRow}>
+              <ActivityIndicator color={ChickIntelPalette.green1} />
+              <Text style={styles.statusText}>
+                Updating fertility metrics...
+              </Text>
+            </View>
+          ) : null}
+
+          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
+          {/* At-a-Glance KPI Cards Row */}
+          <View style={styles.kpiGrid}>
+            <View style={styles.kpiCard}>
+              <View style={styles.kpiIconWrap}>
                 <MaterialCommunityIcons
-                  name="chart-donut"
-                  size={18}
+                  name="heart-pulse"
+                  size={16}
                   color={ChickIntelPalette.green1}
                 />
               </View>
-              <Text style={styles.cardTitle}>{report.title}</Text>
+              <Text style={styles.kpiLabel}>Fertility Rate</Text>
+              <Text
+                style={[styles.kpiValue, { color: ChickIntelPalette.green1 }]}
+              >
+                {report.fertilityRate}%
+              </Text>
+              <Text style={styles.kpiSubtext}>Fertile Egg Ratio</Text>
             </View>
 
-            <View style={styles.chartWrapper}>
-              <DonutChart slices={report.slices} total={report.totalOutcomes} />
+            <View style={styles.kpiCard}>
+              <View style={styles.kpiIconWrap}>
+                <MaterialCommunityIcons
+                  name="egg-outline"
+                  size={16}
+                  color={ChickIntelPalette.green1}
+                />
+              </View>
+              <Text style={styles.kpiLabel}>Hatch Rate</Text>
+              <Text style={styles.kpiValue}>{report.productionRate}%</Text>
+              <Text style={styles.kpiSubtext}>Hatched Outcomes</Text>
             </View>
 
-            <View style={styles.insightCard}>
-              <View style={styles.insightHeaderRow}>
-                <View style={styles.insightIconBadge}>
+            <View style={styles.kpiCard}>
+              <View style={styles.kpiIconWrap}>
+                <MaterialCommunityIcons
+                  name="egg-outline"
+                  size={16}
+                  color={ChickIntelPalette.green1}
+                />
+              </View>
+              <Text style={styles.kpiLabel}>Total Eggs</Text>
+              <Text style={styles.kpiValue}>
+                {report.totalEggs.toLocaleString()}
+              </Text>
+              <Text style={styles.kpiSubtext}>Batch Quantity</Text>
+            </View>
+          </View>
+
+          {/* Donut & Breakdown Card */}
+          <BlurCard
+            style={[styles.glassCard, isDark && styles.glassCardDark]}
+            borderRadius={20}
+            intensity={18}
+            transparent
+          >
+            <View
+              style={[
+                styles.cardSurface,
+                { backgroundColor: "transparent", borderColor: glassBorder },
+              ]}
+            >
+              <View style={styles.cardHeaderRow}>
+                <View style={styles.cardIconBadge}>
                   <MaterialCommunityIcons
-                    name="lightbulb-on-outline"
-                    size={16}
+                    name="chart-donut"
+                    size={18}
                     color={ChickIntelPalette.green1}
                   />
                 </View>
-                <Text style={styles.insightTitle}>
-                  Fertility Operational Insight
+                <Text style={styles.cardTitle}>{report.title}</Text>
+              </View>
+
+              <View style={styles.chartWrapper}>
+                <DonutChart
+                  slices={report.slices}
+                  total={report.totalOutcomes}
+                />
+              </View>
+
+              <View style={styles.insightCard}>
+                <View style={styles.insightHeaderRow}>
+                  <View style={styles.insightIconBadge}>
+                    <MaterialCommunityIcons
+                      name="lightbulb-on-outline"
+                      size={16}
+                      color={ChickIntelPalette.green1}
+                    />
+                  </View>
+                  <Text style={styles.insightTitle}>
+                    Fertility Operational Insight
+                  </Text>
+                </View>
+                <Text style={styles.insightBodyText}>
+                  {report.analyticsText}
                 </Text>
               </View>
-              <Text style={styles.insightBodyText}>{report.analyticsText}</Text>
             </View>
-          </View>
-        </BlurCard>
-      </ScrollView>
+          </BlurCard>
+        </ScrollView>
 
-      {/* Scope Selection Modal */}
-      <Modal
-        visible={scopeModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setScopeModalVisible(false)}
-      >
-        <Pressable
-          style={styles.scopeModalBackdrop}
-          onPress={() => setScopeModalVisible(false)}
+        {/* Scope Selection Modal */}
+        <Modal
+          visible={scopeModalVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setScopeModalVisible(false)}
         >
           <Pressable
-            style={styles.scopeModalCard}
-            onPress={(event) => event.stopPropagation()}
+            style={styles.scopeModalBackdrop}
+            onPress={() => setScopeModalVisible(false)}
           >
-            <Text style={styles.scopeModalTitle}>Select Egg Batch Scope</Text>
-            <ScrollView
-              style={styles.scopeModalList}
-              showsVerticalScrollIndicator={false}
+            <Pressable
+              style={styles.scopeModalCard}
+              onPress={(event) => event.stopPropagation()}
             >
-              {scopeOptions.map((option) => {
-                const isSelected = option.key === selectedScopeKey;
+              <Text style={styles.scopeModalTitle}>Select Egg Batch Scope</Text>
+              <ScrollView
+                style={styles.scopeModalList}
+                showsVerticalScrollIndicator={false}
+              >
+                {scopeOptions.map((option) => {
+                  const isSelected = option.key === selectedScopeKey;
 
-                return (
-                  <Pressable
-                    key={option.key}
-                    onPress={() => {
-                      setSelectedScopeKey(option.key);
-                      setScopeModalVisible(false);
-                    }}
-                    style={[
-                      styles.scopeOptionRow,
-                      isSelected ? styles.scopeOptionRowSelected : null,
-                    ]}
-                  >
-                    {option.key === "overall" ? (
-                      <Text
-                        style={[
-                          styles.scopeOptionText,
-                          isSelected ? styles.scopeOptionTextSelected : null,
-                        ]}
-                      >
-                        {option.label}
-                      </Text>
-                    ) : (
-                      <View style={styles.scopeOptionContent}>
-                        <View
-                          style={[
-                            styles.scopeOptionPill,
-                            {
-                              backgroundColor:
-                                option.colorHex ?? ChickIntelPalette.gray2,
-                            },
-                          ]}
-                        />
+                  return (
+                    <Pressable
+                      key={option.key}
+                      onPress={() => {
+                        setSelectedScopeKey(option.key);
+                        setScopeModalVisible(false);
+                      }}
+                      style={[
+                        styles.scopeOptionRow,
+                        isSelected ? styles.scopeOptionRowSelected : null,
+                      ]}
+                    >
+                      {option.key === "overall" ? (
                         <Text
                           style={[
                             styles.scopeOptionText,
                             isSelected ? styles.scopeOptionTextSelected : null,
                           ]}
-                          numberOfLines={1}
                         >
                           {option.label}
                         </Text>
-                      </View>
-                    )}
-                    {isSelected ? (
-                      <MaterialCommunityIcons
-                        name="check"
-                        size={18}
-                        color={ChickIntelPalette.green1}
-                      />
-                    ) : null}
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
+                      ) : (
+                        <View style={styles.scopeOptionContent}>
+                          <View
+                            style={[
+                              styles.scopeOptionPill,
+                              {
+                                backgroundColor:
+                                  option.colorHex ?? ChickIntelPalette.gray2,
+                              },
+                            ]}
+                          />
+                          <Text
+                            style={[
+                              styles.scopeOptionText,
+                              isSelected
+                                ? styles.scopeOptionTextSelected
+                                : null,
+                            ]}
+                            numberOfLines={1}
+                          >
+                            {option.label}
+                          </Text>
+                        </View>
+                      )}
+                      {isSelected ? (
+                        <MaterialCommunityIcons
+                          name="check"
+                          size={18}
+                          color={ChickIntelPalette.green1}
+                        />
+                      ) : null}
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            </Pressable>
           </Pressable>
-        </Pressable>
-      </Modal>
+        </Modal>
       </SafeAreaView>
     </View>
   );

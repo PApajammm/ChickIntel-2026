@@ -48,7 +48,6 @@ import { addRecentBreedScan } from "@/utils/recent-breed-scans";
 import { createFarmBatch, fetchFarmBatches } from "@/utils/supabase-batches";
 import { fetchBreedOptions } from "@/utils/supabase-lookups";
 
-const TAB_BAR_OFFSET = 55;
 const MAX_SCAN_ZOOM = 0.7;
 
 const AGE_UNIT_OPTIONS = ["Days old", "Weeks old"] as const;
@@ -89,6 +88,11 @@ export default function AddBatchScreen() {
   const { activeFarm } = useAuth();
   const { mode: modeParam } = useLocalSearchParams<{ mode?: string }>();
   const initialMode: BatchMode = modeParam === "egg" ? "egg" : "chicken";
+  const isNarrowPhone = width < 360;
+  const colorModalWidth = Math.min(width - moderateScale(36), scale(420));
+  const colorGridCardWidth = Math.floor(
+    (colorModalWidth - moderateScale(36)) / 4,
+  );
   const [mode] = useState<BatchMode>(initialMode);
   const router = useRouter();
   const cameraRef = useRef<CameraViewportRef>(null);
@@ -472,7 +476,7 @@ export default function AddBatchScreen() {
           contentContainerStyle={[
             styles.content,
             {
-              paddingBottom: insets.bottom + TAB_BAR_OFFSET + 24,
+              paddingBottom: 15,
             },
           ]}
           showsVerticalScrollIndicator={false}
@@ -786,6 +790,9 @@ export default function AddBatchScreen() {
       <Modal
         visible={breedScannerOpen}
         animationType="slide"
+        presentationStyle="fullScreen"
+        statusBarTranslucent
+        navigationBarTranslucent
         onRequestClose={closeBreedScanner}
       >
         <View style={styles.cameraModalScreen}>
@@ -863,17 +870,33 @@ export default function AddBatchScreen() {
 
                 <View
                   pointerEvents="box-none"
-                  style={styles.cameraViewfinderArea}
-                >
-                  <ViewfinderOverlay size={viewfinderSize} />
-                </View>
-
-                <View
                   style={[
-                    styles.cameraBottomColumn,
-                    { paddingBottom: insets.bottom + 24 },
+                    styles.cameraViewfinderArea,
+                    isNarrowPhone && styles.cameraViewfinderAreaNarrow,
                   ]}
                 >
+                  <ViewfinderOverlay size={viewfinderSize} />
+                  <View style={styles.breedSupportedCard}>
+                    <View style={styles.breedSupportedHeadingRow}>
+                      <MaterialCommunityIcons
+                        name="feather"
+                        size={15}
+                        color={ChickIntelPalette.green1}
+                      />
+                      <Text style={styles.breedSupportedHeading}>
+                        SUPPORTED BREEDS
+                      </Text>
+                    </View>
+                    <Text style={styles.breedSupportedCategories}>
+                      Silkie • Rhode Island Red
+                    </Text>
+                    <Text style={styles.breedSupportedNote}>
+                      Only supported breeds are detected.
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={[styles.cameraBottomColumn, { paddingBottom: 0 }]}>
                   <View style={styles.cameraZoomWrap}>
                     <MaterialCommunityIcons
                       name="magnify-minus-outline"
@@ -991,6 +1014,8 @@ export default function AddBatchScreen() {
                     }}
                     style={[
                       styles.colorGridCard,
+                      { width: colorGridCardWidth },
+                      isNarrowPhone && styles.colorGridCardNarrow,
                       active && styles.colorGridCardActive,
                       disabled && styles.colorGridCardDisabled,
                     ]}
@@ -1145,12 +1170,11 @@ const styles = StyleSheet.create({
   colorGridContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 10,
+    justifyContent: "space-between",
+    rowGap: 10,
     paddingBottom: 10,
   },
   colorGridCard: {
-    width: "22%",
-    minWidth: scale(72),
     alignItems: "center",
     padding: moderateScale(8),
     borderRadius: 10,
@@ -1158,6 +1182,10 @@ const styles = StyleSheet.create({
     borderColor: "#E4EAE8",
     backgroundColor: "#FAFDFB",
     gap: 6,
+  },
+  colorGridCardNarrow: {
+    padding: moderateScale(5),
+    gap: 4,
   },
   colorGridCardActive: {
     borderColor: ChickIntelPalette.green1,
@@ -1662,12 +1690,56 @@ const styles = StyleSheet.create({
   cameraViewfinderArea: {
     flex: 1,
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "flex-end",
+    paddingBottom: verticalScale(8),
+    gap: 14,
+  },
+  cameraViewfinderAreaNarrow: {
+    gap: 6,
+  },
+  breedSupportedCard: {
+    width: "80%",
+    maxWidth: scale(320),
+    paddingHorizontal: moderateScale(14),
+    paddingVertical: verticalScale(9),
+    borderRadius: 14,
+    backgroundColor: "rgba(254, 254, 254, 0.96)",
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.34)",
+  },
+  breedSupportedHeadingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  breedSupportedHeading: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(11),
+    lineHeight: 14,
+    fontWeight: "800",
+    letterSpacing: 0.6,
+    color: ChickIntelPalette.green1,
+  },
+  breedSupportedCategories: {
+    marginTop: 4,
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(14),
+    lineHeight: 19,
+    fontWeight: "800",
+    color: ChickIntelPalette.gray1,
+  },
+  breedSupportedNote: {
+    marginTop: 3,
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(11),
+    lineHeight: 15,
+    fontWeight: "600",
+    color: "#44504D",
   },
   cameraBottomColumn: {
     paddingHorizontal: moderateScale(18),
     alignItems: "center",
-    gap: 10,
+    gap: 6,
   },
   cameraZoomWrap: {
     width: "70%",

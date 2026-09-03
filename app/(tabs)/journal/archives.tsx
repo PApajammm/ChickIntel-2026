@@ -1,3 +1,9 @@
+import {
+    moderateScale,
+    responsiveFontSize,
+    scale,
+    verticalScale,
+} from "@/utils/responsive";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
@@ -15,7 +21,6 @@ import {
     View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { moderateScale, responsiveFontSize, scale, verticalScale } from "@/utils/responsive";
 
 import BackgroundGradient from "@/assets_imported/background-gradient.svg";
 
@@ -25,16 +30,14 @@ import { ChickIntelPalette } from "@/constants/chickintel-palette";
 import { HealthTypography } from "@/constants/health-typography";
 import { useBehaviors } from "@/hooks/use-behaviors";
 import { useAuth } from "@/providers/auth-provider";
+import { logError } from "@/utils/logger";
+import { mapBehaviorIdsToLabels } from "@/utils/supabase-behaviors";
 import {
     clearArchivedHealthJournalEntries,
     fetchArchivedHealthJournalEntries,
     formatJournalDateTime,
     type HealthJournalSavedScan,
 } from "@/utils/supabase-health-journal";
-import { mapBehaviorIdsToLabels } from "@/utils/supabase-behaviors";
-import { logError } from "@/utils/logger";
-
-const TAB_BAR_OFFSET = 55;
 
 export default function ArchivesScreen() {
   const router = useRouter();
@@ -84,9 +87,9 @@ export default function ArchivesScreen() {
       await clearArchivedHealthJournalEntries(activeFarm.id);
       setEntries([]);
       setClearModalVisible(false);
-      Haptics.notificationAsync(
-        Haptics.NotificationFeedbackType.Success,
-      ).catch(() => null);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
+        () => null,
+      );
     } catch (error) {
       logError("Failed to clear archives", error, { farmId: activeFarm.id });
       Alert.alert(
@@ -124,11 +127,7 @@ export default function ArchivesScreen() {
             accessibilityRole="button"
             accessibilityLabel="Back"
           >
-            <MaterialCommunityIcons
-              name="arrow-left"
-              size={22}
-              color="#FFF"
-            />
+            <MaterialCommunityIcons name="arrow-left" size={22} color="#FFF" />
           </TouchableOpacity>
           <Text style={styles.title}>Archives</Text>
 
@@ -165,7 +164,10 @@ export default function ArchivesScreen() {
               actionStatus={item.actionStatus}
               timestamp={formatJournalDateTime(item.savedAt)}
               photoUri={item.photoUri}
-              behaviorLabels={mapBehaviorIdsToLabels(item.behaviorIds, behaviorItems)}
+              behaviorLabels={mapBehaviorIdsToLabels(
+                item.behaviorIds,
+                behaviorItems,
+              )}
               additionalObservation={item.additionalObservation}
               selected={false}
               onToggleSelect={() => {}}
@@ -178,12 +180,13 @@ export default function ArchivesScreen() {
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyText}>
-                No archived health logs. Items moved to Archives will appear here.
+                No archived health logs. Items moved to Archives will appear
+                here.
               </Text>
             </View>
           }
           contentContainerStyle={{
-            paddingBottom: insets.bottom + TAB_BAR_OFFSET + 20,
+            paddingBottom: 15,
             flexGrow: 1,
           }}
           showsVerticalScrollIndicator={false}
@@ -214,7 +217,8 @@ export default function ArchivesScreen() {
             </View>
             <Text style={styles.modalTitle}>Clear Archives?</Text>
             <Text style={styles.modalMessage}>
-              This will permanently delete all {entries.length} archived health log(s) from Supabase storage. This action cannot be undone.
+              This will permanently delete all {entries.length} archived health
+              log(s) from Supabase storage. This action cannot be undone.
             </Text>
             <View style={styles.modalRow}>
               <Pressable

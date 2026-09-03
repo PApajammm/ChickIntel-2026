@@ -2,15 +2,20 @@ import { peekHistory } from "@/utils/nav-history";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { usePathname, useRouter, type Href } from "expo-router";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ChickFont } from "@/constants/chick-fonts";
-import { moderateScale, responsiveFontSize, scale, verticalScale } from "@/utils/responsive";
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
 import { getFarmColors } from "@/constants/farm-theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuth } from "@/providers/auth-provider";
+import {
+  moderateScale,
+  responsiveFontSize,
+  scale,
+  verticalScale,
+} from "@/utils/responsive";
 
 type ChickTabBarProps = Omit<BottomTabBarProps, "state"> & {
   onLogoutPress: () => void;
@@ -62,7 +67,8 @@ export function ChickTabBar({ onLogoutPress, ..._rest }: ChickTabBarProps) {
         {
           backgroundColor: ChickIntelPalette.light1,
           borderTopColor: ChickIntelPalette.lightGreen,
-          paddingBottom: Math.max(insets.bottom, 6),
+          paddingBottom:
+            Platform.OS === "android" ? 6 : Math.max(insets.bottom, 6),
         },
       ]}
     >
@@ -90,18 +96,15 @@ export function ChickTabBar({ onLogoutPress, ..._rest }: ChickTabBarProps) {
       {profile?.is_admin && (
         <Pressable
           onPress={() => router.push("/admin/dashboard")}
-          style={({ pressed }) => [styles.item, { opacity: pressed ? 0.85 : 1 }]}
+          style={({ pressed }) => [
+            styles.item,
+            { opacity: pressed ? 0.85 : 1 },
+          ]}
           accessibilityRole="button"
           accessibilityLabel="Admin"
         >
-          <MaterialCommunityIcons
-            name="cog"
-            size={26}
-            color={inactiveColor}
-          />
-          <Text style={[styles.label, { color: inactiveColor }]}>
-            Admin
-          </Text>
+          <MaterialCommunityIcons name="cog" size={26} color={inactiveColor} />
+          <Text style={[styles.label, { color: inactiveColor }]}>Admin</Text>
         </Pressable>
       )}
 
@@ -111,14 +114,8 @@ export function ChickTabBar({ onLogoutPress, ..._rest }: ChickTabBarProps) {
         accessibilityRole="button"
         accessibilityLabel="Logout"
       >
-        <MaterialCommunityIcons
-          name="power"
-          size={26}
-          color={inactiveColor}
-        />
-        <Text style={[styles.label, { color: inactiveColor }]}>
-          Logout
-        </Text>
+        <MaterialCommunityIcons name="power" size={26} color={inactiveColor} />
+        <Text style={[styles.label, { color: inactiveColor }]}>Logout</Text>
       </Pressable>
     </View>
   );

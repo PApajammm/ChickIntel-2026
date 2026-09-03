@@ -3,37 +3,36 @@ import { BlurCard } from "@/components/ui/blur-card";
 import { ChickFont } from "@/constants/chick-fonts";
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
 import { ReportsCardTheme, ReportsPageTheme } from "@/constants/reports-theme";
-import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuth } from "@/providers/auth-provider";
 import {
-  moderateScale,
-  responsiveFontSize,
-  scale,
-  verticalScale,
+    moderateScale,
+    responsiveFontSize,
+    scale,
+    verticalScale,
 } from "@/utils/responsive";
 import {
-  fetchFarmReportSnapshot,
-  type FarmReportSnapshot,
-  type ReportDonutSlice,
-  type ReportOverview,
-  type ReportProductionType,
-  type ReportSupplyType,
+    fetchFarmReportSnapshot,
+    type FarmReportSnapshot,
+    type ReportDonutSlice,
+    type ReportOverview,
+    type ReportProductionType,
+    type ReportSupplyType,
 } from "@/utils/supabase-reports";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Print from "expo-print";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Modal,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Circle, G } from "react-native-svg";
 
 const OVERVIEW_OPTIONS: ReportOverview[] = ["Weekly", "Monthly", "Annually"];
@@ -107,7 +106,9 @@ function renderProductionSection(
   const rows = snapshot.slices
     .map((slice) => {
       const percentVal =
-        snapshot.total > 0 ? Math.round((slice.count / snapshot.total) * 100) : 0;
+        snapshot.total > 0
+          ? Math.round((slice.count / snapshot.total) * 100)
+          : 0;
       return `
         <tr>
             <td style="font-weight: 700;">
@@ -127,7 +128,7 @@ function renderProductionSection(
 
   const topSlice = snapshot.slices.reduce(
     (max, item) => (item.count > max.count ? item : max),
-    snapshot.slices[0] || { label: "N/A", count: 0, displayPercent: "0%" }
+    snapshot.slices[0] || { label: "N/A", count: 0, displayPercent: "0%" },
   );
 
   return `
@@ -247,7 +248,7 @@ function renderSupplySection(
   const totalQty = supply.bars.reduce((sum, b) => sum + b.value, 0);
   const peakBar = supply.bars.reduce(
     (max, b) => (b.value > max.value ? b : max),
-    supply.bars[0] || { label: "N/A", value: 0 }
+    supply.bars[0] || { label: "N/A", value: 0 },
   );
 
   const supplyRows =
@@ -352,39 +353,71 @@ function buildPrintableHtml({
   if (printScope === "All Categories (Multi-Page)") {
     pages.push({
       categoryName: "Egg Production",
-      contentHtml: renderProductionSection("Egg Production Report", "🥚", eggReport.production),
+      contentHtml: renderProductionSection(
+        "Egg Production Report",
+        "🥚",
+        eggReport.production,
+      ),
     });
     pages.push({
       categoryName: "Chicken Production",
-      contentHtml: renderProductionSection("Chicken Flock & Batch Report", "🐓", chickenReport.production),
+      contentHtml: renderProductionSection(
+        "Chicken Flock & Batch Report",
+        "🐓",
+        chickenReport.production,
+      ),
     });
     pages.push({
       categoryName: "Vitamins & Meds",
-      contentHtml: renderSupplySection("Vitamins & Medication Activity", "💊", vitaminsReport.supply),
+      contentHtml: renderSupplySection(
+        "Vitamins & Medication Activity",
+        "💊",
+        vitaminsReport.supply,
+      ),
     });
     pages.push({
       categoryName: "Feeds Consumption",
-      contentHtml: renderSupplySection("Feeds Consumption & Inventory", "🌾", feedsReport.supply),
+      contentHtml: renderSupplySection(
+        "Feeds Consumption & Inventory",
+        "🌾",
+        feedsReport.supply,
+      ),
     });
   } else if (printScope === "Eggs Only") {
     pages.push({
       categoryName: "Egg Production",
-      contentHtml: renderProductionSection("Egg Production Report", "🥚", eggReport.production),
+      contentHtml: renderProductionSection(
+        "Egg Production Report",
+        "🥚",
+        eggReport.production,
+      ),
     });
   } else if (printScope === "Chickens Only") {
     pages.push({
       categoryName: "Chicken Production",
-      contentHtml: renderProductionSection("Chicken Flock & Batch Report", "🐓", chickenReport.production),
+      contentHtml: renderProductionSection(
+        "Chicken Flock & Batch Report",
+        "🐓",
+        chickenReport.production,
+      ),
     });
   } else if (printScope === "Vitamins & Meds Only") {
     pages.push({
       categoryName: "Vitamins & Meds",
-      contentHtml: renderSupplySection("Vitamins & Medication Activity", "💊", vitaminsReport.supply),
+      contentHtml: renderSupplySection(
+        "Vitamins & Medication Activity",
+        "💊",
+        vitaminsReport.supply,
+      ),
     });
   } else if (printScope === "Feeds Only") {
     pages.push({
       categoryName: "Feeds Consumption",
-      contentHtml: renderSupplySection("Feeds Consumption & Inventory", "🌾", feedsReport.supply),
+      contentHtml: renderSupplySection(
+        "Feeds Consumption & Inventory",
+        "🌾",
+        feedsReport.supply,
+      ),
     });
   }
 
@@ -423,7 +456,7 @@ function buildPrintableHtml({
             <span>Generated on ${escapeHtml(generatedDate)} ${escapeHtml(generatedTime)}</span>
             <span>Page ${idx + 1} of ${totalPages}</span>
           </div>
-      </div>`
+      </div>`,
     )
     .join("");
 
@@ -872,7 +905,9 @@ function PrintModal({
                 color="#FFF"
               />
               <Text style={styles.printBtnText}>
-                {printingReport ? "Generating multi-page PDF..." : "Export & Print PDF"}
+                {printingReport
+                  ? "Generating multi-page PDF..."
+                  : "Export & Print PDF"}
               </Text>
             </TouchableOpacity>
 
@@ -999,7 +1034,8 @@ function DonutChart({
 
       <View style={styles.breakdownList}>
         {slices.map((slice) => {
-          const percentVal = total > 0 ? Math.round((slice.count / total) * 100) : 0;
+          const percentVal =
+            total > 0 ? Math.round((slice.count / total) * 100) : 0;
           return (
             <View key={slice.label} style={styles.breakdownRowContainer}>
               <View style={styles.breakdownRowHeader}>
@@ -1049,8 +1085,14 @@ function ConsumptionBarChart({
   if (bars.length === 0) {
     return (
       <View style={styles.emptyChartBox}>
-        <MaterialCommunityIcons name="cube-outline" size={28} color={ChickIntelPalette.gray2} />
-        <Text style={styles.emptyChartText}>No consumption data recorded for this timeframe.</Text>
+        <MaterialCommunityIcons
+          name="cube-outline"
+          size={28}
+          color={ChickIntelPalette.gray2}
+        />
+        <Text style={styles.emptyChartText}>
+          No consumption data recorded for this timeframe.
+        </Text>
       </View>
     );
   }
@@ -1121,7 +1163,6 @@ function SmartInsightCard({ text }: { text: string }) {
 
 export default function ReportsScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { activeFarm, profile } = useAuth();
   const isDark = false;
   const activeFarmId = activeFarm?.id;
@@ -1135,8 +1176,9 @@ export default function ReportsScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const [printModalVisible, setPrintModalVisible] = useState(false);
-  const [printScope, setPrintScope] =
-    useState<PrintScopeOption>("All Categories (Multi-Page)");
+  const [printScope, setPrintScope] = useState<PrintScopeOption>(
+    "All Categories (Multi-Page)",
+  );
   const [printingReport, setPrintingReport] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -1279,12 +1321,16 @@ export default function ReportsScreen() {
 
   const topSlice = report.production.slices.reduce(
     (max, item) => (item.count > max.count ? item : max),
-    report.production.slices[0] || { label: "N/A", count: 0, displayPercent: "0%" }
+    report.production.slices[0] || {
+      label: "N/A",
+      count: 0,
+      displayPercent: "0%",
+    },
   );
 
   const totalSupplyUsage = report.supply.bars.reduce(
     (sum, item) => sum + item.value,
-    0
+    0,
   );
   const displayedSupplyTotal = report.supply.totalSlices ?? totalSupplyUsage;
 
@@ -1301,273 +1347,282 @@ export default function ReportsScreen() {
       />
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
         <View style={styles.viewShot}>
-        {/* Pinned Top Header */}
-        <View style={styles.fixedHeader}>
-          <View style={styles.header}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+          {/* Pinned Top Header */}
+          <View style={styles.fixedHeader}>
+            <View style={styles.header}>
+              <View
+                style={{ flexDirection: "row", alignItems: "center", gap: 10 }}
+              >
+                <TouchableOpacity
+                  style={styles.printButton}
+                  onPress={() =>
+                    router.canGoBack()
+                      ? router.back()
+                      : router.replace("/(tabs)")
+                  }
+                  activeOpacity={0.8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Go back"
+                >
+                  <MaterialCommunityIcons
+                    name="arrow-left"
+                    size={22}
+                    color="#FFF"
+                  />
+                </TouchableOpacity>
+                <View>
+                  <Text style={styles.screenTitle}>Farm Reports</Text>
+                  <Text style={styles.screenSubtitle}>
+                    {activeFarm?.name || "No active farm"} • {overview} Snapshot
+                  </Text>
+                </View>
+              </View>
               <TouchableOpacity
                 style={styles.printButton}
-                onPress={() =>
-                  router.canGoBack() ? router.back() : router.replace("/(tabs)")
-                }
+                onPress={() => setPrintModalVisible(true)}
                 activeOpacity={0.8}
-                accessibilityRole="button"
-                accessibilityLabel="Go back"
               >
                 <MaterialCommunityIcons
-                  name="arrow-left"
+                  name="printer-outline"
                   size={22}
                   color="#FFF"
                 />
               </TouchableOpacity>
-              <View>
-                <Text style={styles.screenTitle}>Farm Reports</Text>
-                <Text style={styles.screenSubtitle}>
-                  {activeFarm?.name || "No active farm"} • {overview} Snapshot
+            </View>
+
+            {/* Timeframe Filter Bar */}
+            <View style={styles.timeframeBarContainer}>
+              <Text style={styles.timeframeLabel}>Timeframe:</Text>
+              <SegmentedPills
+                options={OVERVIEW_OPTIONS}
+                selected={overview}
+                onSelect={(val) => setOverview(val)}
+                containerStyle={styles.timeframePillsContainer}
+                itemStyle={styles.timeframePillItem}
+                icons={{
+                  Weekly: "calendar-week",
+                  Monthly: "calendar-month",
+                  Annually: "calendar-multiselect",
+                }}
+              />
+            </View>
+          </View>
+
+          <ScrollView
+            contentContainerStyle={[
+              styles.content,
+              {
+                paddingTop: 10,
+                paddingBottom: 15,
+              },
+            ]}
+            showsVerticalScrollIndicator={false}
+          >
+            {loading ? (
+              <View style={styles.statusRow}>
+                <ActivityIndicator color={ChickIntelPalette.green1} />
+                <Text style={styles.statusText}>
+                  Updating report analytics...
+                </Text>
+              </View>
+            ) : null}
+
+            {error ? <Text style={styles.errorText}>{error}</Text> : null}
+            {saveError ? (
+              <Text style={styles.errorText}>{saveError}</Text>
+            ) : null}
+            {saveMessage ? (
+              <Text style={styles.successText}>{saveMessage}</Text>
+            ) : null}
+
+            {/* KPI Summary Cards */}
+            <View style={styles.kpiGrid}>
+              <View style={styles.kpiCard}>
+                <View style={styles.kpiIconWrap}>
+                  <MaterialCommunityIcons
+                    name={prodType === "Eggs" ? "egg" : "bird"}
+                    size={16}
+                    color={ChickIntelPalette.green1}
+                  />
+                </View>
+                <Text style={styles.kpiLabel}>Total {prodType}</Text>
+                <Text style={styles.kpiValue}>
+                  {report.production.total.toLocaleString()}
+                </Text>
+                <Text style={styles.kpiSubtext}>{overview} total recorded</Text>
+              </View>
+
+              <View style={styles.kpiCard}>
+                <View style={styles.kpiIconWrap}>
+                  <MaterialCommunityIcons
+                    name="chart-pie"
+                    size={16}
+                    color={ChickIntelPalette.green1}
+                  />
+                </View>
+                <Text style={styles.kpiLabel}>Top Outcome</Text>
+                <Text
+                  style={[styles.kpiValue, { textTransform: "capitalize" }]}
+                >
+                  {topSlice.label}
+                </Text>
+                <Text style={styles.kpiSubtext}>
+                  {topSlice.displayPercent} ({topSlice.count.toLocaleString()})
+                </Text>
+              </View>
+
+              <View style={styles.kpiCard}>
+                <View style={styles.kpiIconWrap}>
+                  <MaterialCommunityIcons
+                    name="truck-delivery-outline"
+                    size={16}
+                    color={ChickIntelPalette.green1}
+                  />
+                </View>
+                <Text style={styles.kpiLabel}>Consumed Supply</Text>
+                <Text style={styles.kpiValue}>
+                  {displayedSupplyTotal.toLocaleString()}
+                </Text>
+                <Text style={styles.kpiSubtext}>
+                  {supplyType} units consumed
                 </Text>
               </View>
             </View>
-            <TouchableOpacity
-              style={styles.printButton}
-              onPress={() => setPrintModalVisible(true)}
-              activeOpacity={0.8}
+
+            {/* Section 1: Production Overview */}
+            <BlurCard
+              style={[styles.reportCard, isDark && styles.reportCardDark]}
+              borderRadius={20}
+              intensity={18}
+              transparent
             >
-              <MaterialCommunityIcons
-                name="printer-outline"
-                size={22}
-                color="#FFF"
-              />
-            </TouchableOpacity>
-          </View>
-
-          {/* Timeframe Filter Bar */}
-          <View style={styles.timeframeBarContainer}>
-            <Text style={styles.timeframeLabel}>Timeframe:</Text>
-            <SegmentedPills
-              options={OVERVIEW_OPTIONS}
-              selected={overview}
-              onSelect={(val) => setOverview(val)}
-              containerStyle={styles.timeframePillsContainer}
-              itemStyle={styles.timeframePillItem}
-              icons={{
-                Weekly: "calendar-week",
-                Monthly: "calendar-month",
-                Annually: "calendar-multiselect",
-              }}
-            />
-          </View>
-        </View>
-
-        <ScrollView
-          contentContainerStyle={[
-            styles.content,
-            {
-              paddingTop: 10,
-              paddingBottom: insets.bottom + 110,
-            },
-          ]}
-          showsVerticalScrollIndicator={false}
-        >
-
-          {loading ? (
-            <View style={styles.statusRow}>
-              <ActivityIndicator color={ChickIntelPalette.green1} />
-              <Text style={styles.statusText}>Updating report analytics...</Text>
-            </View>
-          ) : null}
-
-          {error ? <Text style={styles.errorText}>{error}</Text> : null}
-          {saveError ? <Text style={styles.errorText}>{saveError}</Text> : null}
-          {saveMessage ? (
-            <Text style={styles.successText}>{saveMessage}</Text>
-          ) : null}
-
-          {/* KPI Summary Cards */}
-          <View style={styles.kpiGrid}>
-            <View style={styles.kpiCard}>
-              <View style={styles.kpiIconWrap}>
-                <MaterialCommunityIcons
-                  name={prodType === "Eggs" ? "egg" : "bird"}
-                  size={16}
-                  color={ChickIntelPalette.green1}
-                />
-              </View>
-              <Text style={styles.kpiLabel}>Total {prodType}</Text>
-              <Text style={styles.kpiValue}>
-                {report.production.total.toLocaleString()}
-              </Text>
-              <Text style={styles.kpiSubtext}>
-                {overview} total recorded
-              </Text>
-            </View>
-
-            <View style={styles.kpiCard}>
-              <View style={styles.kpiIconWrap}>
-                <MaterialCommunityIcons
-                  name="chart-pie"
-                  size={16}
-                  color={ChickIntelPalette.green1}
-                />
-              </View>
-              <Text style={styles.kpiLabel}>Top Outcome</Text>
-              <Text style={[styles.kpiValue, { textTransform: "capitalize" }]}>
-                {topSlice.label}
-              </Text>
-              <Text style={styles.kpiSubtext}>
-                {topSlice.displayPercent} ({topSlice.count.toLocaleString()})
-              </Text>
-            </View>
-
-            <View style={styles.kpiCard}>
-              <View style={styles.kpiIconWrap}>
-                <MaterialCommunityIcons
-                  name="truck-delivery-outline"
-                  size={16}
-                  color={ChickIntelPalette.green1}
-                />
-              </View>
-              <Text style={styles.kpiLabel}>Consumed Supply</Text>
-              <Text style={styles.kpiValue}>
-                {displayedSupplyTotal.toLocaleString()}
-              </Text>
-              <Text style={styles.kpiSubtext}>
-                {supplyType} units consumed
-              </Text>
-            </View>
-          </View>
-
-          {/* Section 1: Production Overview */}
-          <BlurCard
-            style={[styles.reportCard, isDark && styles.reportCardDark]}
-            borderRadius={20}
-            intensity={18}
-            transparent
-          >
-            <View
-              style={[
-                styles.cardSurface,
-                {
-                  backgroundColor: "transparent",
-                  borderColor: glassBorder,
-                },
-              ]}
-            >
-              <View style={styles.cardHeaderRow}>
-                <View style={styles.cardTitleWrap}>
-                  <View style={styles.cardIconBadge}>
-                    <MaterialCommunityIcons
-                      name={prodType === "Eggs" ? "egg-outline" : "bird"}
-                      size={18}
-                      color={ChickIntelPalette.green1}
-                    />
+              <View
+                style={[
+                  styles.cardSurface,
+                  {
+                    backgroundColor: "transparent",
+                    borderColor: glassBorder,
+                  },
+                ]}
+              >
+                <View style={styles.cardHeaderRow}>
+                  <View style={styles.cardTitleWrap}>
+                    <View style={styles.cardIconBadge}>
+                      <MaterialCommunityIcons
+                        name={prodType === "Eggs" ? "egg-outline" : "bird"}
+                        size={18}
+                        color={ChickIntelPalette.green1}
+                      />
+                    </View>
+                    <Text style={styles.cardTitle}>
+                      {report.production.title}
+                    </Text>
                   </View>
-                  <Text style={styles.cardTitle}>
-                    {report.production.title}
-                  </Text>
+                  <SegmentedPills
+                    options={TYPE_OPTIONS}
+                    selected={prodType}
+                    onSelect={(val) => setProdType(val)}
+                    icons={{
+                      Eggs: "egg",
+                      Chickens: "bird",
+                    }}
+                  />
                 </View>
-                <SegmentedPills
-                  options={TYPE_OPTIONS}
-                  selected={prodType}
-                  onSelect={(val) => setProdType(val)}
-                  icons={{
-                    Eggs: "egg",
-                    Chickens: "bird",
-                  }}
-                />
-              </View>
 
-              <View style={styles.chartWrapper}>
-                <DonutChart
-                  slices={report.production.slices}
-                  total={report.production.total}
-                />
-              </View>
-
-              <SmartInsightCard text={report.production.analyticsText} />
-            </View>
-          </BlurCard>
-
-          {/* Section 2: Supply Activity */}
-          <BlurCard
-            style={[styles.reportCard, isDark && styles.reportCardDark]}
-            borderRadius={20}
-            intensity={18}
-            transparent
-          >
-            <View
-              style={[
-                styles.cardSurface,
-                {
-                  backgroundColor: "transparent",
-                  borderColor: glassBorder,
-                },
-              ]}
-            >
-              <View style={styles.cardHeaderRow}>
-                <View style={styles.cardTitleWrap}>
-                  <View style={styles.cardIconBadge}>
-                    <MaterialCommunityIcons
-                      name="truck-delivery-outline"
-                      size={18}
-                      color={ChickIntelPalette.green1}
-                    />
-                  </View>
-                  <Text style={styles.cardTitle}>{report.supply.title}</Text>
-                </View>
-                <SegmentedPills
-                  options={SUPPLY_OPTIONS}
-                  selected={supplyType}
-                  onSelect={(val) => setSupplyType(val)}
-                  icons={{
-                    "Vitamins & Meds": "pill",
-                    Feeds: "barley",
-                  }}
-                />
-              </View>
-
-              {supplyType === "Feeds" ||
-              (report.supply.slices && report.supply.slices.length > 0) ? (
                 <View style={styles.chartWrapper}>
                   <DonutChart
-                    slices={report.supply.slices ?? []}
-                    total={report.supply.totalSlices ?? 0}
+                    slices={report.production.slices}
+                    total={report.production.total}
                   />
                 </View>
-              ) : (
-                <View style={styles.barChartWrapper}>
-                  <ConsumptionBarChart
-                    bars={report.supply.bars}
-                    maxY={report.supply.maxY}
-                  />
-                </View>
-              )}
 
-              <SmartInsightCard text={report.supply.analyticsText} />
+                <SmartInsightCard text={report.production.analyticsText} />
+              </View>
+            </BlurCard>
+
+            {/* Section 2: Supply Activity */}
+            <BlurCard
+              style={[styles.reportCard, isDark && styles.reportCardDark]}
+              borderRadius={20}
+              intensity={18}
+              transparent
+            >
+              <View
+                style={[
+                  styles.cardSurface,
+                  {
+                    backgroundColor: "transparent",
+                    borderColor: glassBorder,
+                  },
+                ]}
+              >
+                <View style={styles.cardHeaderRow}>
+                  <View style={styles.cardTitleWrap}>
+                    <View style={styles.cardIconBadge}>
+                      <MaterialCommunityIcons
+                        name="truck-delivery-outline"
+                        size={18}
+                        color={ChickIntelPalette.green1}
+                      />
+                    </View>
+                    <Text style={styles.cardTitle}>{report.supply.title}</Text>
+                  </View>
+                  <SegmentedPills
+                    options={SUPPLY_OPTIONS}
+                    selected={supplyType}
+                    onSelect={(val) => setSupplyType(val)}
+                    icons={{
+                      "Vitamins & Meds": "pill",
+                      Feeds: "barley",
+                    }}
+                  />
+                </View>
+
+                {supplyType === "Feeds" ||
+                (report.supply.slices && report.supply.slices.length > 0) ? (
+                  <View style={styles.chartWrapper}>
+                    <DonutChart
+                      slices={report.supply.slices ?? []}
+                      total={report.supply.totalSlices ?? 0}
+                    />
+                  </View>
+                ) : (
+                  <View style={styles.barChartWrapper}>
+                    <ConsumptionBarChart
+                      bars={report.supply.bars}
+                      maxY={report.supply.maxY}
+                    />
+                  </View>
+                )}
+
+                <SmartInsightCard text={report.supply.analyticsText} />
+              </View>
+            </BlurCard>
+
+            {/* Footer Metadata */}
+            <View style={styles.footerContainer}>
+              <Text style={styles.footerLabel}>
+                Report Snapshot Information
+              </Text>
+              <Text style={styles.footerText}>Generated by: {generatedBy}</Text>
+              <Text style={styles.footerText}>
+                Date: {generatedDate} at {generatedTime}
+              </Text>
+              <Text style={styles.footerText}>
+                Farm: {activeFarm?.name || "No active farm"}
+              </Text>
             </View>
-          </BlurCard>
+          </ScrollView>
+        </View>
 
-          {/* Footer Metadata */}
-          <View style={styles.footerContainer}>
-            <Text style={styles.footerLabel}>Report Snapshot Information</Text>
-            <Text style={styles.footerText}>Generated by: {generatedBy}</Text>
-            <Text style={styles.footerText}>
-              Date: {generatedDate} at {generatedTime}
-            </Text>
-            <Text style={styles.footerText}>
-              Farm: {activeFarm?.name || "No active farm"}
-            </Text>
-          </View>
-        </ScrollView>
-      </View>
-
-      <PrintModal
-        visible={printModalVisible}
-        onClose={() => setPrintModalVisible(false)}
-        selectedPrintScope={printScope}
-        onSelectPrintScope={setPrintScope}
-        onPrintReport={handlePrintReport}
-        printingReport={printingReport}
-      />
+        <PrintModal
+          visible={printModalVisible}
+          onClose={() => setPrintModalVisible(false)}
+          selectedPrintScope={printScope}
+          onSelectPrintScope={setPrintScope}
+          onPrintReport={handlePrintReport}
+          printingReport={printingReport}
+        />
       </SafeAreaView>
     </View>
   );

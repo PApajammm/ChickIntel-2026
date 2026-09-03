@@ -346,7 +346,7 @@ export default function EggBatchColorScreen() {
           styles.content,
           {
             paddingTop: insets.top + 10,
-            paddingBottom: insets.bottom + 96,
+            paddingBottom: 15,
           },
         ]}
         showsVerticalScrollIndicator={false}
@@ -641,7 +641,7 @@ export default function EggBatchColorScreen() {
               : undefined,
           })
         }
-        bottom={insets.bottom + TAB_BAR_OFFSET - 2 - FAB_OFFSET_FROM_TAB_TOP}
+        bottom={TAB_BAR_OFFSET - 2 - FAB_OFFSET_FROM_TAB_TOP}
         accessibilityLabel="Add egg batch"
       />
 

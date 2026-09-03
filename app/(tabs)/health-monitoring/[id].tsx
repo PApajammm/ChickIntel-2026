@@ -1,19 +1,24 @@
+import {
+    moderateScale,
+    responsiveFontSize,
+    scale,
+    verticalScale,
+} from "@/utils/responsive";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useCameraPermissions } from "expo-camera";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { moderateScale, responsiveFontSize, scale, verticalScale } from "@/utils/responsive";
 
 import BackgroundGradient from "@/assets_imported/background-gradient.svg";
 import { HealthInputSummaryCard } from "@/components/health-scan/health-input-summary-card";
@@ -24,19 +29,17 @@ import { HealthTypography } from "@/constants/health-typography";
 import { useBehaviors } from "@/hooks/use-behaviors";
 import { useAuth } from "@/providers/auth-provider";
 import { logError } from "@/utils/logger";
+import { mapBehaviorIdsToLabels } from "@/utils/supabase-behaviors";
 import {
-  fetchDiseaseDetails,
-  type DiseaseDetails,
+    fetchDiseaseDetails,
+    type DiseaseDetails,
 } from "@/utils/supabase-diseases";
 import type { HealthJournalSavedScan } from "@/utils/supabase-health-journal";
 import {
-  fetchHealthMonitoringRecordById,
-  fetchHealthMonitoringScanHistory,
-  type HealthMonitoringRecord,
+    fetchHealthMonitoringRecordById,
+    fetchHealthMonitoringScanHistory,
+    type HealthMonitoringRecord,
 } from "@/utils/supabase-health-monitoring";
-import { mapBehaviorIdsToLabels } from "@/utils/supabase-behaviors";
-
-const TAB_BAR_OFFSET = 55;
 
 function formatScanDate(savedAt?: string) {
   if (!savedAt) return "Unknown date";
@@ -221,11 +224,7 @@ export default function HealthMonitoringDetailScreen() {
           accessibilityRole="button"
           accessibilityLabel="Back"
         >
-          <MaterialCommunityIcons
-            name="arrow-left"
-            size={22}
-            color="#FFF"
-          />
+          <MaterialCommunityIcons name="arrow-left" size={22} color="#FFF" />
         </TouchableOpacity>
         <Text style={styles.pageTitle}>Health Monitoring</Text>
         <View style={styles.topMeta}>
@@ -235,10 +234,7 @@ export default function HealthMonitoringDetailScreen() {
       </View>
 
       <ScrollView
-        contentContainerStyle={[
-          styles.scroll,
-          { paddingBottom: insets.bottom + TAB_BAR_OFFSET + 24 },
-        ]}
+        contentContainerStyle={[styles.scroll, { paddingBottom: 15 }]}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.metaRow}>

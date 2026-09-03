@@ -1411,7 +1411,7 @@ export default function AdminDashboardScreen() {
       </View>
 
       {activeTab !== "logs" && (
-        <View style={[styles.fabContainer, { bottom: insets.bottom + 16 }]}>
+        <View style={[styles.fabContainer, { bottom: 16 }]}>
           <Pressable
             onPress={() => {
               if (activeTab === "farmers") handleOpenAddFarmer();

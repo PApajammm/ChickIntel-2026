@@ -430,8 +430,7 @@ export default function ProfilesScreen() {
     });
   }, [chickenData, savedEggBatches]);
 
-  const fabBottom =
-    insets.bottom + TAB_BAR_OFFSET - 2 - FAB_OFFSET_FROM_TAB_TOP;
+  const fabBottom = TAB_BAR_OFFSET - 2 - FAB_OFFSET_FROM_TAB_TOP;
 
   return (
     <SafeAreaView
@@ -544,7 +543,7 @@ export default function ProfilesScreen() {
           styles.content,
           {
             paddingTop: 10,
-            paddingBottom: insets.bottom + TAB_BAR_OFFSET + 96,
+            paddingBottom: 78,
           },
         ]}
         showsVerticalScrollIndicator={false}

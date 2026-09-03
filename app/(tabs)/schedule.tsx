@@ -1,9 +1,21 @@
+import {
+    moderateScale,
+    responsiveFontSize,
+    scale,
+    verticalScale,
+} from "@/utils/responsive";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useFocusEffect } from "@react-navigation/native";
-import { StatusBar } from "expo-status-bar";
 import { useRouter } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { StatusBar } from "expo-status-bar";
+import React, {
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+} from "react";
 import {
     ActivityIndicator,
     Alert,
@@ -20,7 +32,6 @@ import {
     View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { moderateScale, responsiveFontSize, scale, verticalScale } from "@/utils/responsive";
 
 import BackgroundGradient from "@/assets_imported/background-gradient.svg";
 import { BlurCard } from "@/components/ui/blur-card";
@@ -32,7 +43,6 @@ import {
 } from "@/components/ui/chick-form";
 import { ChickFont } from "@/constants/chick-fonts";
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
-import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuth } from "@/providers/auth-provider";
 import { useFarmData } from "@/providers/farm-data-provider";
 import { logError } from "@/utils/logger";
@@ -46,7 +56,6 @@ import {
     fetchVitaminOptions,
 } from "@/utils/supabase-lookups";
 import {
-    completeScheduleTask,
     computeTaskStatus,
     createScheduleTask,
     deleteScheduleTask,
@@ -56,10 +65,9 @@ import {
     SCHEDULE_DAYS_OF_WEEK,
     scheduleTaskMatchesDate,
     type SupabaseScheduleTask,
-    type SupabaseScheduleTaskCompletion,
+    type SupabaseScheduleTaskCompletion
 } from "@/utils/supabase-schedule";
 
-const TAB_BAR_OFFSET = 55;
 const DAYS_OF_WEEK = [...SCHEDULE_DAYS_OF_WEEK];
 const MONTHS = [
   "January",
@@ -910,11 +918,7 @@ export default function ScheduleScreen() {
             accessibilityRole="button"
             accessibilityLabel="Go back"
           >
-            <MaterialCommunityIcons
-              name="arrow-left"
-              size={22}
-              color="#FFF"
-            />
+            <MaterialCommunityIcons name="arrow-left" size={22} color="#FFF" />
           </TouchableOpacity>
           <Text style={[styles.headerTitle, { fontSize: responsiveTitleSize }]}>
             Schedule
@@ -925,7 +929,7 @@ export default function ScheduleScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
-          paddingBottom: insets.bottom + TAB_BAR_OFFSET + 30,
+          paddingBottom: 15,
           paddingHorizontal: responsivePadding,
         }}
       >
@@ -1275,9 +1279,7 @@ export default function ScheduleScreen() {
                     activeOpacity={0.7}
                     accessibilityRole="button"
                     accessibilityLabel={
-                      previewTimeframe === "Weekly"
-                        ? "Next week"
-                        : "Next month"
+                      previewTimeframe === "Weekly" ? "Next week" : "Next month"
                     }
                   >
                     <MaterialCommunityIcons

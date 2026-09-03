@@ -15,7 +15,7 @@ import {
     StyleSheet,
     Text,
     TouchableOpacity,
-    View
+    View,
 } from "react-native";
 import {
     SafeAreaView,
@@ -32,8 +32,6 @@ import { DEFAULT_IMAGE_BASED_DETECTION } from "@/constants/health-scan-behaviors
 import { HealthTypography } from "@/constants/health-typography";
 import { useBehaviors } from "@/hooks/use-behaviors";
 import { logStep } from "@/utils/logger";
-
-const TAB_BAR_OFFSET = 55;
 
 export default function ScannedHealthInputScreen() {
   const router = useRouter();
@@ -150,7 +148,7 @@ export default function ScannedHealthInputScreen() {
     <KeyboardAvoidingView
       style={{ flex: 1 }}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={insets.top + TAB_BAR_OFFSET}
+      keyboardVerticalOffset={insets.top}
     >
       <View style={styles.screen}>
         <BackgroundGradient
@@ -203,7 +201,7 @@ export default function ScannedHealthInputScreen() {
               styles.scroll,
               {
                 paddingTop: 8,
-                paddingBottom: insets.bottom + TAB_BAR_OFFSET + 28,
+                paddingBottom: 15,
               },
             ]}
             showsVerticalScrollIndicator={false}

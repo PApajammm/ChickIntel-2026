@@ -22,10 +22,7 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import {
-    SafeAreaView,
-    useSafeAreaInsets,
-} from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import BackgroundGradient from "@/assets_imported/background-gradient.svg";
 import { HealthFlowFooterButton } from "@/components/health-scan/health-flow-footer-button";
@@ -61,8 +58,6 @@ import {
     formatChtTag,
     getNextChtNumber,
 } from "@/utils/supabase-health-monitoring";
-
-const TAB_BAR_OFFSET = 55;
 
 const MONITORABLE_DISEASES = ["Infectious Coryza", "Fowlpox"];
 const NON_CHICKEN_RESULT = "Non-chicken detected";
@@ -127,7 +122,6 @@ function formatBatchOptionLabel(batch: BatchItem) {
 
 export default function ScannedHealthResultScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { activeFarm } = useAuth();
   const params = useLocalSearchParams<{
     photoUri?: string;
@@ -554,7 +548,7 @@ export default function ScannedHealthResultScreen() {
             styles.scroll,
             {
               paddingTop: 8,
-              paddingBottom: insets.bottom + TAB_BAR_OFFSET + 28,
+              paddingBottom: 15,
             },
           ]}
           showsVerticalScrollIndicator={false}

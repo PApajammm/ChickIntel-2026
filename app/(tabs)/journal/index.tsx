@@ -1,3 +1,9 @@
+import {
+    moderateScale,
+    responsiveFontSize,
+    scale,
+    verticalScale,
+} from "@/utils/responsive";
 import { useCameraPermissions } from "expo-camera";
 import * as Haptics from "expo-haptics";
 import type { Href } from "expo-router";
@@ -16,7 +22,6 @@ import {
     View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { moderateScale, responsiveFontSize, scale, verticalScale } from "@/utils/responsive";
 
 import BackgroundGradient from "@/assets_imported/background-gradient.svg";
 
@@ -51,8 +56,7 @@ export default function JournalIndexScreen() {
   const [archiveModalVisible, setArchiveModalVisible] = useState(false);
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const { behaviors: behaviorItems } = useBehaviors();
-  const fabBottom =
-    insets.bottom + TAB_BAR_OFFSET - 2 - FAB_OFFSET_FROM_TAB_TOP;
+  const fabBottom = TAB_BAR_OFFSET - 2 - FAB_OFFSET_FROM_TAB_TOP;
 
   const refresh = useCallback(async () => {
     if (!configured || !activeFarm?.id) {
@@ -242,10 +246,7 @@ export default function JournalIndexScreen() {
           maxToRenderPerBatch={6}
           windowSize={5}
           removeClippedSubviews={Platform.OS !== "web"}
-          contentContainerStyle={[
-            styles.listContent,
-            { paddingBottom: insets.bottom + TAB_BAR_OFFSET + 20 },
-          ]}
+          contentContainerStyle={[styles.listContent, { paddingBottom: 15 }]}
           ItemSeparatorComponent={() => <View style={styles.sep} />}
           ListHeaderComponent={<View style={styles.listTop} />}
           ListEmptyComponent={

@@ -35,7 +35,6 @@ import {
     updateHealthMonitoringStatus,
 } from "@/utils/supabase-health-monitoring";
 
-const TAB_BAR_OFFSET = 55;
 type HealthMonitoringTab = "Active" | "History";
 type PendingStatusChange = {
   record: HealthMonitoringRecord;
@@ -414,12 +413,7 @@ export default function HealthMonitoringIndexScreen() {
                   size={16}
                   color={active ? "#FFFFFF" : "#4A5452"}
                 />
-                <Text
-                  style={[
-                    styles.tabText,
-                    active && styles.tabTextActive,
-                  ]}
-                >
+                <Text style={[styles.tabText, active && styles.tabTextActive]}>
                   {tab}
                 </Text>
               </Pressable>
@@ -432,10 +426,7 @@ export default function HealthMonitoringIndexScreen() {
           extraData={{ selectedTab, records }}
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
-          contentContainerStyle={[
-            styles.listContent,
-            { paddingBottom: insets.bottom + TAB_BAR_OFFSET + 20 },
-          ]}
+          contentContainerStyle={[styles.listContent, { paddingBottom: 15 }]}
           ItemSeparatorComponent={() => <View style={styles.sep} />}
           ListHeaderComponent={<View style={styles.listTop} />}
           ListEmptyComponent={
