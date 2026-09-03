@@ -143,6 +143,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
         .returns<FarmMembership[]>(),
     ]);
 
+    if (
+      isInvalidRefreshTokenError(profileError) ||
+      isInvalidRefreshTokenError(membershipError)
+    ) {
+      await clearBrokenLocalSession(profileError ?? membershipError);
+      return;
+    }
+
     let finalProfileData = profileData;
 
     if (profileError || !finalProfileData) {

@@ -1,8 +1,8 @@
 import {
-  moderateScale,
-  responsiveFontSize,
-  scale,
-  verticalScale,
+    moderateScale,
+    responsiveFontSize,
+    scale,
+    verticalScale,
 } from "@/utils/responsive";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
@@ -10,17 +10,18 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  Alert,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Alert,
+    FlatList,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -32,8 +33,8 @@ import type { BatchItem } from "@/utils/batch-store";
 import { logError } from "@/utils/logger";
 import { fetchFarmBatches } from "@/utils/supabase-batches";
 import {
-  createFarmEggBatch,
-  fetchFarmEggBatches,
+    createFarmEggBatch,
+    fetchFarmEggBatches,
 } from "@/utils/supabase-egg-batches";
 
 type BatchColorOption = {
@@ -121,6 +122,7 @@ export default function EggBatchAgeUnitScreen() {
   const [batchColors, setBatchColors] = useState<BatchColorOption[]>(() => []);
   const [selectedColorId, setSelectedColorId] = useState<string | null>(null);
   const [colorMenuVisible, setColorMenuVisible] = useState(false);
+  const [colorSearch, setColorSearch] = useState("");
 
   const resetForm = useCallback(() => {
     setBatchNo("");
@@ -129,6 +131,7 @@ export default function EggBatchAgeUnitScreen() {
     setAgeUnit("Days old");
     setSelectedColorId(null);
     setColorMenuVisible(false);
+    setColorSearch("");
   }, []);
 
   const loadColors = useCallback(async () => {
@@ -243,6 +246,17 @@ export default function EggBatchAgeUnitScreen() {
         : null,
     [batchColors, selectedColorId],
   );
+
+  const filteredBatchColors = useMemo(() => {
+    const query = colorSearch.trim().toLowerCase();
+    if (!query) return batchColors;
+
+    return batchColors.filter((option) =>
+      `${option.batchNo} ${option.colorName} ${option.label}`
+        .toLowerCase()
+        .includes(query),
+    );
+  }, [batchColors, colorSearch]);
 
   useEffect(() => {
     let cancelled = false;
@@ -606,50 +620,127 @@ export default function EggBatchAgeUnitScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      <Modal visible={colorMenuVisible} transparent animationType="fade">
+      <Modal
+        visible={colorMenuVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          setColorMenuVisible(false);
+          setColorSearch("");
+        }}
+      >
         <View style={styles.menuOverlay}>
           <Pressable
             style={StyleSheet.absoluteFill}
-            onPress={() => setColorMenuVisible(false)}
+            onPress={() => {
+              setColorMenuVisible(false);
+              setColorSearch("");
+            }}
           />
           <View style={styles.menuCard}>
-            <Text style={styles.menuTitle}>Chicken profile colors</Text>
-            {batchColors.map((option) => {
-              const active = option.id === selectedColorId;
-              return (
+            <View style={styles.menuHeader}>
+              <View>
+                <Text style={styles.menuTitle}>Chicken profile colors</Text>
+                <Text style={styles.menuCount}>
+                  {filteredBatchColors.length} of {batchColors.length} colors
+                </Text>
+              </View>
+              <Pressable
+                onPress={() => {
+                  setColorMenuVisible(false);
+                  setColorSearch("");
+                }}
+                style={styles.menuCloseButton}
+                accessibilityRole="button"
+                accessibilityLabel="Close color picker"
+              >
+                <MaterialCommunityIcons
+                  name="close"
+                  size={18}
+                  color={ChickIntelPalette.gray1}
+                />
+              </Pressable>
+            </View>
+            <View style={styles.searchField}>
+              <MaterialCommunityIcons
+                name="magnify"
+                size={19}
+                color={ChickIntelPalette.gray2}
+              />
+              <TextInput
+                value={colorSearch}
+                onChangeText={setColorSearch}
+                placeholder="Search batch number or color"
+                placeholderTextColor="#899696"
+                style={styles.searchInput}
+                autoCapitalize="none"
+                autoCorrect={false}
+                returnKeyType="search"
+              />
+              {colorSearch ? (
                 <Pressable
-                  key={option.id}
-                  onPress={() => {
-                    setSelectedColorId(option.id);
-                    setColorMenuVisible(false);
-                  }}
-                  style={({ pressed }) => [
-                    styles.menuItem,
-                    { opacity: pressed ? 0.82 : 1 },
-                  ]}
+                  onPress={() => setColorSearch("")}
                   accessibilityRole="button"
+                  accessibilityLabel="Clear color search"
                 >
-                  <View style={styles.selectLeft}>
-                    <View
-                      style={[
-                        styles.colorDot,
-                        {
-                          backgroundColor: option.colorHex,
-                        },
-                      ]}
-                    />
-                    <Text style={styles.menuItemText}>{option.label}</Text>
-                  </View>
-                  {active ? (
-                    <MaterialCommunityIcons
-                      name="check"
-                      size={18}
-                      color={ChickIntelPalette.gray1}
-                    />
-                  ) : null}
+                  <MaterialCommunityIcons
+                    name="close-circle"
+                    size={18}
+                    color={ChickIntelPalette.gray2}
+                  />
                 </Pressable>
-              );
-            })}
+              ) : null}
+            </View>
+            <FlatList
+              data={filteredBatchColors}
+              keyExtractor={(option) => option.id}
+              style={styles.menuList}
+              contentContainerStyle={styles.menuListContent}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator
+              initialNumToRender={20}
+              ListEmptyComponent={
+                <Text style={styles.emptyMenuText}>No matching colors</Text>
+              }
+              renderItem={({ item: option }) => {
+                const active = option.id === selectedColorId;
+                return (
+                  <Pressable
+                    onPress={() => {
+                      setSelectedColorId(option.id);
+                      setColorMenuVisible(false);
+                      setColorSearch("");
+                    }}
+                    style={({ pressed }) => [
+                      styles.menuItem,
+                      active && styles.menuItemActive,
+                      { opacity: pressed ? 0.82 : 1 },
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active }}
+                  >
+                    <View style={styles.selectLeft}>
+                      <View
+                        style={[
+                          styles.colorDot,
+                          {
+                            backgroundColor: option.colorHex,
+                          },
+                        ]}
+                      />
+                      <Text style={styles.menuItemText}>{option.label}</Text>
+                    </View>
+                    {active ? (
+                      <MaterialCommunityIcons
+                        name="check-circle"
+                        size={19}
+                        color={ChickIntelPalette.green1}
+                      />
+                    ) : null}
+                  </Pressable>
+                );
+              }}
+            />
           </View>
         </View>
       </Modal>
@@ -912,11 +1003,18 @@ const styles = StyleSheet.create({
     padding: moderateScale(20),
   },
   menuCard: {
+    maxHeight: "82%",
     borderRadius: 5,
     backgroundColor: ChickIntelPalette.light1,
     borderWidth: 1,
     borderColor: "rgba(49,118,103,0.18)",
     padding: moderateScale(16),
+    gap: 10,
+  },
+  menuHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     gap: 10,
   },
   menuTitle: {
@@ -926,8 +1024,55 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: ChickIntelPalette.gray1,
   },
+  menuCount: {
+    marginTop: 2,
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(11),
+    color: ChickIntelPalette.gray2,
+  },
+  menuCloseButton: {
+    width: scale(34),
+    height: verticalScale(34),
+    borderRadius: 17,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(49,118,103,0.1)",
+  },
+  searchField: {
+    minHeight: verticalScale(44),
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(49,118,103,0.18)",
+    backgroundColor: "rgba(49,118,103,0.06)",
+    paddingHorizontal: moderateScale(10),
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+  },
+  searchInput: {
+    flex: 1,
+    minWidth: 0,
+    padding: 0,
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(13),
+    color: ChickIntelPalette.gray1,
+  },
+  menuList: {
+    flexShrink: 1,
+  },
+  menuListContent: {
+    gap: 8,
+    paddingVertical: 1,
+  },
+  emptyMenuText: {
+    paddingVertical: verticalScale(24),
+    textAlign: "center",
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(13),
+    color: ChickIntelPalette.gray2,
+  },
   menuItem: {
-    minHeight: verticalScale(42),
+    minHeight: verticalScale(48),
     borderRadius: 5,
     borderWidth: 1,
     borderColor: "rgba(49,118,103,0.12)",
@@ -936,6 +1081,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+  },
+  menuItemActive: {
+    borderColor: ChickIntelPalette.green1,
+    backgroundColor: "rgba(49,118,103,0.14)",
   },
   menuItemText: {
     fontFamily: ChickFont.sans,
