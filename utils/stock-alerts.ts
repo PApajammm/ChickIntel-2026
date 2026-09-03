@@ -262,9 +262,17 @@ export function computeEffectiveInventoryItems(
         (task.feedDailyAmount ?? 0) > 0,
     );
 
-    const currentQty = Number.isFinite(item.qty) ? item.qty : 0;
-    const baseQty = Number.isFinite(item.baseQty) ? item.baseQty : currentQty;
-    const safeBaseQty = Number.isFinite(baseQty) ? Number(baseQty) : currentQty;
+    const storedQty = Number.isFinite(item.qty) ? item.qty : 0;
+    const restockCreditQty = Number.isFinite(item.restockCreditQty)
+      ? item.restockCreditQty
+      : 0;
+    const currentQty = storedQty + restockCreditQty;
+    const baseQty = Number.isFinite(item.baseQty)
+      ? item.baseQty
+      : Number.isFinite(item.totalQty)
+        ? item.totalQty
+        : storedQty;
+    const safeBaseQty = Number.isFinite(baseQty) ? Number(baseQty) : storedQty;
     const completedDatesByTaskId = new Map<string, Set<string>>();
 
     completions.forEach((completion) => {

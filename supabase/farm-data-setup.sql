@@ -38,6 +38,8 @@ create table if not exists public.inventory_items (
     item_type text not null,
     item_name text not null,
     qty numeric(12, 2) not null default 0 check (qty >= 0),
+    total_qty numeric(12, 2) not null default 0 check (total_qty >= 0),
+    restock_credit_qty numeric(12, 2) not null default 0 check (restock_credit_qty >= 0),
     unit text not null,
     price numeric(12, 2),
     status_percent integer not null default 0 check (status_percent between 0 and 100),
@@ -47,6 +49,14 @@ create table if not exists public.inventory_items (
     created_at timestamptz not null default timezone('utc', now()),
     updated_at timestamptz not null default timezone('utc', now())
 );
+
+alter table public.inventory_items
+    add column if not exists total_qty numeric(12, 2) not null default 0,
+    add column if not exists restock_credit_qty numeric(12, 2) not null default 0;
+
+update public.inventory_items
+set total_qty = qty
+where total_qty = 0 and qty > 0;
 
 create index if not exists idx_batches_farm_id
     on public.batches (farm_id);

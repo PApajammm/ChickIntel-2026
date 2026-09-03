@@ -1,9 +1,9 @@
 import BackgroundGradient from "@/assets_imported/background-gradient.svg";
 import { BlurCard } from "@/components/ui/blur-card";
 import {
-    ChickSelectionModal,
-    ChickSelectRow,
-    ChickTextInput,
+  ChickSelectionModal,
+  ChickSelectRow,
+  ChickTextInput,
 } from "@/components/ui/chick-form";
 import { ChickFont } from "@/constants/chick-fonts";
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
@@ -12,15 +12,15 @@ import { useAuth } from "@/providers/auth-provider";
 import { useFarmData } from "@/providers/farm-data-provider";
 import { logError } from "@/utils/logger";
 import {
-    moderateScale,
-    responsiveFontSize,
-    scale,
-    verticalScale,
+  moderateScale,
+  responsiveFontSize,
+  scale,
+  verticalScale,
 } from "@/utils/responsive";
 import {
-    getExpirationStatus,
-    getStockSeverityMeta,
-    type EffectiveInventoryItem,
+  getExpirationStatus,
+  getStockSeverityMeta,
+  type EffectiveInventoryItem,
 } from "@/utils/stock-alerts";
 import type { SupabaseInventoryItem } from "@/utils/supabase-inventory";
 import { fetchInventoryCategoryOptions } from "@/utils/supabase-lookups";
@@ -32,17 +32,17 @@ import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native";
 import {
-    Alert,
-    Animated,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  Animated,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -1393,7 +1393,7 @@ export default function InventoryScreen() {
                   Items
                 </Text>
                 <Text style={styles.tabEmptySubtitle}>
-                  You don't have any items under this category yet.
+                  You don&apos;t have any items under this category yet.
                 </Text>
                 <TouchableOpacity
                   style={styles.tabEmptyAddBtn}
