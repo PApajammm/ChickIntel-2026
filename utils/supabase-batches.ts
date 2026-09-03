@@ -15,10 +15,6 @@ type BatchRow = {
   color_hex: string | null;
 };
 
-function normalizeBatchColorName(value: string | null | undefined) {
-  return value?.trim().toLowerCase() ?? "";
-}
-
 function mapBatchRow(row: BatchRow): BatchItem {
   return {
     id: row.batch_no,
@@ -107,7 +103,7 @@ export async function createFarmBatch(
       color_hex: input.colorHex,
     })
     .select(
-      "id, batch_no, breed_name, female_count, male_count, age_label, isolated_count, killed_count, color_name, color_hex",
+      "id, batch_no, breed_name, female_count, male_count, age_label, isolated_count, killed_count, color_name, color_hex, created_at",
     )
     .single();
 

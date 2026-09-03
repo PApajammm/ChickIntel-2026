@@ -1,10 +1,9 @@
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
 import type { SupabaseInventoryItem } from "@/utils/supabase-inventory";
 import {
-    formatScheduleDateKey,
-    scheduleTaskMatchesDate,
-    type SupabaseScheduleTask,
-    type SupabaseScheduleTaskCompletion,
+  formatScheduleDateKey,
+  type SupabaseScheduleTask,
+  type SupabaseScheduleTaskCompletion,
 } from "@/utils/supabase-schedule";
 
 export type EffectiveInventoryItem = SupabaseInventoryItem & {
@@ -33,9 +32,13 @@ export function isTaskLinkedToInventoryItem(
   }
 
   const taskInventoryName = task.feedInventoryItemName || task.title;
+  const normTask = normalizeInventoryLabel(taskInventoryName);
+  const normItem = normalizeInventoryLabel(item.name);
   const nameMatches =
-    normalizeInventoryLabel(taskInventoryName) ===
-    normalizeInventoryLabel(item.name);
+    normTask === normItem ||
+    (normTask.length >= 3 &&
+      normItem.length >= 3 &&
+      (normTask.includes(normItem) || normItem.includes(normTask)));
   if (!nameMatches) {
     return false;
   }
@@ -119,7 +122,11 @@ export interface ExpirationMeta {
   softColor: string;
   textColor: string;
   borderColor: string;
-  iconName: "alert-circle" | "clock-alert-outline" | "check-circle-outline" | "calendar-outline";
+  iconName:
+    | "alert-circle"
+    | "clock-alert-outline"
+    | "check-circle-outline"
+    | "calendar-outline";
   isExpired: boolean;
   isExpiringSoon: boolean;
 }
@@ -163,8 +170,16 @@ export function getExpirationStatus(
   }
 
   // Normalize times to midnight for calendar day comparison
-  const refMidnight = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), referenceDate.getDate());
-  const expMidnight = new Date(expDate.getFullYear(), expDate.getMonth(), expDate.getDate());
+  const refMidnight = new Date(
+    referenceDate.getFullYear(),
+    referenceDate.getMonth(),
+    referenceDate.getDate(),
+  );
+  const expMidnight = new Date(
+    expDate.getFullYear(),
+    expDate.getMonth(),
+    expDate.getDate(),
+  );
   const diffTime = expMidnight.getTime() - refMidnight.getTime();
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
@@ -235,7 +250,7 @@ export function getExpirationStatus(
 }
 
 export function computeEffectiveInventoryItems(
-  items: Array<SupabaseInventoryItem & { baseQty?: number }>,
+  items: (SupabaseInventoryItem & { baseQty?: number })[],
   scheduleTasks: SupabaseScheduleTask[],
   now: Date,
   completions: SupabaseScheduleTaskCompletion[] = [],
@@ -274,24 +289,26 @@ export function computeEffectiveInventoryItems(
     }
 
     const consumedQty = relatedConsumableTasks.reduce((total, task) => {
-      const itemStartDate = new Date(item.deliveryDate || item.orderDate);
-      itemStartDate.setHours(0, 0, 0, 0);
       const completedDates =
         completedDatesByTaskId.get(task.id) ?? new Set<string>();
-      let dailyConsumption = 0;
-      const cursor = new Date(itemStartDate);
+      if (completedDates.size === 0) return total;
 
-      while (cursor.getTime() <= now.getTime()) {
-        if (scheduleTaskMatchesDate(task, cursor)) {
-          const occurrenceDateKey = formatScheduleDateKey(cursor);
-          if (completedDates.has(occurrenceDateKey)) {
-            dailyConsumption += task.feedDailyAmount ?? 0;
-          }
+      const rawItemDate = item.deliveryDate || item.orderDate;
+      const itemStartDateKey =
+        rawItemDate instanceof Date
+          ? formatScheduleDateKey(rawItemDate)
+          : rawItemDate
+            ? formatScheduleDateKey(new Date(rawItemDate))
+            : "";
+
+      let taskConsumption = 0;
+      completedDates.forEach((compDateKey) => {
+        if (!itemStartDateKey || compDateKey >= itemStartDateKey) {
+          taskConsumption += task.feedDailyAmount ?? 0;
         }
-        cursor.setDate(cursor.getDate() + 1);
-      }
+      });
 
-      return total + dailyConsumption;
+      return total + taskConsumption;
     }, 0);
 
     const remainingQty = Math.max(currentQty - consumedQty, 0);

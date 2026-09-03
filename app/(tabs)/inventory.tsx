@@ -674,13 +674,15 @@ export default function InventoryScreen() {
 
   const currentTabGroups = useMemo(() => {
     return activeCategoryGroups.filter(
-      ([groupTitle]) => getCategoryTab(groupTitle) === selectedTab,
+      ([groupTitle]) =>
+        selectedTab === "all" || getCategoryTab(groupTitle) === selectedTab,
     );
   }, [activeCategoryGroups, selectedTab]);
 
   const currentTabExpiredItems = useMemo(() => {
     return expiredItemsList.filter(
-      (item) => getCategoryTab(item.type) === selectedTab,
+      (item) =>
+        selectedTab === "all" || getCategoryTab(item.type) === selectedTab,
     );
   }, [expiredItemsList, selectedTab]);
 

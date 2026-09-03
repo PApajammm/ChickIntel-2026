@@ -47,6 +47,16 @@ function normalizeInventoryName(name: string) {
   return name.trim().toLowerCase();
 }
 
+function parseDatabaseDate(dateStr?: string | null): Date | undefined {
+  if (!dateStr) return undefined;
+  if (dateStr.includes("T")) return new Date(dateStr);
+  const parts = dateStr.split("-").map(Number);
+  if (parts.length === 3 && !parts.some(Number.isNaN)) {
+    return new Date(parts[0], parts[1] - 1, parts[2]);
+  }
+  return new Date(dateStr);
+}
+
 function mapInventoryRow(row: InventoryRow): SupabaseInventoryItem {
   return {
     id: row.id,
@@ -55,11 +65,9 @@ function mapInventoryRow(row: InventoryRow): SupabaseInventoryItem {
     qty: Number(row.qty),
     unit: row.unit,
     statusPercent: row.status_percent,
-    orderDate: row.purchased_date ? new Date(row.purchased_date) : new Date(),
-    deliveryDate: row.delivered_date ? new Date(row.delivered_date) : undefined,
-    expirationDate: row.expiration_date
-      ? new Date(row.expiration_date)
-      : undefined,
+    orderDate: parseDatabaseDate(row.purchased_date) ?? new Date(),
+    deliveryDate: parseDatabaseDate(row.delivered_date),
+    expirationDate: parseDatabaseDate(row.expiration_date),
   };
 }
 
@@ -172,7 +180,7 @@ export async function createInventoryItem(
       price: input.price ?? null,
       status_percent: 100,
       purchased_date: formatDatabaseDate(input.purchasedDate),
-      delivered_date: formatDatabaseDate(input.deliveredDate),
+      delivered_date: formatDatabaseDate(input.deliveredDate ?? input.purchasedDate),
       expiration_date: formatDatabaseDate(input.expirationDate),
     })
     .select(

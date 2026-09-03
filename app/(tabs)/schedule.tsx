@@ -1,8 +1,8 @@
 import {
-  moderateScale,
-  responsiveFontSize,
-  scale,
-  verticalScale,
+    moderateScale,
+    responsiveFontSize,
+    scale,
+    verticalScale,
 } from "@/utils/responsive";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -10,36 +10,36 @@ import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
 } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Modal,
-  PanResponder,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  useWindowDimensions,
-  View,
+    ActivityIndicator,
+    Alert,
+    KeyboardAvoidingView,
+    Modal,
+    PanResponder,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    useWindowDimensions,
+    View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import BackgroundGradient from "@/assets_imported/background-gradient.svg";
 import { BlurCard } from "@/components/ui/blur-card";
 import {
-  ChickField,
-  ChickSelectionModal,
-  ChickSelectRow,
-  ChickTextInput,
+    ChickField,
+    ChickSelectionModal,
+    ChickSelectRow,
+    ChickTextInput,
 } from "@/components/ui/chick-form";
 import { ChickFont } from "@/constants/chick-fonts";
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
@@ -48,24 +48,24 @@ import { useFarmData } from "@/providers/farm-data-provider";
 import { logError } from "@/utils/logger";
 import { computeEffectiveInventoryItems } from "@/utils/stock-alerts";
 import {
-  fetchInventoryItems,
-  type SupabaseInventoryItem,
+    fetchInventoryItems,
+    type SupabaseInventoryItem,
 } from "@/utils/supabase-inventory";
 import {
-  fetchMedicationOptions,
-  fetchVitaminOptions,
+    fetchMedicationOptions,
+    fetchVitaminOptions,
 } from "@/utils/supabase-lookups";
 import {
-  computeTaskStatus,
-  createScheduleTask,
-  deleteScheduleTask,
-  fetchScheduleTaskCompletions,
-  fetchScheduleTasks,
-  formatScheduleDateKey,
-  SCHEDULE_DAYS_OF_WEEK,
-  scheduleTaskMatchesDate,
-  type SupabaseScheduleTask,
-  type SupabaseScheduleTaskCompletion,
+    computeTaskStatus,
+    createScheduleTask,
+    deleteScheduleTask,
+    fetchScheduleTaskCompletions,
+    fetchScheduleTasks,
+    formatScheduleDateKey,
+    SCHEDULE_DAYS_OF_WEEK,
+    scheduleTaskMatchesDate,
+    type SupabaseScheduleTask,
+    type SupabaseScheduleTaskCompletion,
 } from "@/utils/supabase-schedule";
 
 const DAYS_OF_WEEK = [...SCHEDULE_DAYS_OF_WEEK];
@@ -447,7 +447,7 @@ export default function ScheduleScreen() {
     }
   }, [activeFarm?.id, configured]);
 
-  const { completeTask } = useFarmData();
+  const { completeTask, refreshFarmData } = useFarmData();
 
   const handleMarkComplete = useCallback(
     async (task: ScheduleTask, dateKey: string) => {
@@ -462,6 +462,7 @@ export default function ScheduleScreen() {
             ),
             savedCompletion,
           ]);
+          void loadTaskMetadata();
         }
       } catch (error) {
         logError("Task completion failed", error, {
@@ -475,7 +476,7 @@ export default function ScheduleScreen() {
         );
       }
     },
-    [activeFarm?.id, completeTask],
+    [activeFarm?.id, completeTask, loadTaskMetadata],
   );
 
   useEffect(() => {
@@ -866,6 +867,8 @@ export default function ScheduleScreen() {
           [startKey]: [...(prev[startKey] || []), createdTask],
         }));
         closeAddTaskModal();
+        void refreshFarmData();
+        void loadTaskMetadata();
       })
       .catch((error: any) => {
         logError("Schedule task create failed", error, {
@@ -892,6 +895,8 @@ export default function ScheduleScreen() {
 
           return Object.fromEntries(nextEntries);
         });
+        void refreshFarmData();
+        void loadTaskMetadata();
       })
       .catch((error) => {
         logError("Schedule task delete failed", error, {

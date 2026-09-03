@@ -75,7 +75,7 @@ type ChickenEditFormState = {
 };
 
 function parseCount(value: string) {
-  return Number.parseInt(value || "0", 10) || 0;
+  return Math.max(0, Number.parseInt(value || "0", 10) || 0);
 }
 
 function clampNonNegative(value: number) {
@@ -132,6 +132,7 @@ export default function ProfilesScreen() {
   const [chickenError, setChickenError] = useState<string | null>(null);
 
   const [savedEggBatches, setSavedEggBatches] = useState<EggBatchItem[]>([]);
+  const [eggError, setEggError] = useState<string | null>(null);
 
   const [selectedBatch, setSelectedBatch] = useState<BatchItem | null>(null);
   const [editVisible, setEditVisible] = useState(false);
@@ -189,13 +190,18 @@ export default function ProfilesScreen() {
   const loadEggBatches = useCallback(async () => {
     if (!activeFarm?.id) {
       setSavedEggBatches([]);
+      setEggError(null);
       return;
     }
 
+    setEggError(null);
     try {
       const rows = await fetchFarmEggBatches(activeFarm.id);
       setSavedEggBatches(rows);
     } catch (error) {
+      setEggError(
+        error instanceof Error ? error.message : "Unable to load egg batches.",
+      );
       logError("Profiles egg batches load failed", error, {
         farmId: activeFarm.id,
       });
@@ -744,6 +750,9 @@ export default function ProfilesScreen() {
           </View>
         ) : (
           <View style={styles.list}>
+            {eggError ? (
+              <Text style={styles.emptyStateText}>{eggError}</Text>
+            ) : null}
             {eggColorCards.map((item) => (
               <BlurCard
                 key={item.id}
