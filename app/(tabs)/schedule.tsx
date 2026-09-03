@@ -1,8 +1,8 @@
 import {
-    moderateScale,
-    responsiveFontSize,
-    scale,
-    verticalScale,
+  moderateScale,
+  responsiveFontSize,
+  scale,
+  verticalScale,
 } from "@/utils/responsive";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -10,36 +10,36 @@ import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, {
-    useCallback,
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
 } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    KeyboardAvoidingView,
-    Modal,
-    PanResponder,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    useWindowDimensions,
-    View,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Modal,
+  PanResponder,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import BackgroundGradient from "@/assets_imported/background-gradient.svg";
 import { BlurCard } from "@/components/ui/blur-card";
 import {
-    ChickField,
-    ChickSelectionModal,
-    ChickSelectRow,
-    ChickTextInput,
+  ChickField,
+  ChickSelectionModal,
+  ChickSelectRow,
+  ChickTextInput,
 } from "@/components/ui/chick-form";
 import { ChickFont } from "@/constants/chick-fonts";
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
@@ -48,24 +48,24 @@ import { useFarmData } from "@/providers/farm-data-provider";
 import { logError } from "@/utils/logger";
 import { computeEffectiveInventoryItems } from "@/utils/stock-alerts";
 import {
-    fetchInventoryItems,
-    type SupabaseInventoryItem,
+  fetchInventoryItems,
+  type SupabaseInventoryItem,
 } from "@/utils/supabase-inventory";
 import {
-    fetchMedicationOptions,
-    fetchVitaminOptions,
+  fetchMedicationOptions,
+  fetchVitaminOptions,
 } from "@/utils/supabase-lookups";
 import {
-    computeTaskStatus,
-    createScheduleTask,
-    deleteScheduleTask,
-    fetchScheduleTaskCompletions,
-    fetchScheduleTasks,
-    formatScheduleDateKey,
-    SCHEDULE_DAYS_OF_WEEK,
-    scheduleTaskMatchesDate,
-    type SupabaseScheduleTask,
-    type SupabaseScheduleTaskCompletion
+  computeTaskStatus,
+  createScheduleTask,
+  deleteScheduleTask,
+  fetchScheduleTaskCompletions,
+  fetchScheduleTasks,
+  formatScheduleDateKey,
+  SCHEDULE_DAYS_OF_WEEK,
+  scheduleTaskMatchesDate,
+  type SupabaseScheduleTask,
+  type SupabaseScheduleTaskCompletion,
 } from "@/utils/supabase-schedule";
 
 const DAYS_OF_WEEK = [...SCHEDULE_DAYS_OF_WEEK];
@@ -256,6 +256,7 @@ export default function ScheduleScreen() {
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [repeat, setRepeat] = useState("Never");
   const [customRepeatDays, setCustomRepeatDays] = useState<string[]>([]);
+  const endDateManuallySetRef = useRef(false);
   const [consumableInventoryOptions, setConsumableInventoryOptions] = useState<
     FeedInventoryOption[]
   >([]);
@@ -287,6 +288,7 @@ export default function ScheduleScreen() {
     setShowTimePicker(false);
     setRepeat("Never");
     setCustomRepeatDays([]);
+    endDateManuallySetRef.current = false;
     setNewConsumableInventoryName("Choose inventory item");
     setNewConsumableInventoryId(null);
     setNewConsumableInventoryUnit("");
@@ -719,18 +721,24 @@ export default function ScheduleScreen() {
     setRepeat(selectedRepeat);
 
     const start = new Date(newTaskStartDate);
+
+    // Keep an end date the user already selected; only suggest a range for a new task.
+    if (selectedRepeat !== "Never" && endDateManuallySetRef.current) {
+      return;
+    }
+
     const end = new Date(start);
 
     if (selectedRepeat === "Weekly") {
-      end.setDate(start.getDate() + 7);
+      end.setDate(start.getDate() + 6);
     } else if (selectedRepeat === "Daily") {
-      end.setDate(start.getDate() + 30);
+      end.setDate(start.getDate() + 29);
     } else if (selectedRepeat === "Monthly") {
       end.setMonth(start.getMonth() + 1);
     } else if (selectedRepeat === "Annually") {
       end.setFullYear(start.getFullYear() + 1);
     } else if (selectedRepeat === "Custom") {
-      end.setDate(start.getDate() + 30);
+      end.setDate(start.getDate() + 29);
     } else if (selectedRepeat === "Never") {
       end.setTime(start.getTime());
     }
@@ -1192,7 +1200,7 @@ export default function ScheduleScreen() {
                 {
                   backgroundColor: "rgba(255, 255, 255, 0.95)",
                   paddingHorizontal: 16,
-                  paddingVertical: 14,
+                  paddingVertical: 10,
                 },
               ]}
             >
@@ -1686,6 +1694,7 @@ export default function ScheduleScreen() {
               setNewTaskStartDate(date);
               if (date > newTaskEndDate) {
                 setNewTaskEndDate(date);
+                endDateManuallySetRef.current = false;
               }
             }
           }}
@@ -1708,6 +1717,7 @@ export default function ScheduleScreen() {
                 );
               } else {
                 setNewTaskEndDate(date);
+                endDateManuallySetRef.current = true;
               }
             }
           }}
@@ -1810,8 +1820,8 @@ const styles = StyleSheet.create({
   },
   cardSurface: {
     borderRadius: 10,
-    paddingTop: 16,
-    paddingBottom: 24,
+    paddingTop: 12,
+    paddingBottom: 16,
     overflow: "hidden",
   },
   monthCol: {
@@ -1822,7 +1832,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: moderateScale(12),
-    marginBottom: 16,
+    marginBottom: 10,
   },
   monthTitle: {
     fontFamily: ChickFont.display,
@@ -1846,7 +1856,7 @@ const styles = StyleSheet.create({
   },
   gridRow: {
     flexDirection: "row",
-    marginBottom: 6,
+    marginBottom: 4,
   },
   gridSlot: {
     flex: 1,
@@ -1893,7 +1903,7 @@ const styles = StyleSheet.create({
   divider: {
     height: verticalScale(1),
     backgroundColor: "rgba(49, 118, 103, 0.15)",
-    marginVertical: verticalScale(20),
+    marginVertical: verticalScale(12),
     marginHorizontal: moderateScale(20),
   },
   agendaWrap: {

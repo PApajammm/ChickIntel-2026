@@ -782,7 +782,7 @@ export default function HomeScreen() {
           styles.content,
           {
             paddingTop: 14,
-            paddingBottom: insets.bottom + TAB_BAR_OFFSET + 98,
+            paddingBottom: insets.bottom + TAB_BAR_OFFSET + 15,
           },
         ]}
         showsVerticalScrollIndicator={false}

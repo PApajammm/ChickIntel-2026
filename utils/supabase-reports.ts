@@ -2,12 +2,12 @@ import { supabase } from "@/lib/supabase";
 import { getEggMetricWindow } from "@/utils/egg-metric-windows";
 import { isTaskLinkedToInventoryItem } from "@/utils/stock-alerts";
 import {
-  fetchScheduleTaskCompletions,
-  fetchScheduleTasks,
-  formatScheduleDateKey,
-  scheduleTaskMatchesDate,
-  type SupabaseScheduleTask,
-  type SupabaseScheduleTaskCompletion,
+    fetchScheduleTaskCompletions,
+    fetchScheduleTasks,
+    formatScheduleDateKey,
+    scheduleTaskMatchesDate,
+    type SupabaseScheduleTask,
+    type SupabaseScheduleTaskCompletion,
 } from "@/utils/supabase-schedule";
 
 export type ReportOverview = "Weekly" | "Monthly" | "Annually";
@@ -255,7 +255,7 @@ function buildEggFertilitySnapshot(
   const totalEggs = rows.reduce((sum, row) => sum + Number(row.egg_qty), 0);
   const totalOutcomes = fertileCount + unhatchedCount + damagedCount;
   const fertilityRate =
-    totalEggs > 0 ? Math.round((fertileCount / totalEggs) * 100) : 0;
+    totalOutcomes > 0 ? Math.round((fertileCount / totalOutcomes) * 100) : 0;
   const productionRate =
     totalOutcomes > 0 ? Math.round((fertileCount / totalOutcomes) * 100) : 0;
 
@@ -438,10 +438,13 @@ function buildSupplySnapshot(
   windowStart: Date,
   now: Date,
 ) {
-  const isTargetSupply = supplyType === "Feeds" ? isFeedInventory : isVitaminOrMedInventory;
+  const isTargetSupply =
+    supplyType === "Feeds" ? isFeedInventory : isVitaminOrMedInventory;
 
   // Filter inventory items matching the supply type
-  const targetInventory = inventoryRows.filter((row) => isTargetSupply(row.item_type));
+  const targetInventory = inventoryRows.filter((row) =>
+    isTargetSupply(row.item_type),
+  );
 
   // Map completions to fast lookup: taskId -> Set of completed occurrence dates
   const completionsByTaskId = new Map<string, Set<string>>();
@@ -457,8 +460,11 @@ function buildSupplySnapshot(
   targetInventory.forEach((item) => {
     const linkedTasks = tasks.filter(
       (task) =>
-        isTaskLinkedToInventoryItem(task, { id: item.id, name: item.item_name || "", type: item.item_type }) &&
-        (task.feedDailyAmount ?? 0) > 0,
+        isTaskLinkedToInventoryItem(task, {
+          id: item.id,
+          name: item.item_name || "",
+          type: item.item_type,
+        }) && (task.feedDailyAmount ?? 0) > 0,
     );
 
     const itemStartDate = new Date(
@@ -474,12 +480,17 @@ function buildSupplySnapshot(
       if (!completedDates || completedDates.size === 0) return;
 
       // Check occurrences within the active report timeframe window
-      const cursor = new Date(Math.max(itemStartDate.getTime(), windowStart.getTime()));
+      const cursor = new Date(
+        Math.max(itemStartDate.getTime(), windowStart.getTime()),
+      );
       cursor.setHours(0, 0, 0, 0);
 
       while (cursor.getTime() <= now.getTime()) {
         const dateKey = formatScheduleDateKey(cursor);
-        if (completedDates.has(dateKey) && scheduleTaskMatchesDate(task, cursor)) {
+        if (
+          completedDates.has(dateKey) &&
+          scheduleTaskMatchesDate(task, cursor)
+        ) {
           consumptionRecords.push({
             itemId: item.id,
             name: item.item_name || item.item_type || "Supply Item",
@@ -505,7 +516,11 @@ function buildSupplySnapshot(
 
     // Avoid double counting if already linked to a known target inventory item
     const alreadyLinked = targetInventory.some((item) =>
-      isTaskLinkedToInventoryItem(task, { id: item.id, name: item.item_name || "", type: item.item_type }),
+      isTaskLinkedToInventoryItem(task, {
+        id: item.id,
+        name: item.item_name || "",
+        type: item.item_type,
+      }),
     );
     if (alreadyLinked) return;
 
@@ -517,7 +532,10 @@ function buildSupplySnapshot(
 
     while (cursor.getTime() <= now.getTime()) {
       const dateKey = formatScheduleDateKey(cursor);
-      if (completedDates.has(dateKey) && scheduleTaskMatchesDate(task, cursor)) {
+      if (
+        completedDates.has(dateKey) &&
+        scheduleTaskMatchesDate(task, cursor)
+      ) {
         consumptionRecords.push({
           itemId: task.id,
           name: task.feedInventoryItemName || task.title,
@@ -632,13 +650,19 @@ function buildSupplySnapshot(
 
     consumptionRecords.forEach((record) => {
       const label = record.name?.trim() || "Feed Supply";
-      feedTotals.set(label, (feedTotals.get(label) ?? 0) + Number(record.amount ?? 0));
+      feedTotals.set(
+        label,
+        (feedTotals.get(label) ?? 0) + Number(record.amount ?? 0),
+      );
     });
 
     const rankedFeeds = [...feedTotals.entries()]
       .sort(([, leftTotal], [, rightTotal]) => rightTotal - leftTotal)
       .slice(0, 5);
-    const displayedTotal = rankedFeeds.reduce((sum, [, count]) => sum + count, 0);
+    const displayedTotal = rankedFeeds.reduce(
+      (sum, [, count]) => sum + count,
+      0,
+    );
     const allFeedsTotal = consumptionRecords.reduce(
       (sum, r) => sum + Number(r.amount ?? 0),
       0,
@@ -690,10 +714,7 @@ export async function fetchFarmReportSnapshot(input: {
   supplyType: ReportSupplyType;
 }) {
   const now = new Date();
-  const windowStart = getProductionWindowStart(
-    input.overview,
-    now,
-  );
+  const windowStart = getProductionWindowStart(input.overview, now);
   const reportStart = windowStart.toISOString();
 
   const [
@@ -719,10 +740,14 @@ export async function fetchFarmReportSnapshot(input: {
       .eq("farm_id", input.farmId),
     supabase
       .from("inventory_items")
-      .select("id, item_type, item_name, qty, purchased_date, delivered_date, created_at")
+      .select(
+        "id, item_type, item_name, qty, purchased_date, delivered_date, created_at",
+      )
       .eq("farm_id", input.farmId),
     fetchScheduleTasks(input.farmId).catch(() => [] as SupabaseScheduleTask[]),
-    fetchScheduleTaskCompletions(input.farmId).catch(() => [] as SupabaseScheduleTaskCompletion[]),
+    fetchScheduleTaskCompletions(input.farmId).catch(
+      () => [] as SupabaseScheduleTaskCompletion[],
+    ),
     supabase
       .from("health_monitoring")
       .select("batch_no, monitoring_status")

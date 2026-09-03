@@ -654,7 +654,8 @@ export default function EggFertilityReportScreen() {
           const match = nextOptions.find(
             (option) =>
               option.colorName?.toLowerCase() ===
-              initialScopeLabel.toLowerCase(),
+                initialScopeLabel.toLowerCase() &&
+              (!initialScopeHex || option.colorHex === initialScopeHex),
           );
           if (match) {
             setSelectedScopeKey(match.key);
@@ -677,7 +678,7 @@ export default function EggFertilityReportScreen() {
     return () => {
       cancelled = true;
     };
-  }, [activeFarm?.id, initialScopeLabel]);
+  }, [activeFarm?.id, initialScopeHex, initialScopeLabel]);
 
   const selectedScope = useMemo(
     () =>

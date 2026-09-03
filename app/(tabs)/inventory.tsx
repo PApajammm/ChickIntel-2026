@@ -1,9 +1,9 @@
 import BackgroundGradient from "@/assets_imported/background-gradient.svg";
 import { BlurCard } from "@/components/ui/blur-card";
 import {
-  ChickSelectionModal,
-  ChickSelectRow,
-  ChickTextInput
+    ChickSelectionModal,
+    ChickSelectRow,
+    ChickTextInput,
 } from "@/components/ui/chick-form";
 import { ChickFont } from "@/constants/chick-fonts";
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
@@ -12,15 +12,15 @@ import { useAuth } from "@/providers/auth-provider";
 import { useFarmData } from "@/providers/farm-data-provider";
 import { logError } from "@/utils/logger";
 import {
-  moderateScale,
-  responsiveFontSize,
-  scale,
-  verticalScale,
+    moderateScale,
+    responsiveFontSize,
+    scale,
+    verticalScale,
 } from "@/utils/responsive";
 import {
-  getExpirationStatus,
-  getStockSeverityMeta,
-  type EffectiveInventoryItem,
+    getExpirationStatus,
+    getStockSeverityMeta,
+    type EffectiveInventoryItem,
 } from "@/utils/stock-alerts";
 import type { SupabaseInventoryItem } from "@/utils/supabase-inventory";
 import { fetchInventoryCategoryOptions } from "@/utils/supabase-lookups";
@@ -32,17 +32,17 @@ import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native";
 import {
-  Alert,
-  Animated,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    Alert,
+    Animated,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -248,7 +248,7 @@ const ExpiredAlertBanner = ({
             style={[
               styles.previewSegmentedItem,
               activeExpirationFilter === "all" &&
-              styles.previewSegmentedItemActive,
+                styles.previewSegmentedItemActive,
             ]}
             onPress={() => setActiveExpirationFilter("all")}
             activeOpacity={0.8}
@@ -266,7 +266,7 @@ const ExpiredAlertBanner = ({
               style={[
                 styles.previewSegmentedText,
                 activeExpirationFilter === "all" &&
-                styles.previewSegmentedTextActive,
+                  styles.previewSegmentedTextActive,
               ]}
             >
               All Items ({totalCount})
@@ -278,7 +278,7 @@ const ExpiredAlertBanner = ({
               style={[
                 styles.previewSegmentedItem,
                 activeExpirationFilter === "expired" &&
-                styles.previewSegmentedItemActive,
+                  styles.previewSegmentedItemActive,
               ]}
               onPress={() =>
                 setActiveExpirationFilter(
@@ -314,7 +314,7 @@ const ExpiredAlertBanner = ({
               style={[
                 styles.previewSegmentedItem,
                 activeExpirationFilter === "expiring-soon" &&
-                styles.previewSegmentedItemActive,
+                  styles.previewSegmentedItemActive,
               ]}
               onPress={() =>
                 setActiveExpirationFilter(
@@ -338,7 +338,7 @@ const ExpiredAlertBanner = ({
                 style={[
                   styles.previewSegmentedText,
                   activeExpirationFilter === "expiring-soon" &&
-                  styles.previewSegmentedTextActive,
+                    styles.previewSegmentedTextActive,
                 ]}
               >
                 Expiring Soon ({expirationSummary.expiringSoonCount})
@@ -382,7 +382,7 @@ export default function InventoryScreen() {
     title: "",
     options: [],
     value: "",
-    onSelect: () => { },
+    onSelect: () => {},
   });
 
   const hasExpirationDate = (type: string) => {
@@ -454,7 +454,10 @@ export default function InventoryScreen() {
   const activeTabPageIndex = useMemo(() => {
     if (totalTabPages <= 1 || tabMaxScroll <= 0) return 0;
     const progress = Math.max(0, Math.min(1, tabScrollX / tabMaxScroll));
-    return Math.min(totalTabPages - 1, Math.round(progress * (totalTabPages - 1)));
+    return Math.min(
+      totalTabPages - 1,
+      Math.round(progress * (totalTabPages - 1)),
+    );
   }, [tabScrollX, tabMaxScroll, totalTabPages]);
 
   // When >4 categories exist, size each item so exactly 4 tabs fit in the visible container
@@ -466,9 +469,13 @@ export default function InventoryScreen() {
 
   const handleTabScroll = useCallback(
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-      const { contentOffset, layoutMeasurement, contentSize } = event.nativeEvent;
+      const { contentOffset, layoutMeasurement, contentSize } =
+        event.nativeEvent;
       const x = contentOffset.x;
-      const maxScroll = Math.max(0, contentSize.width - layoutMeasurement.width);
+      const maxScroll = Math.max(
+        0,
+        contentSize.width - layoutMeasurement.width,
+      );
       setTabScrollX(x);
       setTabMaxScroll(maxScroll);
     },
@@ -541,10 +548,7 @@ export default function InventoryScreen() {
         .then((options) => {
           if (!cancelled) {
             const merged = [
-              ...new Set([
-                ...DEFAULT_INVENTORY_CATEGORIES,
-                ...options,
-              ]),
+              ...new Set([...DEFAULT_INVENTORY_CATEGORIES, ...options]),
             ];
             setTypeOptions(merged);
           }
@@ -737,7 +741,7 @@ export default function InventoryScreen() {
         qty: parsedQty,
         unit:
           newItemUnit === "Choose Measurement unit" ||
-            newItemUnit === "Measurement unit"
+          newItemUnit === "Measurement unit"
             ? "pcs"
             : newItemUnit,
         purchasedDate: newItemDate,
@@ -776,7 +780,7 @@ export default function InventoryScreen() {
     if (!activeFarm?.id) return;
 
     const hasRestockValue = restockQty.trim().length > 0;
-    const restockAmount = hasRestockValue ? Number.parseFloat(restockQty) : 0;
+    const restockAmount = hasRestockValue ? Number(restockQty.trim()) : 0;
 
     if (
       hasRestockValue &&
@@ -946,11 +950,11 @@ export default function InventoryScreen() {
                           >
                             Exp: {formatAppDate(item.expirationDate)}
                             {expMeta.isExpired &&
-                              expMeta.daysRemaining !== null &&
-                              expMeta.daysRemaining < 0
+                            expMeta.daysRemaining !== null &&
+                            expMeta.daysRemaining < 0
                               ? ` (${Math.abs(expMeta.daysRemaining)}d ago)`
                               : expMeta.isExpiringSoon &&
-                                expMeta.daysRemaining !== null
+                                  expMeta.daysRemaining !== null
                                 ? ` (${expMeta.daysRemaining}d left)`
                                 : ""}
                           </Text>
@@ -1099,7 +1103,12 @@ export default function InventoryScreen() {
       />
       <StatusBar style="dark" />
       {/* Fixed Top Section: Header, Expired Notification Alert, Category Tabs & Pagination */}
-      <View style={[styles.fixedHeaderArea, { paddingTop: insets.top + verticalScale(8) }]}>
+      <View
+        style={[
+          styles.fixedHeaderArea,
+          { paddingTop: insets.top + verticalScale(8) },
+        ]}
+      >
         <View style={styles.header}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
             <TouchableOpacity
@@ -1111,7 +1120,11 @@ export default function InventoryScreen() {
               accessibilityRole="button"
               accessibilityLabel="Go back"
             >
-              <MaterialCommunityIcons name="arrow-left" size={22} color="#FFF" />
+              <MaterialCommunityIcons
+                name="arrow-left"
+                size={22}
+                color="#FFF"
+              />
             </TouchableOpacity>
             <Text style={styles.screenTitle}>Inventory</Text>
           </View>
@@ -1120,7 +1133,7 @@ export default function InventoryScreen() {
             onPress={() => {
               setNewItemType(
                 inventoryTabs.find((tab) => tab.id === selectedTab)?.label ||
-                "Select Category",
+                  "Select Category",
               );
               setAddModalVisible(true);
             }}
@@ -1179,9 +1192,7 @@ export default function InventoryScreen() {
                       inventoryTabs.length > 4 && tabItemWidth
                         ? { width: tabItemWidth }
                         : styles.segmentFlex,
-                      isActive
-                        ? styles.segmentActive
-                        : styles.segmentInactive,
+                      isActive ? styles.segmentActive : styles.segmentInactive,
                     ]}
                     accessibilityRole="tab"
                     accessibilityState={{ selected: isActive }}
@@ -1305,7 +1316,6 @@ export default function InventoryScreen() {
         keyboardDismissMode="on-drag"
       >
         <View style={[styles.content, { paddingTop: 6 }]}>
-
           {loadingItems ? (
             <Text style={styles.emptyStateText}>Loading inventory...</Text>
           ) : null}
@@ -1316,10 +1326,10 @@ export default function InventoryScreen() {
             <Text style={styles.emptyStateText}>No inventory items yet.</Text>
           ) : null}
           {!loadingItems &&
-            !inventoryError &&
-            effectiveItems.length > 0 &&
-            activeCategoryGroups.length === 0 &&
-            expiredItemsList.length === 0 ? (
+          !inventoryError &&
+          effectiveItems.length > 0 &&
+          activeCategoryGroups.length === 0 &&
+          expiredItemsList.length === 0 ? (
             <View style={styles.emptyFilterWrap}>
               <MaterialCommunityIcons
                 name="filter-variant-remove"
@@ -1341,25 +1351,25 @@ export default function InventoryScreen() {
           {/* Active Category Tables for Selected Tab */}
           {!loadingItems && !inventoryError
             ? currentTabGroups.map(([groupTitle, groupItems]) =>
-              renderInventoryTable(groupTitle, groupItems, false),
-            )
+                renderInventoryTable(groupTitle, groupItems, false),
+              )
             : null}
 
           {/* Dedicated Expired Items Table for Selected Tab */}
           {!loadingItems && !inventoryError && currentTabExpiredItems.length > 0
             ? renderInventoryTable(
-              `Expired ${inventoryTabs.find((t) => t.id === selectedTab)?.label || "Supplies"}`,
-              currentTabExpiredItems,
-              true,
-            )
+                `Expired ${inventoryTabs.find((t) => t.id === selectedTab)?.label || "Supplies"}`,
+                currentTabExpiredItems,
+                true,
+              )
             : null}
 
           {/* Tab Empty State when no items exist for this tab */}
           {!loadingItems &&
-            !inventoryError &&
-            effectiveItems.length > 0 &&
-            currentTabGroups.length === 0 &&
-            currentTabExpiredItems.length === 0 ? (
+          !inventoryError &&
+          effectiveItems.length > 0 &&
+          currentTabGroups.length === 0 &&
+          currentTabExpiredItems.length === 0 ? (
             <BlurCard
               style={styles.tabEmptyCard}
               borderRadius={14}
@@ -1409,6 +1419,9 @@ export default function InventoryScreen() {
       <Modal
         visible={addModalVisible}
         animationType="slide"
+        presentationStyle="fullScreen"
+        statusBarTranslucent
+        navigationBarTranslucent
         onRequestClose={() => setAddModalVisible(false)}
       >
         <View style={styles.modalScreen}>
@@ -1473,7 +1486,7 @@ export default function InventoryScreen() {
                   />
                   <Text style={styles.modalSummaryChipText} numberOfLines={1}>
                     {newItemType === "Select Category" ||
-                      newItemType === "Choose type"
+                    newItemType === "Choose type"
                       ? "No category yet"
                       : newItemType}
                   </Text>
@@ -1487,7 +1500,7 @@ export default function InventoryScreen() {
                   <Text style={styles.modalSummaryChipText} numberOfLines={1}>
                     {newItemQty.trim() || "0"}{" "}
                     {newItemUnit === "Measurement unit" ||
-                      newItemUnit === "Choose Measurement unit"
+                    newItemUnit === "Choose Measurement unit"
                       ? "unit"
                       : newItemUnit}
                   </Text>
@@ -1511,9 +1524,7 @@ export default function InventoryScreen() {
                     size={18}
                     color={ChickIntelPalette.green1}
                   />
-                  <Text style={styles.modalFormSectionTitle}>
-                    Item details
-                  </Text>
+                  <Text style={styles.modalFormSectionTitle}>Item details</Text>
                 </View>
 
                 <ChickSelectRow
@@ -1546,9 +1557,7 @@ export default function InventoryScreen() {
                     size={18}
                     color={ChickIntelPalette.green1}
                   />
-                  <Text style={styles.modalFormSectionTitle}>
-                    Stock amount
-                  </Text>
+                  <Text style={styles.modalFormSectionTitle}>Stock amount</Text>
                 </View>
 
                 <View style={styles.addModalTwoColumn}>
@@ -1708,6 +1717,9 @@ export default function InventoryScreen() {
       <Modal
         visible={editModalVisible}
         animationType="slide"
+        presentationStyle="fullScreen"
+        statusBarTranslucent
+        navigationBarTranslucent
         onRequestClose={() => setEditModalVisible(false)}
       >
         <View style={styles.modalScreen}>
@@ -1942,7 +1954,7 @@ export default function InventoryScreen() {
                       />
                     )}
                     {editExpirationDate &&
-                      getExpirationStatus(editExpirationDate).isExpired ? (
+                    getExpirationStatus(editExpirationDate).isExpired ? (
                       <View
                         style={[
                           styles.addModalInfoCallout,

@@ -1,35 +1,35 @@
 import React, {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
+    createContext,
+    useCallback,
+    useContext,
+    useEffect,
+    useMemo,
+    useState,
 } from "react";
 
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/providers/auth-provider";
 import { logError, logStep } from "@/utils/logger";
 import {
-  computeEffectiveInventoryItems,
-  type EffectiveInventoryItem,
+    computeEffectiveInventoryItems,
+    type EffectiveInventoryItem,
 } from "@/utils/stock-alerts";
 import {
-  createInventoryItem,
-  deleteInventoryItem,
-  fetchInventoryItems,
-  updateInventoryItem,
-  type SupabaseInventoryItem,
+    createInventoryItem,
+    deleteInventoryItem,
+    fetchInventoryItems,
+    updateInventoryItem,
+    type SupabaseInventoryItem,
 } from "@/utils/supabase-inventory";
 import {
-  completeScheduleTask,
-  createScheduleTask,
-  deleteScheduleTask,
-  fetchScheduleTaskCompletions,
-  fetchScheduleTasks,
-  type SupabaseScheduleTask,
-  type SupabaseScheduleTaskCompletion,
+    completeScheduleTask,
+    createScheduleTask,
+    deleteScheduleTask,
+    fetchScheduleTaskCompletions,
+    fetchScheduleTasks,
+    type SupabaseScheduleTask,
+    type SupabaseScheduleTaskCompletion,
 } from "@/utils/supabase-schedule";
-import { supabase } from "@/lib/supabase";
 
 type FarmDataContextType = {
   rawItems: SupabaseInventoryItem[];
@@ -62,7 +62,9 @@ const FarmDataContext = createContext<FarmDataContextType | null>(null);
 export function FarmDataProvider({ children }: { children: React.ReactNode }) {
   const { activeFarm, configured } = useAuth();
   const [rawItems, setRawItems] = useState<SupabaseInventoryItem[]>([]);
-  const [scheduleTasks, setScheduleTasks] = useState<SupabaseScheduleTask[]>([]);
+  const [scheduleTasks, setScheduleTasks] = useState<SupabaseScheduleTask[]>(
+    [],
+  );
   const [scheduleCompletions, setScheduleCompletions] = useState<
     SupabaseScheduleTaskCompletion[]
   >([]);
@@ -97,9 +99,15 @@ export function FarmDataProvider({ children }: { children: React.ReactNode }) {
       setRawItems(items);
       setScheduleTasks(tasks);
       setScheduleCompletions(completions);
-      logStep("Farm data refreshed", { farmId: activeFarm.id, itemsCount: items.length, tasksCount: tasks.length });
+      logStep("Farm data refreshed", {
+        farmId: activeFarm.id,
+        itemsCount: items.length,
+        tasksCount: tasks.length,
+      });
     } catch (error) {
-      logError("Failed to refresh farm data", error, { farmId: activeFarm?.id });
+      logError("Failed to refresh farm data", error, {
+        farmId: activeFarm?.id,
+      });
     } finally {
       setLoading(false);
     }
@@ -188,6 +196,7 @@ export function FarmDataProvider({ children }: { children: React.ReactNode }) {
 
       await updateInventoryItem(activeFarm.id, itemId, {
         qty: newPhysicalQty,
+        statusPercent: restockQty > 0 ? 100 : undefined,
         deliveredDate: extra?.deliveredDate,
         expirationDate: extra?.expirationDate,
       });
@@ -199,6 +208,7 @@ export function FarmDataProvider({ children }: { children: React.ReactNode }) {
             ? {
                 ...item,
                 qty: newPhysicalQty,
+                statusPercent: restockQty > 0 ? 100 : item.statusPercent,
                 deliveryDate: extra?.deliveredDate ?? item.deliveryDate,
                 expirationDate: extra?.expirationDate ?? item.expirationDate,
               }
@@ -264,7 +274,10 @@ export function FarmDataProvider({ children }: { children: React.ReactNode }) {
     async (input: Parameters<typeof createInventoryItem>[1]) => {
       if (!activeFarm?.id) throw new Error("No active farm");
       const created = await createInventoryItem(activeFarm.id, input);
-      setRawItems((prev) => [created, ...prev.filter((i) => i.id !== created.id)]);
+      setRawItems((prev) => [
+        created,
+        ...prev.filter((i) => i.id !== created.id),
+      ]);
       void refreshFarmData();
       return created;
     },

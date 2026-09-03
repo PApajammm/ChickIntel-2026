@@ -24,6 +24,15 @@ type InventoryRow = {
   expiration_date?: string | null;
 };
 
+function formatDatabaseDate(date?: Date | null) {
+  if (!date) return null;
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 function normalizeInventoryType(type: string) {
   const normalized = type.trim().toLowerCase();
 
@@ -48,7 +57,9 @@ function mapInventoryRow(row: InventoryRow): SupabaseInventoryItem {
     statusPercent: row.status_percent,
     orderDate: row.purchased_date ? new Date(row.purchased_date) : new Date(),
     deliveryDate: row.delivered_date ? new Date(row.delivered_date) : undefined,
-    expirationDate: row.expiration_date ? new Date(row.expiration_date) : undefined,
+    expirationDate: row.expiration_date
+      ? new Date(row.expiration_date)
+      : undefined,
   };
 }
 
@@ -68,7 +79,9 @@ export async function fetchInventoryItems(farmId: string) {
 
   if (error) throw error;
 
-  const mapped = (data ?? []).map((row) => mapInventoryRow(row as InventoryRow));
+  const mapped = (data ?? []).map((row) =>
+    mapInventoryRow(row as InventoryRow),
+  );
 
   if (!activeCategoryOptions.length) {
     return mapped;
@@ -132,15 +145,9 @@ export async function createInventoryItem(
         qty: nextQty,
         unit: input.unit,
         price: input.price ?? null,
-        purchased_date: input.purchasedDate
-          ? input.purchasedDate.toISOString().slice(0, 10)
-          : null,
-        delivered_date: input.deliveredDate
-          ? input.deliveredDate.toISOString().slice(0, 10)
-          : null,
-        expiration_date: input.expirationDate
-          ? input.expirationDate.toISOString().slice(0, 10)
-          : null,
+        purchased_date: formatDatabaseDate(input.purchasedDate),
+        delivered_date: formatDatabaseDate(input.deliveredDate),
+        expiration_date: formatDatabaseDate(input.expirationDate),
       })
       .eq("farm_id", farmId)
       .eq("id", existingMatch.id)
@@ -164,15 +171,9 @@ export async function createInventoryItem(
       unit: input.unit,
       price: input.price ?? null,
       status_percent: 100,
-      purchased_date: input.purchasedDate
-        ? input.purchasedDate.toISOString().slice(0, 10)
-        : null,
-      delivered_date: input.deliveredDate
-        ? input.deliveredDate.toISOString().slice(0, 10)
-        : null,
-      expiration_date: input.expirationDate
-        ? input.expirationDate.toISOString().slice(0, 10)
-        : null,
+      purchased_date: formatDatabaseDate(input.purchasedDate),
+      delivered_date: formatDatabaseDate(input.deliveredDate),
+      expiration_date: formatDatabaseDate(input.expirationDate),
     })
     .select(
       "id, item_type, item_name, qty, unit, status_percent, purchased_date, delivered_date, expiration_date",
@@ -192,9 +193,7 @@ export async function updateInventoryItemDeliveryDate(
   const { error } = await supabase
     .from("inventory_items")
     .update({
-      delivered_date: deliveredDate
-        ? deliveredDate.toISOString().slice(0, 10)
-        : null,
+      delivered_date: formatDatabaseDate(deliveredDate),
     })
     .eq("farm_id", farmId)
     .eq("id", itemId);
@@ -207,6 +206,7 @@ export async function updateInventoryItem(
   itemId: string,
   input: {
     qty?: number;
+    statusPercent?: number;
     deliveredDate?: Date;
     expirationDate?: Date;
   },
@@ -215,15 +215,14 @@ export async function updateInventoryItem(
   if (input.qty !== undefined) {
     payload.qty = input.qty;
   }
+  if (input.statusPercent !== undefined) {
+    payload.status_percent = input.statusPercent;
+  }
   if (input.deliveredDate !== undefined) {
-    payload.delivered_date = input.deliveredDate
-      ? input.deliveredDate.toISOString().slice(0, 10)
-      : null;
+    payload.delivered_date = formatDatabaseDate(input.deliveredDate);
   }
   if (input.expirationDate !== undefined) {
-    payload.expiration_date = input.expirationDate
-      ? input.expirationDate.toISOString().slice(0, 10)
-      : null;
+    payload.expiration_date = formatDatabaseDate(input.expirationDate);
   }
 
   if (Object.keys(payload).length === 0) {

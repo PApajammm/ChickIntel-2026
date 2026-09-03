@@ -11,14 +11,27 @@ drop function if exists public.sync_profile_is_admin_to_auth();
 drop function if exists public.sync_profile_is_admin_to_admin_users();
 drop function if exists public.is_admin(uuid);
 
--- 3. Create RLS Policies for profiles (Admins) using direct JWT email verification
+-- 3. Create an RLS-safe admin check and policies for profiles
+create or replace function public.is_admin()
+returns boolean
+language sql
+security definer
+set search_path = public, auth
+as $$
+    select exists (
+        select 1
+        from public.profiles p
+        where p.id = auth.uid() and p.is_admin = true
+    );
+$$;
+
 drop policy if exists "profiles_select_admin" on public.profiles;
 create policy "profiles_select_admin"
 on public.profiles
 for select
 to authenticated
 using (
-    auth.jwt() ->> 'email' = 'dev@gmail.com'
+    public.is_admin()
 );
 
 drop policy if exists "profiles_update_admin" on public.profiles;
@@ -27,10 +40,10 @@ on public.profiles
 for update
 to authenticated
 using (
-    auth.jwt() ->> 'email' = 'dev@gmail.com'
+    public.is_admin()
 )
 with check (
-    auth.jwt() ->> 'email' = 'dev@gmail.com'
+    public.is_admin()
 );
 
 -- 4. Create RLS Policies for farms and farm_members (Admins)
@@ -40,7 +53,7 @@ on public.farms
 for select
 to authenticated
 using (
-    auth.jwt() ->> 'email' = 'dev@gmail.com'
+    public.is_admin()
 );
 
 drop policy if exists "farm_members_select_admin" on public.farm_members;
@@ -49,7 +62,7 @@ on public.farm_members
 for select
 to authenticated
 using (
-    auth.jwt() ->> 'email' = 'dev@gmail.com'
+    public.is_admin()
 );
 
 drop policy if exists "farm_members_insert_admin" on public.farm_members;
@@ -58,7 +71,7 @@ on public.farm_members
 for insert
 to authenticated
 with check (
-    auth.jwt() ->> 'email' = 'dev@gmail.com'
+    public.is_admin()
 );
 
 -- 5. Trigger to automatically sync auth.users last_sign_in_at to public.profiles last_login_at
@@ -136,7 +149,7 @@ begin
 
     if target_farm_id is not null then
         insert into public.farm_members (farm_id, user_id, role)
-        values (target_farm_id, new.id, 'farmer')
+        values (target_farm_id, new.id, 'worker')
         on conflict (farm_id, user_id) do nothing;
 
         update public.profiles

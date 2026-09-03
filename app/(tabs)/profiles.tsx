@@ -1288,8 +1288,8 @@ const styles = StyleSheet.create({
     position: "relative",
     paddingLeft: 16,
     paddingRight: 16,
-    paddingTop: 14,
-    paddingBottom: 14,
+    paddingTop: 10,
+    paddingBottom: 10,
     backgroundColor: "rgba(255, 255, 255, 0.94)",
     overflow: "hidden",
   },
@@ -1302,7 +1302,7 @@ const styles = StyleSheet.create({
   },
   cardMainContainer: {
     paddingLeft: 2,
-    gap: 12,
+    gap: 8,
   },
   cardHeaderRow: {
     flexDirection: "row",
@@ -1312,7 +1312,7 @@ const styles = StyleSheet.create({
   },
   headerLeftStack: {
     flex: 1,
-    gap: 4,
+    gap: 2,
   },
   batchPillBadge: {
     flexDirection: "row",
@@ -1347,7 +1347,7 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(11),
     lineHeight: 16,
     color: "rgba(51, 51, 51, 0.58)",
-    paddingBottom: verticalScale(10),
+    paddingBottom: 0,
   },
   headerRightActions: {
     flexDirection: "row",

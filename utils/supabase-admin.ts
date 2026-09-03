@@ -1,8 +1,13 @@
-import { createClient } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
+import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? "";
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? "";
+const ADMIN_CONSOLE_BREEDS = new Set([
+  "barred rock",
+  "rhode island red",
+  "silkie",
+]);
 
 export type FarmerData = {
   id: string;
@@ -40,26 +45,29 @@ function formatLastLogin(dateStr: string | null | undefined): string {
  * Fetch all farmers from public.profiles and combine with their farm memberships count from public.farm_members.
  */
 export async function fetchFarmers(): Promise<FarmerData[]> {
-  const [{ data: profiles, error: profilesError }, { data: members, error: membersError }] =
-    await Promise.all([
-      supabase
-        .from("profiles")
-        .select("id, display_name, email, is_active, created_at, last_login_at")
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("farm_members")
-        .select("user_id"),
-    ]);
+  const [
+    { data: profiles, error: profilesError },
+    { data: members, error: membersError },
+  ] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("id, display_name, email, is_active, created_at, last_login_at")
+      .order("created_at", { ascending: false }),
+    supabase.from("farm_members").select("user_id"),
+  ]);
 
   if (profilesError) throw profilesError;
   if (membersError) throw membersError;
 
-  const farmCounts = (members || []).reduce((acc, m) => {
-    if (m.user_id) {
-      acc[m.user_id] = (acc[m.user_id] || 0) + 1;
-    }
-    return acc;
-  }, {} as Record<string, number>);
+  const farmCounts = (members || []).reduce(
+    (acc, m) => {
+      if (m.user_id) {
+        acc[m.user_id] = (acc[m.user_id] || 0) + 1;
+      }
+      return acc;
+    },
+    {} as Record<string, number>,
+  );
 
   return (profiles || []).map((p: any) => ({
     id: p.id,
@@ -76,7 +84,11 @@ export async function fetchFarmers(): Promise<FarmerData[]> {
  * Provisions a new farmer user account via an isolated Supabase Auth client,
  * then automatically connects the new farmer as a member of the active admin farm.
  */
-export async function createFarmer(email: string, name: string, pgword: string): Promise<string> {
+export async function createFarmer(
+  email: string,
+  name: string,
+  pgword: string,
+): Promise<string> {
   const tempClient = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
       persistSession: false,
@@ -106,27 +118,29 @@ export async function createFarmer(email: string, name: string, pgword: string):
   const newUserId = data.user.id;
 
   // 1. Fetch active farm ID
-  const { data: farmData } = await supabase
+  const { data: farmData, error: farmError } = await supabase
     .from("farms")
     .select("id")
     .limit(1);
 
+  if (farmError) throw farmError;
+
   const farmId = farmData?.[0]?.id;
 
   // 2. Ensure public.profiles record exists with display_name, is_active, and default_farm_id
-  await supabase
-    .from("profiles")
-    .upsert({
-      id: newUserId,
-      email: data.user.email,
-      display_name: name,
-      is_active: true,
-      default_farm_id: farmId ?? null,
-    });
+  const { error: profileError } = await supabase.from("profiles").upsert({
+    id: newUserId,
+    email: data.user.email,
+    display_name: name,
+    is_active: true,
+    default_farm_id: farmId ?? null,
+  });
+
+  if (profileError) throw profileError;
 
   // 3. Connect farmer to the farm in public.farm_members
   if (farmId) {
-    await supabase
+    const { error: membershipError } = await supabase
       .from("farm_members")
       .upsert(
         {
@@ -134,8 +148,10 @@ export async function createFarmer(email: string, name: string, pgword: string):
           user_id: newUserId,
           role: "farmer",
         },
-        { onConflict: "farm_id,user_id" }
+        { onConflict: "farm_id,user_id" },
       );
+
+    if (membershipError) throw membershipError;
   }
 
   return newUserId;
@@ -144,11 +160,15 @@ export async function createFarmer(email: string, name: string, pgword: string):
 /**
  * Update the profile details of an existing farmer (name, is_active).
  */
-export async function updateFarmer(id: string, name: string, isActive: boolean): Promise<void> {
+export async function updateFarmer(
+  id: string,
+  name: string,
+  isActive: boolean,
+): Promise<void> {
   const updateData: { is_active: boolean; display_name?: string } = {
     is_active: isActive,
   };
-  
+
   if (name && name.trim() !== "") {
     updateData.display_name = name.trim();
   }
@@ -164,7 +184,10 @@ export async function updateFarmer(id: string, name: string, isActive: boolean):
 /**
  * Toggle active status of a farmer without modifying their display_name.
  */
-export async function toggleFarmerStatus(id: string, currentStatus: boolean): Promise<void> {
+export async function toggleFarmerStatus(
+  id: string,
+  currentStatus: boolean,
+): Promise<void> {
   const { error } = await supabase
     .from("profiles")
     .update({
@@ -202,19 +225,28 @@ export async function fetchBreeds(): Promise<BreedData[]> {
 
   if (error) throw error;
 
-  return (data || []).map((b: any) => ({
-    id: b.id,
-    name: b.name,
-    description: b.purpose || "",
-    isActive: b.is_active !== false,
-    created_at: b.created_at,
-  }));
+  return (data || [])
+    .filter(
+      (b: any) =>
+        typeof b.name === "string" &&
+        ADMIN_CONSOLE_BREEDS.has(b.name.trim().toLowerCase()),
+    )
+    .map((b: any) => ({
+      id: b.id,
+      name: b.name,
+      description: b.purpose || "",
+      isActive: b.is_active !== false,
+      created_at: b.created_at,
+    }));
 }
 
 /**
  * Create a new chicken breed in public.breeds.
  */
-export async function createBreed(name: string, description: string): Promise<BreedData> {
+export async function createBreed(
+  name: string,
+  description: string,
+): Promise<BreedData> {
   const { data, error } = await supabase
     .from("breeds")
     .insert({
@@ -260,7 +292,10 @@ export async function updateBreed(
 /**
  * Toggle active status of a breed in public.breeds.
  */
-export async function toggleBreedStatus(id: string, currentStatus: boolean): Promise<void> {
+export async function toggleBreedStatus(
+  id: string,
+  currentStatus: boolean,
+): Promise<void> {
   const { error } = await supabase
     .from("breeds")
     .update({ is_active: !currentStatus })
@@ -292,7 +327,10 @@ export async function fetchItemTypes(): Promise<ItemTypeData[]> {
 /**
  * Create a new inventory item type in public.inventory_categories.
  */
-export async function createItemType(name: string, description: string): Promise<ItemTypeData> {
+export async function createItemType(
+  name: string,
+  description: string,
+): Promise<ItemTypeData> {
   const { data, error } = await supabase
     .from("inventory_categories")
     .insert({
@@ -338,7 +376,10 @@ export async function updateItemType(
 /**
  * Toggle active status of an inventory item type in public.inventory_categories.
  */
-export async function toggleItemTypeStatus(id: string, currentStatus: boolean): Promise<void> {
+export async function toggleItemTypeStatus(
+  id: string,
+  currentStatus: boolean,
+): Promise<void> {
   const { error } = await supabase
     .from("inventory_categories")
     .update({ is_active: !currentStatus })
