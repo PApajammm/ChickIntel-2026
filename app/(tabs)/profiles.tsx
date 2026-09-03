@@ -455,31 +455,32 @@ export default function ProfilesScreen() {
       <StatusBar style="dark" />
       <View style={styles.fixedHeader}>
         <View style={styles.pageHeaderRow}>
-          <View style={styles.headerLeftRow}>
-            <Pressable
-              style={({ pressed }) => [
-                styles.backButton,
-                { opacity: pressed ? 0.75 : 1 },
-              ]}
-              onPress={() =>
-                router.canGoBack() ? router.back() : router.replace("/(tabs)")
-              }
-              accessibilityRole="button"
-              accessibilityLabel="Go back"
-            >
-              <MaterialCommunityIcons
-                name="arrow-left"
-                size={22}
-                color="#FFF"
-              />
-            </Pressable>
+          <Pressable
+            style={({ pressed }) => [
+              styles.backButton,
+              { opacity: pressed ? 0.75 : 1 },
+            ]}
+            onPress={() =>
+              router.canGoBack() ? router.back() : router.replace("/(tabs)")
+            }
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+          >
+            <MaterialCommunityIcons
+              name="arrow-left"
+              size={22}
+              color="#FFF"
+            />
+          </Pressable>
 
-            <Text style={[styles.pageTitle, { color: colors.text }]}>
-              {mode === "chicken"
-                ? "Batch Profile (chicken)"
-                : "Batch Profile (eggs)"}
-            </Text>
-          </View>
+          <Text
+            style={[styles.pageTitle, { color: colors.text }]}
+            numberOfLines={1}
+          >
+            {mode === "chicken"
+              ? "Batch Profile (chicken)"
+              : "Batch Profile (eggs)"}
+          </Text>
 
           {mode === "egg" ? (
             <Pressable
@@ -499,7 +500,9 @@ export default function ProfilesScreen() {
                 color="#FFF"
               />
             </Pressable>
-          ) : null}
+          ) : (
+            <View style={styles.headerRightPlaceholder} />
+          )}
         </View>
         <View style={styles.segmentStickyHeader}>
           <View style={styles.segmentWrap}>
@@ -1203,28 +1206,26 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   pageTitle: {
+    flex: 1,
     fontFamily: ChickFont.display,
-    fontSize: responsiveFontSize(20),
-    lineHeight: 30,
+    fontSize: responsiveFontSize(18),
+    lineHeight: 28,
     fontWeight: "800",
-    letterSpacing: -0.55,
+    letterSpacing: -0.4,
     color: ChickIntelPalette.gray1,
-    marginTop: 10,
-    marginBottom: 8,
+    textAlign: "center",
   },
   pageHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 12,
+    gap: 8,
     marginTop: 10,
     marginBottom: 8,
+    minHeight: verticalScale(42),
   },
-  headerLeftRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    flex: 1,
+  headerRightPlaceholder: {
+    width: scale(42),
   },
   segmentStickyHeader: {
     backgroundColor: "transparent",

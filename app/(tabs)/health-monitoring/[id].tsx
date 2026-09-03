@@ -389,6 +389,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.55,
     color: ChickIntelPalette.gray1,
     flex: 1,
+    textAlign: "center",
   },
   chtTag: {
     fontFamily: ChickFont.display,

@@ -526,13 +526,12 @@ export default function ScannedHealthResultScreen() {
                 color="#FFF"
               />
             </TouchableOpacity>
-            <View style={styles.titleWrap}>
-              <Text style={styles.pageTitle}>
-                {isMonitoringRescan
-                  ? "Update Behavior Check"
-                  : "Behavior Check Result"}
-              </Text>
-            </View>
+            <Text style={styles.pageTitle} numberOfLines={1}>
+              {isMonitoringRescan
+                ? "Update Behavior Check"
+                : "Behavior Check Result"}
+            </Text>
+            <View style={styles.headerRightPlaceholder} />
           </View>
           <Text style={styles.pageSubtitle}>
             {isAnalyzingImage
@@ -856,8 +855,9 @@ const styles = StyleSheet.create({
   },
   headerTitleRow: {
     flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 10,
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 6,
   },
   titleWrap: {
     flex: 1,
@@ -867,6 +867,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: moderateScale(16),
   },
   pageTitle: {
+    flex: 1,
+    textAlign: "center",
     fontFamily: ChickFont.display,
     fontSize: responsiveFontSize(20),
     lineHeight: 30,
@@ -875,8 +877,12 @@ const styles = StyleSheet.create({
     color: ChickIntelPalette.gray1,
     marginBottom: 2,
   },
+  headerRightPlaceholder: {
+    width: scale(42),
+  },
   pageSubtitle: {
     ...HealthTypography.meta,
+    textAlign: "center",
     marginBottom: 12,
     color: ChickIntelPalette.green1,
   },

@@ -379,24 +379,23 @@ export default function HealthMonitoringIndexScreen() {
       >
         <StatusBar style="dark" />
         <View style={styles.headerRow}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() =>
-                router.canGoBack() ? router.back() : router.replace("/(tabs)")
-              }
-              activeOpacity={0.8}
-              accessibilityRole="button"
-              accessibilityLabel="Go back"
-            >
-              <MaterialCommunityIcons
-                name="arrow-left"
-                size={22}
-                color="#FFF"
-              />
-            </TouchableOpacity>
-            <Text style={styles.pageTitle}>Health Monitoring</Text>
-          </View>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() =>
+              router.canGoBack() ? router.back() : router.replace("/(tabs)")
+            }
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+          >
+            <MaterialCommunityIcons
+              name="arrow-left"
+              size={22}
+              color="#FFF"
+            />
+          </TouchableOpacity>
+          <Text style={styles.pageTitle} numberOfLines={1}>Health Monitoring</Text>
+          <View style={styles.headerRightPlaceholder} />
         </View>
 
         <View style={styles.tabs}>
@@ -528,7 +527,7 @@ const styles = StyleSheet.create({
   },
   headerRow: {
     flexDirection: "row",
-    alignItems: "flex-start",
+    alignItems: "center",
     justifyContent: "space-between",
     gap: 12,
     marginTop: 10,
@@ -536,12 +535,16 @@ const styles = StyleSheet.create({
   },
   pageTitle: {
     flex: 1,
+    textAlign: "center",
     fontFamily: ChickFont.display,
     fontSize: responsiveFontSize(20),
     lineHeight: 30,
     fontWeight: "800",
     letterSpacing: -0.55,
     color: ChickIntelPalette.gray1,
+  },
+  headerRightPlaceholder: {
+    width: scale(42),
   },
   backButton: {
     width: scale(42),

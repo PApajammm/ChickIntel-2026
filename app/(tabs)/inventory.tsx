@@ -1112,24 +1112,22 @@ export default function InventoryScreen() {
         ]}
       >
         <View style={styles.header}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() =>
-                router.canGoBack() ? router.back() : router.replace("/(tabs)")
-              }
-              activeOpacity={0.8}
-              accessibilityRole="button"
-              accessibilityLabel="Go back"
-            >
-              <MaterialCommunityIcons
-                name="arrow-left"
-                size={22}
-                color="#FFF"
-              />
-            </TouchableOpacity>
-            <Text style={styles.screenTitle}>Inventory</Text>
-          </View>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() =>
+              router.canGoBack() ? router.back() : router.replace("/(tabs)")
+            }
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+          >
+            <MaterialCommunityIcons
+              name="arrow-left"
+              size={22}
+              color="#FFF"
+            />
+          </TouchableOpacity>
+          <Text style={styles.screenTitle} numberOfLines={1}>Inventory</Text>
           <TouchableOpacity
             style={styles.addButton}
             onPress={() => {
@@ -2196,6 +2194,8 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
   },
   screenTitle: {
+    flex: 1,
+    textAlign: "center",
     fontFamily: ChickFont.display,
     fontSize: responsiveFontSize(20),
     lineHeight: 30,
