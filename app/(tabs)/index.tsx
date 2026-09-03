@@ -244,11 +244,11 @@ export default function HomeScreen() {
   const maxScrollXRef = useRef(0);
   const scrollWidthRef = useRef(0);
   const isUserInteractingRef = useRef(false);
-  const userInteractionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const userInteractionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const directionRef = useRef<1 | -1>(1);
   const loopCountRef = useRef(0);
-  const kpiTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const kpiTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useFocusEffect(
     useCallback(() => {

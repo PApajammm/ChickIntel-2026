@@ -820,83 +820,41 @@ export default function InventoryScreen() {
     groupItems: EffectiveInventoryItem[],
     isExpiredTable: boolean = false,
   ) => {
-    const selectedTabMeta = inventoryTabs.find((t) => t.id === selectedTab);
-    const isCategoryTitle =
-      groupTitle.toLowerCase() === selectedTab.toLowerCase() ||
-      groupTitle.toLowerCase() ===
-      (selectedTabMeta?.label.toLowerCase() || "") ||
-      groupTitle.toLowerCase().startsWith("expired ");
-
-    const displayTitle = isExpiredTable
-      ? "Expired Stock"
-      : isCategoryTitle
-        ? "Active Stock"
-        : `Active Stock (${groupTitle})`;
-
     return (
       <BlurCard
         key={groupTitle}
-        style={styles.tableContainer}
+        style={styles.tableRowsContainer}
         borderRadius={14}
         intensity={16}
       >
         <View style={styles.tableSurface}>
-          <View style={styles.tableSectionHeader}>
-            <View
-              style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
-            >
-              {isExpiredTable ? (
-                <MaterialCommunityIcons
-                  name="alert-decagram"
-                  size={20}
-                  color="#EF4444"
-                />
-              ) : null}
-              <View>
-                <Text
-                  style={[
-                    styles.tableSectionTitle,
-                    isExpiredTable && styles.tableSectionTitleExpired,
-                  ]}
-                >
-                  {displayTitle}
-                </Text>
-              </View>
-            </View>
-            <View
-              style={[
-                styles.tableMetaPill,
-                isExpiredTable && styles.tableMetaPillExpired,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.tableSectionMeta,
-                  isExpiredTable && styles.tableSectionMetaExpired,
-                ]}
+          {isExpiredTable ? (
+            <>
+              <View
+                style={[styles.subGroupHeader, styles.subGroupHeaderExpired]}
               >
-                {groupItems.length} {isExpiredTable ? "expired " : ""}item
-                {groupItems.length === 1 ? "" : "s"}
-              </Text>
-            </View>
-          </View>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            bounces={false}
-            contentContainerStyle={styles.tableScrollContent}
-          >
-            <View style={styles.tableInner}>
-              <View style={styles.headerRow}>
-                <View style={[styles.colName, styles.headerCell]}>
-                  <Text style={styles.headerText}>
-                    {isExpiredTable ? "Expired Item" : "Item Details"}
+                <View
+                  style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+                >
+                  <MaterialCommunityIcons
+                    name="alert-decagram"
+                    size={16}
+                    color="#EF4444"
+                  />
+                  <Text style={[styles.subGroupTitle, { color: "#B91C1C" }]}>
+                    Expired Supplies
                   </Text>
                 </View>
+                <Text style={[styles.subGroupCount, { color: "#991B1B" }]}>
+                  {groupItems.length} item{groupItems.length === 1 ? "" : "s"}
+                </Text>
+              </View>
+              <View style={[styles.headerRow, styles.headerRowExpired]}>
+                <View style={[styles.colName, styles.headerCell]}>
+                  <Text style={styles.headerText}>Expired Item</Text>
+                </View>
                 <View style={[styles.colStatus, styles.headerCell]}>
-                  <Text style={styles.headerText}>
-                    {isExpiredTable ? "Remaining Stock" : "Live Usage"}
-                  </Text>
+                  <Text style={styles.headerText}>Remaining Stock</Text>
                 </View>
                 <View
                   style={[
@@ -908,7 +866,23 @@ export default function InventoryScreen() {
                   <Text style={styles.headerText}>Action</Text>
                 </View>
               </View>
+            </>
+          ) : selectedTab === "all" ? (
+            <View style={styles.subGroupHeader}>
+              <Text style={styles.subGroupTitle}>{groupTitle}</Text>
+              <Text style={styles.subGroupCount}>
+                {groupItems.length} item{groupItems.length === 1 ? "" : "s"}
+              </Text>
+            </View>
+          ) : null}
 
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            bounces={false}
+            contentContainerStyle={styles.tableScrollContent}
+          >
+            <View style={styles.tableInner}>
               {groupItems.map((item, index) => {
                 const isLast = index === groupItems.length - 1;
                 const stockMeta = getStockSeverityMeta(item.statusPercent);
@@ -1124,147 +1098,213 @@ export default function InventoryScreen() {
         ]}
       />
       <StatusBar style="dark" />
-      <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+      {/* Fixed Top Section: Header, Expired Notification Alert, Category Tabs & Pagination */}
+      <View style={[styles.fixedHeaderArea, { paddingTop: insets.top + verticalScale(8) }]}>
+        <View style={styles.header}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() =>
+                router.canGoBack() ? router.back() : router.replace("/(tabs)")
+              }
+              activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
+            >
+              <MaterialCommunityIcons name="arrow-left" size={22} color="#FFF" />
+            </TouchableOpacity>
+            <Text style={styles.screenTitle}>Inventory</Text>
+          </View>
           <TouchableOpacity
-            style={styles.backButton}
-            onPress={() =>
-              router.canGoBack() ? router.back() : router.replace("/(tabs)")
-            }
+            style={styles.addButton}
+            onPress={() => {
+              setNewItemType(
+                inventoryTabs.find((tab) => tab.id === selectedTab)?.label ||
+                "Select Category",
+              );
+              setAddModalVisible(true);
+            }}
             activeOpacity={0.8}
             accessibilityRole="button"
-            accessibilityLabel="Go back"
+            accessibilityLabel="Add inventory item"
           >
-            <MaterialCommunityIcons name="arrow-left" size={22} color="#FFF" />
+            <MaterialCommunityIcons name="plus" size={24} color="#FFF" />
           </TouchableOpacity>
-          <Text style={styles.screenTitle}>Inventory</Text>
         </View>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => {
-            setNewItemType(
-              inventoryTabs.find((tab) => tab.id === selectedTab)?.label ||
-              "Select Category",
-            );
-            setAddModalVisible(true);
-          }}
-          activeOpacity={0.8}
-          accessibilityRole="button"
-          accessibilityLabel="Add inventory item"
-        >
-          <MaterialCommunityIcons name="plus" size={24} color="#FFF" />
-        </TouchableOpacity>
-      </View>
 
-      <ScrollView
-        contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="on-drag"
-      >
-        <View style={styles.content}>
-          {/* Expiration Alert Summary Banner with Guaranteed Blinking Animation */}
-          {!loadingItems && !inventoryError && expirationSummary.hasAlerts ? (
+        {/* Expiration Alert Summary Banner with Guaranteed Blinking Animation */}
+        {!loadingItems && !inventoryError && expirationSummary.hasAlerts ? (
+          <View style={styles.fixedAlertWrapper}>
             <ExpiredAlertBanner
               expirationSummary={expirationSummary}
               activeExpirationFilter={activeExpirationFilter}
               setActiveExpirationFilter={setActiveExpirationFilter}
               totalCount={effectiveItems.length}
             />
-          ) : null}
+          </View>
+        ) : null}
 
-          {/* Category tabs container with 4 default visible tabs & pagination dots if >4 */}
-          <View style={styles.tabSectionHeader}>
-            <View
-              style={styles.segmentWrap}
-              onLayout={(e) => {
-                const w = e.nativeEvent.layout.width;
-                if (w > 0 && Math.abs(w - tabBarWidth) > 1) {
-                  setTabBarWidth(w);
-                }
-              }}
+        {/* Category tabs container with 4 default visible tabs & pagination dots if >4 */}
+        <View style={styles.tabSectionHeader}>
+          <View
+            style={styles.segmentWrap}
+            onLayout={(e) => {
+              const w = e.nativeEvent.layout.width;
+              if (w > 0 && Math.abs(w - tabBarWidth) > 1) {
+                setTabBarWidth(w);
+              }
+            }}
+          >
+            <ScrollView
+              ref={tabScrollRef}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              scrollEventThrottle={16}
+              onScroll={handleTabScroll}
+              onContentSizeChange={handleTabContentSizeChange}
+              contentContainerStyle={[
+                styles.segmentScrollContent,
+                inventoryTabs.length <= 4 && styles.segmentScrollContentGrow,
+              ]}
             >
-              <ScrollView
-                ref={tabScrollRef}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                scrollEventThrottle={16}
-                onScroll={handleTabScroll}
-                onContentSizeChange={handleTabContentSizeChange}
-                contentContainerStyle={[
-                  styles.segmentScrollContent,
-                  inventoryTabs.length <= 4 && styles.segmentScrollContentGrow,
+              {inventoryTabs.map((tab) => {
+                const isActive = selectedTab === tab.id;
+                const hasExpired = tabAlerts[tab.id]?.hasExpired;
+                return (
+                  <Pressable
+                    key={tab.id}
+                    onPress={() => setSelectedTab(tab.id)}
+                    style={[
+                      styles.segment,
+                      inventoryTabs.length > 4 && tabItemWidth
+                        ? { width: tabItemWidth }
+                        : styles.segmentFlex,
+                      isActive
+                        ? styles.segmentActive
+                        : styles.segmentInactive,
+                    ]}
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected: isActive }}
+                    accessibilityLabel={`${tab.label} tab`}
+                  >
+                    <MaterialCommunityIcons
+                      name={tab.icon as any}
+                      size={13}
+                      color={isActive ? "#FFFFFF" : "#4A5452"}
+                    />
+                    <Text
+                      style={[
+                        styles.segmentText,
+                        isActive
+                          ? styles.segmentTextActive
+                          : styles.segmentTextInactive,
+                      ]}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.8}
+                    >
+                      {tab.label}
+                    </Text>
+                    {hasExpired ? (
+                      <View
+                        style={[
+                          styles.segmentAlertDot,
+                          isActive && styles.segmentAlertDotActive,
+                        ]}
+                      />
+                    ) : null}
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </View>
+
+          {/* Subtle pagination indicator dots beneath tabs */}
+          {inventoryTabs.length > 4 && totalTabPages > 1 ? (
+            <View style={styles.paginationDotsContainer}>
+              {Array.from({ length: totalTabPages }).map((_, idx) => {
+                const isDotActive = activeTabPageIndex === idx;
+                return (
+                  <View
+                    key={idx}
+                    style={[
+                      styles.paginationDot,
+                      isDotActive && styles.paginationDotActive,
+                    ]}
+                  />
+                );
+              })}
+            </View>
+          ) : null}
+        </View>
+
+        {/* Fixed Table Header Bar & Column Titles Row (Fixed Position) */}
+        {!loadingItems &&
+        !inventoryError &&
+        effectiveItems.length > 0 &&
+        activeExpirationFilter !== "expired" &&
+        currentTabGroups.length > 0 ? (
+          <View style={styles.fixedTableTopCard}>
+            <View style={styles.tableSectionHeader}>
+              <View
+                style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
+              >
+                <MaterialCommunityIcons
+                  name="package-variant-closed"
+                  size={18}
+                  color={ChickIntelPalette.green1}
+                />
+                <Text style={styles.tableSectionTitle}>
+                  {selectedTab === "all"
+                    ? "Active Stock"
+                    : `Active Stock (${inventoryTabs.find((t) => t.id === selectedTab)?.label || "Category"})`}
+                </Text>
+              </View>
+              <View style={styles.tableMetaPill}>
+                <Text style={styles.tableSectionMeta}>
+                  {currentTabGroups.reduce(
+                    (acc, [, items]) => acc + items.length,
+                    0,
+                  )}{" "}
+                  item
+                  {currentTabGroups.reduce(
+                    (acc, [, items]) => acc + items.length,
+                    0,
+                  ) === 1
+                    ? ""
+                    : "s"}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.headerRow}>
+              <View style={[styles.colName, styles.headerCell]}>
+                <Text style={styles.headerText}>Item Details</Text>
+              </View>
+              <View style={[styles.colStatus, styles.headerCell]}>
+                <Text style={styles.headerText}>Live Usage</Text>
+              </View>
+              <View
+                style={[
+                  styles.colActions,
+                  styles.headerCell,
+                  { justifyContent: "center" },
                 ]}
               >
-                {inventoryTabs.map((tab) => {
-                  const isActive = selectedTab === tab.id;
-                  const hasExpired = tabAlerts[tab.id]?.hasExpired;
-                  return (
-                    <Pressable
-                      key={tab.id}
-                      onPress={() => setSelectedTab(tab.id)}
-                      style={[
-                        styles.segment,
-                        inventoryTabs.length > 4 && tabItemWidth
-                          ? { width: tabItemWidth }
-                          : styles.segmentFlex,
-                        isActive
-                          ? styles.segmentActive
-                          : styles.segmentInactive,
-                      ]}
-                      accessibilityRole="tab"
-                      accessibilityState={{ selected: isActive }}
-                      accessibilityLabel={`${tab.label} tab`}
-                    >
-                      <MaterialCommunityIcons
-                        name={tab.icon as any}
-                        size={13}
-                        color={isActive ? "#FFFFFF" : "#4A5452"}
-                      />
-                      <Text
-                        style={[
-                          styles.segmentText,
-                          isActive
-                            ? styles.segmentTextActive
-                            : styles.segmentTextInactive,
-                        ]}
-                        numberOfLines={1}
-                        adjustsFontSizeToFit
-                        minimumFontScale={0.8}
-                      >
-                        {tab.label}
-                      </Text>
-                      {hasExpired ? (
-                        <View
-                          style={[
-                            styles.segmentAlertDot,
-                            isActive && styles.segmentAlertDotActive,
-                          ]}
-                        />
-                      ) : null}
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
-            </View>
-
-            {/* Subtle pagination indicator dots beneath tabs */}
-            {inventoryTabs.length > 4 && totalTabPages > 1 ? (
-              <View style={styles.paginationDotsContainer}>
-                {Array.from({ length: totalTabPages }).map((_, idx) => {
-                  const isDotActive = activeTabPageIndex === idx;
-                  return (
-                    <View
-                      key={idx}
-                      style={[
-                        styles.paginationDot,
-                        isDotActive && styles.paginationDotActive,
-                      ]}
-                    />
-                  );
-                })}
+                <Text style={styles.headerText}>Action</Text>
               </View>
-            ) : null}
+            </View>
           </View>
+        ) : null}
+      </View>
+
+      <ScrollView
+        contentContainerStyle={{
+          paddingBottom: insets.bottom + 120,
+        }}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+      >
+        <View style={[styles.content, { paddingTop: 6 }]}>
 
           {loadingItems ? (
             <Text style={styles.emptyStateText}>Loading inventory...</Text>
@@ -1990,18 +2030,30 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: ChickIntelPalette.light1,
   },
+  fixedHeaderArea: {
+    width: "100%",
+    backgroundColor: "transparent",
+    zIndex: 20,
+    paddingBottom: verticalScale(2),
+  },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: moderateScale(20),
-    marginTop: 4,
-    marginBottom: 8,
+    paddingHorizontal: moderateScale(16),
+    marginTop: 2,
+    marginBottom: 4,
+  },
+  fixedAlertWrapper: {
+    paddingHorizontal: moderateScale(16),
+    marginTop: verticalScale(2),
+    marginBottom: verticalScale(2),
   },
   tabSectionHeader: {
     backgroundColor: "transparent",
-    marginTop: verticalScale(12),
-    marginBottom: verticalScale(4),
+    paddingHorizontal: moderateScale(16),
+    marginTop: verticalScale(4),
+    marginBottom: verticalScale(2),
     width: "100%",
   },
   segmentWrap: {
@@ -2171,9 +2223,54 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: moderateScale(16),
   },
+  fixedTableTopCard: {
+    marginHorizontal: moderateScale(16),
+    marginTop: verticalScale(4),
+    marginBottom: verticalScale(2),
+    borderRadius: 14,
+    overflow: "hidden",
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.2)",
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  tableRowsContainer: {
+    overflow: "hidden",
+    marginTop: verticalScale(6),
+  },
   tableContainer: {
     overflow: "hidden",
     marginTop: 12,
+  },
+  subGroupHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: moderateScale(14),
+    paddingVertical: verticalScale(8),
+    backgroundColor: "rgba(49, 118, 103, 0.08)",
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(49, 118, 103, 0.12)",
+  },
+  subGroupHeaderExpired: {
+    backgroundColor: "rgba(220, 38, 38, 0.08)",
+    borderBottomColor: "rgba(220, 38, 38, 0.14)",
+  },
+  subGroupTitle: {
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(13),
+    fontWeight: "700",
+    color: ChickIntelPalette.gray1,
+  },
+  subGroupCount: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(11),
+    fontWeight: "600",
+    color: ChickIntelPalette.gray2,
   },
   tableSurface: {
     borderRadius: 14,
@@ -2190,7 +2287,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: moderateScale(14),
-    paddingVertical: verticalScale(12),
+    paddingVertical: verticalScale(10),
     borderBottomWidth: 1,
     borderBottomColor: "rgba(45, 106, 79, 0.12)",
     backgroundColor: "rgba(156, 213, 201, 0.28)",
