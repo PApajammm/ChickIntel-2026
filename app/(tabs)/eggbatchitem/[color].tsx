@@ -130,6 +130,15 @@ export default function EggBatchColorScreen() {
     hatchedQty: "0",
     damagedQty: "0",
   });
+  const [discrepancyModalVisible, setDiscrepancyModalVisible] = useState(false);
+
+  const totalRecordedEggs = selectedEgg?.eggQty ?? 0;
+  const hatchedCount = parseCount(editForm.hatchedQty);
+  const damagedCount = parseCount(editForm.damagedQty);
+  const totalUpdatedEggs = hatchedCount + damagedCount;
+  const hasDiscrepancy = totalUpdatedEggs > totalRecordedEggs;
+  const discrepancyQty = Math.max(0, totalUpdatedEggs - totalRecordedEggs);
+  const derivedUnhatched = Math.max(0, totalRecordedEggs - totalUpdatedEggs);
 
   const loadEggBatches = useCallback(async () => {
     if (!activeFarm?.id) {
@@ -298,15 +307,20 @@ export default function EggBatchColorScreen() {
       return;
     }
 
+    const hatched = parseCount(editForm.hatchedQty);
+    const damaged = parseCount(editForm.damagedQty);
+    const eggTotal = selectedEgg.eggQty ?? 0;
+
+    if (hatched + damaged > eggTotal) {
+      setDiscrepancyModalVisible(true);
+      return;
+    }
+
     const updatedEgg = {
       ...selectedEgg,
-      hatchedQty: parseCount(editForm.hatchedQty),
-      damagedQty: parseCount(editForm.damagedQty),
-      unhatchedQty: getDerivedUnhatchedQty(
-        selectedEgg.eggQty ?? 0,
-        parseCount(editForm.hatchedQty),
-        parseCount(editForm.damagedQty),
-      ),
+      hatchedQty: hatched,
+      damagedQty: damaged,
+      unhatchedQty: Math.max(0, eggTotal - hatched - damaged),
     };
 
     if (!activeFarm?.id) {
@@ -663,8 +677,50 @@ export default function EggBatchColorScreen() {
                   Update Collected Eggs Information
                 </Text>
 
-                <View style={styles.modalField}>
-                  <Text style={styles.modalLabel}>Hatched Qty. :</Text>
+                {/* Batch Quantity Reference Pill */}
+                <View style={styles.batchInfoRefRow}>
+                  <MaterialCommunityIcons
+                    name="egg-outline"
+                    size={15}
+                    color={ChickIntelPalette.green1}
+                  />
+                  <Text style={styles.batchInfoRefText}>
+                    Recorded Egg Batch Quantity:{" "}
+                    <Text style={styles.batchInfoValueEmphasized}>
+                      {totalRecordedEggs} eggs
+                    </Text>
+                  </Text>
+                </View>
+
+                {/* Discrepancy Warning Banner */}
+                {hasDiscrepancy && (
+                  <View style={styles.discrepancyBanner}>
+                    <View style={styles.discrepancyBannerHeader}>
+                      <MaterialCommunityIcons
+                        name="alert-octagon"
+                        size={16}
+                        color="#DC2626"
+                      />
+                      <Text style={styles.discrepancyBannerTitle}>
+                        Numbers Do Not Tally
+                      </Text>
+                    </View>
+                    <Text style={styles.discrepancyBannerDesc}>
+                      Hatched ({hatchedCount}) + Damaged ({damagedCount}) ={" "}
+                      <Text style={{ fontWeight: "800" }}>{totalUpdatedEggs}</Text>, which
+                      exceeds the recorded {totalRecordedEggs} eggs by{" "}
+                      <Text style={{ fontWeight: "800", color: "#DC2626" }}>
+                        {discrepancyQty} egg{discrepancyQty === 1 ? "" : "s"}
+                      </Text>
+                      . Adjust counts to save.
+                    </Text>
+                  </View>
+                )}
+
+                <View style={[styles.inputBoxInside, hasDiscrepancy && styles.inputBoxDiscrepancy]}>
+                  <Text style={[styles.insideLabel, hasDiscrepancy && { color: "#DC2626" }]}>
+                    Hatched Qty.
+                  </Text>
                   <TextInput
                     value={editForm.hatchedQty}
                     onChangeText={(value) =>
@@ -675,13 +731,15 @@ export default function EggBatchColorScreen() {
                     }
                     keyboardType="number-pad"
                     placeholder="0"
-                    placeholderTextColor="#B6B6B6"
-                    style={styles.modalInput}
+                    placeholderTextColor="#9CA3AF"
+                    style={styles.modalInputInside}
                   />
                 </View>
 
-                <View style={styles.modalField}>
-                  <Text style={styles.modalLabel}>Damaged Qty. :</Text>
+                <View style={[styles.inputBoxInside, hasDiscrepancy && styles.inputBoxDiscrepancy]}>
+                  <Text style={[styles.insideLabel, hasDiscrepancy && { color: "#DC2626" }]}>
+                    Damaged Qty.
+                  </Text>
                   <TextInput
                     value={editForm.damagedQty}
                     onChangeText={(value) =>
@@ -692,47 +750,158 @@ export default function EggBatchColorScreen() {
                     }
                     keyboardType="number-pad"
                     placeholder="0"
-                    placeholderTextColor="#B6B6B6"
-                    style={styles.modalInput}
+                    placeholderTextColor="#9CA3AF"
+                    style={styles.modalInputInside}
                   />
                 </View>
 
-                <View style={styles.modalField}>
-                  <Text style={styles.modalLabel}>Unhatched Qty. :</Text>
-                  <View style={styles.readonlyField}>
-                    <Text style={styles.readonlyValue}>
-                      {getDerivedUnhatchedQty(
-                        selectedEgg?.eggQty ?? 0,
-                        parseCount(editForm.hatchedQty),
-                        parseCount(editForm.damagedQty),
-                      )}
-                    </Text>
-                    <Text style={styles.readonlyHint}>
-                      Auto-calculated from Egg Qty minus Hatched and Damaged.
-                    </Text>
-                  </View>
+                <View
+                  style={[
+                    styles.inputBoxInside,
+                    styles.readonlyBoxInside,
+                    hasDiscrepancy && styles.inputBoxDiscrepancy,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.insideLabel,
+                      hasDiscrepancy && { color: "#DC2626" },
+                    ]}
+                  >
+                    Unhatched Qty. {hasDiscrepancy ? "(Mismatch)" : ""}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.readonlyValueInside,
+                      hasDiscrepancy && { color: "#DC2626" },
+                    ]}
+                  >
+                    {hasDiscrepancy ? `0 (Exceeded by ${discrepancyQty})` : derivedUnhatched}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.readonlyHint,
+                      hasDiscrepancy && { color: "#991B1B" },
+                    ]}
+                  >
+                    {hasDiscrepancy
+                      ? `Sum of Hatched (${hatchedCount}) and Damaged (${damagedCount}) cannot exceed ${totalRecordedEggs}.`
+                      : `Auto-calculated: ${totalRecordedEggs} Egg Qty - ${hatchedCount} Hatched - ${damagedCount} Damaged.`}
+                  </Text>
                 </View>
 
                 <View style={styles.modalActions}>
-                  <Pressable
+                  <TouchableOpacity
                     onPress={closeEdit}
                     style={styles.cancelBtn}
+                    activeOpacity={0.8}
                     accessibilityRole="button"
+                    accessibilityLabel="Cancel changes"
                   >
                     <Text style={styles.cancelText}>Cancel</Text>
-                  </Pressable>
-                  <Pressable
-                    onPress={saveEdit}
-                    style={styles.saveBtn}
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => {
+                      if (hasDiscrepancy) {
+                        setDiscrepancyModalVisible(true);
+                        return;
+                      }
+                      saveEdit();
+                    }}
+                    disabled={hasDiscrepancy}
+                    style={[
+                      styles.saveBtn,
+                      hasDiscrepancy && styles.saveBtnDisabled,
+                    ]}
+                    activeOpacity={0.8}
                     accessibilityRole="button"
+                    accessibilityLabel="Save changes"
                   >
-                    <Text style={styles.saveText}>Save</Text>
-                  </Pressable>
+                    <Text
+                      style={[
+                        styles.saveText,
+                        hasDiscrepancy && styles.saveTextDisabled,
+                      ]}
+                    >
+                      {hasDiscrepancy ? "Cannot Save (Mismatch)" : "Save Changes"}
+                    </Text>
+                  </TouchableOpacity>
                 </View>
               </View>
             </ScrollView>
           </View>
         </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Discrepancy Warning Notification Modal */}
+      <Modal
+        visible={discrepancyModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDiscrepancyModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.discrepancyModalCard}>
+            <View style={styles.discrepancyModalIconWrap}>
+              <MaterialCommunityIcons
+                name="alert-circle-outline"
+                size={36}
+                color="#DC2626"
+              />
+            </View>
+            <Text style={styles.discrepancyModalTitle}>
+              Egg Numbers Do Not Tally
+            </Text>
+            <Text style={styles.discrepancyModalDesc}>
+              The entered egg counts do not tally with the recorded batch quantity.
+            </Text>
+
+            <View style={styles.discrepancyBreakdownCard}>
+              <View style={styles.breakdownRow}>
+                <Text style={styles.breakdownLabel}>Recorded Total Eggs:</Text>
+                <Text style={styles.breakdownValue}>{totalRecordedEggs}</Text>
+              </View>
+              <View style={styles.breakdownRow}>
+                <Text style={styles.breakdownLabel}>Hatched Quantity:</Text>
+                <Text style={styles.breakdownValue}>{hatchedCount}</Text>
+              </View>
+              <View style={styles.breakdownRow}>
+                <Text style={styles.breakdownLabel}>Damaged Quantity:</Text>
+                <Text style={styles.breakdownValue}>{damagedCount}</Text>
+              </View>
+              <View style={[styles.breakdownRow, styles.breakdownRowTotal]}>
+                <Text
+                  style={[
+                    styles.breakdownLabel,
+                    { fontWeight: "700", color: "#DC2626" },
+                  ]}
+                >
+                  Total Sum Entered:
+                </Text>
+                <Text
+                  style={[
+                    styles.breakdownValue,
+                    { fontWeight: "800", color: "#DC2626" },
+                  ]}
+                >
+                  {totalUpdatedEggs} ({discrepancyQty} excess)
+                </Text>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={styles.discrepancyModalBtn}
+              onPress={() => setDiscrepancyModalVisible(false)}
+              activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel="Review and correct egg numbers"
+            >
+              <Text style={styles.discrepancyModalBtnText}>
+                Review & Correct
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </Modal>
     </View>
   );
@@ -1014,99 +1183,261 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   modalCard: {
-    borderRadius: 5,
-    backgroundColor: ChickIntelPalette.light1,
+    borderRadius: 14,
+    backgroundColor: "rgba(255, 255, 255, 0.98)",
     borderWidth: 1,
-    borderColor: "rgba(49,118,103,0.18)",
-    padding: moderateScale(16),
-    gap: 10,
+    borderColor: "rgba(49, 118, 103, 0.22)",
+    padding: moderateScale(18),
+    gap: 12,
     alignSelf: "stretch",
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 5,
   },
   modalTitle: {
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(14),
-    fontWeight: "700",
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(16),
+    fontWeight: "800",
     color: ChickIntelPalette.gray1,
+    letterSpacing: -0.2,
     marginBottom: 2,
   },
-  modalField: {
+  batchInfoRefRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+    backgroundColor: "rgba(49, 118, 103, 0.09)",
+    paddingHorizontal: moderateScale(11),
+    paddingVertical: verticalScale(7),
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.2)",
+  },
+  batchInfoRefText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12),
+    color: "#334155",
+    fontWeight: "600",
+  },
+  batchInfoValueEmphasized: {
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(13.5),
+    fontWeight: "900",
+    color: ChickIntelPalette.green1,
+    letterSpacing: -0.2,
+  },
+  discrepancyBanner: {
+    backgroundColor: "rgba(220, 38, 38, 0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(220, 38, 38, 0.3)",
+    borderRadius: 10,
+    paddingHorizontal: moderateScale(12),
+    paddingVertical: verticalScale(8),
+    gap: 3,
+  },
+  discrepancyBannerHeader: {
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
+  },
+  discrepancyBannerTitle: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12),
+    fontWeight: "800",
+    color: "#DC2626",
+  },
+  discrepancyBannerDesc: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(11.5),
+    lineHeight: 16,
+    color: "#7F1D1D",
+  },
+  inputBoxDiscrepancy: {
+    borderColor: "rgba(220, 38, 38, 0.4)",
+    backgroundColor: "rgba(220, 38, 38, 0.03)",
+  },
+  inputBoxInside: {
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.22)",
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: moderateScale(12),
+    paddingTop: verticalScale(7),
+    paddingBottom: verticalScale(5),
+    gap: 1,
     width: "100%",
   },
-  modalLabel: {
+  readonlyBoxInside: {
+    backgroundColor: "rgba(156, 213, 201, 0.14)",
+    borderColor: "rgba(49, 118, 103, 0.2)",
+    paddingBottom: verticalScale(7),
+  },
+  insideLabel: {
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(13),
-    color: ChickIntelPalette.gray1,
+    fontSize: responsiveFontSize(10.5),
+    color: ChickIntelPalette.green1,
     fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
   },
-  modalInput: {
-    height: verticalScale(38),
-    borderRadius: 5,
-    borderWidth: 1,
-    borderColor: "rgba(49,118,103,0.14)",
-    backgroundColor: ChickIntelPalette.light1,
-    paddingHorizontal: moderateScale(10),
-    paddingVertical: verticalScale(0),
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(13),
-    color: ChickIntelPalette.gray1,
-    textAlignVertical: "center",
-    width: "100%",
-  },
-  readonlyField: {
-    borderRadius: 5,
-    borderWidth: 1,
-    borderColor: "rgba(49,118,103,0.14)",
-    backgroundColor: "rgba(156,213,201,0.12)",
-    paddingHorizontal: moderateScale(10),
-    paddingVertical: verticalScale(10),
-    gap: 2,
-  },
-  readonlyValue: {
+  modalInputInside: {
+    minHeight: verticalScale(30),
+    paddingHorizontal: 0,
+    paddingVertical: verticalScale(1),
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(15),
     fontWeight: "700",
     color: ChickIntelPalette.gray1,
+    width: "100%",
+  },
+  readonlyValueInside: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(15),
+    fontWeight: "700",
+    color: ChickIntelPalette.gray1,
+    paddingVertical: verticalScale(2),
   },
   readonlyHint: {
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(11),
-    lineHeight: 15,
+    fontSize: responsiveFontSize(10.5),
+    lineHeight: 14,
     color: ChickIntelPalette.gray2,
+    marginTop: 1,
   },
   modalActions: {
     flexDirection: "row",
-    gap: 8,
-    marginTop: 4,
+    gap: 10,
+    marginTop: verticalScale(6),
   },
   cancelBtn: {
     flex: 1,
-    minHeight: verticalScale(36),
-    borderRadius: 5,
-    backgroundColor: ChickIntelPalette.gray1,
+    minHeight: verticalScale(42),
+    borderRadius: 10,
+    backgroundColor: "#F0F4F3",
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.15)",
     alignItems: "center",
     justifyContent: "center",
   },
   cancelText: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(13),
-    fontWeight: "600",
-    color: ChickIntelPalette.light1,
+    fontWeight: "700",
+    color: ChickIntelPalette.gray1,
   },
   saveBtn: {
     flex: 1,
-    minHeight: verticalScale(36),
-    borderRadius: 5,
-    backgroundColor: ChickIntelPalette.light1,
-    borderWidth: 1,
-    borderColor: "rgba(49,118,103,0.18)",
+    minHeight: verticalScale(42),
+    borderRadius: 10,
+    backgroundColor: ChickIntelPalette.green1,
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.25)",
+    shadowColor: "#317667",
+    shadowOpacity: 0.22,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
+  saveBtnDisabled: {
+    backgroundColor: "#CBD5E1",
+    borderColor: "rgba(0, 0, 0, 0.08)",
+    shadowOpacity: 0,
+    elevation: 0,
   },
   saveText: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(13),
     fontWeight: "700",
-    color: ChickIntelPalette.gray1,
+    color: "#FFFFFF",
+  },
+  saveTextDisabled: {
+    color: "#64748B",
+  },
+  discrepancyModalCard: {
+    borderRadius: 16,
+    backgroundColor: "#FFFFFF",
+    padding: moderateScale(20),
+    alignItems: "center",
+    gap: 10,
+    shadowColor: "#000",
+    shadowOpacity: 0.14,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 6,
+  },
+  discrepancyModalIconWrap: {
+    width: scale(52),
+    height: verticalScale(52),
+    borderRadius: 26,
+    backgroundColor: "rgba(220, 38, 38, 0.12)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 2,
+  },
+  discrepancyModalTitle: {
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(16),
+    fontWeight: "800",
+    color: "#1E293B",
+    textAlign: "center",
+  },
+  discrepancyModalDesc: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12.5),
+    lineHeight: 17,
+    color: "#64748B",
+    textAlign: "center",
+  },
+  discrepancyBreakdownCard: {
+    width: "100%",
+    backgroundColor: "#F8FAFC",
+    borderRadius: 10,
+    padding: moderateScale(12),
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    gap: 6,
+    marginVertical: verticalScale(4),
+  },
+  breakdownRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  breakdownRowTotal: {
+    borderTopWidth: 1,
+    borderTopColor: "#E2E8F0",
+    paddingTop: verticalScale(6),
+    marginTop: verticalScale(2),
+  },
+  breakdownLabel: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12),
+    color: "#475569",
+    fontWeight: "600",
+  },
+  breakdownValue: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12.5),
+    color: "#1E293B",
+    fontWeight: "700",
+  },
+  discrepancyModalBtn: {
+    width: "100%",
+    backgroundColor: ChickIntelPalette.green1,
+    paddingVertical: verticalScale(11),
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: verticalScale(4),
+  },
+  discrepancyModalBtnText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(13.5),
+    fontWeight: "700",
+    color: "#FFFFFF",
   },
 });
