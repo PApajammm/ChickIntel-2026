@@ -9,9 +9,12 @@ import {
   Easing,
   Linking,
   Modal,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   PanResponder,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -24,13 +27,13 @@ import { ChickIntelPalette } from "@/constants/chickintel-palette";
 import { moderateScale, responsiveFontSize, scale, verticalScale } from "@/utils/responsive";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const CARD_WIDTH = Math.round(Math.min(SCREEN_WIDTH * 0.46, 175)); // Decreased by 30% from 250
+const CARD_WIDTH = Math.round(Math.min(SCREEN_WIDTH * 0.46, 175));
 const RADIUS_X = SCREEN_WIDTH * 0.31;
 const RADIUS_Y = 12;
 const DRAG_SENSITIVITY = 110;
 
 const NAV_BTN_SIZE = 44;
-const CONTACT_BTN_SIZE = Math.round(NAV_BTN_SIZE * 0.88); // Decreased by 30% from original 55px
+const CONTACT_BTN_SIZE = Math.round(NAV_BTN_SIZE * 0.88);
 
 const DEVELOPERS = [
   {
@@ -156,20 +159,18 @@ function create3DInterpolations(cardIndex: number, animValue: Animated.Value) {
     inputRange.push(val);
 
     const theta = (val - cardIndex) * ((2 * Math.PI) / NUM_ITEMS);
-    const cosTheta = Math.cos(theta); // +1 = front, -1 = back
-    const sinTheta = Math.sin(theta); // +1 = right, -1 = left
+    const cosTheta = Math.cos(theta);
+    const sinTheta = Math.sin(theta);
 
     translateXRange.push(RADIUS_X * sinTheta);
     translateYRange.push(RADIUS_Y * -cosTheta);
 
     const normalizedDepth = (cosTheta + 1) / 2;
     const baseScale = 0.68 + 0.38 * normalizedDepth;
-    // Reduce dimension of unhovered avatar cards by 10%, smoothly easing to 1.0 at front
-    const unhoveredDimFactor = 0.90 + 0.10 * Math.pow(normalizedDepth, 3);
+    const unhoveredDimFactor = 0.9 + 0.1 * Math.pow(normalizedDepth, 3);
     scaleRange.push(baseScale * unhoveredDimFactor);
-    opacityRange.push(0.20 + 0.80 * normalizedDepth);
+    opacityRange.push(0.2 + 0.8 * normalizedDepth);
 
-    // Front card has 0 dark overlay; non-centered / background cards ramp up to 0.96 darkness (10% darker)
     const darkAmount = Math.max(0, 1 - Math.pow(normalizedDepth, 2)) * 0.96;
     darkOverlayRange.push(darkAmount);
 
@@ -226,10 +227,127 @@ function create3DInterpolations(cardIndex: number, animValue: Animated.Value) {
 export default function DevelopersScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const [activeTab, setActiveTab] = useState<"about-app" | "about-us">("about-app");
+
+  // Carousel & 3D state for "About Us" tab
   const animValue = useRef(new Animated.Value(0)).current;
   const currentStep = useRef(0);
   const [activeCardIndex, setActiveCardIndex] = useState(0);
   const [selectedContact, setSelectedContact] = useState<ContactChannel | null>(null);
+
+  // Slow, smooth upward entrance animation for "About App" tab
+  const aboutAnim = useRef(new Animated.Value(0)).current;
+
+  // Auto slow scroll up and down in About App
+  const aboutScrollRef = useRef<ScrollView>(null);
+  const contentHeightRef = useRef(0);
+  const containerHeightRef = useRef(0);
+  const currentScrollYRef = useRef(0);
+  const isUserInteractingRef = useRef(false);
+  const scrollAnimationFrameRef = useRef<number | null>(null);
+  const autoScrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const stopAutoScroll = useCallback(() => {
+    if (scrollAnimationFrameRef.current) {
+      cancelAnimationFrame(scrollAnimationFrameRef.current);
+      scrollAnimationFrameRef.current = null;
+    }
+    if (autoScrollTimerRef.current) {
+      clearTimeout(autoScrollTimerRef.current);
+      autoScrollTimerRef.current = null;
+    }
+  }, []);
+
+  const smoothScrollYTo = useCallback(
+    (targetY: number, duration = 4500, onComplete?: () => void) => {
+      if (isUserInteractingRef.current) return;
+      const maxScroll = Math.max(0, contentHeightRef.current - containerHeightRef.current);
+      const clampedTarget = Math.max(0, Math.min(targetY, maxScroll));
+      const startY = currentScrollYRef.current;
+      const distance = clampedTarget - startY;
+      if (Math.abs(distance) < 2) {
+        onComplete?.();
+        return;
+      }
+
+      if (scrollAnimationFrameRef.current) {
+        cancelAnimationFrame(scrollAnimationFrameRef.current);
+      }
+
+      const startTime = Date.now();
+      const easeInOutSine = (t: number) => -(Math.cos(Math.PI * t) - 1) / 2;
+
+      const step = () => {
+        if (isUserInteractingRef.current) return;
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased = easeInOutSine(progress);
+        const nextY = startY + distance * eased;
+        currentScrollYRef.current = nextY;
+        aboutScrollRef.current?.scrollTo({ y: nextY, animated: false });
+
+        if (progress < 1) {
+          scrollAnimationFrameRef.current = requestAnimationFrame(step);
+        } else {
+          scrollAnimationFrameRef.current = null;
+          onComplete?.();
+        }
+      };
+
+      scrollAnimationFrameRef.current = requestAnimationFrame(step);
+    },
+    []
+  );
+
+  // Starts the slow continuous scroll down and then up cycle
+  const startSlowScrollCycle = useCallback(() => {
+    stopAutoScroll();
+    if (isUserInteractingRef.current || activeTab !== "about-app") return;
+
+    const maxScroll = Math.max(0, contentHeightRef.current - containerHeightRef.current);
+    if (maxScroll <= 30) return;
+
+    // Wait a brief moment after entrance, then slowly scroll down (halved speed = 12s)
+    autoScrollTimerRef.current = setTimeout(() => {
+      if (isUserInteractingRef.current || activeTab !== "about-app") return;
+      smoothScrollYTo(maxScroll, 12000, () => {
+        // Pauses at the bottom, then slowly scrolls back up (halved speed = 10s)
+        autoScrollTimerRef.current = setTimeout(() => {
+          if (isUserInteractingRef.current || activeTab !== "about-app") return;
+          smoothScrollYTo(0, 10000, () => {
+            // Pauses at top and loops
+            autoScrollTimerRef.current = setTimeout(() => {
+              startSlowScrollCycle();
+            }, 3000);
+          });
+        }, 2200);
+      });
+    }, 1800);
+  }, [activeTab, smoothScrollYTo, stopAutoScroll]);
+
+  useEffect(() => {
+    if (activeTab === "about-app") {
+      isUserInteractingRef.current = false;
+      currentScrollYRef.current = 0;
+      aboutScrollRef.current?.scrollTo({ y: 0, animated: false });
+
+      aboutAnim.setValue(0);
+      Animated.timing(aboutAnim, {
+        toValue: 1,
+        duration: 950,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start(() => {
+        startSlowScrollCycle();
+      });
+    } else {
+      stopAutoScroll();
+    }
+
+    return () => {
+      stopAutoScroll();
+    };
+  }, [activeTab, aboutAnim, startSlowScrollCycle, stopAutoScroll]);
 
   const handleOpenContact = async (channel: ContactChannel) => {
     setSelectedContact(null);
@@ -269,7 +387,6 @@ export default function DevelopersScreen() {
     (targetStep: number, isAuto = false) => {
       currentStep.current = targetStep;
       if (isAuto) {
-        // Fast, fluid cinematic deceleration for auto-carousel
         Animated.timing(animValue, {
           toValue: targetStep,
           duration: 600,
@@ -285,11 +402,15 @@ export default function DevelopersScreen() {
         }).start();
       }
     },
-    [animValue],
+    [animValue]
   );
 
-  // Automatic swiping: faster initial trigger (~900ms), brisk interval (~1.8s), max 5 full loops (20 steps)
   useEffect(() => {
+    if (activeTab !== "about-us") {
+      stopAutoPlay();
+      return;
+    }
+
     const MAX_AUTO_STEPS = NUM_ITEMS * 5;
     const INITIAL_DELAY_MS = 900;
     const AUTO_INTERVAL_MS = 1800;
@@ -312,7 +433,7 @@ export default function DevelopersScreen() {
     return () => {
       stopAutoPlay();
     };
-  }, [stopAutoPlay, rotateToStep]);
+  }, [activeTab, stopAutoPlay, rotateToStep]);
 
   const panResponder = useRef(
     PanResponder.create({
@@ -346,207 +467,502 @@ export default function DevelopersScreen() {
 
       <View
         style={[
-          styles.content,
+          styles.mainContainer,
           {
             paddingTop: insets.top + verticalScale(8),
-            paddingBottom: insets.bottom + verticalScale(14),
+            paddingBottom: insets.bottom + verticalScale(6),
           },
         ]}
       >
-        {/* Top Bar: Back Button (Fixed) & Title (Lowered by 4rem) */}
-        <View style={styles.topBar}>
-          <Pressable
-            onPress={() => router.back()}
-            style={({ pressed }) => [styles.backBtn, pressed && styles.backBtnPressed]}
-            hitSlop={12}
-            accessibilityRole="button"
-            accessibilityLabel="Go back"
-          >
-            <MaterialCommunityIcons name="arrow-left" size={22} color="#FFF" />
-          </Pressable>
-          <View style={styles.titleContainer}>
-            <Text style={styles.appTitle}>ChickIntel App 2026</Text>
-            <Text style={styles.appVersion}>Version 1.0.9</Text>
+        {/* Fixed Top Header */}
+        <View style={styles.fixedHeader}>
+          <View style={styles.topBar}>
+            <Pressable
+              onPress={() => (router.canGoBack() ? router.back() : router.replace("/(tabs)"))}
+              style={({ pressed }) => [styles.backBtn, pressed && styles.backBtnPressed]}
+              hitSlop={12}
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
+            >
+              <MaterialCommunityIcons name="arrow-left" size={22} color="#FFF" />
+            </Pressable>
+            <Text style={styles.headerTitle}>
+              {activeTab === "about-app" ? "About ChickIntel" : "The Developers"}
+            </Text>
+            <View style={styles.headerRightPlaceholder} />
           </View>
-        </View>
 
-        {/* 360-Degree Rotational 3D Carousel */}
-        <View style={styles.carouselWrapper} {...panResponder.panHandlers}>
-          {/* Section Title - Exactly 2.25rem above carousel stage */}
-          <Text style={styles.sectionTitle}>Meet the Team</Text>
-
-          <View style={styles.carouselStage}>
-            {DEVELOPERS.map((dev, index) => {
-              const animatedStyles = create3DInterpolations(index, animValue);
-              const isFront = activeCardIndex === index;
-              const zIndex = isFront ? 10 : 2;
-
-              return (
-                <Animated.View
-                  key={dev.id}
+          {/* Sticky Tab Segments (Styled from Batch Profile page) */}
+          <View style={styles.segmentStickyHeader}>
+            <View style={styles.segmentWrap}>
+              <Pressable
+                onPress={() => setActiveTab("about-app")}
+                style={[
+                  styles.segment,
+                  activeTab === "about-app" ? styles.segmentActive : styles.segmentInactive,
+                ]}
+              >
+                <Text
                   style={[
-                    styles.cardContainer,
-                    {
-                      zIndex,
-                      elevation: isFront ? 10 : 2,
-                    },
-                    animatedStyles.cardStyle,
+                    styles.segmentText,
+                    activeTab === "about-app"
+                      ? styles.segmentTextActive
+                      : styles.segmentTextInactive,
                   ]}
                 >
-                  {/* Modern Glassmorphic Card */}
-                  <View style={[styles.cardBox, isFront && styles.activeCardBox]}>
-                    {/* Glassmorphism Frosted Blur Backdrop */}
-                    <View style={styles.blurBackdropWrap} pointerEvents="none">
-                      <BlurView
-                        intensity={isFront ? (Platform.OS === "ios" ? 45 : 32) : (Platform.OS === "ios" ? 28 : 18)}
-                        tint="dark"
-                        style={StyleSheet.absoluteFill}
-                      />
-                    </View>
+                  About App
+                </Text>
+              </Pressable>
 
-                    {/* Top Header: Position Title Badge */}
-                    <View style={styles.cardHeader}>
-                      <View
-                        style={[
-                          styles.roleChip,
-                          isFront && styles.roleChipActive,
-                        ]}
-                      >
-                        <MaterialCommunityIcons
-                          name={getRoleIcon(dev.role) as any}
-                          size={10}
-                          color={isFront ? "#6EE7B7" : "#A7F3D0"}
-                        />
-                        <Text
-                          style={[
-                            styles.roleText,
-                            isFront && styles.roleTextActive,
-                          ]}
-                        >
-                          {dev.role}
-                        </Text>
-                      </View>
-                    </View>
-
-                    {/* Framed Avatar Image - Anchored to TOP so hair/head is never cut */}
-                    <View
-                      style={[
-                        styles.imageWrapper,
-                        isFront && styles.imageWrapperActive,
-                      ]}
-                    >
-                      <Image
-                        source={dev.avatar}
-                        style={styles.avatarImage}
-                        contentFit="cover"
-                        contentPosition="top"
-                        blurRadius={
-                          isFront ? 0 : Platform.OS === "ios" ? 14 : 10
-                        }
-                      />
-                      <View style={styles.imageInnerGlow} />
-
-                      {/* Extra Frosted Blur Overlay for Inactive Background Avatars */}
-                      {!isFront && (
-                        <BlurView
-                          intensity={Platform.OS === "ios" ? 24 : 16}
-                          tint="dark"
-                          style={StyleSheet.absoluteFill}
-                          pointerEvents="none"
-                        />
-                      )}
-                    </View>
-
-                    {/* Developer Name Plate */}
-                    <View
-                      style={[
-                        styles.namePlate,
-                        isFront && styles.activeNamePlate,
-                      ]}
-                    >
-                      <Text
-                        style={styles.devName}
-                        numberOfLines={1}
-                        adjustsFontSizeToFit
-                        minimumFontScale={0.85}
-                      >
-                        {dev.name}
-                      </Text>
-                    </View>
-
-                    {/* Non-centered defocus & darkening overlay */}
-                    <Animated.View
-                      pointerEvents="none"
-                      style={[
-                        styles.cardDarkOverlay,
-                        { opacity: animatedStyles.darkOverlayOpacity },
-                      ]}
-                    />
-                  </View>
-                </Animated.View>
-              );
-            })}
-          </View>
-
-          {/* Pagination Indicators (Swipable Carousel) */}
-          <View style={styles.paginationRow}>
-            <View style={styles.dotsContainer}>
-              {DEVELOPERS.map((_, idx) => (
-                <Pressable
-                  key={idx}
-                  onPress={() => {
-                    stopAutoPlay();
-                    const currentMod = ((currentStep.current % NUM_ITEMS) + NUM_ITEMS) % NUM_ITEMS;
-                    let diff = idx - currentMod;
-                    if (diff > NUM_ITEMS / 2) diff -= NUM_ITEMS;
-                    if (diff < -NUM_ITEMS / 2) diff += NUM_ITEMS;
-                    rotateToStep(currentStep.current + diff);
-                  }}
-                  hitSlop={8}
+              <Pressable
+                onPress={() => setActiveTab("about-us")}
+                style={[
+                  styles.segment,
+                  activeTab === "about-us" ? styles.segmentActive : styles.segmentInactive,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.segmentText,
+                    activeTab === "about-us"
+                      ? styles.segmentTextActive
+                      : styles.segmentTextInactive,
+                  ]}
                 >
-                  <View
-                    style={[
-                      styles.dot,
-                      activeCardIndex === idx ? styles.activeDot : styles.inactiveDot,
-                    ]}
-                  />
-                </Pressable>
-              ))}
+                  About Us
+                </Text>
+              </Pressable>
             </View>
           </View>
         </View>
 
-        {/* Contact Details Channels (Dark Gray with Palette Orange Icons) */}
-        <View style={styles.contactSection}>
-          <Text style={styles.contactTitle}>CONTACT US</Text>
-          <View style={styles.contactRow}>
-            {CONTACT_CHANNELS.map((item) => (
-              <Pressable
-                key={item.id}
-                onPress={() => setSelectedContact(item)}
-                style={({ pressed }) => [
-                  styles.contactBtn,
-                  pressed && styles.contactBtnPressed,
-                ]}
-                hitSlop={8}
-              >
-                {item.library === "fa6" ? (
-                  <FontAwesome6
-                    name={item.icon}
-                    size={17}
-                    color="#F7B274"
+        {/* Tab 1: About App */}
+        {activeTab === "about-app" ? (
+          <Animated.View
+            style={[
+              styles.aboutAppContainer,
+              {
+                opacity: aboutAnim,
+                transform: [
+                  {
+                    translateY: aboutAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [36, 0],
+                    }),
+                  },
+                ],
+              },
+            ]}
+          >
+            <ScrollView
+              ref={aboutScrollRef}
+              contentContainerStyle={styles.aboutAppScrollContent}
+              showsVerticalScrollIndicator={false}
+              onLayout={(e) => {
+                containerHeightRef.current = e.nativeEvent.layout.height;
+              }}
+              onContentSizeChange={(_, h) => {
+                contentHeightRef.current = h;
+              }}
+              onScroll={(e: NativeSyntheticEvent<NativeScrollEvent>) => {
+                currentScrollYRef.current = e.nativeEvent.contentOffset.y;
+              }}
+              scrollEventThrottle={16}
+              onScrollBeginDrag={() => {
+                isUserInteractingRef.current = true;
+                stopAutoScroll();
+              }}
+              onTouchStart={() => {
+                isUserInteractingRef.current = true;
+                stopAutoScroll();
+              }}
+            >
+              {/* App Identity Banner */}
+              <View style={styles.appBannerCard}>
+                <View style={styles.appIconWrapper}>
+                  <Image
+                    source={require("@/assets/images/icon.png")}
+                    style={styles.appLogoImage}
+                    contentFit="cover"
                   />
-                ) : (
-                  <MaterialCommunityIcons
-                    name={item.icon as any}
-                    size={19}
-                    color="#F7B274"
-                  />
-                )}
-              </Pressable>
-            ))}
+                </View>
+
+                {/* "ChickIntel App 2026" & "Version 1.0.9" */}
+                <Text style={styles.appTitle}>ChickIntel App 2026</Text>
+                <View style={styles.versionBadge}>
+                  <Text style={styles.appVersion}>Version 1.0.9</Text>
+                </View>
+
+                {/* Darkened font color for clarity */}
+                <Text style={styles.appTagline}>
+                  Smart Poultry Management, Health & Diagnostics Screening
+                </Text>
+              </View>
+
+              {/* Mission & Overview */}
+              <View style={styles.infoCard}>
+                <View style={styles.cardHeaderRow}>
+                  <View style={styles.iconCircle}>
+                    <MaterialCommunityIcons name="information" size={18} color={ChickIntelPalette.green1} />
+                  </View>
+                  <Text style={styles.infoCardTitle}>Overview & Purpose</Text>
+                </View>
+                <Text style={styles.infoCardBody}>
+                  ChickIntel is an integrated smart poultry management platform tailored for backyard raisers, commercial farm technicians, and poultry farm managers. It streamlines daily operations by unifying batch profiles, inventory tracking, routine task schedules, egg production metrics, and AI-assisted health screening.
+                </Text>
+              </View>
+
+              {/* Key Capabilities & Features */}
+              <View style={styles.infoCard}>
+                <View style={styles.cardHeaderRow}>
+                  <View style={styles.iconCircle}>
+                    <MaterialCommunityIcons name="star-shooting" size={18} color={ChickIntelPalette.green1} />
+                  </View>
+                  <Text style={styles.infoCardTitle}>Key Capabilities</Text>
+                </View>
+
+                <View style={styles.featureList}>
+                  {/* Capability 1: Health & Behavior Diagnostics */}
+                  <View style={styles.featureItem}>
+                    <View style={styles.featureBullet}>
+                      <MaterialCommunityIcons name="stethoscope" size={16} color={ChickIntelPalette.green1} />
+                    </View>
+                    <View style={styles.featureTextWrap}>
+                      <Text style={styles.featureTitle}>AI Health & Behavior Diagnostics</Text>
+                      <Text style={styles.featureDesc}>
+                        Visual symptom scanning combined with behavioral observations to screen poultry condition status, assess severity levels, and generate biosecurity guidance.
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Capability 2: Fertility Rate Analysis */}
+                  <View style={styles.featureItem}>
+                    <View style={styles.featureBullet}>
+                      <MaterialCommunityIcons name="egg-outline" size={16} color={ChickIntelPalette.green1} />
+                    </View>
+                    <View style={styles.featureTextWrap}>
+                      <Text style={styles.featureTitle}>Egg Batch & Fertility Rate Analysis</Text>
+                      <Text style={styles.featureDesc}>
+                        Batch-level monitoring of egg collection, fertile vs. infertile distribution, unhatched/damaged records, and computed fertility percentages for incubator efficiency.
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Capability 3: Inventory & Smart Scheduling */}
+                  <View style={styles.featureItem}>
+                    <View style={styles.featureBullet}>
+                      <MaterialCommunityIcons name="clipboard-list-outline" size={16} color={ChickIntelPalette.green1} />
+                    </View>
+                    <View style={styles.featureTextWrap}>
+                      <Text style={styles.featureTitle}>
+                        Poultry Inventory & Task Scheduling Smart Management
+                      </Text>
+                      <Text style={styles.featureDesc}>
+                        Real-time tracking of feed stocks, biologics, medicines, and equipment supplies alongside customizable repeat schedules for feeding, watering, and flock vaccinations.
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Capability 4: Production Insights */}
+                  <View style={styles.featureItem}>
+                    <View style={styles.featureBullet}>
+                      <MaterialCommunityIcons name="chart-areaspline" size={16} color={ChickIntelPalette.green1} />
+                    </View>
+                    <View style={styles.featureTextWrap}>
+                      <Text style={styles.featureTitle}>Poultry Production Insights & Reports</Text>
+                      <Text style={styles.featureDesc}>
+                        Automated summaries of flock mortality rates, egg production trends, feed utilization, and exportable PDF audit reports for farm decision-making.
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Capability 5: Breed Identification */}
+                  <View style={styles.featureItem}>
+                    <View style={styles.featureBullet}>
+                      <MaterialCommunityIcons name="tag-outline" size={16} color={ChickIntelPalette.green1} />
+                    </View>
+                    <View style={styles.featureTextWrap}>
+                      <Text style={styles.featureTitle}>Chicken Breed Identification</Text>
+                      <Text style={styles.featureDesc}>
+                        Visual morphological identification and attribute profiling for supported pure chicken breeds: Silkie and Rhode Island Red.
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              </View>
+
+              {/* Solid Warning Card: AI Health & Breed Detection Limitations (No Glassmorphism) */}
+              <View style={styles.solidLimitationCard}>
+                <View style={styles.cardHeaderRow}>
+                  <View style={styles.warningIconCircle}>
+                    <MaterialCommunityIcons name="alert-decagram" size={18} color="#B45309" />
+                  </View>
+                  <Text style={styles.limitationHeaderTitle}>
+                    AI Health, Behavior & Breed Detection Limitations
+                  </Text>
+                </View>
+
+                <View style={styles.limitationsList}>
+                  {/* Condition Scope */}
+                  <View style={styles.limitationItem}>
+                    <View style={styles.limitationBullet}>
+                      <MaterialCommunityIcons name="virus-outline" size={16} color="#B45309" />
+                    </View>
+                    <View style={styles.limitationTextWrap}>
+                      <Text style={styles.limitationTitleText}>Limited Illness Detection Scope:</Text>
+                      <Text style={styles.limitationDesc}>
+                        The AI model is specifically trained to detect and screen for{" "}
+                        <Text style={styles.boldInlineText}>Healthy</Text>,{" "}
+                        <Text style={styles.boldInlineText}>Infectious Coryza</Text>, and{" "}
+                        <Text style={styles.boldInlineText}>Fowlpox (Dry/Wet)</Text>. It does NOT detect general avian influenza, internal parasites, systemic bacterial septicemia, or nutritional deficiencies.
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Breed Scope: Silkie, Rhode Island Red only */}
+                  <View style={styles.limitationItem}>
+                    <View style={styles.limitationBullet}>
+                      <MaterialCommunityIcons name="feather" size={16} color="#B45309" />
+                    </View>
+                    <View style={styles.limitationTextWrap}>
+                      <Text style={styles.limitationTitleText}>Supported Breeds: Silkie, Rhode Island Red only</Text>
+                      <Text style={styles.limitationDesc}>
+                        Breed recognition is currently trained and optimized strictly for Silkie and Rhode Island Red. Other breeds, native mixed crosses, or juvenile chicks cannot be reliably identified.
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Advisory Disclaimer */}
+                  <View style={styles.limitationItem}>
+                    <View style={styles.limitationBullet}>
+                      <MaterialCommunityIcons name="shield-alert-outline" size={16} color="#B45309" />
+                    </View>
+                    <View style={styles.limitationTextWrap}>
+                      <Text style={styles.limitationTitleText}>Advisory Screening Only:</Text>
+                      <Text style={styles.limitationDesc}>
+                        Outputs provide early decision-support and must never replace diagnostic verification, laboratory bacterial/viral culture, or treatment prescription by a licensed veterinarian.
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Capture Requirements */}
+                  <View style={styles.limitationItem}>
+                    <View style={styles.limitationBullet}>
+                      <MaterialCommunityIcons name="camera-iris" size={16} color="#B45309" />
+                    </View>
+                    <View style={styles.limitationTextWrap}>
+                      <Text style={styles.limitationTitleText}>Image Quality Requirement:</Text>
+                      <Text style={styles.limitationDesc}>
+                        Accurate inference depends on clear natural lighting, focused close-up shots of facial features (comb, eyes, wattle), and unobstructed plumage.
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              </View>
+
+              {/* Footer Attribution with Semi-Bold Maroon BPSU Text */}
+              <View style={styles.aboutFooter}>
+                <Text style={styles.footerBpsuText}>
+                  Developed for BPSU BSCS CS4A Capstone Project 2026
+                </Text>
+                <Text style={styles.footerSubText}>
+                  ChickIntel · Smart Poultry Management & Diagnostics
+                </Text>
+              </View>
+            </ScrollView>
+          </Animated.View>
+        ) : (
+          /* Tab 2: About Us (Original Developer Carousel & Logic Preserved) */
+          <View style={styles.aboutUsContent}>
+            {/* 360-Degree Rotational 3D Carousel */}
+            <View style={styles.carouselWrapper} {...panResponder.panHandlers}>
+              {/* Section Title */}
+              <Text style={styles.sectionTitle}>Meet the Team</Text>
+
+              <View style={styles.carouselStage}>
+                {DEVELOPERS.map((dev, index) => {
+                  const animatedStyles = create3DInterpolations(index, animValue);
+                  const isFront = activeCardIndex === index;
+                  const zIndex = isFront ? 10 : 2;
+
+                  return (
+                    <Animated.View
+                      key={dev.id}
+                      style={[
+                        styles.cardContainer,
+                        {
+                          zIndex,
+                          elevation: isFront ? 10 : 2,
+                        },
+                        animatedStyles.cardStyle,
+                      ]}
+                    >
+                      {/* Modern Glassmorphic Card */}
+                      <View style={[styles.cardBox, isFront && styles.activeCardBox]}>
+                        {/* Glassmorphism Frosted Blur Backdrop */}
+                        <View style={styles.blurBackdropWrap} pointerEvents="none">
+                          <BlurView
+                            intensity={
+                              isFront
+                                ? Platform.OS === "ios"
+                                  ? 45
+                                  : 32
+                                : Platform.OS === "ios"
+                                ? 28
+                                : 18
+                            }
+                            tint="dark"
+                            style={StyleSheet.absoluteFill}
+                          />
+                        </View>
+
+                        {/* Top Header: Position Title Badge */}
+                        <View style={styles.cardHeader}>
+                          <View
+                            style={[
+                              styles.roleChip,
+                              isFront && styles.roleChipActive,
+                            ]}
+                          >
+                            <MaterialCommunityIcons
+                              name={getRoleIcon(dev.role) as any}
+                              size={10}
+                              color={isFront ? "#6EE7B7" : "#A7F3D0"}
+                            />
+                            <Text
+                              style={[
+                                styles.roleText,
+                                isFront && styles.roleTextActive,
+                              ]}
+                            >
+                              {dev.role}
+                            </Text>
+                          </View>
+                        </View>
+
+                        {/* Framed Avatar Image - Anchored to TOP */}
+                        <View
+                          style={[
+                            styles.imageWrapper,
+                            isFront && styles.imageWrapperActive,
+                          ]}
+                        >
+                          <Image
+                            source={dev.avatar}
+                            style={styles.avatarImage}
+                            contentFit="cover"
+                            contentPosition="top"
+                            blurRadius={
+                              isFront ? 0 : Platform.OS === "ios" ? 14 : 10
+                            }
+                          />
+                          <View style={styles.imageInnerGlow} />
+
+                          {!isFront && (
+                            <BlurView
+                              intensity={Platform.OS === "ios" ? 24 : 16}
+                              tint="dark"
+                              style={StyleSheet.absoluteFill}
+                              pointerEvents="none"
+                            />
+                          )}
+                        </View>
+
+                        {/* Developer Name Plate */}
+                        <View
+                          style={[
+                            styles.namePlate,
+                            isFront && styles.activeNamePlate,
+                          ]}
+                        >
+                          <Text
+                            style={styles.devName}
+                            numberOfLines={1}
+                            adjustsFontSizeToFit
+                            minimumFontScale={0.85}
+                          >
+                            {dev.name}
+                          </Text>
+                        </View>
+
+                        {/* Non-centered defocus & darkening overlay */}
+                        <Animated.View
+                          pointerEvents="none"
+                          style={[
+                            styles.cardDarkOverlay,
+                            { opacity: animatedStyles.darkOverlayOpacity },
+                          ]}
+                        />
+                      </View>
+                    </Animated.View>
+                  );
+                })}
+              </View>
+
+              {/* Pagination Indicators */}
+              <View style={styles.paginationRow}>
+                <View style={styles.dotsContainer}>
+                  {DEVELOPERS.map((_, idx) => (
+                    <Pressable
+                      key={idx}
+                      onPress={() => {
+                        stopAutoPlay();
+                        const currentMod =
+                          ((currentStep.current % NUM_ITEMS) + NUM_ITEMS) % NUM_ITEMS;
+                        let diff = idx - currentMod;
+                        if (diff > NUM_ITEMS / 2) diff -= NUM_ITEMS;
+                        if (diff < -NUM_ITEMS / 2) diff += NUM_ITEMS;
+                        rotateToStep(currentStep.current + diff);
+                      }}
+                      hitSlop={8}
+                    >
+                      <View
+                        style={[
+                          styles.dot,
+                          activeCardIndex === idx
+                            ? styles.activeDot
+                            : styles.inactiveDot,
+                        ]}
+                      />
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+            </View>
+
+            {/* Contact Details Channels */}
+            <View style={styles.contactSection}>
+              <Text style={styles.contactTitle}>CONTACT US</Text>
+              <View style={styles.contactRow}>
+                {CONTACT_CHANNELS.map((item) => (
+                  <Pressable
+                    key={item.id}
+                    onPress={() => setSelectedContact(item)}
+                    style={({ pressed }) => [
+                      styles.contactBtn,
+                      pressed && styles.contactBtnPressed,
+                    ]}
+                    hitSlop={8}
+                  >
+                    {item.library === "fa6" ? (
+                      <FontAwesome6
+                        name={item.icon}
+                        size={17}
+                        color="#F7B274"
+                      />
+                    ) : (
+                      <MaterialCommunityIcons
+                        name={item.icon as any}
+                        size={19}
+                        color="#F7B274"
+                      />
+                    )}
+                  </Pressable>
+                ))}
+              </View>
+            </View>
           </View>
-        </View>
+        )}
       </View>
 
       {/* Contact Channel Confirmation Modal */}
@@ -556,12 +972,14 @@ export default function DevelopersScreen() {
         animationType="fade"
         onRequestClose={() => setSelectedContact(null)}
       >
-        <Pressable style={styles.modalBackdrop} onPress={() => setSelectedContact(null)}>
+        <Pressable
+          style={styles.modalBackdrop}
+          onPress={() => setSelectedContact(null)}
+        >
           <Pressable
             style={styles.modalCard}
             onPress={(e) => e.stopPropagation()}
           >
-            {/* Top Icon Badge */}
             {selectedContact && (
               <View style={styles.modalIconBadge}>
                 {selectedContact.library === "fa6" ? (
@@ -581,17 +999,14 @@ export default function DevelopersScreen() {
             )}
 
             <Text style={styles.modalTitle}>{selectedContact?.title}</Text>
-
             <Text style={styles.modalPrompt}>{selectedContact?.prompt}</Text>
 
-            {/* Pill with Handle / Address */}
             <View style={styles.modalHandlePill}>
               <Text style={styles.modalHandleText} numberOfLines={1}>
                 {selectedContact?.handle}
               </Text>
             </View>
 
-            {/* Action Buttons */}
             <View style={styles.modalActionRow}>
               <Pressable
                 onPress={() => setSelectedContact(null)}
@@ -629,23 +1044,23 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: ChickIntelPalette.lightGreen,
   },
-  content: {
+  mainContainer: {
     flex: 1,
-    alignItems: "center",
-    justifyContent: "space-between",
+  },
+  fixedHeader: {
+    width: "100%",
+    backgroundColor: "transparent",
+    zIndex: 20,
   },
   topBar: {
-    width: "100%",
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "space-between",
     paddingHorizontal: moderateScale(16),
-    position: "relative",
-    minHeight: scale(38),
+    minHeight: verticalScale(44),
+    marginBottom: verticalScale(6),
   },
   backBtn: {
-    position: "absolute",
-    left: moderateScale(16),
-    top: 0,
     width: scale(42),
     height: verticalScale(42),
     borderRadius: 14,
@@ -659,39 +1074,305 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     shadowOffset: { width: scale(0), height: verticalScale(4) },
     elevation: 4,
-    zIndex: 10,
   },
   backBtnPressed: {
     opacity: 0.7,
     transform: [{ scale: 0.94 }],
   },
-  titleContainer: {
+  headerTitle: {
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(18),
+    fontWeight: "800",
+    color: ChickIntelPalette.gray1,
+    letterSpacing: -0.3,
+  },
+  headerRightPlaceholder: {
+    width: scale(42),
+  },
+
+  // Segment Tabs (from Batch Profile page)
+  segmentStickyHeader: {
+    backgroundColor: "transparent",
+    paddingHorizontal: moderateScale(16),
+    paddingVertical: verticalScale(4),
+    marginBottom: verticalScale(6),
+  },
+  segmentWrap: {
+    flexDirection: "row",
+    backgroundColor: "rgba(255, 255, 255, 0.85)",
+    borderRadius: 10,
+    padding: 4,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.12)",
+  },
+  segment: {
+    flex: 1,
     alignItems: "center",
-    marginTop: verticalScale(64), // Lowered by 4rem (64px)
-    marginBottom: verticalScale(2),
+    justifyContent: "center",
+    minHeight: verticalScale(38),
+    borderRadius: 10,
+    paddingHorizontal: moderateScale(10),
+  },
+  segmentActive: {
+    backgroundColor: ChickIntelPalette.green1,
+  },
+  segmentInactive: {
+    backgroundColor: "transparent",
+  },
+  segmentText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(13),
+    fontWeight: "700",
+    lineHeight: 18,
+    color: "#4A5452",
+  },
+  segmentTextActive: {
+    color: "#FFFFFF",
+  },
+  segmentTextInactive: {
+    color: "#4A5452",
+  },
+
+  // About App Tab Styles
+  aboutAppContainer: {
+    flex: 1,
+  },
+  aboutAppScrollContent: {
+    paddingHorizontal: moderateScale(16),
+    paddingTop: verticalScale(8),
+    paddingBottom: verticalScale(32),
+    gap: verticalScale(14),
+  },
+  appBannerCard: {
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "transparent",
+    borderRadius: 18,
+    paddingVertical: verticalScale(18),
+    paddingHorizontal: moderateScale(16),
+    borderWidth: 1.5,
+    borderColor: "rgba(49, 118, 103, 0.5)",
+  },
+  appIconWrapper: {
+    width: scale(68),
+    height: scale(68),
+    borderRadius: scale(18),
+    overflow: "hidden",
+    marginBottom: verticalScale(10),
+    borderWidth: 1.5,
+    borderColor: "rgba(49, 118, 103, 0.35)",
+    backgroundColor: "#FFFFFF",
+  },
+  appLogoImage: {
+    width: "100%",
+    height: "100%",
   },
   appTitle: {
     fontFamily: ChickFont.display,
-    fontSize: responsiveFontSize(20.4),
-    fontWeight: "700",
-    color: "#2b2b2b",
-    marginBottom: 2,
+    fontSize: responsiveFontSize(20),
+    fontWeight: "800",
+    color: ChickIntelPalette.gray1,
+    letterSpacing: -0.3,
+    marginBottom: verticalScale(4),
+    textAlign: "center",
+  },
+  versionBadge: {
+    backgroundColor: "rgba(49, 118, 103, 0.12)",
+    paddingHorizontal: moderateScale(10),
+    paddingVertical: verticalScale(3),
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.28)",
+    marginBottom: verticalScale(8),
   },
   appVersion: {
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(14.4),
+    fontSize: responsiveFontSize(12),
+    fontWeight: "700",
+    color: ChickIntelPalette.green1,
+    letterSpacing: 0.3,
+  },
+  appTagline: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12.8),
+    lineHeight: responsiveFontSize(18),
+    fontWeight: "700",
+    color: "#1E293B",
+    textAlign: "center",
+    maxWidth: scale(310),
+  },
+  infoCard: {
+    backgroundColor: "transparent",
+    borderRadius: 16,
+    padding: moderateScale(16),
+    borderWidth: 1.5,
+    borderColor: "rgba(49, 118, 103, 0.5)",
+    gap: verticalScale(10),
+  },
+
+  // Limitation Card (Transparent Background)
+  solidLimitationCard: {
+    backgroundColor: "transparent",
+    borderRadius: 16,
+    padding: moderateScale(16),
+    borderWidth: 1.5,
+    borderColor: "rgba(217, 119, 6, 0.38)",
+    gap: verticalScale(12),
+  },
+  limitationHeaderTitle: {
+    flex: 1,
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(14.5),
+    fontWeight: "800",
+    color: "#92400E",
+    letterSpacing: -0.2,
+  },
+
+  cardHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: moderateScale(8),
+  },
+  iconCircle: {
+    width: scale(30),
+    height: scale(30),
+    borderRadius: scale(15),
+    backgroundColor: "rgba(49, 118, 103, 0.12)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  warningIconCircle: {
+    width: scale(30),
+    height: scale(30),
+    borderRadius: scale(15),
+    backgroundColor: "#FDE68A",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  infoCardTitle: {
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(15),
+    fontWeight: "800",
+    color: ChickIntelPalette.gray1,
+    letterSpacing: -0.2,
+  },
+  infoCardBody: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(13),
+    lineHeight: responsiveFontSize(19),
+    color: "#475569",
+  },
+  featureList: {
+    gap: verticalScale(12),
+  },
+  featureItem: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: moderateScale(10),
+  },
+  featureBullet: {
+    width: scale(28),
+    height: scale(28),
+    borderRadius: scale(8),
+    backgroundColor: "rgba(49, 118, 103, 0.1)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 2,
+  },
+  featureTextWrap: {
+    flex: 1,
+    gap: 2,
+  },
+  featureTitle: {
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(13.5),
+    fontWeight: "700",
+    color: ChickIntelPalette.gray1,
+  },
+  featureDesc: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12),
+    lineHeight: responsiveFontSize(17),
+    color: "#525252",
+  },
+  limitationsList: {
+    gap: verticalScale(12),
+  },
+  limitationItem: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: moderateScale(10),
+  },
+  limitationBullet: {
+    width: scale(28),
+    height: scale(28),
+    borderRadius: scale(8),
+    backgroundColor: "rgba(245, 158, 11, 0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 2,
+  },
+  limitationTextWrap: {
+    flex: 1,
+    gap: 3,
+  },
+  limitationTitleText: {
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(13.5),
+    fontWeight: "800",
+    color: "#78350F",
+    letterSpacing: -0.2,
+    lineHeight: responsiveFontSize(18),
+  },
+  limitationDesc: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12),
+    lineHeight: responsiveFontSize(17.5),
+    color: "#78350F",
+    textAlign: "left",
+  },
+  boldInlineText: {
+    fontFamily: ChickFont.sans,
+    fontWeight: "700",
+    color: "#78350F",
+  },
+  aboutFooter: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: verticalScale(14),
+    gap: 4,
+  },
+  footerBpsuText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12.5),
     fontWeight: "600",
-    color: "#4a4a4a",
+    color: "#800000",
+    textAlign: "center",
+    letterSpacing: 0.1,
+  },
+  footerSubText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(10.5),
+    color: "rgba(51, 51, 51, 0.6)",
+    textAlign: "center",
+  },
+
+  // About Us Tab Styles
+  aboutUsContent: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   sectionTitle: {
     fontFamily: ChickFont.display,
-    fontSize: responsiveFontSize(24),
+    fontSize: responsiveFontSize(22),
     fontWeight: "800",
     color: ChickIntelPalette.gray1,
     letterSpacing: 0.8,
     marginTop: 0,
-    paddingBottom: 10,
-    marginBottom: verticalScale(22),
+    paddingBottom: 6,
+    marginBottom: verticalScale(12),
   },
   carouselWrapper: {
     flex: 1,
@@ -701,7 +1382,7 @@ const styles = StyleSheet.create({
   },
   carouselStage: {
     width: SCREEN_WIDTH,
-    height: verticalScale(266), // Increased by 20% from 222
+    height: verticalScale(266),
     alignItems: "center",
     justifyContent: "center",
     position: "relative",
@@ -709,7 +1390,7 @@ const styles = StyleSheet.create({
   cardContainer: {
     position: "absolute",
     width: CARD_WIDTH,
-    height: verticalScale(260), // Increased by 20% from 216
+    height: verticalScale(260),
     alignItems: "center",
     justifyContent: "center",
   },
@@ -842,8 +1523,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginTop: verticalScale(18),
-    marginBottom: verticalScale(12),
+    marginTop: verticalScale(14),
+    marginBottom: verticalScale(8),
   },
   dotsContainer: {
     flexDirection: "row",
@@ -870,9 +1551,9 @@ const styles = StyleSheet.create({
     width: "100%",
     alignItems: "center",
     justifyContent: "center",
-    marginTop: verticalScale(6),
+    marginTop: verticalScale(4),
     paddingHorizontal: moderateScale(16),
-    paddingBottom: verticalScale(65),
+    paddingBottom: verticalScale(28),
   },
   contactTitle: {
     fontFamily: ChickFont.display,
@@ -880,7 +1561,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#2b2b2b",
     letterSpacing: 1.2,
-    marginBottom: verticalScale(10),
+    marginBottom: verticalScale(8),
     textAlign: "center",
   },
   contactRow: {

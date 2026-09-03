@@ -4,28 +4,28 @@ import { useCameraPermissions } from "expo-camera";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ComponentType,
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+    type ComponentType,
 } from "react";
 import {
-  Alert,
-  Animated,
-  Easing,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  useWindowDimensions,
-  View,
-  type NativeScrollEvent,
-  type NativeSyntheticEvent,
+    Alert,
+    Animated,
+    Easing,
+    Modal,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    useWindowDimensions,
+    View,
+    type NativeScrollEvent,
+    type NativeSyntheticEvent,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -40,6 +40,7 @@ import JournalIcon from "@/assets_imported/icon-journal.svg";
 import BatchProfileIcon from "@/assets_imported/icon-profile.svg";
 import ReportsIcon from "@/assets_imported/icon-reports.svg";
 import { HeartMonitorIcon } from "@/components/icons/heart-monitor-icon";
+import { BlurCard } from "@/components/ui/blur-card";
 import { PrimaryFab } from "@/components/ui/primary-fab";
 import { ChickFont } from "@/constants/chick-fonts";
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
@@ -47,23 +48,23 @@ import { getFarmColors } from "@/constants/farm-theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuth } from "@/providers/auth-provider";
 import {
-  fetchHomeKpiSnapshot,
-  formatBirdAdditionTrend,
-  formatConsumptionTrend,
-  formatKpiTrend,
-  type HomeKpiPeriod,
+    fetchHomeKpiSnapshot,
+    formatBirdAdditionTrend,
+    formatConsumptionTrend,
+    formatKpiTrend,
+    type HomeKpiPeriod,
 } from "@/utils/home-kpis";
 import { logError, logStep } from "@/utils/logger";
 import {
-  getFeaturedBreedCards,
-  type FeaturedBreedCard,
+    getFeaturedBreedCards,
+    type FeaturedBreedCard,
 } from "@/utils/recent-breed-scans";
 import {
-  moderateScale,
-  responsiveFontSize,
-  scale,
-  useResponsiveMetrics,
-  verticalScale,
+    moderateScale,
+    responsiveFontSize,
+    scale,
+    useResponsiveMetrics,
+    verticalScale,
 } from "@/utils/responsive";
 import { fetchFarmBatches } from "@/utils/supabase-batches";
 
@@ -243,9 +244,7 @@ export default function HomeScreen() {
   const maxScrollXRef = useRef(0);
   const scrollWidthRef = useRef(0);
   const isUserInteractingRef = useRef(false);
-  const userInteractionTimeoutRef = useRef<ReturnType<
-    typeof setTimeout
-  > | null>(null);
+  const userInteractionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const directionRef = useRef<1 | -1>(1);
   const loopCountRef = useRef(0);
@@ -265,38 +264,41 @@ export default function HomeScreen() {
 
   const kpiStep = dynamicKpiCardWidth + moderateScale(12);
 
-  const smoothScrollTo = useCallback((targetX: number, duration = 650) => {
-    const clampedTarget = Math.max(
-      0,
-      Math.min(targetX, maxScrollXRef.current || targetX),
-    );
-    const startX = currentScrollXRef.current;
-    const distance = clampedTarget - startX;
-    if (Math.abs(distance) < 1) return;
+  const smoothScrollTo = useCallback(
+    (targetX: number, duration = 650) => {
+      const clampedTarget = Math.max(
+        0,
+        Math.min(targetX, maxScrollXRef.current || targetX),
+      );
+      const startX = currentScrollXRef.current;
+      const distance = clampedTarget - startX;
+      if (Math.abs(distance) < 1) return;
 
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
-    }
-
-    const startTime = Date.now();
-    const easeInOutCubic = (t: number) =>
-      t < 0.5 ? 4 * t * t * t : (t - 1) * (2 * t - 2) * (2 * t - 2) + 1;
-
-    const animate = () => {
-      const elapsed = Date.now() - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      const eased = easeInOutCubic(progress);
-      const nextX = startX + distance * eased;
-
-      kpiScrollRef.current?.scrollTo({ x: nextX, animated: false });
-
-      if (progress < 1) {
-        animationFrameRef.current = requestAnimationFrame(animate);
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
       }
-    };
 
-    animationFrameRef.current = requestAnimationFrame(animate);
-  }, []);
+      const startTime = Date.now();
+      const easeInOutCubic = (t: number) =>
+        t < 0.5 ? 4 * t * t * t : (t - 1) * (2 * t - 2) * (2 * t - 2) + 1;
+
+      const animate = () => {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased = easeInOutCubic(progress);
+        const nextX = startX + distance * eased;
+
+        kpiScrollRef.current?.scrollTo({ x: nextX, animated: false });
+
+        if (progress < 1) {
+          animationFrameRef.current = requestAnimationFrame(animate);
+        }
+      };
+
+      animationFrameRef.current = requestAnimationFrame(animate);
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!isScreenFocused || periodPickerFor) return;
@@ -329,13 +331,7 @@ export default function HomeScreen() {
     return () => {
       if (kpiTimerRef.current) clearInterval(kpiTimerRef.current);
     };
-  }, [
-    isScreenFocused,
-    periodPickerFor,
-    kpiCards.length,
-    kpiStep,
-    smoothScrollTo,
-  ]);
+  }, [isScreenFocused, periodPickerFor, kpiCards.length, kpiStep, smoothScrollTo]);
 
   useEffect(() => {
     return () => {
@@ -736,7 +732,8 @@ export default function HomeScreen() {
     });
   }
 
-  const fabBottom = TAB_BAR_OFFSET - 2 - FAB_OFFSET_FROM_TAB_TOP;
+  const fabBottom =
+    insets.bottom + TAB_BAR_OFFSET - 2 - FAB_OFFSET_FROM_TAB_TOP;
 
   const displayName = profile?.display_name?.trim() || "there";
   const roleLabel = profile?.is_admin ? "Admin Owner" : `Farmer ${displayName}`;
@@ -785,7 +782,7 @@ export default function HomeScreen() {
           styles.content,
           {
             paddingTop: 14,
-            paddingBottom: TAB_BAR_OFFSET + 15,
+            paddingBottom: insets.bottom + TAB_BAR_OFFSET + 98,
           },
         ]}
         showsVerticalScrollIndicator={false}
@@ -868,9 +865,7 @@ export default function HomeScreen() {
                   <View
                     style={[
                       styles.kpiBody,
-                      {
-                        paddingRight: Math.floor(dynamicKpiArtworkSize * 0.45),
-                      },
+                      { paddingRight: Math.floor(dynamicKpiArtworkSize * 0.45) },
                     ]}
                   >
                     <Text
