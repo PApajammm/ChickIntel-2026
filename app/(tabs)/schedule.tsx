@@ -85,6 +85,20 @@ const MONTHS = [
   "November",
   "December",
 ];
+const MONTHS_SHORT = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
 const PREVIEW_TIMEFRAME_OPTIONS = ["Weekly", "Monthly"] as const;
 type PreviewTimeframeOption = (typeof PREVIEW_TIMEFRAME_OPTIONS)[number];
 
@@ -518,7 +532,37 @@ export default function ScheduleScreen() {
     ? "rgba(202, 227, 221, 0.2)"
     : "rgba(255, 255, 255, 0.65)";
 
-  const calendarGrid = useMemo(() => {
+  const [calendarViewMode, setCalendarViewMode] = useState<"week" | "month">(
+    "month",
+  );
+
+  const calendarRows = useMemo(() => {
+    if (calendarViewMode === "week") {
+      const baseDate = selectedDate || viewDate;
+      const dayOfWeek = baseDate.getDay();
+      const startOfWeek = new Date(
+        baseDate.getFullYear(),
+        baseDate.getMonth(),
+        baseDate.getDate() - dayOfWeek,
+      );
+
+      const weekSlots = [];
+      for (let i = 0; i < 7; i++) {
+        const slotDate = new Date(
+          startOfWeek.getFullYear(),
+          startOfWeek.getMonth(),
+          startOfWeek.getDate() + i,
+        );
+        weekSlots.push({
+          day: slotDate.getDate(),
+          current:
+            slotDate.getMonth() === (selectedDate || viewDate).getMonth(),
+          date: slotDate,
+        });
+      }
+      return [weekSlots];
+    }
+
     const year = viewDate.getFullYear();
     const month = viewDate.getMonth();
     const firstDayOfMonth = new Date(year, month, 1).getDay();
@@ -560,7 +604,48 @@ export default function ScheduleScreen() {
       rows.push(fullGrid.slice(i, i + 7));
     }
     return rows;
-  }, [viewDate]);
+  }, [calendarViewMode, selectedDate, viewDate]);
+
+  const calendarNavTitle = useMemo(() => {
+    if (calendarViewMode === "month") {
+      return `${MONTHS[viewDate.getMonth()]} ${viewDate.getFullYear()}`;
+    }
+    const baseDate = selectedDate || viewDate;
+    const dayOfWeek = baseDate.getDay();
+    const startOfWeek = new Date(
+      baseDate.getFullYear(),
+      baseDate.getMonth(),
+      baseDate.getDate() - dayOfWeek,
+    );
+    const endOfWeek = new Date(
+      startOfWeek.getFullYear(),
+      startOfWeek.getMonth(),
+      startOfWeek.getDate() + 6,
+    );
+
+    if (startOfWeek.getMonth() === endOfWeek.getMonth()) {
+      return `${MONTHS[startOfWeek.getMonth()]} ${startOfWeek.getDate()} - ${endOfWeek.getDate()}, ${startOfWeek.getFullYear()}`;
+    }
+    return `${MONTHS_SHORT[startOfWeek.getMonth()]} ${startOfWeek.getDate()} - ${MONTHS_SHORT[endOfWeek.getMonth()]} ${endOfWeek.getDate()}, ${endOfWeek.getFullYear()}`;
+  }, [calendarViewMode, selectedDate, viewDate]);
+
+  const handleNavigateCalendar = (delta: number) => {
+    if (calendarViewMode === "week") {
+      const baseDate = selectedDate || viewDate;
+      const nextDate = new Date(
+        baseDate.getFullYear(),
+        baseDate.getMonth(),
+        baseDate.getDate() + delta * 7,
+      );
+      setSelectedDate(nextDate);
+      setViewDate(new Date(nextDate.getFullYear(), nextDate.getMonth(), 1));
+      setPreviewBaseDate(new Date(nextDate));
+    } else {
+      setViewDate(
+        new Date(viewDate.getFullYear(), viewDate.getMonth() + delta, 1),
+      );
+    }
+  };
 
   const changeMonth = (delta: number) => {
     setViewDate(
@@ -961,8 +1046,98 @@ export default function ScheduleScreen() {
               ]}
             >
               <View style={styles.monthCol}>
+                {/* Mode Selector Tab: Week / Month */}
+                <View style={styles.calendarModeSelectorWrap}>
+                  <View style={styles.calendarModeSelector}>
+                    <TouchableOpacity
+                      onPress={() => setCalendarViewMode("week")}
+                      style={[
+                        styles.calendarModeTab,
+                        calendarViewMode === "week" &&
+                          styles.calendarModeTabActive,
+                      ]}
+                      activeOpacity={0.8}
+                      accessibilityRole="tab"
+                      accessibilityState={{
+                        selected: calendarViewMode === "week",
+                      }}
+                    >
+                      <MaterialCommunityIcons
+                        name="calendar-week"
+                        size={15}
+                        color={
+                          calendarViewMode === "week"
+                            ? "#FFFFFF"
+                            : ChickIntelPalette.gray2
+                        }
+                      />
+                      <Text
+                        style={[
+                          styles.calendarModeTabText,
+                          calendarViewMode === "week" &&
+                            styles.calendarModeTabTextActive,
+                        ]}
+                      >
+                        Week
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      onPress={() => {
+                        setCalendarViewMode("month");
+                        setViewDate(
+                          new Date(
+                            selectedDate.getFullYear(),
+                            selectedDate.getMonth(),
+                            1,
+                          ),
+                        );
+                      }}
+                      style={[
+                        styles.calendarModeTab,
+                        calendarViewMode === "month" &&
+                          styles.calendarModeTabActive,
+                      ]}
+                      activeOpacity={0.8}
+                      accessibilityRole="tab"
+                      accessibilityState={{
+                        selected: calendarViewMode === "month",
+                      }}
+                    >
+                      <MaterialCommunityIcons
+                        name="calendar-month"
+                        size={15}
+                        color={
+                          calendarViewMode === "month"
+                            ? "#FFFFFF"
+                            : ChickIntelPalette.gray2
+                        }
+                      />
+                      <Text
+                        style={[
+                          styles.calendarModeTabText,
+                          calendarViewMode === "month" &&
+                            styles.calendarModeTabTextActive,
+                        ]}
+                      >
+                        Month
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* Calendar Navigation Row */}
                 <View style={styles.monthNavRow}>
-                  <Pressable onPress={() => changeMonth(-1)} hitSlop={15}>
+                  <Pressable
+                    onPress={() => handleNavigateCalendar(-1)}
+                    hitSlop={15}
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                      calendarViewMode === "week"
+                        ? "Previous week"
+                        : "Previous month"
+                    }
+                  >
                     <MaterialCommunityIcons
                       name="chevron-left"
                       size={28}
@@ -972,12 +1147,27 @@ export default function ScheduleScreen() {
                   <Text
                     style={[
                       styles.monthTitle,
-                      { fontSize: responsiveMonthSize },
+                      {
+                        fontSize:
+                          calendarViewMode === "week"
+                            ? responsiveFontSize(15)
+                            : responsiveMonthSize,
+                      },
                     ]}
+                    numberOfLines={1}
                   >
-                    {MONTHS[viewDate.getMonth()]} {viewDate.getFullYear()}
+                    {calendarNavTitle}
                   </Text>
-                  <Pressable onPress={() => changeMonth(1)} hitSlop={15}>
+                  <Pressable
+                    onPress={() => handleNavigateCalendar(1)}
+                    hitSlop={15}
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                      calendarViewMode === "week"
+                        ? "Next week"
+                        : "Next month"
+                    }
+                  >
                     <MaterialCommunityIcons
                       name="chevron-right"
                       size={28}
@@ -987,14 +1177,14 @@ export default function ScheduleScreen() {
                 </View>
 
                 <View style={styles.weekRow}>
-                  {DAYS_OF_WEEK.map((d) => (
-                    <Text key={d} style={styles.weekLabel}>
+                  {DAYS_OF_WEEK.map((d, index) => (
+                    <Text key={`dow-${d}-${index}`} style={styles.weekLabel}>
                       {d}
                     </Text>
                   ))}
                 </View>
 
-                {calendarGrid.map((row, ridx) => (
+                {calendarRows.map((row, ridx) => (
                   <View key={`row-${ridx}`} style={styles.gridRow}>
                     {row.map((slot, sidx) => {
                       const dateKey = formatScheduleDateKey(slot.date);
@@ -1215,7 +1405,7 @@ export default function ScheduleScreen() {
             >
               {/* Timeframe Filter Bar (Matching Reports Page Design) */}
               <View style={styles.previewTimeframeBar}>
-                <Text style={styles.previewTimeframeLabel}>TASKS PREVIEW</Text>
+                <Text style={styles.previewTimeframeLabel}>TASKS HISTORY</Text>
                 <View style={styles.previewSegmentedContainer}>
                   {PREVIEW_TIMEFRAME_OPTIONS.map((option) => {
                     const active = previewTimeframe === option;
@@ -1987,6 +2177,42 @@ const styles = StyleSheet.create({
   },
   monthCol: {
     paddingHorizontal: moderateScale(8),
+  },
+  calendarModeSelectorWrap: {
+    alignItems: "center",
+    marginBottom: verticalScale(10),
+  },
+  calendarModeSelector: {
+    flexDirection: "row",
+    backgroundColor: "rgba(49, 118, 103, 0.08)",
+    borderRadius: 12,
+    padding: 3,
+  },
+  calendarModeTab: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: verticalScale(6),
+    paddingHorizontal: moderateScale(16),
+    borderRadius: 9,
+  },
+  calendarModeTabActive: {
+    backgroundColor: ChickIntelPalette.green1,
+    shadowColor: ChickIntelPalette.green1,
+    shadowOpacity: 0.22,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  calendarModeTabText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12),
+    fontWeight: "600",
+    color: ChickIntelPalette.gray2,
+  },
+  calendarModeTabTextActive: {
+    color: "#FFFFFF",
+    fontWeight: "800",
   },
   monthNavRow: {
     flexDirection: "row",
