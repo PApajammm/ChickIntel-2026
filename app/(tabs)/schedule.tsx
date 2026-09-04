@@ -5,7 +5,10 @@ import {
     verticalScale,
 } from "@/utils/responsive";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import DateTimePicker from "@react-native-community/datetimepicker";
+import {
+  ChickDatePickerModal,
+  ChickTimePickerModal,
+} from "@/components/ui/chick-date-picker-modal";
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -1693,19 +1696,16 @@ export default function ScheduleScreen() {
                     color={ChickIntelPalette.gray2}
                   />
                 </TouchableOpacity>
-                {showTimePicker && (
-                  <DateTimePicker
-                    value={newTaskStartDate}
-                    mode="time"
-                    display="default"
-                    onChange={(event, date) => {
-                      setShowTimePicker(Platform.OS === "ios");
-                      if (date) setNewTaskStartDate(date);
-                    }}
-                    accentColor={ChickIntelPalette.green1}
-                    themeVariant={isDark ? "dark" : "light"}
-                  />
-                )}
+                <ChickTimePickerModal
+                  visible={showTimePicker}
+                  value={newTaskStartDate}
+                  onConfirm={(date) => {
+                    setShowTimePicker(false);
+                    setNewTaskStartDate(date);
+                  }}
+                  onCancel={() => setShowTimePicker(false)}
+                  title="SELECT TIME"
+                />
 
                 {/* Start Date Picker Row */}
                 <TouchableOpacity
@@ -1729,25 +1729,19 @@ export default function ScheduleScreen() {
                     color={ChickIntelPalette.gray2}
                   />
                 </TouchableOpacity>
-                {showStartDatePicker && (
-                  <DateTimePicker
-                    value={newTaskStartDate}
-                    mode="date"
-                    display="default"
-                    onChange={(event, date) => {
-                      setShowStartDatePicker(Platform.OS === "ios");
-                      if (date) {
-                        setNewTaskStartDate(date);
-                        if (date > newTaskEndDate) {
-                          setNewTaskEndDate(date);
-                          endDateManuallySetRef.current = false;
-                        }
-                      }
-                    }}
-                    accentColor={ChickIntelPalette.green1}
-                    themeVariant={isDark ? "dark" : "light"}
-                  />
-                )}
+                <ChickDatePickerModal
+                  visible={showStartDatePicker}
+                  value={newTaskStartDate}
+                  onConfirm={(date) => {
+                    setShowStartDatePicker(false);
+                    setNewTaskStartDate(date);
+                    if (date > newTaskEndDate) {
+                      setNewTaskEndDate(date);
+                      endDateManuallySetRef.current = false;
+                    }
+                  }}
+                  onCancel={() => setShowStartDatePicker(false)}
+                />
 
                 {/* End Date Picker Row */}
                 <TouchableOpacity
@@ -1771,29 +1765,24 @@ export default function ScheduleScreen() {
                     color={ChickIntelPalette.gray2}
                   />
                 </TouchableOpacity>
-                {showEndDatePicker && (
-                  <DateTimePicker
-                    value={newTaskEndDate}
-                    mode="date"
-                    display="default"
-                    onChange={(event, date) => {
-                      setShowEndDatePicker(Platform.OS === "ios");
-                      if (date) {
-                        if (date < newTaskStartDate) {
-                          Alert.alert(
-                            "Invalid Date Range",
-                            "End Date cannot be earlier than Start Date.",
-                          );
-                        } else {
-                          setNewTaskEndDate(date);
-                          endDateManuallySetRef.current = true;
-                        }
-                      }
-                    }}
-                    accentColor={ChickIntelPalette.green1}
-                    themeVariant={isDark ? "dark" : "light"}
-                  />
-                )}
+                <ChickDatePickerModal
+                  visible={showEndDatePicker}
+                  value={newTaskEndDate}
+                  minDate={newTaskStartDate}
+                  onConfirm={(date) => {
+                    setShowEndDatePicker(false);
+                    if (date < newTaskStartDate) {
+                      Alert.alert(
+                        "Invalid Date Range",
+                        "End Date cannot be earlier than Start Date.",
+                      );
+                    } else {
+                      setNewTaskEndDate(date);
+                      endDateManuallySetRef.current = true;
+                    }
+                  }}
+                  onCancel={() => setShowEndDatePicker(false)}
+                />
 
                 {/* Repeat Picker Row */}
                 <ChickSelectRow

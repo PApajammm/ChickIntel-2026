@@ -24,8 +24,8 @@ import {
 } from "@/utils/stock-alerts";
 import type { SupabaseInventoryItem } from "@/utils/supabase-inventory";
 import { fetchInventoryCategoryOptions } from "@/utils/supabase-lookups";
+import { ChickDatePickerModal } from "@/components/ui/chick-date-picker-modal";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import DateTimePicker from "@react-native-community/datetimepicker";
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -1623,14 +1623,15 @@ export default function InventoryScreen() {
                     color={ChickIntelPalette.gray2}
                   />
                 </TouchableOpacity>
-                {showDatePicker && (
-                  <DateTimePicker
-                    value={newItemDate}
-                    mode="date"
-                    display="default"
-                    onChange={onDateChange}
-                  />
-                )}
+                <ChickDatePickerModal
+                  visible={showDatePicker}
+                  value={newItemDate}
+                  onConfirm={(date) => {
+                    setShowDatePicker(false);
+                    setNewItemDate(date);
+                  }}
+                  onCancel={() => setShowDatePicker(false)}
+                />
 
                 {hasExpirationDate(newItemType) ? (
                   <>
@@ -1662,14 +1663,16 @@ export default function InventoryScreen() {
                         color="#B45309"
                       />
                     </TouchableOpacity>
-                    {showExpDatePicker && (
-                      <DateTimePicker
-                        value={newItemExpDate || new Date()}
-                        mode="date"
-                        display="default"
-                        onChange={onExpDateChange}
-                      />
-                    )}
+                    <ChickDatePickerModal
+                      visible={showExpDatePicker}
+                      value={newItemExpDate || new Date()}
+                      minDate={newItemDate}
+                      onConfirm={(date) => {
+                        setShowExpDatePicker(false);
+                        setNewItemExpDate(date);
+                      }}
+                      onCancel={() => setShowExpDatePicker(false)}
+                    />
                   </>
                 ) : (
                   <View style={styles.addModalInfoCallout}>
@@ -1906,14 +1909,15 @@ export default function InventoryScreen() {
                     color={ChickIntelPalette.gray2}
                   />
                 </TouchableOpacity>
-                {showEditDeliveryDatePicker && (
-                  <DateTimePicker
-                    value={editDeliveryDate || new Date()}
-                    mode="date"
-                    display="default"
-                    onChange={onEditDeliveryDateChange}
-                  />
-                )}
+                <ChickDatePickerModal
+                  visible={showEditDeliveryDatePicker}
+                  value={editDeliveryDate || new Date()}
+                  onConfirm={(date) => {
+                    setShowEditDeliveryDatePicker(false);
+                    setEditDeliveryDate(date);
+                  }}
+                  onCancel={() => setShowEditDeliveryDatePicker(false)}
+                />
 
                 {editingItem && hasExpirationDate(editingItem.type) ? (
                   <>
@@ -1945,14 +1949,16 @@ export default function InventoryScreen() {
                         color="#B45309"
                       />
                     </TouchableOpacity>
-                    {showEditExpDatePicker && (
-                      <DateTimePicker
-                        value={editExpirationDate || new Date()}
-                        mode="date"
-                        display="default"
-                        onChange={onEditExpDateChange}
-                      />
-                    )}
+                    <ChickDatePickerModal
+                      visible={showEditExpDatePicker}
+                      value={editExpirationDate || new Date()}
+                      minDate={editDeliveryDate}
+                      onConfirm={(date) => {
+                        setShowEditExpDatePicker(false);
+                        setEditExpirationDate(date);
+                      }}
+                      onCancel={() => setShowEditExpDatePicker(false)}
+                    />
                     {editExpirationDate &&
                     getExpirationStatus(editExpirationDate).isExpired ? (
                       <View
