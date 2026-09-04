@@ -368,39 +368,37 @@ export default function EggBatchColorScreen() {
         keyboardDismissMode="on-drag"
       >
         <View style={styles.headerRow}>
-          <View style={styles.headerLeftRow}>
-            <TouchableOpacity
-              onPress={() =>
-                router.replace({
-                  pathname: "/(tabs)/profiles" as any,
-                  params: { mode: "egg" },
-                })
-              }
-              accessibilityRole="button"
-              accessibilityLabel="Back to egg batch profile"
-              style={styles.backButton}
-              activeOpacity={0.8}
-            >
-              <MaterialCommunityIcons
-                name="arrow-left"
-                size={22}
-                color="#FFF"
-              />
-            </TouchableOpacity>
-            <View style={styles.headerTitleWrap}>
-              <Text style={styles.pageTitle}>
-                Egg Batches per Color / Origin
-              </Text>
-              <Text style={styles.subtitle}>
-                {colorName ? (
-                  colorName
-                ) : (
-                  <Text style={styles.subtitleMuted}>Selected color</Text>
-                )}{" "}
-                • {summaryMetrics.batchCount} batches • Fertility{" "}
-                {summaryMetrics.fertility}
-              </Text>
-            </View>
+          <TouchableOpacity
+            onPress={() =>
+              router.replace({
+                pathname: "/(tabs)/profiles" as any,
+                params: { mode: "egg" },
+              })
+            }
+            accessibilityRole="button"
+            accessibilityLabel="Back to egg batch profile"
+            style={styles.backButton}
+            activeOpacity={0.8}
+          >
+            <MaterialCommunityIcons
+              name="arrow-left"
+              size={22}
+              color="#FFF"
+            />
+          </TouchableOpacity>
+          <View style={styles.headerTitleWrap}>
+            <Text style={styles.pageTitle} numberOfLines={1}>
+              Egg Batches per Color
+            </Text>
+            <Text style={styles.subtitle} numberOfLines={1}>
+              {colorName ? (
+                colorName
+              ) : (
+                <Text style={styles.subtitleMuted}>Selected color</Text>
+              )}{" "}
+              • {summaryMetrics.batchCount} batches • Fertility{" "}
+              {summaryMetrics.fertility}
+            </Text>
           </View>
           <View style={styles.headerActions}>
             {hasSelectedEggs ? (
@@ -428,7 +426,9 @@ export default function EggBatchColorScreen() {
                   />
                 </TouchableOpacity>
               </>
-            ) : null}
+            ) : (
+              <View style={styles.headerRightPlaceholder} />
+            )}
           </View>
         </View>
 
@@ -931,6 +931,8 @@ const styles = StyleSheet.create({
   headerTitleWrap: {
     flex: 1,
     gap: 2,
+    alignItems: "center",
+    justifyContent: "center",
   },
   headerActions: {
     flexDirection: "row",
@@ -985,6 +987,9 @@ const styles = StyleSheet.create({
     elevation: 4,
     flexShrink: 0,
   },
+  headerRightPlaceholder: {
+    width: scale(42),
+  },
   pageTitle: {
     fontFamily: ChickFont.display,
     fontSize: responsiveFontSize(18),
@@ -992,11 +997,14 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: -0.55,
     color: ChickIntelPalette.gray1,
+    textAlign: "center",
   },
   subtitle: {
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(13),
-    color: "#5A6161",
+    fontSize: responsiveFontSize(11),
+    fontWeight: "600",
+    color: ChickIntelPalette.green1,
+    textAlign: "center",
   },
   subtitleMuted: {
     fontFamily: ChickFont.sans,

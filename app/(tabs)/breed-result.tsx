@@ -142,7 +142,7 @@ export default function BreedResultScreen() {
         contentContainerStyle={[styles.scroll, { paddingBottom: 15 }]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+        <View style={styles.headerRow}>
           <TouchableOpacity
             style={styles.backButton}
             onPress={() =>
@@ -156,7 +156,8 @@ export default function BreedResultScreen() {
           >
             <MaterialCommunityIcons name="arrow-left" size={22} color="#FFF" />
           </TouchableOpacity>
-          <Text style={styles.pageTitle}>Breed Result</Text>
+          <Text style={styles.pageTitle} numberOfLines={1}>Breed Result</Text>
+          <View style={styles.headerRightPlaceholder} />
         </View>
         <Text style={styles.pageSubtitle}>
           {isAnalyzingImage
@@ -282,13 +283,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: moderateScale(16),
     gap: 18,
   },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
   pageTitle: {
+    flex: 1,
+    textAlign: "center",
     fontFamily: ChickFont.display,
     fontSize: responsiveFontSize(20),
     lineHeight: 28,
     fontWeight: "800",
     letterSpacing: -0.45,
     color: ChickIntelPalette.gray1,
+  },
+  headerRightPlaceholder: {
+    width: scale(42),
   },
   backButton: {
     width: scale(42),
@@ -308,12 +319,11 @@ const styles = StyleSheet.create({
   },
   pageSubtitle: {
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(12),
-    lineHeight: 17,
-    fontWeight: "600",
+    fontSize: responsiveFontSize(13),
+    lineHeight: 18,
     color: ChickIntelPalette.gray2,
+    marginTop: -8,
     textAlign: "center",
-    marginBottom: 6,
   },
   card: {
     borderRadius: 24,

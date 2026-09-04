@@ -782,31 +782,29 @@ export default function EggFertilityReportScreen() {
         <View style={styles.fixedHeader}>
           {/* Header */}
           <View style={styles.header}>
-            <View style={styles.headerLeft}>
-              <TouchableOpacity
-                style={styles.backButton}
-                onPress={() =>
-                  router.replace({
-                    pathname: "/(tabs)/profiles" as any,
-                    params: { mode: "egg" },
-                  })
-                }
-                activeOpacity={0.8}
-                accessibilityRole="button"
-                accessibilityLabel="Go back"
-              >
-                <MaterialCommunityIcons
-                  name="arrow-left"
-                  size={22}
-                  color="#FFF"
-                />
-              </TouchableOpacity>
-              <View style={styles.headerCopy}>
-                <Text style={styles.screenTitle}>Egg Fertility Report</Text>
-                <Text style={styles.headerSubtitle} numberOfLines={1}>
-                  {scopeLabel}
-                </Text>
-              </View>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() =>
+                router.replace({
+                  pathname: "/(tabs)/profiles" as any,
+                  params: { mode: "egg" },
+                })
+              }
+              activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
+            >
+              <MaterialCommunityIcons
+                name="arrow-left"
+                size={22}
+                color="#FFF"
+              />
+            </TouchableOpacity>
+            <View style={styles.headerCopy}>
+              <Text style={styles.screenTitle} numberOfLines={1}>Egg Fertility Report</Text>
+              <Text style={styles.headerSubtitle} numberOfLines={1}>
+                {scopeLabel}
+              </Text>
             </View>
             <TouchableOpacity
               style={styles.printButton}
@@ -1120,6 +1118,9 @@ const styles = StyleSheet.create({
   headerCopy: {
     flex: 1,
     gap: 2,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 8,
   },
   screenTitle: {
     fontFamily: ChickFont.display,
@@ -1127,11 +1128,13 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: ChickIntelPalette.gray1,
     letterSpacing: -0.3,
+    textAlign: "center",
   },
   headerSubtitle: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(12),
     color: ChickIntelPalette.gray2,
+    textAlign: "center",
   },
   backButton: {
     width: scale(42),

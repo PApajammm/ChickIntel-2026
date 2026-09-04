@@ -1350,37 +1350,35 @@ export default function ReportsScreen() {
           {/* Pinned Top Header */}
           <View style={styles.fixedHeader}>
             <View style={styles.header}>
-              <View
-                style={{ flexDirection: "row", alignItems: "center", gap: 10 }}
+              <TouchableOpacity
+                style={styles.printButton}
+                onPress={() =>
+                  router.canGoBack()
+                    ? router.back()
+                    : router.replace("/(tabs)")
+                }
+                activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel="Go back"
               >
-                <TouchableOpacity
-                  style={styles.printButton}
-                  onPress={() =>
-                    router.canGoBack()
-                      ? router.back()
-                      : router.replace("/(tabs)")
-                  }
-                  activeOpacity={0.8}
-                  accessibilityRole="button"
-                  accessibilityLabel="Go back"
-                >
-                  <MaterialCommunityIcons
-                    name="arrow-left"
-                    size={22}
-                    color="#FFF"
-                  />
-                </TouchableOpacity>
-                <View>
-                  <Text style={styles.screenTitle}>Farm Reports</Text>
-                  <Text style={styles.screenSubtitle}>
-                    {activeFarm?.name || "No active farm"} • {overview} Snapshot
-                  </Text>
-                </View>
+                <MaterialCommunityIcons
+                  name="arrow-left"
+                  size={22}
+                  color="#FFF"
+                />
+              </TouchableOpacity>
+              <View style={styles.headerTitleWrap}>
+                <Text style={styles.screenTitle} numberOfLines={1}>Farm Reports</Text>
+                <Text style={styles.screenSubtitle} numberOfLines={1}>
+                  {activeFarm?.name || "No active farm"} • {overview} Snapshot
+                </Text>
               </View>
               <TouchableOpacity
                 style={styles.printButton}
                 onPress={() => setPrintModalVisible(true)}
                 activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel="Print farm report"
               >
                 <MaterialCommunityIcons
                   name="printer-outline"
@@ -1656,18 +1654,26 @@ const styles = StyleSheet.create({
     marginTop: verticalScale(6),
     marginBottom: verticalScale(2),
   },
+  headerTitleWrap: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 8,
+  },
   screenTitle: {
     fontFamily: ChickFont.display,
     fontSize: responsiveFontSize(22),
     fontWeight: "800",
     color: ChickIntelPalette.gray1,
     letterSpacing: -0.3,
+    textAlign: "center",
   },
   screenSubtitle: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(12),
     color: ChickIntelPalette.gray2,
     marginTop: 2,
+    textAlign: "center",
   },
   printButton: {
     width: scale(42),

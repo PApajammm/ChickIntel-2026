@@ -166,7 +166,12 @@ export default function ScannedHealthInputScreen() {
           {/* Pinned Top Header */}
           <View style={styles.fixedHeader}>
             <View
-              style={{ flexDirection: "row", alignItems: "center", gap: 10 }}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: 6,
+              }}
             >
               <TouchableOpacity
                 style={styles.backButton}
@@ -183,11 +188,12 @@ export default function ScannedHealthInputScreen() {
                   color="#FFF"
                 />
               </TouchableOpacity>
-              <Text style={styles.pageTitle}>
+              <Text style={styles.pageTitle} numberOfLines={1}>
                 {isMonitoringRescan
                   ? "Update Behavior Check"
                   : "Behavior Check"}
               </Text>
+              <View style={styles.headerRightPlaceholder} />
             </View>
             <Text style={styles.pageSubtitle}>
               {isMonitoringRescan
@@ -257,6 +263,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   pageTitle: {
+    flex: 1,
+    textAlign: "center",
     fontFamily: ChickFont.display,
     fontSize: responsiveFontSize(20),
     lineHeight: 30,
@@ -265,8 +273,12 @@ const styles = StyleSheet.create({
     color: ChickIntelPalette.gray1,
     marginBottom: 2,
   },
+  headerRightPlaceholder: {
+    width: scale(42),
+  },
   pageSubtitle: {
     ...HealthTypography.meta,
+    textAlign: "center",
     marginBottom: 12,
     color: "#5E6665",
   },

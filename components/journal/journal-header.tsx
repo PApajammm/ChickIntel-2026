@@ -1,9 +1,9 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { Pressable, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 import { ChickFont } from "@/constants/chick-fonts";
-import { moderateScale, responsiveFontSize, scale, verticalScale } from "@/utils/responsive";
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
+import { moderateScale, responsiveFontSize, scale, verticalScale } from "@/utils/responsive";
 
 type JournalHeaderProps = {
   onBackPress?: () => void;
@@ -29,30 +29,28 @@ export function JournalHeader({
 }: JournalHeaderProps) {
   return (
     <View style={styles.row}>
-      <View style={styles.titleLeftRow}>
-        {onBackPress ? (
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={onBackPress}
-            activeOpacity={0.8}
-            accessibilityRole="button"
-            accessibilityLabel="Go back"
-          >
-            <MaterialCommunityIcons
-              name="arrow-left"
-              size={22}
-              color="#FFF"
-            />
-          </TouchableOpacity>
-        ) : null}
-        <Text style={styles.title} numberOfLines={2}>
-          {isSelecting
-            ? selectedCount > 0
-              ? `${selectedCount} Selected`
-              : "Select Logs to Archive"
-            : "Behavior Journal"}
-        </Text>
-      </View>
+      {onBackPress ? (
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={onBackPress}
+          activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+        >
+          <MaterialCommunityIcons
+            name="arrow-left"
+            size={22}
+            color="#FFF"
+          />
+        </TouchableOpacity>
+      ) : null}
+      <Text style={styles.title} numberOfLines={1}>
+        {isSelecting
+          ? selectedCount > 0
+            ? `${selectedCount} Selected`
+            : "Select Logs to Archive"
+          : "Behavior Journal"}
+      </Text>
       <View style={styles.headerIcons}>
         {!isSelecting ? (
           <>
@@ -155,6 +153,8 @@ const styles = StyleSheet.create({
   },
   title: {
     flex: 1,
+    textAlign: "center",
+    paddingLeft: 40,
     fontFamily: ChickFont.display,
     fontSize: responsiveFontSize(20),
     lineHeight: 30,

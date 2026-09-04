@@ -129,9 +129,9 @@ export default function ArchivesScreen() {
           >
             <MaterialCommunityIcons name="arrow-left" size={22} color="#FFF" />
           </TouchableOpacity>
-          <Text style={styles.title}>Archives</Text>
+          <Text style={styles.title} numberOfLines={1}>Archives</Text>
 
-          {entries.length > 0 && (
+          {entries.length > 0 ? (
             <TouchableOpacity
               onPress={() => setClearModalVisible(true)}
               style={styles.clearHeaderBtn}
@@ -145,6 +145,8 @@ export default function ArchivesScreen() {
                 color="#FFF"
               />
             </TouchableOpacity>
+          ) : (
+            <View style={styles.headerRightPlaceholder} />
           )}
         </View>
 
@@ -287,6 +289,10 @@ const styles = StyleSheet.create({
     letterSpacing: -0.55,
     color: ChickIntelPalette.gray1,
     flex: 1,
+    textAlign: "center",
+  },
+  headerRightPlaceholder: {
+    width: scale(42),
   },
   clearHeaderBtn: {
     width: scale(42),

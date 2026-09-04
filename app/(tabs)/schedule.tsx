@@ -5,7 +5,10 @@ import {
     verticalScale,
 } from "@/utils/responsive";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import DateTimePicker from "@react-native-community/datetimepicker";
+import {
+  ChickDatePickerModal,
+  ChickTimePickerModal,
+} from "@/components/ui/chick-date-picker-modal";
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -36,7 +39,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import BackgroundGradient from "@/assets_imported/background-gradient.svg";
 import { BlurCard } from "@/components/ui/blur-card";
 import {
-    ChickField,
     ChickSelectionModal,
     ChickSelectRow,
     ChickTextInput,
@@ -82,6 +84,20 @@ const MONTHS = [
   "October",
   "November",
   "December",
+];
+const MONTHS_SHORT = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
 ];
 const PREVIEW_TIMEFRAME_OPTIONS = ["Weekly", "Monthly"] as const;
 type PreviewTimeframeOption = (typeof PREVIEW_TIMEFRAME_OPTIONS)[number];
@@ -516,7 +532,37 @@ export default function ScheduleScreen() {
     ? "rgba(202, 227, 221, 0.2)"
     : "rgba(255, 255, 255, 0.65)";
 
-  const calendarGrid = useMemo(() => {
+  const [calendarViewMode, setCalendarViewMode] = useState<"week" | "month">(
+    "month",
+  );
+
+  const calendarRows = useMemo(() => {
+    if (calendarViewMode === "week") {
+      const baseDate = selectedDate || viewDate;
+      const dayOfWeek = baseDate.getDay();
+      const startOfWeek = new Date(
+        baseDate.getFullYear(),
+        baseDate.getMonth(),
+        baseDate.getDate() - dayOfWeek,
+      );
+
+      const weekSlots = [];
+      for (let i = 0; i < 7; i++) {
+        const slotDate = new Date(
+          startOfWeek.getFullYear(),
+          startOfWeek.getMonth(),
+          startOfWeek.getDate() + i,
+        );
+        weekSlots.push({
+          day: slotDate.getDate(),
+          current:
+            slotDate.getMonth() === (selectedDate || viewDate).getMonth(),
+          date: slotDate,
+        });
+      }
+      return [weekSlots];
+    }
+
     const year = viewDate.getFullYear();
     const month = viewDate.getMonth();
     const firstDayOfMonth = new Date(year, month, 1).getDay();
@@ -558,7 +604,48 @@ export default function ScheduleScreen() {
       rows.push(fullGrid.slice(i, i + 7));
     }
     return rows;
-  }, [viewDate]);
+  }, [calendarViewMode, selectedDate, viewDate]);
+
+  const calendarNavTitle = useMemo(() => {
+    if (calendarViewMode === "month") {
+      return `${MONTHS[viewDate.getMonth()]} ${viewDate.getFullYear()}`;
+    }
+    const baseDate = selectedDate || viewDate;
+    const dayOfWeek = baseDate.getDay();
+    const startOfWeek = new Date(
+      baseDate.getFullYear(),
+      baseDate.getMonth(),
+      baseDate.getDate() - dayOfWeek,
+    );
+    const endOfWeek = new Date(
+      startOfWeek.getFullYear(),
+      startOfWeek.getMonth(),
+      startOfWeek.getDate() + 6,
+    );
+
+    if (startOfWeek.getMonth() === endOfWeek.getMonth()) {
+      return `${MONTHS[startOfWeek.getMonth()]} ${startOfWeek.getDate()} - ${endOfWeek.getDate()}, ${startOfWeek.getFullYear()}`;
+    }
+    return `${MONTHS_SHORT[startOfWeek.getMonth()]} ${startOfWeek.getDate()} - ${MONTHS_SHORT[endOfWeek.getMonth()]} ${endOfWeek.getDate()}, ${endOfWeek.getFullYear()}`;
+  }, [calendarViewMode, selectedDate, viewDate]);
+
+  const handleNavigateCalendar = (delta: number) => {
+    if (calendarViewMode === "week") {
+      const baseDate = selectedDate || viewDate;
+      const nextDate = new Date(
+        baseDate.getFullYear(),
+        baseDate.getMonth(),
+        baseDate.getDate() + delta * 7,
+      );
+      setSelectedDate(nextDate);
+      setViewDate(new Date(nextDate.getFullYear(), nextDate.getMonth(), 1));
+      setPreviewBaseDate(new Date(nextDate));
+    } else {
+      setViewDate(
+        new Date(viewDate.getFullYear(), viewDate.getMonth() + delta, 1),
+      );
+    }
+  };
 
   const changeMonth = (delta: number) => {
     setViewDate(
@@ -921,22 +1008,24 @@ export default function ScheduleScreen() {
       <StatusBar style="dark" />
 
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() =>
-              router.canGoBack() ? router.back() : router.replace("/(tabs)")
-            }
-            activeOpacity={0.8}
-            accessibilityRole="button"
-            accessibilityLabel="Go back"
-          >
-            <MaterialCommunityIcons name="arrow-left" size={22} color="#FFF" />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { fontSize: responsiveTitleSize }]}>
-            Schedule
-          </Text>
-        </View>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() =>
+            router.canGoBack() ? router.back() : router.replace("/(tabs)")
+          }
+          activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+        >
+          <MaterialCommunityIcons name="arrow-left" size={22} color="#FFF" />
+        </TouchableOpacity>
+        <Text
+          style={[styles.headerTitle, { fontSize: responsiveTitleSize }]}
+          numberOfLines={1}
+        >
+          Schedule
+        </Text>
+        <View style={styles.headerRightPlaceholder} />
       </View>
 
       <ScrollView
@@ -957,8 +1046,98 @@ export default function ScheduleScreen() {
               ]}
             >
               <View style={styles.monthCol}>
+                {/* Mode Selector Tab: Week / Month */}
+                <View style={styles.calendarModeSelectorWrap}>
+                  <View style={styles.calendarModeSelector}>
+                    <TouchableOpacity
+                      onPress={() => setCalendarViewMode("week")}
+                      style={[
+                        styles.calendarModeTab,
+                        calendarViewMode === "week" &&
+                          styles.calendarModeTabActive,
+                      ]}
+                      activeOpacity={0.8}
+                      accessibilityRole="tab"
+                      accessibilityState={{
+                        selected: calendarViewMode === "week",
+                      }}
+                    >
+                      <MaterialCommunityIcons
+                        name="calendar-week"
+                        size={15}
+                        color={
+                          calendarViewMode === "week"
+                            ? "#FFFFFF"
+                            : ChickIntelPalette.gray2
+                        }
+                      />
+                      <Text
+                        style={[
+                          styles.calendarModeTabText,
+                          calendarViewMode === "week" &&
+                            styles.calendarModeTabTextActive,
+                        ]}
+                      >
+                        Week
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      onPress={() => {
+                        setCalendarViewMode("month");
+                        setViewDate(
+                          new Date(
+                            selectedDate.getFullYear(),
+                            selectedDate.getMonth(),
+                            1,
+                          ),
+                        );
+                      }}
+                      style={[
+                        styles.calendarModeTab,
+                        calendarViewMode === "month" &&
+                          styles.calendarModeTabActive,
+                      ]}
+                      activeOpacity={0.8}
+                      accessibilityRole="tab"
+                      accessibilityState={{
+                        selected: calendarViewMode === "month",
+                      }}
+                    >
+                      <MaterialCommunityIcons
+                        name="calendar-month"
+                        size={15}
+                        color={
+                          calendarViewMode === "month"
+                            ? "#FFFFFF"
+                            : ChickIntelPalette.gray2
+                        }
+                      />
+                      <Text
+                        style={[
+                          styles.calendarModeTabText,
+                          calendarViewMode === "month" &&
+                            styles.calendarModeTabTextActive,
+                        ]}
+                      >
+                        Month
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* Calendar Navigation Row */}
                 <View style={styles.monthNavRow}>
-                  <Pressable onPress={() => changeMonth(-1)} hitSlop={15}>
+                  <Pressable
+                    onPress={() => handleNavigateCalendar(-1)}
+                    hitSlop={15}
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                      calendarViewMode === "week"
+                        ? "Previous week"
+                        : "Previous month"
+                    }
+                  >
                     <MaterialCommunityIcons
                       name="chevron-left"
                       size={28}
@@ -968,12 +1147,27 @@ export default function ScheduleScreen() {
                   <Text
                     style={[
                       styles.monthTitle,
-                      { fontSize: responsiveMonthSize },
+                      {
+                        fontSize:
+                          calendarViewMode === "week"
+                            ? responsiveFontSize(15)
+                            : responsiveMonthSize,
+                      },
                     ]}
+                    numberOfLines={1}
                   >
-                    {MONTHS[viewDate.getMonth()]} {viewDate.getFullYear()}
+                    {calendarNavTitle}
                   </Text>
-                  <Pressable onPress={() => changeMonth(1)} hitSlop={15}>
+                  <Pressable
+                    onPress={() => handleNavigateCalendar(1)}
+                    hitSlop={15}
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                      calendarViewMode === "week"
+                        ? "Next week"
+                        : "Next month"
+                    }
+                  >
                     <MaterialCommunityIcons
                       name="chevron-right"
                       size={28}
@@ -983,14 +1177,14 @@ export default function ScheduleScreen() {
                 </View>
 
                 <View style={styles.weekRow}>
-                  {DAYS_OF_WEEK.map((d) => (
-                    <Text key={d} style={styles.weekLabel}>
+                  {DAYS_OF_WEEK.map((d, index) => (
+                    <Text key={`dow-${d}-${index}`} style={styles.weekLabel}>
                       {d}
                     </Text>
                   ))}
                 </View>
 
-                {calendarGrid.map((row, ridx) => (
+                {calendarRows.map((row, ridx) => (
                   <View key={`row-${ridx}`} style={styles.gridRow}>
                     {row.map((slot, sidx) => {
                       const dateKey = formatScheduleDateKey(slot.date);
@@ -1059,19 +1253,19 @@ export default function ScheduleScreen() {
                     {selectedDate.getDate()}{" "}
                     {MONTHS[selectedDate.getMonth()].toUpperCase()}
                   </Text>
-                  <Pressable
+                  <TouchableOpacity
                     onPress={() => openAddTaskModal(selectedDate)}
-                    style={({ pressed }) => [
-                      styles.quickAddBtn,
-                      { opacity: pressed ? 0.7 : 1 },
-                    ]}
+                    style={styles.quickAddBtn}
+                    activeOpacity={0.8}
+                    accessibilityRole="button"
+                    accessibilityLabel="Add scheduled task for selected day"
                   >
                     <MaterialCommunityIcons
-                      name="plus-circle-outline"
-                      size={24}
-                      color={ChickIntelPalette.green1}
+                      name="plus"
+                      size={20}
+                      color="#FFF"
                     />
-                  </Pressable>
+                  </TouchableOpacity>
                 </View>
                 <View style={styles.taskList}>
                   {loadingTasks ? (
@@ -1211,7 +1405,7 @@ export default function ScheduleScreen() {
             >
               {/* Timeframe Filter Bar (Matching Reports Page Design) */}
               <View style={styles.previewTimeframeBar}>
-                <Text style={styles.previewTimeframeLabel}>TASKS PREVIEW</Text>
+                <Text style={styles.previewTimeframeLabel}>TASKS HISTORY</Text>
                 <View style={styles.previewSegmentedContainer}>
                   {PREVIEW_TIMEFRAME_OPTIONS.map((option) => {
                     const active = previewTimeframe === option;
@@ -1429,30 +1623,125 @@ export default function ScheduleScreen() {
         </View>
       </ScrollView>
 
-      {/* Add Event Modal */}
+      {/* Add Task Modal */}
       <Modal
         visible={isAddModalVisible}
-        transparent
-        animationType="fade"
+        animationType="slide"
+        presentationStyle="fullScreen"
+        statusBarTranslucent
+        navigationBarTranslucent
         onRequestClose={closeAddTaskModal}
       >
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 10 : 0}
-        >
-          <View style={styles.modalBackdrop}>
-            <View style={styles.modalContent}>
-              <ScrollView
-                showsVerticalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
-                keyboardDismissMode="on-drag"
-              >
-                <Text style={styles.modalTitle}>Add to Schedule</Text>
+        <View style={styles.modalScreen}>
+          <BackgroundGradient
+            width="110%"
+            height="110%"
+            preserveAspectRatio="xMidYMid slice"
+            style={[
+              StyleSheet.absoluteFill,
+              { transform: [{ scale: 1.08 }, { translateY: -14 }] },
+            ]}
+          />
+          <StatusBar style="dark" />
+          <KeyboardAvoidingView
+            style={styles.modalKeyboardArea}
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            keyboardVerticalOffset={insets.top}
+          >
+            <View
+              style={[
+                styles.modalHeaderContainer,
+                { paddingTop: insets.top + 10 },
+              ]}
+            >
+              <View style={styles.modalTopBar}>
+                <TouchableOpacity
+                  onPress={closeAddTaskModal}
+                  style={styles.modalBackButton}
+                  activeOpacity={0.8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Go back"
+                >
+                  <MaterialCommunityIcons
+                    name="arrow-left"
+                    size={22}
+                    color="#FFF"
+                  />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.modalTitleCard}>
+                <View style={styles.modalKickerRow}>
+                  <MaterialCommunityIcons
+                    name="calendar-clock-outline"
+                    size={15}
+                    color="#CAE3DD"
+                  />
+                  <Text style={styles.modalKickerText}>Schedule routine</Text>
+                </View>
+                <Text style={styles.modalPageTitle}>Add New Task</Text>
+                <Text style={styles.modalPageSubtitle}>
+                  Set up feeding, treatment, egg collection, or custom flock tasks.
+                </Text>
+              </View>
+
+              <View style={styles.modalSummaryChipRow}>
+                <View style={styles.modalSummaryChip}>
+                  <MaterialCommunityIcons
+                    name="clipboard-list-outline"
+                    size={12}
+                    color={ChickIntelPalette.green1}
+                  />
+                  <Text style={styles.modalSummaryChipText} numberOfLines={1}>
+                    {newTaskTitle || "Task"}
+                  </Text>
+                </View>
+                <View style={styles.modalSummaryChip}>
+                  <MaterialCommunityIcons
+                    name="clock-outline"
+                    size={12}
+                    color={ChickIntelPalette.green1}
+                  />
+                  <Text style={styles.modalSummaryChipText} numberOfLines={1}>
+                    {formatDisplayTime(formatTimeValue(newTaskStartDate))}
+                  </Text>
+                </View>
+                <View style={styles.modalSummaryChip}>
+                  <MaterialCommunityIcons
+                    name="repeat"
+                    size={12}
+                    color={ChickIntelPalette.green1}
+                  />
+                  <Text style={styles.modalSummaryChipText} numberOfLines={1}>
+                    {repeat === "Never" ? "One-time" : repeat}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            <ScrollView
+              contentContainerStyle={[
+                styles.modalScrollContent,
+                { paddingBottom: insets.bottom + 24 },
+              ]}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+            >
+              <View style={styles.modalFormSection}>
+                <View style={styles.modalFormSectionHeader}>
+                  <MaterialCommunityIcons
+                    name="clipboard-text-outline"
+                    size={18}
+                    color={ChickIntelPalette.green1}
+                  />
+                  <Text style={styles.modalFormSectionTitle}>Task details</Text>
+                </View>
 
                 <ChickSelectRow
-                  label="Select task"
                   value={newTaskTitle}
+                  placeholder="Select Task"
+                  rowStyle={styles.compactSelectRow}
                   onPress={() =>
                     setSelectionModal({
                       visible: true,
@@ -1467,9 +1756,9 @@ export default function ScheduleScreen() {
                 {newTaskTitle !== "Egg Collecting" ? (
                   <>
                     <ChickSelectRow
-                      label="Inventory item"
                       value={newConsumableInventoryName}
                       placeholder="Choose inventory item"
+                      rowStyle={styles.compactSelectRow}
                       onPress={() => {
                         const filteredOptions = getFilteredInventoryOptions();
                         if (filteredOptions.length === 0) {
@@ -1508,90 +1797,196 @@ export default function ScheduleScreen() {
                         });
                       }}
                     />
+
                     {newConsumableInventoryQty !== null ? (
-                      <Text style={styles.feedStockHint}>
-                        Available stock:{" "}
-                        {formatQuantityValue(newConsumableInventoryQty)}{" "}
-                        {newConsumableInventoryUnit || "unit"}
-                      </Text>
-                    ) : null}
-                    <ChickField label="Task quantity">
-                      <ChickTextInput
-                        placeholder="Enter amount to deduct when time is reached"
-                        keyboardType="decimal-pad"
-                        value={newConsumableDailyAmount}
-                        onChangeText={setNewConsumableDailyAmount}
-                        style={styles.feedAmountInput}
-                      />
-                      {newConsumableInventoryUnit ? (
-                        <Text style={styles.feedUnitHint}>
-                          Uses inventory unit: {newConsumableInventoryUnit}
+                      <View style={styles.addModalInfoCallout}>
+                        <MaterialCommunityIcons
+                          name="cube-outline"
+                          size={16}
+                          color={ChickIntelPalette.green1}
+                        />
+                        <Text style={styles.addModalInfoText}>
+                          Available in stock:{" "}
+                          <Text
+                            style={{
+                              fontWeight: "700",
+                              color: ChickIntelPalette.gray1,
+                            }}
+                          >
+                            {formatQuantityValue(newConsumableInventoryQty)}{" "}
+                            {newConsumableInventoryUnit || "unit"}
+                          </Text>
                         </Text>
-                      ) : null}
-                    </ChickField>
+                      </View>
+                    ) : null}
+
+                    <ChickTextInput
+                      placeholder="Quantity to deduct per run"
+                      keyboardType="decimal-pad"
+                      value={newConsumableDailyAmount}
+                      onChangeText={setNewConsumableDailyAmount}
+                      style={styles.compactInput}
+                    />
+
+                    {newConsumableInventoryUnit ? (
+                      <View style={styles.addModalInfoCallout}>
+                        <MaterialCommunityIcons
+                          name="scale-balance"
+                          size={16}
+                          color={ChickIntelPalette.green1}
+                        />
+                        <Text style={styles.addModalInfoText}>
+                          Deducts using inventory unit:{" "}
+                          <Text
+                            style={{
+                              fontWeight: "700",
+                              color: ChickIntelPalette.gray1,
+                            }}
+                          >
+                            {newConsumableInventoryUnit}
+                          </Text>
+                        </Text>
+                      </View>
+                    ) : null}
                   </>
                 ) : null}
+              </View>
 
-                <View style={styles.modalFormRow}>
-                  <ChickField label="Time" style={{ flex: 1 }}>
-                    <TouchableOpacity
-                      style={styles.iconValueRow}
-                      onPress={() => setShowTimePicker(true)}
-                      activeOpacity={0.85}
-                    >
-                      <Text style={styles.iconValueText}>
-                        {formatDisplayTime(formatTimeValue(newTaskStartDate))}
-                      </Text>
-                      <MaterialCommunityIcons
-                        name="clock-outline"
-                        size={18}
-                        color={ChickIntelPalette.gray1}
-                      />
-                    </TouchableOpacity>
-                  </ChickField>
+              <View style={styles.modalFormSection}>
+                <View style={styles.modalFormSectionHeader}>
+                  <MaterialCommunityIcons
+                    name="calendar-month-outline"
+                    size={18}
+                    color={ChickIntelPalette.green1}
+                  />
+                  <Text style={styles.modalFormSectionTitle}>
+                    Schedule & timing
+                  </Text>
                 </View>
 
-                <View style={styles.modalFormRow}>
-                  <ChickField label="Start Date" style={{ flex: 1 }}>
-                    <TouchableOpacity
-                      style={styles.iconValueRow}
-                      onPress={() => setShowStartDatePicker(true)}
-                      activeOpacity={0.85}
-                    >
-                      <Text style={styles.iconValueText}>
-                        {formatAppDate(newTaskStartDate)}
-                      </Text>
-                      <MaterialCommunityIcons
-                        name="calendar-outline"
-                        size={18}
-                        color={ChickIntelPalette.gray1}
-                      />
-                    </TouchableOpacity>
-                  </ChickField>
-                  <ChickField label="End Date" style={{ flex: 1 }}>
-                    <TouchableOpacity
-                      style={styles.iconValueRow}
-                      onPress={() => setShowEndDatePicker(true)}
-                      activeOpacity={0.85}
-                    >
-                      <Text style={styles.iconValueText}>
-                        {formatAppDate(newTaskEndDate)}
-                      </Text>
-                      <MaterialCommunityIcons
-                        name="calendar-range-outline"
-                        size={18}
-                        color={ChickIntelPalette.gray1}
-                      />
-                    </TouchableOpacity>
-                  </ChickField>
-                </View>
+                {/* Time Picker Row */}
+                <TouchableOpacity
+                  style={styles.dateRow}
+                  onPress={() => setShowTimePicker(true)}
+                  activeOpacity={0.85}
+                >
+                  <View style={styles.dateRowCopy}>
+                    <MaterialCommunityIcons
+                      name="clock-outline"
+                      size={18}
+                      color={ChickIntelPalette.green1}
+                    />
+                    <Text style={styles.dateRowText}>
+                      Time: {formatDisplayTime(formatTimeValue(newTaskStartDate))}
+                    </Text>
+                  </View>
+                  <MaterialCommunityIcons
+                    name="chevron-right"
+                    size={20}
+                    color={ChickIntelPalette.gray2}
+                  />
+                </TouchableOpacity>
+                <ChickTimePickerModal
+                  visible={showTimePicker}
+                  value={newTaskStartDate}
+                  onConfirm={(date) => {
+                    setShowTimePicker(false);
+                    setNewTaskStartDate(date);
+                  }}
+                  onCancel={() => setShowTimePicker(false)}
+                  title="SELECT TIME"
+                />
+
+                {/* Start Date Picker Row */}
+                <TouchableOpacity
+                  style={styles.dateRow}
+                  onPress={() => setShowStartDatePicker(true)}
+                  activeOpacity={0.85}
+                >
+                  <View style={styles.dateRowCopy}>
+                    <MaterialCommunityIcons
+                      name="calendar-blank-outline"
+                      size={18}
+                      color={ChickIntelPalette.green1}
+                    />
+                    <Text style={styles.dateRowText}>
+                      Start date: {formatAppDate(newTaskStartDate)}
+                    </Text>
+                  </View>
+                  <MaterialCommunityIcons
+                    name="chevron-right"
+                    size={20}
+                    color={ChickIntelPalette.gray2}
+                  />
+                </TouchableOpacity>
+                <ChickDatePickerModal
+                  visible={showStartDatePicker}
+                  value={newTaskStartDate}
+                  onConfirm={(date) => {
+                    setShowStartDatePicker(false);
+                    setNewTaskStartDate(date);
+                    if (date > newTaskEndDate) {
+                      setNewTaskEndDate(date);
+                      endDateManuallySetRef.current = false;
+                    }
+                  }}
+                  onCancel={() => setShowStartDatePicker(false)}
+                />
+
+                {/* End Date Picker Row */}
+                <TouchableOpacity
+                  style={styles.dateRow}
+                  onPress={() => setShowEndDatePicker(true)}
+                  activeOpacity={0.85}
+                >
+                  <View style={styles.dateRowCopy}>
+                    <MaterialCommunityIcons
+                      name="calendar-range-outline"
+                      size={18}
+                      color={ChickIntelPalette.green1}
+                    />
+                    <Text style={styles.dateRowText}>
+                      End date: {formatAppDate(newTaskEndDate)}
+                    </Text>
+                  </View>
+                  <MaterialCommunityIcons
+                    name="chevron-right"
+                    size={20}
+                    color={ChickIntelPalette.gray2}
+                  />
+                </TouchableOpacity>
+                <ChickDatePickerModal
+                  visible={showEndDatePicker}
+                  value={newTaskEndDate}
+                  minDate={newTaskStartDate}
+                  onConfirm={(date) => {
+                    setShowEndDatePicker(false);
+                    if (date < newTaskStartDate) {
+                      Alert.alert(
+                        "Invalid Date Range",
+                        "End Date cannot be earlier than Start Date.",
+                      );
+                    } else {
+                      setNewTaskEndDate(date);
+                      endDateManuallySetRef.current = true;
+                    }
+                  }}
+                  onCancel={() => setShowEndDatePicker(false)}
+                />
+
+                {/* Repeat Picker Row */}
                 <ChickSelectRow
-                  label="Repeat"
-                  value={repeat}
+                  value={
+                    repeat === "Never"
+                      ? "Does not repeat (One-time)"
+                      : `Repeats ${repeat}`
+                  }
+                  placeholder="Select Repeat Frequency"
+                  rowStyle={styles.compactSelectRow}
                   onPress={() =>
                     setSelectionModal({
                       visible: true,
-                      title: "Select Repeat",
+                      title: "Select Repeat Frequency",
                       options: [
                         "Never",
                         "Daily",
@@ -1605,144 +2000,74 @@ export default function ScheduleScreen() {
                     })
                   }
                 />
+
                 {repeat === "Custom" && (
                   <View style={styles.customRepeatContainer}>
+                    <Text style={styles.customRepeatLabel}>
+                      Select repeat days:
+                    </Text>
                     <View style={styles.customRepeatRow}>
-                      {DAYS_OF_WEEK.slice(0, 4).map((day) => (
-                        <TouchableOpacity
-                          key={day}
-                          style={[
-                            styles.daySelector,
-                            customRepeatDays.includes(day) &&
-                              styles.daySelectorSelected,
-                          ]}
-                          onPress={() => {
-                            setCustomRepeatDays((prev) =>
-                              prev.includes(day)
-                                ? prev.filter((d) => d !== day)
-                                : [...prev, day],
-                            );
-                          }}
-                        >
-                          <Text
+                      {DAYS_OF_WEEK.map((day) => {
+                        const isSelected = customRepeatDays.includes(day);
+                        return (
+                          <TouchableOpacity
+                            key={day}
                             style={[
-                              styles.daySelectorText,
-                              customRepeatDays.includes(day) &&
-                                styles.daySelectorTextSelected,
+                              styles.daySelector,
+                              isSelected && styles.daySelectorSelected,
                             ]}
+                            onPress={() => {
+                              setCustomRepeatDays((prev) =>
+                                prev.includes(day)
+                                  ? prev.filter((d) => d !== day)
+                                  : [...prev, day],
+                              );
+                            }}
+                            activeOpacity={0.8}
                           >
-                            {day}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                    <View style={styles.customRepeatRow}>
-                      {DAYS_OF_WEEK.slice(4).map((day) => (
-                        <TouchableOpacity
-                          key={day}
-                          style={[
-                            styles.daySelector,
-                            customRepeatDays.includes(day) &&
-                              styles.daySelectorSelected,
-                          ]}
-                          onPress={() => {
-                            setCustomRepeatDays((prev) =>
-                              prev.includes(day)
-                                ? prev.filter((d) => d !== day)
-                                : [...prev, day],
-                            );
-                          }}
-                        >
-                          <Text
-                            style={[
-                              styles.daySelectorText,
-                              customRepeatDays.includes(day) &&
-                                styles.daySelectorTextSelected,
-                            ]}
-                          >
-                            {day}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
+                            <Text
+                              style={[
+                                styles.daySelectorText,
+                                isSelected && styles.daySelectorTextSelected,
+                              ]}
+                            >
+                              {day}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
                     </View>
                   </View>
                 )}
+              </View>
 
-                <View style={styles.modalActions}>
-                  <Pressable
-                    onPress={closeAddTaskModal}
-                    style={styles.modalBtnCancel}
-                  >
-                    <Text style={styles.modalBtnTextCancel}>Cancel</Text>
-                  </Pressable>
-                  <Pressable
-                    onPress={handleAddEvent}
-                    style={styles.modalBtnAdd}
-                  >
-                    <Text style={styles.modalBtnTextAdd}>Add Task</Text>
-                  </Pressable>
-                </View>
-              </ScrollView>
-            </View>
-          </View>
-        </KeyboardAvoidingView>
+              {/* Action Buttons */}
+              <View style={styles.modalActionRow}>
+                <TouchableOpacity
+                  style={styles.modalCancelButton}
+                  onPress={closeAddTaskModal}
+                  activeOpacity={0.8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Cancel adding task"
+                >
+                  <Text style={styles.modalCancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.modalSaveButton,
+                    { opacity: pressed ? 0.9 : 1 },
+                  ]}
+                  onPress={handleAddEvent}
+                  accessibilityRole="button"
+                  accessibilityLabel="Add scheduled task"
+                >
+                  <Text style={styles.modalSaveButtonText}>Add Task</Text>
+                </Pressable>
+              </View>
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </View>
       </Modal>
-
-      {showStartDatePicker && (
-        <DateTimePicker
-          value={newTaskStartDate}
-          mode="date"
-          display="default"
-          onChange={(event, date) => {
-            setShowStartDatePicker(false);
-            if (date) {
-              setNewTaskStartDate(date);
-              if (date > newTaskEndDate) {
-                setNewTaskEndDate(date);
-                endDateManuallySetRef.current = false;
-              }
-            }
-          }}
-          accentColor={ChickIntelPalette.green1}
-          themeVariant={isDark ? "dark" : "light"}
-        />
-      )}
-      {showEndDatePicker && (
-        <DateTimePicker
-          value={newTaskEndDate}
-          mode="date"
-          display="default"
-          onChange={(event, date) => {
-            setShowEndDatePicker(false);
-            if (date) {
-              if (date < newTaskStartDate) {
-                Alert.alert(
-                  "Invalid Date Range",
-                  "End Date cannot be earlier than Start Date.",
-                );
-              } else {
-                setNewTaskEndDate(date);
-                endDateManuallySetRef.current = true;
-              }
-            }
-          }}
-          accentColor={ChickIntelPalette.green1}
-          themeVariant={isDark ? "dark" : "light"}
-        />
-      )}
-      {showTimePicker && (
-        <DateTimePicker
-          value={newTaskStartDate}
-          mode="time"
-          display="default"
-          onChange={(event, date) => {
-            setShowTimePicker(false);
-            if (date) setNewTaskStartDate(date);
-          }}
-          accentColor={ChickIntelPalette.green1}
-          themeVariant={isDark ? "dark" : "light"}
-        />
-      )}
 
       {/* Selection Modal */}
       <Modal
@@ -1790,12 +2115,17 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   headerTitle: {
+    flex: 1,
+    textAlign: "center",
     fontFamily: ChickFont.display,
     fontSize: responsiveFontSize(20),
     lineHeight: 30,
     fontWeight: "800",
     letterSpacing: -0.55,
     color: ChickIntelPalette.gray1,
+  },
+  headerRightPlaceholder: {
+    width: scale(42),
   },
   backButton: {
     width: scale(42),
@@ -1811,6 +2141,22 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     shadowOffset: { width: scale(0), height: verticalScale(4) },
     elevation: 4,
+  },
+  addButton: {
+    width: scale(42),
+    height: verticalScale(42),
+    borderRadius: 14,
+    backgroundColor: ChickIntelPalette.green1,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.25)",
+    shadowColor: "#317667",
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
+    shadowOffset: { width: scale(0), height: verticalScale(4) },
+    elevation: 4,
+    flexShrink: 0,
   },
   contentShell: {
     width: "100%",
@@ -1831,6 +2177,42 @@ const styles = StyleSheet.create({
   },
   monthCol: {
     paddingHorizontal: moderateScale(8),
+  },
+  calendarModeSelectorWrap: {
+    alignItems: "center",
+    marginBottom: verticalScale(10),
+  },
+  calendarModeSelector: {
+    flexDirection: "row",
+    backgroundColor: "rgba(49, 118, 103, 0.08)",
+    borderRadius: 12,
+    padding: 3,
+  },
+  calendarModeTab: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: verticalScale(6),
+    paddingHorizontal: moderateScale(16),
+    borderRadius: 9,
+  },
+  calendarModeTabActive: {
+    backgroundColor: ChickIntelPalette.green1,
+    shadowColor: ChickIntelPalette.green1,
+    shadowOpacity: 0.22,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  calendarModeTabText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12),
+    fontWeight: "600",
+    color: ChickIntelPalette.gray2,
+  },
+  calendarModeTabTextActive: {
+    color: "#FFFFFF",
+    fontWeight: "800",
   },
   monthNavRow: {
     flexDirection: "row",
@@ -1928,7 +2310,17 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
   },
   quickAddBtn: {
-    padding: moderateScale(4),
+    width: scale(32),
+    height: scale(32),
+    borderRadius: 10,
+    backgroundColor: ChickIntelPalette.green1,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#317667",
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
   },
   taskList: {
     gap: 8,
@@ -2006,120 +2398,241 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontStyle: "italic",
   },
-  // Modal Styles
-  modalBackdrop: {
+  // Add Task Modal (Matching Inventory Add Item Design)
+  modalScreen: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.45)",
-    justifyContent: "center",
-    padding: moderateScale(20),
-  },
-  modalContent: {
     backgroundColor: ChickIntelPalette.light1,
-    borderRadius: 5,
-    padding: moderateScale(16),
-    gap: 14,
-    borderWidth: 1,
-    borderColor: ChickIntelPalette.lightGreen,
   },
-  modalTitle: {
+  modalKeyboardArea: {
+    flex: 1,
+  },
+  modalHeaderContainer: {
+    paddingHorizontal: moderateScale(16),
+    gap: 12,
+    flexShrink: 0,
+    paddingBottom: 12,
+  },
+  modalTopBar: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  modalBackButton: {
+    width: scale(42),
+    height: verticalScale(42),
+    borderRadius: 14,
+    backgroundColor: ChickIntelPalette.green1,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.25)",
+    shadowColor: "#317667",
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
+    shadowOffset: { width: scale(0), height: verticalScale(4) },
+    elevation: 4,
+    flexShrink: 0,
+  },
+  modalTitleCard: {
+    borderRadius: 14,
+    paddingHorizontal: moderateScale(16),
+    paddingVertical: verticalScale(14),
+    backgroundColor: ChickIntelPalette.green1,
+    gap: 4,
+  },
+  modalKickerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  modalKickerText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(11),
+    fontWeight: "800",
+    letterSpacing: 0.55,
+    textTransform: "uppercase",
+    color: "#CAE3DD",
+  },
+  modalPageTitle: {
     fontFamily: ChickFont.display,
-    fontSize: responsiveFontSize(16),
-    fontWeight: "600",
+    fontSize: responsiveFontSize(20),
+    lineHeight: 26,
+    fontWeight: "800",
+    letterSpacing: -0.4,
+    color: "#FFFFFF",
+  },
+  modalPageSubtitle: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12),
+    lineHeight: 17,
+    fontWeight: "500",
+    color: "rgba(255, 255, 255, 0.88)",
+  },
+  modalSummaryChipRow: {
+    flexDirection: "row",
+    gap: 6,
+  },
+  modalSummaryChip: {
+    flex: 1,
+    minHeight: verticalScale(26),
+    paddingVertical: verticalScale(3),
+    paddingHorizontal: moderateScale(6),
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+    borderRadius: 8,
+    backgroundColor: "rgba(254, 254, 254, 0.72)",
+  },
+  modalSummaryChipText: {
+    flexShrink: 1,
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(10),
+    fontWeight: "700",
+    color: ChickIntelPalette.gray1,
+  },
+  modalScrollContent: {
+    paddingHorizontal: moderateScale(16),
+    gap: 12,
+    paddingTop: verticalScale(4),
+  },
+  modalFormSection: {
+    gap: 10,
+    borderRadius: 16,
+    paddingHorizontal: moderateScale(14),
+    paddingVertical: verticalScale(14),
+    backgroundColor: "rgba(254, 254, 254, 0.92)",
+  },
+  modalFormSectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  modalFormSectionTitle: {
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(14),
+    fontWeight: "800",
     letterSpacing: -0.15,
     color: ChickIntelPalette.gray1,
-    marginBottom: 4,
   },
-  iconValueRow: {
+  addModalInfoCallout: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: "rgba(254, 254, 254, 0.72)",
-    borderRadius: 5,
-    borderWidth: 1,
-    borderColor: "rgba(67, 139, 123, 0.22)",
-    paddingHorizontal: moderateScale(14),
-    paddingVertical: verticalScale(12),
+    alignItems: "flex-start",
+    gap: 8,
+    borderRadius: 12,
+    paddingHorizontal: moderateScale(12),
+    paddingVertical: verticalScale(10),
+    backgroundColor: "rgba(202, 227, 221, 0.28)",
   },
-  iconValueText: {
-    color: ChickIntelPalette.gray1,
+  addModalInfoText: {
+    flex: 1,
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(15),
+    fontSize: responsiveFontSize(11),
+    lineHeight: 16,
     fontWeight: "600",
+    color: ChickIntelPalette.gray2,
   },
-  feedAmountInput: {
+  compactSelectRow: {
     minHeight: verticalScale(46),
-    borderRadius: 5,
+    paddingVertical: verticalScale(11),
+    borderRadius: 12,
+    backgroundColor: "rgba(244, 248, 247, 0.96)",
   },
-  feedUnitHint: {
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(11),
-    fontWeight: "500",
-    color: ChickIntelPalette.gray1,
-    opacity: 0.65,
-    marginTop: 4,
+  compactInput: {
+    minHeight: verticalScale(46),
+    paddingVertical: verticalScale(11),
+    borderRadius: 12,
+    backgroundColor: "rgba(244, 248, 247, 0.96)",
   },
-  feedStockHint: {
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(11),
-    fontWeight: "600",
-    color: ChickIntelPalette.green1,
-    marginTop: 3,
-  },
-  modalFormRow: {
+  dateRow: {
     flexDirection: "row",
-    gap: 12,
-  },
-  modalActions: {
-    flexDirection: "row",
-    gap: 12,
-    marginTop: 10,
-  },
-  modalBtnCancel: {
-    flex: 1,
-    backgroundColor: "rgba(254, 254, 254, 0.72)",
-    borderRadius: 5,
-    paddingVertical: verticalScale(14),
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "space-between",
+    minHeight: verticalScale(46),
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: "rgba(67, 139, 123, 0.22)",
+    backgroundColor: "rgba(244, 248, 247, 0.96)",
+    paddingHorizontal: moderateScale(14),
+    paddingVertical: verticalScale(10),
   },
-  modalBtnAdd: {
+  dateRowCopy: {
     flex: 1,
-    backgroundColor: ChickIntelPalette.green1,
-    paddingVertical: verticalScale(14),
-    borderRadius: 5,
+    minWidth: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  dateRowText: {
+    flexShrink: 1,
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(14),
+    fontWeight: "700",
+    color: ChickIntelPalette.gray1,
+  },
+  modalActionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginTop: verticalScale(4),
+    marginBottom: verticalScale(12),
+  },
+  modalCancelButton: {
+    flex: 1,
+    height: verticalScale(52),
+    borderRadius: 14,
+    backgroundColor: "rgba(254, 254, 254, 0.88)",
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.18)",
     alignItems: "center",
     justifyContent: "center",
   },
-  modalBtnTextCancel: {
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(15),
-    fontWeight: "600",
+  modalCancelButtonText: {
     color: ChickIntelPalette.gray1,
-    opacity: 0.7,
-  },
-  modalBtnTextAdd: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(15),
     fontWeight: "700",
+  },
+  modalSaveButton: {
+    flex: 1,
+    height: verticalScale(52),
+    borderRadius: 14,
+    backgroundColor: ChickIntelPalette.green1,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#317667",
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    shadowOffset: { width: scale(0), height: verticalScale(4) },
+    elevation: 3,
+  },
+  modalSaveButtonText: {
     color: "#FFF",
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(15),
+    fontWeight: "700",
   },
   customRepeatContainer: {
     gap: 8,
-    marginTop: 10,
+    marginTop: 4,
+  },
+  customRepeatLabel: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12),
+    fontWeight: "700",
+    color: ChickIntelPalette.gray1,
   },
   customRepeatRow: {
     flexDirection: "row",
-    gap: 6,
+    gap: 5,
   },
   daySelector: {
     flex: 1,
     minWidth: scale(0),
     borderWidth: 1,
-    borderColor: ChickIntelPalette.lightGreen,
-    borderRadius: 4,
-    paddingVertical: verticalScale(7),
+    borderColor: "rgba(49, 118, 103, 0.22)",
+    backgroundColor: "rgba(244, 248, 247, 0.96)",
+    borderRadius: 8,
+    paddingVertical: verticalScale(8),
     paddingHorizontal: moderateScale(2),
     alignItems: "center",
     justifyContent: "center",
@@ -2131,9 +2644,8 @@ const styles = StyleSheet.create({
   daySelectorText: {
     color: ChickIntelPalette.gray1,
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(10),
+    fontSize: responsiveFontSize(11),
     fontWeight: "700",
-    letterSpacing: -0.2,
   },
   daySelectorTextSelected: {
     color: "#FFF",

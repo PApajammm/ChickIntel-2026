@@ -330,6 +330,8 @@ const styles = StyleSheet.create({
     letterSpacing: -0.55,
     color: ChickIntelPalette.gray1,
     flex: 1,
+    textAlign: "center",
+    paddingLeft: 30,
   },
   cardSpacer: {
     height: verticalScale(8),
