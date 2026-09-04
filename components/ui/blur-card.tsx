@@ -3,7 +3,6 @@ import { PropsWithChildren } from "react";
 import { Platform, StyleProp, StyleSheet, View, ViewStyle } from "react-native";
 
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
-import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useResponsiveScale } from "@/utils/responsive";
 
 type BlurCardProps = PropsWithChildren<{
@@ -82,7 +81,6 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   inner: {
-    flex: 1,
     zIndex: 1,
   },
 });
