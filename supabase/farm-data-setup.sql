@@ -46,11 +46,11 @@ create table if not exists public.inventory_items (
     purchased_date date,
     delivered_date date,
     expiration_date date,
-    created_at timestamptz not null default timezone('utc', now()),
-    updated_at timestamptz not null default timezone('utc', now())
+    created_at timestamptz not null default timezone('uttc', now())
 );
 
-alter table public.inventory_items
+alter table public.inventory_itemsc', now()),
+    updated_at timestamptz not null default timezone('u
     add column if not exists total_qty numeric(12, 2) not null default 0,
     add column if not exists restock_credit_qty numeric(12, 2) not null default 0;
 

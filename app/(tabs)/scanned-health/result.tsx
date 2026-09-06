@@ -1,26 +1,26 @@
 import {
-    moderateScale,
-    responsiveFontSize,
-    scale,
-    verticalScale,
+  moderateScale,
+  responsiveFontSize,
+  scale,
+  verticalScale,
 } from "@/utils/responsive";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useMemo, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -29,8 +29,8 @@ import { HealthFlowFooterButton } from "@/components/health-scan/health-flow-foo
 import { HealthInputSummaryCard } from "@/components/health-scan/health-input-summary-card";
 import { HealthResultCard } from "@/components/health-scan/health-result-card";
 import {
-    ChickSelectRow,
-    ChickSelectionModal,
+  ChickSelectRow,
+  ChickSelectionModal,
 } from "@/components/ui/chick-form";
 import { ChickFont } from "@/constants/chick-fonts";
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
@@ -40,23 +40,23 @@ import { useBehaviors } from "@/hooks/use-behaviors";
 import { useAuth } from "@/providers/auth-provider";
 import type { BatchItem } from "@/utils/batch-store";
 import {
-    inferDiseaseFromImage,
-    type HealthImageInferenceResult,
+  inferDiseaseFromImage,
+  type HealthImageInferenceResult,
 } from "@/utils/health-image-inference";
 import { logError, logStep } from "@/utils/logger";
 import { fetchFarmBatches } from "@/utils/supabase-batches";
 import { mapBehaviorIdsToLabels } from "@/utils/supabase-behaviors";
 import {
-    detectDiseaseFromClassifierLabel,
-    type MatchedDisease,
+  detectDiseaseFromClassifierLabel,
+  type MatchedDisease,
 } from "@/utils/supabase-diseases";
 import { createHealthJournalEntry } from "@/utils/supabase-health-journal";
 import {
-    appendHealthLogToMonitoring,
-    createHealthMonitoringRecord,
-    doesChtTagExist,
-    formatChtTag,
-    getNextChtNumber,
+  appendHealthLogToMonitoring,
+  createHealthMonitoringRecord,
+  doesChtTagExist,
+  formatChtTag,
+  getNextChtNumber,
 } from "@/utils/supabase-health-monitoring";
 
 const MONITORABLE_DISEASES = ["Infectious Coryza", "Fowlpox"];
@@ -715,9 +715,7 @@ export default function ScannedHealthResultScreen() {
                   </View>
 
                   <View style={styles.chtInputCard}>
-                    <Text style={styles.chtInputLabel}>
-                      CHICHECK HEALTH TAG
-                    </Text>
+                    <Text style={styles.chtInputLabel}>CHICKEN HEALTH TAG</Text>
                     <View style={styles.chtRow}>
                       <Text style={styles.chtPrefix}>CHT-</Text>
                       <TextInput
@@ -789,15 +787,43 @@ export default function ScannedHealthResultScreen() {
           onRequestClose={() => setUpdateSuccessVisible(false)}
         >
           <View style={styles.modalBg}>
-            <View style={styles.modalCard}>
-              <Text style={styles.modalTitle}>Health scan updated</Text>
-              <Text style={styles.modalBody}>
-                {chtTag
-                  ? `${chtTag}'s monitoring record now shows this latest scan. Earlier scans are still saved in the history.`
-                  : "This chicken's monitoring record now shows the latest scan. Earlier scans are still saved in the history."}
-              </Text>
+            <View style={[styles.modalCard, styles.updateModalCard]}>
+              <View style={styles.updateModalHeader}>
+                <View style={styles.updateModalIconBadge}>
+                  <MaterialCommunityIcons
+                    name="check"
+                    size={24}
+                    color={ChickIntelPalette.green1}
+                  />
+                </View>
+                <View style={styles.updateModalHeaderText}>
+                  <Text style={styles.updateModalEyebrow}>SCAN SAVED</Text>
+                  <Text style={styles.updateModalTitle}>
+                    Health scan updated
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.updateModalBody}>
+                <Text style={styles.updateModalBodyText}>
+                  {chtTag
+                    ? `${chtTag}'s monitoring record now shows this latest scan.`
+                    : "This chicken's monitoring record now shows the latest scan."}
+                </Text>
+                <View style={styles.updateModalHistoryRow}>
+                  <MaterialCommunityIcons
+                    name="history"
+                    size={18}
+                    color={ChickIntelPalette.green1}
+                  />
+                  <Text style={styles.updateModalHistoryText}>
+                    Earlier scans are still saved in the history.
+                  </Text>
+                </View>
+              </View>
+
               <Pressable
-                style={styles.modalBtn}
+                style={styles.updateModalButton}
                 onPress={() => {
                   setUpdateSuccessVisible(false);
                   router.replace({
@@ -809,9 +835,14 @@ export default function ScannedHealthResultScreen() {
                   } as any);
                 }}
               >
-                <Text style={styles.modalBtnText}>
+                <Text style={styles.updateModalButtonText}>
                   Back to Health Monitoring
                 </Text>
+                <MaterialCommunityIcons
+                  name="arrow-right"
+                  size={18}
+                  color="#FFFFFF"
+                />
               </Pressable>
             </View>
           </View>
@@ -923,6 +954,88 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     shadowOffset: { width: scale(0), height: verticalScale(6) },
     elevation: 8,
+  },
+  updateModalCard: {
+    padding: moderateScale(16),
+  },
+  updateModalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingBottom: verticalScale(12),
+    borderBottomWidth: 1,
+    borderBottomColor: "#E6EEEC",
+  },
+  updateModalIconBadge: {
+    width: scale(48),
+    height: verticalScale(48),
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#E5F3EE",
+    borderWidth: 1,
+    borderColor: "#C5E4DA",
+  },
+  updateModalHeaderText: {
+    flex: 1,
+    minWidth: 0,
+  },
+  updateModalEyebrow: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(10),
+    fontWeight: "800",
+    letterSpacing: 1,
+    color: ChickIntelPalette.green1,
+    marginBottom: 3,
+  },
+  updateModalTitle: {
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(19),
+    lineHeight: 24,
+    fontWeight: "800",
+    color: ChickIntelPalette.gray1,
+  },
+  updateModalBody: {
+    paddingVertical: verticalScale(12),
+    gap: 9,
+  },
+  updateModalBodyText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(14),
+    lineHeight: 20,
+    color: "#4F5D5A",
+  },
+  updateModalHistoryRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    padding: moderateScale(9),
+    borderRadius: 10,
+    backgroundColor: "#F2F8F6",
+  },
+  updateModalHistoryText: {
+    flex: 1,
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12),
+    lineHeight: 17,
+    fontWeight: "600",
+    color: ChickIntelPalette.green1,
+  },
+  updateModalButton: {
+    minHeight: verticalScale(48),
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: ChickIntelPalette.green1,
+    paddingHorizontal: moderateScale(16),
+    borderRadius: 12,
+  },
+  updateModalButtonText: {
+    fontFamily: ChickFont.sans,
+    color: "#FFFFFF",
+    fontWeight: "800",
+    fontSize: responsiveFontSize(14),
   },
   modalHeader: {
     backgroundColor: ChickIntelPalette.green1,
