@@ -85,3 +85,68 @@ export async function cropPhotoToViewfinder({
     return { uri: photoUri, width: photoWidth, height: photoHeight };
   }
 }
+
+type OptimizeOptions = {
+  photoUri: string;
+  photoWidth: number;
+  photoHeight: number;
+  maxDimension?: number;
+  quality?: number;
+};
+
+/**
+ * Optimizes a full-frame photo for AI inference without cropping.
+ * Downscales images larger than maxDimension (default: 1024px) to reduce payload size
+ * and network latency while preserving full chicken morphology and aspect ratio.
+ */
+export async function optimizePhotoForInference({
+  photoUri,
+  photoWidth,
+  photoHeight,
+  maxDimension = 1024,
+  quality = 0.88,
+}: OptimizeOptions): Promise<{ uri: string; width: number; height: number }> {
+  try {
+    if (!photoUri) {
+      return { uri: photoUri, width: photoWidth, height: photoHeight };
+    }
+
+    const manipulateFn =
+      ImageManipulator.manipulateAsync ||
+      (ImageManipulator as any).default?.manipulateAsync;
+
+    if (!manipulateFn || typeof manipulateFn !== "function") {
+      return { uri: photoUri, width: photoWidth, height: photoHeight };
+    }
+
+    const format =
+      ImageManipulator.SaveFormat?.JPEG ??
+      (ImageManipulator as any).SaveFormat?.JPEG ??
+      "jpeg";
+
+    const actions: any[] = [];
+    const maxSide = Math.max(photoWidth || 0, photoHeight || 0);
+
+    if (maxSide > maxDimension && photoWidth > 0 && photoHeight > 0) {
+      if (photoWidth >= photoHeight) {
+        actions.push({ resize: { width: maxDimension } });
+      } else {
+        actions.push({ resize: { height: maxDimension } });
+      }
+    }
+
+    const result = await manipulateFn(photoUri, actions, {
+      compress: quality,
+      format,
+    });
+
+    return {
+      uri: result.uri,
+      width: result.width,
+      height: result.height,
+    };
+  } catch (error) {
+    console.warn("[image-crop-helper] Optimization skipped, returning original photo:", error);
+    return { uri: photoUri, width: photoWidth, height: photoHeight };
+  }
+}

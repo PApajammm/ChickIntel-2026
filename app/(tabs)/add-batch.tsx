@@ -1,9 +1,9 @@
 import BackgroundGradient from "@/assets_imported/background-gradient.svg";
 import {
-  moderateScale,
-  responsiveFontSize,
-  scale,
-  verticalScale,
+    moderateScale,
+    responsiveFontSize,
+    scale,
+    verticalScale,
 } from "@/utils/responsive";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import Slider from "@react-native-community/slider";
@@ -14,24 +14,24 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useMemo, useRef, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-  useWindowDimensions,
+    ActivityIndicator,
+    Alert,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
+    useWindowDimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
-  CameraViewport,
-  type CameraViewportRef,
+    CameraViewport,
+    type CameraViewportRef,
 } from "@/components/scanner/camera-viewport";
 import { ScannerShutter } from "@/components/scanner/scanner-shutter";
 import { ViewfinderOverlay } from "@/components/scanner/viewfinder-overlay";
@@ -39,10 +39,11 @@ import { ChickFont } from "@/constants/chick-fonts";
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
 import { useAuth } from "@/providers/auth-provider";
 import {
-  inferBreedFromImage,
-  isNonChickenClassifierLabel,
-  mapBreedPredictionToAttributes,
+    inferBreedFromImage,
+    mapBreedPredictionToAttributes,
+    resolveBestBreedPrediction,
 } from "@/utils/breed-image-inference";
+import { optimizePhotoForInference } from "@/utils/image-crop-helper";
 import { logError, logStep } from "@/utils/logger";
 import { addRecentBreedScan } from "@/utils/recent-breed-scans";
 import { createFarmBatch, fetchFarmBatches } from "@/utils/supabase-batches";
@@ -317,9 +318,16 @@ export default function AddBatchScreen() {
     }
 
     try {
-      const photo = await cam.takePictureAsync({
+      const rawPhoto = await cam.takePictureAsync({
         quality: 0.88,
         skipProcessing: Platform.OS === "ios",
+      });
+      const photo = await optimizePhotoForInference({
+        photoUri: rawPhoto.uri,
+        photoWidth: rawPhoto.width,
+        photoHeight: rawPhoto.height,
+        maxDimension: 1024,
+        quality: 0.88,
       });
 
       setCapturedPhotoUri(photo.uri);
@@ -327,9 +335,9 @@ export default function AddBatchScreen() {
 
       inferBreedFromImage(photo.uri)
         .then((inference) => {
-          const topPrediction = inference?.topPrediction;
+          const resolved = resolveBestBreedPrediction(inference);
 
-          if (!topPrediction) {
+          if (!resolved.prediction && !resolved.isNonChicken) {
             Alert.alert(
               "Breed detection unavailable",
               "We couldn't identify a breed from this photo. Please try again with a clearer view of the chicken.",
@@ -339,7 +347,7 @@ export default function AddBatchScreen() {
             return;
           }
 
-          if (isNonChickenClassifierLabel(topPrediction.className)) {
+          if (resolved.isNonChicken) {
             Alert.alert(
               "Non-chicken detected",
               "The captured image does not appear to contain a chicken. Retake the photo with the chicken clearly inside the frame.",
@@ -349,7 +357,9 @@ export default function AddBatchScreen() {
             return;
           }
 
-          const detectedBreed = mapBreedPredictionToAttributes(topPrediction);
+          const detectedBreed = mapBreedPredictionToAttributes(
+            resolved.prediction!,
+          );
 
           setBreed(detectedBreed.breedName);
           addRecentBreedScan({

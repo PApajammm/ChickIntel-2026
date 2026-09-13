@@ -1,49 +1,53 @@
 import {
-    moderateScale,
-    responsiveFontSize,
-    scale,
-    verticalScale,
+  moderateScale,
+  responsiveFontSize,
+  scale,
+  verticalScale,
 } from "@/utils/responsive";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { useIsFocused } from "@react-navigation/native";
+import * as FileSystem from "expo-file-system/legacy";
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import BackgroundGradient from "@/assets_imported/background-gradient.svg";
 import { AttributeList } from "@/components/breed-scan/attribute-list";
-import { BlurCard } from "@/components/ui/blur-card";
 import {
-    BREED_DETECTION_NOTE,
-    type BreedScanAttributes,
+  BREED_DETECTION_NOTE,
+  type BreedScanAttributes,
 } from "@/constants/breed-scan";
 import { ChickFont } from "@/constants/chick-fonts";
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
 import { HealthTypography } from "@/constants/health-typography";
 import {
-    inferBreedFromImage,
-    isNonChickenClassifierLabel,
-    mapBreedPredictionToAttributes,
+  inferBreedFromImage,
+  mapBreedPredictionToAttributes,
+  resolveBestBreedPrediction,
 } from "@/utils/breed-image-inference";
-import { logStep } from "@/utils/logger";
-import { addRecentBreedScan } from "@/utils/recent-breed-scans";
 
 export default function BreedResultScreen() {
   const router = useRouter();
+  const isFocused = useIsFocused();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ photoUri?: string }>();
 
   const photoUri = params.photoUri || "";
+  const photoUriRef = useRef(photoUri);
+  photoUriRef.current = photoUri;
+
   const [isAnalyzingImage, setIsAnalyzingImage] = useState(true);
   const [attributes, setAttributes] = useState<BreedScanAttributes | null>(
     null,
@@ -51,7 +55,23 @@ export default function BreedResultScreen() {
   const [isNonChicken, setIsNonChicken] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Automatically delete the temporary captured photo when the user leaves this screen
   useEffect(() => {
+    return () => {
+      const uriToDelete = photoUriRef.current;
+      if (uriToDelete) {
+        FileSystem.deleteAsync(uriToDelete, { idempotent: true }).catch(
+          (err) => {
+            // Silently ignore if already deleted or not accessible
+          },
+        );
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isFocused) return;
+
     if (!photoUri) {
       router.replace("/(tabs)/scanner");
       return;
@@ -61,59 +81,51 @@ export default function BreedResultScreen() {
     setIsAnalyzingImage(true);
     setError(null);
     setIsNonChicken(false);
+    setAttributes(null);
 
     inferBreedFromImage(photoUri)
       .then((inference) => {
         if (!active) return;
 
-        const topPrediction = inference?.topPrediction;
-        if (!topPrediction) {
+        const resolved = resolveBestBreedPrediction(inference);
+
+        if (resolved.isNonChicken) {
+          setIsNonChicken(true);
+          if (isFocused) {
+            Alert.alert(
+              "Non-chicken detected",
+              "The captured image does not appear to contain a chicken. Retake the photo with the chicken clearly inside the frame.",
+            );
+          }
+          return;
+        }
+
+        const validPrediction = resolved.prediction;
+        if (!validPrediction) {
           setError(
             "We couldn't identify a breed from this photo. Please try again.",
           );
-          Alert.alert(
-            "Breed detection unavailable",
-            "We couldn't identify a breed from this photo. Please try again with a clearer view of the chicken.",
-          );
+          if (isFocused) {
+            Alert.alert(
+              "Breed detection unavailable",
+              "We couldn't identify a breed from this photo. Please try again with a clearer view of the chicken.",
+            );
+          }
           return;
         }
 
-        if (isNonChickenClassifierLabel(topPrediction.className)) {
-          setIsNonChicken(true);
-          Alert.alert(
-            "Non-chicken detected",
-            "The captured image does not appear to contain a chicken. Retake the photo with the chicken clearly inside the frame.",
-          );
-          return;
-        }
-
-        const breed = mapBreedPredictionToAttributes(topPrediction);
+        const breed = mapBreedPredictionToAttributes(validPrediction);
         setAttributes(breed);
-
-        addRecentBreedScan({
-          breedName: breed.breedName,
-          photoUri: photoUri,
-          attributes: breed,
-        });
-
-        try {
-          logStep("Breed scan added to in-memory featured cards", {
-            breedName: breed.breedName,
-            modelId: inference?.modelId ?? "unknown",
-            retentionWindow: "3_days",
-            storage: "runtime_memory_only",
-          });
-        } catch {
-          // ignore
-        }
       })
       .catch((err) => {
         if (!active) return;
         setError("Unable to process the image. Please try again.");
-        Alert.alert(
-          "Scan failed",
-          "Unable to capture a breed photo right now.",
-        );
+        if (isFocused) {
+          Alert.alert(
+            "Scan failed",
+            "Unable to capture a breed photo right now.",
+          );
+        }
       })
       .finally(() => {
         if (active) {
@@ -124,7 +136,7 @@ export default function BreedResultScreen() {
     return () => {
       active = false;
     };
-  }, [photoUri, router]);
+  }, [isFocused, photoUri, router]);
 
   const attributeRows = useMemo(() => {
     if (!attributes) return [];
@@ -136,12 +148,18 @@ export default function BreedResultScreen() {
   }, [attributes]);
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top + 10 }]}>
+    <View style={styles.screen}>
+      <BackgroundGradient
+        width="110%"
+        height="110%"
+        preserveAspectRatio="xMidYMid slice"
+        style={[
+          StyleSheet.absoluteFill,
+          { transform: [{ scale: 1.08 }, { translateY: -14 }] },
+        ]}
+      />
       <StatusBar style="dark" />
-      <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingBottom: 15 }]}
-        showsVerticalScrollIndicator={false}
-      >
+      <View style={[styles.fixedHeader, { paddingTop: insets.top + 10 }]}>
         <View style={styles.headerRow}>
           <TouchableOpacity
             style={styles.backButton}
@@ -156,20 +174,58 @@ export default function BreedResultScreen() {
           >
             <MaterialCommunityIcons name="arrow-left" size={22} color="#FFF" />
           </TouchableOpacity>
-          <Text style={styles.pageTitle} numberOfLines={1}>Breed Result</Text>
+          <View style={styles.headerSpacer} />
           <View style={styles.headerRightPlaceholder} />
         </View>
-        <Text style={styles.pageSubtitle}>
-          {isAnalyzingImage
-            ? "Analyzing the captured image before displaying the profile."
-            : isNonChicken
-              ? "The scan did not identify a chicken in the frame."
-              : error
-                ? "Scan was unable to complete."
-                : "A quick profile of the detected breed, temperament, and type."}
-        </Text>
+      </View>
+      <ScrollView
+        contentContainerStyle={[
+          styles.scroll,
+          { paddingBottom: insets.bottom + 18 },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.titleCard}>
+          <View style={styles.kickerRow}>
+            <Text style={styles.cardTitle}>Breed Result</Text>
+          </View>
+        </View>
 
-        <BlurCard style={styles.card} borderRadius={24} intensity={18}>
+        <View style={styles.summaryChipRow}>
+          <View style={styles.summaryChip}>
+            <MaterialCommunityIcons
+              name="camera-outline"
+              size={12}
+              color={ChickIntelPalette.green1}
+            />
+            <Text style={styles.summaryChipText}>Scan frame</Text>
+          </View>
+          <View style={styles.summaryChip}>
+            <MaterialCommunityIcons
+              name="bird"
+              size={12}
+              color={ChickIntelPalette.green1}
+            />
+            <Text style={styles.summaryChipText} numberOfLines={1}>
+              {isNonChicken
+                ? "Review"
+                : attributes?.breedName ||
+                  (isAnalyzingImage ? "Analyzing" : "Review")}
+            </Text>
+          </View>
+          <View style={styles.summaryChip}>
+            <MaterialCommunityIcons
+              name="check-circle-outline"
+              size={12}
+              color={ChickIntelPalette.green1}
+            />
+            <Text style={styles.summaryChipText}>
+              {isNonChicken || error ? "Retry" : "Ready"}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.resultCard}>
           <View style={styles.cardInner}>
             <View style={styles.row}>
               <View style={styles.imageContainer}>
@@ -238,10 +294,17 @@ export default function BreedResultScreen() {
               </View>
             </View>
 
-            {!isAnalyzingImage && attributes && (
+            {!isAnalyzingImage && attributes && !isNonChicken && (
               <>
                 <View style={styles.divider} />
-                <Text style={styles.sectionTitle}>Breed information</Text>
+                <View style={styles.sectionHeader}>
+                  <MaterialCommunityIcons
+                    name="information-outline"
+                    size={18}
+                    color={ChickIntelPalette.green1}
+                  />
+                  <Text style={styles.sectionTitle}>Breed information</Text>
+                </View>
                 <AttributeList rows={attributeRows} />
                 <Text style={styles.note}>{BREED_DETECTION_NOTE}</Text>
               </>
@@ -259,12 +322,20 @@ export default function BreedResultScreen() {
               </>
             )}
           </View>
-        </BlurCard>
+        </View>
 
         <Pressable
-          style={styles.doneBtn}
+          style={({ pressed }) => [
+            styles.doneBtn,
+            { opacity: pressed ? 0.9 : 1 },
+          ]}
           onPress={() => router.replace("/(tabs)/scanner")}
         >
+          <MaterialCommunityIcons
+            name={isNonChicken || error ? "refresh" : "check"}
+            size={18}
+            color="#FFF"
+          />
           <Text style={styles.doneBtnText}>
             {isNonChicken || error ? "Scan Again" : "Done"}
           </Text>
@@ -281,25 +352,24 @@ const styles = StyleSheet.create({
   },
   scroll: {
     paddingHorizontal: moderateScale(16),
+    paddingTop: verticalScale(10),
     gap: 18,
+  },
+  fixedHeader: {
+    paddingHorizontal: moderateScale(16),
+    paddingBottom: verticalScale(8),
+    zIndex: 2,
   },
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
-  pageTitle: {
-    flex: 1,
-    textAlign: "center",
-    fontFamily: ChickFont.display,
-    fontSize: responsiveFontSize(20),
-    lineHeight: 28,
-    fontWeight: "800",
-    letterSpacing: -0.45,
-    color: ChickIntelPalette.gray1,
-  },
   headerRightPlaceholder: {
     width: scale(42),
+  },
+  headerSpacer: {
+    flex: 1,
   },
   backButton: {
     width: scale(42),
@@ -317,16 +387,59 @@ const styles = StyleSheet.create({
     elevation: 4,
     flexShrink: 0,
   },
-  pageSubtitle: {
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(13),
-    lineHeight: 18,
-    color: ChickIntelPalette.gray2,
-    marginTop: -8,
-    textAlign: "center",
+  titleCard: {
+    marginTop: verticalScale(0),
+    borderRadius: 10,
+    paddingHorizontal: moderateScale(16),
+    paddingVertical: verticalScale(14),
+    backgroundColor: ChickIntelPalette.green1,
+    gap: 4,
   },
-  card: {
-    borderRadius: 24,
+  kickerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+  },
+  cardTitle: {
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(22),
+    lineHeight: 28,
+    fontWeight: "800",
+    letterSpacing: -0.5,
+    color: "#FFFFFF",
+  },
+  summaryChipRow: {
+    flexDirection: "row",
+    gap: 6,
+    marginTop: verticalScale(-8),
+  },
+  summaryChip: {
+    flex: 1,
+    minHeight: verticalScale(30),
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+    borderRadius: 8,
+    paddingHorizontal: moderateScale(6),
+    backgroundColor: "rgba(254, 254, 254, 0.9)",
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.16)",
+  },
+  summaryChipText: {
+    flexShrink: 1,
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(10),
+    fontWeight: "700",
+    color: ChickIntelPalette.gray1,
+  },
+  resultCard: {
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "rgba(49,118,103,0.18)",
+    backgroundColor: "rgba(254, 254, 254, 0.78)",
+    padding: moderateScale(12),
   },
   cardInner: {
     paddingHorizontal: moderateScale(18),
@@ -458,6 +571,12 @@ const styles = StyleSheet.create({
     color: ChickIntelPalette.gray1,
     marginBottom: 4,
   },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+    marginBottom: 4,
+  },
   note: {
     ...HealthTypography.meta,
     fontSize: responsiveFontSize(11),
@@ -473,15 +592,17 @@ const styles = StyleSheet.create({
     color: ChickIntelPalette.gray2,
   },
   doneBtn: {
+    flexDirection: "row",
+    gap: 8,
     backgroundColor: ChickIntelPalette.green1,
-    paddingVertical: verticalScale(14),
-    borderRadius: 24,
+    height: verticalScale(52),
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    shadowOffset: { width: scale(0), height: verticalScale(4) },
+    shadowColor: "#317667",
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+    shadowOffset: { width: scale(0), height: verticalScale(5) },
     elevation: 3,
   },
   doneBtnText: {
