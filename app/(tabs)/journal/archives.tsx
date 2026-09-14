@@ -10,11 +10,8 @@ import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useState } from "react";
 import {
-    Alert,
     FlatList,
-    Modal,
     Platform,
-    Pressable,
     StyleSheet,
     Text,
     TouchableOpacity,
@@ -33,7 +30,6 @@ import { useAuth } from "@/providers/auth-provider";
 import { logError } from "@/utils/logger";
 import { mapBehaviorIdsToLabels } from "@/utils/supabase-behaviors";
 import {
-    clearArchivedHealthJournalEntries,
     fetchArchivedHealthJournalEntries,
     formatJournalDateTime,
     type HealthJournalSavedScan,
@@ -45,8 +41,6 @@ export default function ArchivesScreen() {
   const { activeFarm, configured } = useAuth();
   const [entries, setEntries] = useState<HealthJournalSavedScan[]>([]);
   const [refreshing, setRefreshing] = useState(false);
-  const [clearModalVisible, setClearModalVisible] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
   const { behaviors: behaviorItems } = useBehaviors();
 
   const handleBack = () => {
@@ -79,28 +73,6 @@ export default function ArchivesScreen() {
     void refresh();
   }, [refresh]);
 
-  async function handleClearArchives() {
-    if (!activeFarm?.id || isDeleting) return;
-
-    setIsDeleting(true);
-    try {
-      await clearArchivedHealthJournalEntries(activeFarm.id);
-      setEntries([]);
-      setClearModalVisible(false);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
-        () => null,
-      );
-    } catch (error) {
-      logError("Failed to clear archives", error, { farmId: activeFarm.id });
-      Alert.alert(
-        "Clear Archives Failed",
-        "Could not clear archived logs right now. Please try again.",
-      );
-    } finally {
-      setIsDeleting(false);
-    }
-  }
-
   return (
     <View style={styles.screen}>
       <BackgroundGradient
@@ -130,24 +102,7 @@ export default function ArchivesScreen() {
             <MaterialCommunityIcons name="arrow-left" size={22} color="#FFF" />
           </TouchableOpacity>
           <Text style={styles.title} numberOfLines={1}>Archives</Text>
-
-          {entries.length > 0 ? (
-            <TouchableOpacity
-              onPress={() => setClearModalVisible(true)}
-              style={styles.clearHeaderBtn}
-              activeOpacity={0.8}
-              accessibilityRole="button"
-              accessibilityLabel="Clear all archives"
-            >
-              <MaterialCommunityIcons
-                name="trash-can-outline"
-                size={22}
-                color="#FFF"
-              />
-            </TouchableOpacity>
-          ) : (
-            <View style={styles.headerRightPlaceholder} />
-          )}
+          <View style={styles.headerRightPlaceholder} />
         </View>
 
         <FlatList
@@ -195,62 +150,6 @@ export default function ArchivesScreen() {
         />
       </View>
 
-      {/* Confirmation Modal for Clearing Archives */}
-      <Modal
-        visible={clearModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setClearModalVisible(false)}
-      >
-        <Pressable
-          style={styles.modalBackdrop}
-          onPress={() => setClearModalVisible(false)}
-        >
-          <Pressable
-            style={styles.modalCard}
-            onPress={(e) => e.stopPropagation()}
-          >
-            <View style={styles.modalIconWrap}>
-              <MaterialCommunityIcons
-                name="alert-circle-outline"
-                size={32}
-                color="#DC2626"
-              />
-            </View>
-            <Text style={styles.modalTitle}>Clear Archives?</Text>
-            <Text style={styles.modalMessage}>
-              This will permanently delete all {entries.length} archived health
-              log(s) from Supabase storage. This action cannot be undone.
-            </Text>
-            <View style={styles.modalRow}>
-              <Pressable
-                onPress={() => setClearModalVisible(false)}
-                disabled={isDeleting}
-                style={({ pressed }) => [
-                  styles.modalBtn,
-                  styles.modalBtnSecondary,
-                  { opacity: pressed ? 0.85 : 1 },
-                ]}
-              >
-                <Text style={styles.modalBtnSecondaryText}>Cancel</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => void handleClearArchives()}
-                disabled={isDeleting}
-                style={({ pressed }) => [
-                  styles.modalBtn,
-                  styles.modalBtnPrimary,
-                  { opacity: pressed ? 0.92 : 1 },
-                ]}
-              >
-                <Text style={styles.modalBtnPrimaryText}>
-                  {isDeleting ? "Clearing..." : "Delete All"}
-                </Text>
-              </Pressable>
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
     </View>
   );
 }

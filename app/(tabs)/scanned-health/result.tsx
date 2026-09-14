@@ -116,6 +116,32 @@ function isMonitorableDisease(diseaseName: string): boolean {
   );
 }
 
+const MIN_CONFIDENCE_THRESHOLD = 70;
+const MIN_CONFIDENCE_GAP = 10;
+
+function hasStrongHealthPrediction(
+  inference: HealthImageInferenceResult | null,
+) {
+  const predictions = inference?.predictions ?? [];
+  if (!predictions.length) return false;
+
+  const topPrediction = predictions[0];
+  if (!topPrediction || isNonChickenClassifierLabel(topPrediction.className)) {
+    return false;
+  }
+
+  if (Number(topPrediction.confidence ?? 0) < MIN_CONFIDENCE_THRESHOLD) {
+    return false;
+  }
+
+  const runnerUpConfidence = Number(predictions[1]?.confidence ?? 0);
+  if (topPrediction.confidence - runnerUpConfidence < MIN_CONFIDENCE_GAP) {
+    return false;
+  }
+
+  return true;
+}
+
 function formatBatchOptionLabel(batch: BatchItem) {
   return `${batch.id} · ${batch.breed}`;
 }
@@ -189,23 +215,34 @@ export default function ScannedHealthResultScreen() {
   const isNonChickenImage = isNonChickenClassifierLabel(
     imageInference?.topPrediction?.className ?? "",
   );
+  const hasStrongPrediction = hasStrongHealthPrediction(imageInference);
 
   const resolvedDetectedIllness = isNonChickenImage
     ? NON_CHICKEN_RESULT
-    : imageMatchedDisease?.diseaseName ||
-      fallbackImageDiseaseName ||
-      detectedIllness;
+    : hasStrongPrediction
+      ? imageMatchedDisease?.diseaseName ||
+        fallbackImageDiseaseName ||
+        detectedIllness
+      : DEFAULT_IMAGE_BASED_DETECTION;
   const resultDescription = isNonChickenImage
     ? NON_CHICKEN_DESCRIPTION
-    : imageMatchedDisease?.description;
+    : hasStrongPrediction
+      ? imageMatchedDisease?.description ||
+        "The classifier detected a likely disease pattern. Please review the result and the observed behaviors before saving."
+      : "The captured image was not definitive enough for a confident disease match. Please retake the photo with a clearer view of the chicken.";
   const treatmentSteps = isNonChickenImage
     ? [NON_CHICKEN_RECOMMENDATION]
-    : imageMatchedDisease?.treatmentSteps;
+    : hasStrongPrediction && imageMatchedDisease?.treatmentSteps
+      ? imageMatchedDisease.treatmentSteps
+      : [];
   const treatmentText = isNonChickenImage
     ? NON_CHICKEN_RECOMMENDATION
-    : (imageMatchedDisease?.treatmentSteps.join(" ") ?? "");
+    : hasStrongPrediction && imageMatchedDisease?.treatmentSteps
+      ? imageMatchedDisease.treatmentSteps.join(" ")
+      : "Retake the photo with better framing and clearer visible symptoms for a more confident assessment.";
   const resultSeverity =
     !isNonChickenImage &&
+    hasStrongPrediction &&
     (imageMatchedDisease?.severity === "high" ||
       imageMatchedDisease?.severity === "critical");
 
@@ -266,6 +303,11 @@ export default function ScannedHealthResultScreen() {
         }
 
         if (isNonChickenClassifierLabel(topPrediction.className)) {
+          setImageMatchedDisease(null);
+          return;
+        }
+
+        if (!hasStrongHealthPrediction(inference)) {
           setImageMatchedDisease(null);
           return;
         }
@@ -529,7 +571,7 @@ export default function ScannedHealthResultScreen() {
             <Text style={styles.pageTitle} numberOfLines={1}>
               {isMonitoringRescan
                 ? "Update Behavior Check"
-                : "Behavior Check Result"}
+                : "Health Check Result"}
             </Text>
             <View style={styles.headerRightPlaceholder} />
           </View>
@@ -538,7 +580,7 @@ export default function ScannedHealthResultScreen() {
               ? "Analyzing the captured image before finalizing the report."
               : isMonitoringRescan
                 ? `This update will be added to ${chtTag || "this chicken"}'s record. Previous notes are kept.`
-                : "Behavior cues, health context, and notes in one clear journal entry."}
+                : "This report will be saved to your Behavior Journal."}
           </Text>
         </View>
 
