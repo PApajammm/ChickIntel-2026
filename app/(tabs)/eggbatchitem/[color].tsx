@@ -35,6 +35,7 @@ import {
     type EggBatchItem,
 } from "@/utils/batch-store";
 import { logError } from "@/utils/logger";
+import { recordDeletedEggBatch } from "@/utils/supabase-egg-batch-history";
 import {
     deleteFarmEggBatch,
     fetchFarmEggBatches,
@@ -239,6 +240,7 @@ export default function EggBatchColorScreen() {
           if (!activeFarm?.id) return;
 
           try {
+            await recordDeletedEggBatch(activeFarm.id, egg);
             await deleteFarmEggBatch(activeFarm.id, egg.id);
             setSavedEggBatches((prev) =>
               prev.filter((item) => item.id !== egg.id),
@@ -276,6 +278,14 @@ export default function EggBatchColorScreen() {
           style: "destructive",
           onPress: async () => {
             try {
+              const deletedEggs = savedEggBatches.filter((egg) =>
+                selectedIds.has(egg.id),
+              );
+              await Promise.all(
+                deletedEggs.map((egg) =>
+                  recordDeletedEggBatch(activeFarm.id!, egg),
+                ),
+              );
               await Promise.all(
                 [...selectedIds].map((eggId) =>
                   deleteFarmEggBatch(activeFarm.id!, eggId),
@@ -380,11 +390,7 @@ export default function EggBatchColorScreen() {
             style={styles.backButton}
             activeOpacity={0.8}
           >
-            <MaterialCommunityIcons
-              name="arrow-left"
-              size={22}
-              color="#FFF"
-            />
+            <MaterialCommunityIcons name="arrow-left" size={22} color="#FFF" />
           </TouchableOpacity>
           <View style={styles.headerTitleWrap}>
             <Text style={styles.pageTitle} numberOfLines={1}>
@@ -707,8 +713,10 @@ export default function EggBatchColorScreen() {
                     </View>
                     <Text style={styles.discrepancyBannerDesc}>
                       Hatched ({hatchedCount}) + Damaged ({damagedCount}) ={" "}
-                      <Text style={{ fontWeight: "800" }}>{totalUpdatedEggs}</Text>, which
-                      exceeds the recorded {totalRecordedEggs} eggs by{" "}
+                      <Text style={{ fontWeight: "800" }}>
+                        {totalUpdatedEggs}
+                      </Text>
+                      , which exceeds the recorded {totalRecordedEggs} eggs by{" "}
                       <Text style={{ fontWeight: "800", color: "#DC2626" }}>
                         {discrepancyQty} egg{discrepancyQty === 1 ? "" : "s"}
                       </Text>
@@ -717,8 +725,18 @@ export default function EggBatchColorScreen() {
                   </View>
                 )}
 
-                <View style={[styles.inputBoxInside, hasDiscrepancy && styles.inputBoxDiscrepancy]}>
-                  <Text style={[styles.insideLabel, hasDiscrepancy && { color: "#DC2626" }]}>
+                <View
+                  style={[
+                    styles.inputBoxInside,
+                    hasDiscrepancy && styles.inputBoxDiscrepancy,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.insideLabel,
+                      hasDiscrepancy && { color: "#DC2626" },
+                    ]}
+                  >
                     Hatched Qty.
                   </Text>
                   <TextInput
@@ -736,8 +754,18 @@ export default function EggBatchColorScreen() {
                   />
                 </View>
 
-                <View style={[styles.inputBoxInside, hasDiscrepancy && styles.inputBoxDiscrepancy]}>
-                  <Text style={[styles.insideLabel, hasDiscrepancy && { color: "#DC2626" }]}>
+                <View
+                  style={[
+                    styles.inputBoxInside,
+                    hasDiscrepancy && styles.inputBoxDiscrepancy,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.insideLabel,
+                      hasDiscrepancy && { color: "#DC2626" },
+                    ]}
+                  >
                     Damaged Qty.
                   </Text>
                   <TextInput
@@ -776,7 +804,9 @@ export default function EggBatchColorScreen() {
                       hasDiscrepancy && { color: "#DC2626" },
                     ]}
                   >
-                    {hasDiscrepancy ? `0 (Exceeded by ${discrepancyQty})` : derivedUnhatched}
+                    {hasDiscrepancy
+                      ? `0 (Exceeded by ${discrepancyQty})`
+                      : derivedUnhatched}
                   </Text>
                   <Text
                     style={[
@@ -823,7 +853,9 @@ export default function EggBatchColorScreen() {
                         hasDiscrepancy && styles.saveTextDisabled,
                       ]}
                     >
-                      {hasDiscrepancy ? "Cannot Save (Mismatch)" : "Save Changes"}
+                      {hasDiscrepancy
+                        ? "Cannot Save (Mismatch)"
+                        : "Save Changes"}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -853,7 +885,8 @@ export default function EggBatchColorScreen() {
               Egg Numbers Do Not Tally
             </Text>
             <Text style={styles.discrepancyModalDesc}>
-              The entered egg counts do not tally with the recorded batch quantity.
+              The entered egg counts do not tally with the recorded batch
+              quantity.
             </Text>
 
             <View style={styles.discrepancyBreakdownCard}>

@@ -21,6 +21,7 @@ import {
     updateInventoryItem,
     type SupabaseInventoryItem,
 } from "@/utils/supabase-inventory";
+import { recordDeletedInventoryItem } from "@/utils/supabase-inventory-history";
 import {
     completeScheduleTask,
     createScheduleTask,
@@ -296,11 +297,14 @@ export function FarmDataProvider({ children }: { children: React.ReactNode }) {
   const removeInventoryItem = useCallback(
     async (itemId: string) => {
       if (!activeFarm?.id) return;
+      const item = rawItems.find((entry) => entry.id === itemId);
+      if (!item) return;
+      await recordDeletedInventoryItem(activeFarm.id, item);
       await deleteInventoryItem(activeFarm.id, itemId);
       setRawItems((prev) => prev.filter((i) => i.id !== itemId));
       void refreshFarmData();
     },
-    [activeFarm?.id, refreshFarmData],
+    [activeFarm?.id, rawItems, refreshFarmData],
   );
 
   const value = useMemo(

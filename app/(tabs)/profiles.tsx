@@ -45,6 +45,7 @@ import {
     fetchFarmBatches,
     updateFarmBatch,
 } from "@/utils/supabase-batches";
+import { recordDeletedChickenBatch } from "@/utils/supabase-chicken-batch-history";
 import {
     fetchFarmEggBatches,
     updateFarmEggBatch,
@@ -330,6 +331,9 @@ export default function ProfilesScreen() {
             return;
           }
           try {
+            const deletedBatch = chickenData.find((item) => item.id === id);
+            if (!deletedBatch) return;
+            await recordDeletedChickenBatch(activeFarm.id, deletedBatch);
             await deleteFarmBatch(activeFarm.id, id);
             setChickenData((prev) => prev.filter((item) => item.id !== id));
             logStep("Profiles chicken batch deleted", {
@@ -466,11 +470,7 @@ export default function ProfilesScreen() {
             accessibilityRole="button"
             accessibilityLabel="Go back"
           >
-            <MaterialCommunityIcons
-              name="arrow-left"
-              size={22}
-              color="#FFF"
-            />
+            <MaterialCommunityIcons name="arrow-left" size={22} color="#FFF" />
           </Pressable>
 
           <Text
@@ -483,25 +483,44 @@ export default function ProfilesScreen() {
           </Text>
 
           {mode === "egg" ? (
+            <View style={styles.headerActions}>
+              <Pressable
+                onPress={() =>
+                  router.push({
+                    pathname: "/(tabs)/egg-fertility-report" as any,
+                    params: { overview: "Weekly" },
+                  })
+                }
+                style={styles.eggAnalyticsIconButton}
+                accessibilityRole="button"
+                accessibilityLabel="Open egg fertility report"
+              >
+                <MaterialCommunityIcons
+                  name="chart-donut"
+                  size={18}
+                  color="#FFF"
+                />
+              </Pressable>
+              <Pressable
+                onPress={() => router.push("/(tabs)/egg-batch-history" as any)}
+                style={styles.eggAnalyticsIconButton}
+                accessibilityRole="button"
+                accessibilityLabel="Open egg batch history"
+              >
+                <MaterialCommunityIcons name="history" size={21} color="#FFF" />
+              </Pressable>
+            </View>
+          ) : (
             <Pressable
               onPress={() =>
-                router.push({
-                  pathname: "/(tabs)/egg-fertility-report" as any,
-                  params: { overview: "Weekly" },
-                })
+                router.push("/(tabs)/chicken-batch-history" as any)
               }
               style={styles.eggAnalyticsIconButton}
               accessibilityRole="button"
-              accessibilityLabel="Open egg fertility report"
+              accessibilityLabel="Open chicken batch history"
             >
-              <MaterialCommunityIcons
-                name="chart-donut"
-                size={18}
-                color="#FFF"
-              />
+              <MaterialCommunityIcons name="history" size={21} color="#FFF" />
             </Pressable>
-          ) : (
-            <View style={styles.headerRightPlaceholder} />
           )}
         </View>
         <View style={styles.segmentStickyHeader}>
@@ -1226,6 +1245,11 @@ const styles = StyleSheet.create({
   },
   headerRightPlaceholder: {
     width: scale(42),
+  },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
   segmentStickyHeader: {
     backgroundColor: "transparent",
