@@ -5,7 +5,6 @@ import {
     verticalScale,
 } from "@/utils/responsive";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useState } from "react";
@@ -27,7 +26,6 @@ import { ChickIntelPalette } from "@/constants/chickintel-palette";
 import { HealthTypography } from "@/constants/health-typography";
 import { useBehaviors } from "@/hooks/use-behaviors";
 import { useAuth } from "@/providers/auth-provider";
-import { logError } from "@/utils/logger";
 import { mapBehaviorIdsToLabels } from "@/utils/supabase-behaviors";
 import {
     fetchArchivedHealthJournalEntries,
@@ -101,7 +99,9 @@ export default function ArchivesScreen() {
           >
             <MaterialCommunityIcons name="arrow-left" size={22} color="#FFF" />
           </TouchableOpacity>
-          <Text style={styles.title} numberOfLines={1}>Archives</Text>
+          <Text style={styles.title} numberOfLines={1}>
+            Archives
+          </Text>
           <View style={styles.headerRightPlaceholder} />
         </View>
 
@@ -149,7 +149,6 @@ export default function ArchivesScreen() {
           showsVerticalScrollIndicator={false}
         />
       </View>
-
     </View>
   );
 }
