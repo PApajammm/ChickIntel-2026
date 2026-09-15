@@ -84,6 +84,55 @@ export function isNonChickenClassifierLabel(label: string) {
   );
 }
 
+/**
+ * Resolves the top valid breed prediction from inference results.
+ * If the #1 prediction is "nonchicken", this checks if any recognized breed
+ * candidate is present with reasonable plausibility (e.g. nonchicken < 75% or runner-up exists).
+ */
+export function resolveBestBreedPrediction(
+  inference: BreedImageInferenceResult | null,
+): { prediction: BreedImagePrediction | null; isNonChicken: boolean } {
+  if (!inference) {
+    return { prediction: null, isNonChicken: false };
+  }
+
+  const topPrediction = inference.topPrediction;
+  if (!topPrediction) {
+    return { prediction: null, isNonChicken: false };
+  }
+
+  const allPredictions = Array.isArray(inference.predictions)
+    ? inference.predictions
+    : [topPrediction];
+
+  // Find the highest-scoring candidate that is NOT a non-chicken label
+  const bestBreedCandidate = allPredictions.find(
+    (p) => !isNonChickenClassifierLabel(p.className) && p.className.trim().length > 0,
+  );
+
+  if (isNonChickenClassifierLabel(topPrediction.className)) {
+    // If nonchicken is overwhelmingly dominant (>= 75%) and runner-up is negligible (< 10%),
+    // consider it truly a non-chicken image.
+    if (
+      topPrediction.confidence >= 75 &&
+      (!bestBreedCandidate || bestBreedCandidate.confidence < 10)
+    ) {
+      return { prediction: null, isNonChicken: true };
+    }
+
+    // Otherwise, if there is an identified breed candidate, select it!
+    if (bestBreedCandidate) {
+      return { prediction: bestBreedCandidate, isNonChicken: false };
+    }
+
+    // No breed candidate found at all and top was non-chicken
+    return { prediction: null, isNonChicken: true };
+  }
+
+  // Top prediction is already a chicken breed
+  return { prediction: topPrediction, isNonChicken: false };
+}
+
 function titleCase(str: string) {
   return str
     .split(" ")

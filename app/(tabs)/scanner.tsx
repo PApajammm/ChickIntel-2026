@@ -41,7 +41,10 @@ import {
 } from "@/utils/health-capture-quality";
 import { logError, logStep } from "@/utils/logger";
 
-import { cropPhotoToViewfinder } from "@/utils/image-crop-helper";
+import {
+  cropPhotoToViewfinder,
+  optimizePhotoForInference,
+} from "@/utils/image-crop-helper";
 
 /** Keep controls near the bottom edge, just clear of the tab bar. */
 const CONTROLS_CLEARANCE_ABOVE_TAB = 0;
@@ -183,14 +186,25 @@ export default function ScannerScreen() {
         skipProcessing: Platform.OS === "ios",
       });
 
-      const photo = await cropPhotoToViewfinder({
-        photoUri: rawPhoto.uri,
-        photoWidth: rawPhoto.width,
-        photoHeight: rawPhoto.height,
-        viewfinderSize,
-        screenWidth: width,
-        screenHeight: width * 1.5,
-      });
+      // In health mode, crop tightly to the head/eye/comb viewfinder.
+      // In breed mode, preserve the full photo while optimizing dimensions and compression for fast inference.
+      const photo =
+        mode === "health"
+          ? await cropPhotoToViewfinder({
+              photoUri: rawPhoto.uri,
+              photoWidth: rawPhoto.width,
+              photoHeight: rawPhoto.height,
+              viewfinderSize,
+              screenWidth: width,
+              screenHeight: width * 1.5,
+            })
+          : await optimizePhotoForInference({
+              photoUri: rawPhoto.uri,
+              photoWidth: rawPhoto.width,
+              photoHeight: rawPhoto.height,
+              maxDimension: 1024,
+              quality: 0.88,
+            });
 
       try {
         logStep("Scanner capture complete", {

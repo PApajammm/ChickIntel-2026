@@ -1,26 +1,26 @@
 import {
-    moderateScale,
-    responsiveFontSize,
-    scale,
-    verticalScale,
+  moderateScale,
+  responsiveFontSize,
+  scale,
+  verticalScale,
 } from "@/utils/responsive";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useMemo, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -29,8 +29,8 @@ import { HealthFlowFooterButton } from "@/components/health-scan/health-flow-foo
 import { HealthInputSummaryCard } from "@/components/health-scan/health-input-summary-card";
 import { HealthResultCard } from "@/components/health-scan/health-result-card";
 import {
-    ChickSelectRow,
-    ChickSelectionModal,
+  ChickSelectRow,
+  ChickSelectionModal,
 } from "@/components/ui/chick-form";
 import { ChickFont } from "@/constants/chick-fonts";
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
@@ -40,23 +40,23 @@ import { useBehaviors } from "@/hooks/use-behaviors";
 import { useAuth } from "@/providers/auth-provider";
 import type { BatchItem } from "@/utils/batch-store";
 import {
-    inferDiseaseFromImage,
-    type HealthImageInferenceResult,
+  inferDiseaseFromImage,
+  type HealthImageInferenceResult,
 } from "@/utils/health-image-inference";
 import { logError, logStep } from "@/utils/logger";
 import { fetchFarmBatches } from "@/utils/supabase-batches";
 import { mapBehaviorIdsToLabels } from "@/utils/supabase-behaviors";
 import {
-    detectDiseaseFromClassifierLabel,
-    type MatchedDisease,
+  detectDiseaseFromClassifierLabel,
+  type MatchedDisease,
 } from "@/utils/supabase-diseases";
 import { createHealthJournalEntry } from "@/utils/supabase-health-journal";
 import {
-    appendHealthLogToMonitoring,
-    createHealthMonitoringRecord,
-    doesChtTagExist,
-    formatChtTag,
-    getNextChtNumber,
+  appendHealthLogToMonitoring,
+  createHealthMonitoringRecord,
+  doesChtTagExist,
+  formatChtTag,
+  getNextChtNumber,
 } from "@/utils/supabase-health-monitoring";
 
 const MONITORABLE_DISEASES = ["Infectious Coryza", "Fowlpox"];
@@ -114,6 +114,32 @@ function isMonitorableDisease(diseaseName: string): boolean {
     (d) =>
       d.toLowerCase() === normalized || normalized.includes(d.toLowerCase()),
   );
+}
+
+const MIN_CONFIDENCE_THRESHOLD = 70;
+const MIN_CONFIDENCE_GAP = 10;
+
+function hasStrongHealthPrediction(
+  inference: HealthImageInferenceResult | null,
+) {
+  const predictions = inference?.predictions ?? [];
+  if (!predictions.length) return false;
+
+  const topPrediction = predictions[0];
+  if (!topPrediction || isNonChickenClassifierLabel(topPrediction.className)) {
+    return false;
+  }
+
+  if (Number(topPrediction.confidence ?? 0) < MIN_CONFIDENCE_THRESHOLD) {
+    return false;
+  }
+
+  const runnerUpConfidence = Number(predictions[1]?.confidence ?? 0);
+  if (topPrediction.confidence - runnerUpConfidence < MIN_CONFIDENCE_GAP) {
+    return false;
+  }
+
+  return true;
 }
 
 function formatBatchOptionLabel(batch: BatchItem) {
@@ -189,23 +215,34 @@ export default function ScannedHealthResultScreen() {
   const isNonChickenImage = isNonChickenClassifierLabel(
     imageInference?.topPrediction?.className ?? "",
   );
+  const hasStrongPrediction = hasStrongHealthPrediction(imageInference);
 
   const resolvedDetectedIllness = isNonChickenImage
     ? NON_CHICKEN_RESULT
-    : imageMatchedDisease?.diseaseName ||
-      fallbackImageDiseaseName ||
-      detectedIllness;
+    : hasStrongPrediction
+      ? imageMatchedDisease?.diseaseName ||
+        fallbackImageDiseaseName ||
+        detectedIllness
+      : DEFAULT_IMAGE_BASED_DETECTION;
   const resultDescription = isNonChickenImage
     ? NON_CHICKEN_DESCRIPTION
-    : imageMatchedDisease?.description;
+    : hasStrongPrediction
+      ? imageMatchedDisease?.description ||
+        "The classifier detected a likely disease pattern. Please review the result and the observed behaviors before saving."
+      : "The captured image was not definitive enough for a confident disease match. Please retake the photo with a clearer view of the chicken.";
   const treatmentSteps = isNonChickenImage
     ? [NON_CHICKEN_RECOMMENDATION]
-    : imageMatchedDisease?.treatmentSteps;
+    : hasStrongPrediction && imageMatchedDisease?.treatmentSteps
+      ? imageMatchedDisease.treatmentSteps
+      : [];
   const treatmentText = isNonChickenImage
     ? NON_CHICKEN_RECOMMENDATION
-    : (imageMatchedDisease?.treatmentSteps.join(" ") ?? "");
+    : hasStrongPrediction && imageMatchedDisease?.treatmentSteps
+      ? imageMatchedDisease.treatmentSteps.join(" ")
+      : "Retake the photo with better framing and clearer visible symptoms for a more confident assessment.";
   const resultSeverity =
     !isNonChickenImage &&
+    hasStrongPrediction &&
     (imageMatchedDisease?.severity === "high" ||
       imageMatchedDisease?.severity === "critical");
 
@@ -217,6 +254,10 @@ export default function ScannedHealthResultScreen() {
   const [selectedBatchNo, setSelectedBatchNo] = useState("");
   const [batchPickerVisible, setBatchPickerVisible] = useState(false);
   const [updateSuccessVisible, setUpdateSuccessVisible] = useState(false);
+  const [monitoringSuccessInfo, setMonitoringSuccessInfo] = useState<{
+    chtTag: string;
+    batchNo: string;
+  } | null>(null);
   const [updateError, setUpdateError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -266,6 +307,11 @@ export default function ScannedHealthResultScreen() {
         }
 
         if (isNonChickenClassifierLabel(topPrediction.className)) {
+          setImageMatchedDisease(null);
+          return;
+        }
+
+        if (!hasStrongHealthPrediction(inference)) {
           setImageMatchedDisease(null);
           return;
         }
@@ -465,21 +511,10 @@ export default function ScannedHealthResultScreen() {
 
       setChtDialogVisible(false);
       setSaveDialogVisible(false);
-      Alert.alert(
-        "Added to Health Monitoring",
-        `Chicken ${chtTag} from Batch ${selectedBatchNo} is now being monitored.`,
-        [
-          {
-            text: "Go to Health Monitoring",
-            onPress: () => router.replace("/(tabs)/health-monitoring" as any),
-          },
-          {
-            text: "Stay here",
-            style: "cancel",
-            onPress: () => router.replace("/(tabs)" as any),
-          },
-        ],
-      );
+      setMonitoringSuccessInfo({
+        chtTag,
+        batchNo: selectedBatchNo,
+      });
     } catch (error) {
       logError("Failed to create health monitoring record", error);
       setChtError("Could not add to Health Monitoring. Please try again.");
@@ -529,7 +564,7 @@ export default function ScannedHealthResultScreen() {
             <Text style={styles.pageTitle} numberOfLines={1}>
               {isMonitoringRescan
                 ? "Update Behavior Check"
-                : "Behavior Check Result"}
+                : "Health Check Result"}
             </Text>
             <View style={styles.headerRightPlaceholder} />
           </View>
@@ -538,7 +573,7 @@ export default function ScannedHealthResultScreen() {
               ? "Analyzing the captured image before finalizing the report."
               : isMonitoringRescan
                 ? `This update will be added to ${chtTag || "this chicken"}'s record. Previous notes are kept.`
-                : "Behavior cues, health context, and notes in one clear journal entry."}
+                : "This report will be saved to your Behavior Journal."}
           </Text>
         </View>
 
@@ -715,9 +750,7 @@ export default function ScannedHealthResultScreen() {
                   </View>
 
                   <View style={styles.chtInputCard}>
-                    <Text style={styles.chtInputLabel}>
-                      CHICHECK HEALTH TAG
-                    </Text>
+                    <Text style={styles.chtInputLabel}>CHICKEN HEALTH TAG</Text>
                     <View style={styles.chtRow}>
                       <Text style={styles.chtPrefix}>CHT-</Text>
                       <TextInput
@@ -789,15 +822,43 @@ export default function ScannedHealthResultScreen() {
           onRequestClose={() => setUpdateSuccessVisible(false)}
         >
           <View style={styles.modalBg}>
-            <View style={styles.modalCard}>
-              <Text style={styles.modalTitle}>Health scan updated</Text>
-              <Text style={styles.modalBody}>
-                {chtTag
-                  ? `${chtTag}'s monitoring record now shows this latest scan. Earlier scans are still saved in the history.`
-                  : "This chicken's monitoring record now shows the latest scan. Earlier scans are still saved in the history."}
-              </Text>
+            <View style={[styles.modalCard, styles.updateModalCard]}>
+              <View style={styles.updateModalHeader}>
+                <View style={styles.updateModalIconBadge}>
+                  <MaterialCommunityIcons
+                    name="check"
+                    size={24}
+                    color={ChickIntelPalette.green1}
+                  />
+                </View>
+                <View style={styles.updateModalHeaderText}>
+                  <Text style={styles.updateModalEyebrow}>SCAN SAVED</Text>
+                  <Text style={styles.updateModalTitle}>
+                    Health scan updated
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.updateModalBody}>
+                <Text style={styles.updateModalBodyText}>
+                  {chtTag
+                    ? `${chtTag}'s monitoring record now shows this latest scan.`
+                    : "This chicken's monitoring record now shows the latest scan."}
+                </Text>
+                <View style={styles.updateModalHistoryRow}>
+                  <MaterialCommunityIcons
+                    name="history"
+                    size={18}
+                    color={ChickIntelPalette.green1}
+                  />
+                  <Text style={styles.updateModalHistoryText}>
+                    Earlier scans are still saved in the history.
+                  </Text>
+                </View>
+              </View>
+
               <Pressable
-                style={styles.modalBtn}
+                style={styles.updateModalButton}
                 onPress={() => {
                   setUpdateSuccessVisible(false);
                   router.replace({
@@ -809,9 +870,14 @@ export default function ScannedHealthResultScreen() {
                   } as any);
                 }}
               >
-                <Text style={styles.modalBtnText}>
+                <Text style={styles.updateModalButtonText}>
                   Back to Health Monitoring
                 </Text>
+                <MaterialCommunityIcons
+                  name="arrow-right"
+                  size={18}
+                  color="#FFFFFF"
+                />
               </Pressable>
             </View>
           </View>
@@ -835,6 +901,70 @@ export default function ScannedHealthResultScreen() {
               </Pressable>
             </View>
           </View>
+        </Modal>
+
+        {/* Added to Health Monitoring Modal (matching batch profile modal style) */}
+        <Modal
+          visible={monitoringSuccessInfo !== null}
+          transparent
+          animationType="fade"
+          onRequestClose={() => {
+            setMonitoringSuccessInfo(null);
+            router.replace("/(tabs)" as any);
+          }}
+        >
+          <Pressable
+            style={styles.confirmModalBackdrop}
+            onPress={() => {
+              setMonitoringSuccessInfo(null);
+              router.replace("/(tabs)" as any);
+            }}
+          >
+            <Pressable
+              style={styles.confirmModalCard}
+              onPress={(event) => event.stopPropagation()}
+            >
+              <Text style={styles.confirmModalTitle}>
+                Added to Health Monitoring
+              </Text>
+              <Text style={styles.confirmModalMessage}>
+                Chicken {monitoringSuccessInfo?.chtTag} from Batch{" "}
+                {monitoringSuccessInfo?.batchNo} is now being monitored.
+              </Text>
+              <View style={styles.confirmModalRow}>
+                <Pressable
+                  onPress={() => {
+                    setMonitoringSuccessInfo(null);
+                    router.replace("/(tabs)" as any);
+                  }}
+                  style={({ pressed }) => [
+                    styles.confirmModalBtn,
+                    styles.confirmModalBtnSecondary,
+                    { opacity: pressed ? 0.85 : 1 },
+                  ]}
+                >
+                  <Text style={styles.confirmModalBtnSecondaryText}>
+                    Stay here
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => {
+                    setMonitoringSuccessInfo(null);
+                    router.replace("/(tabs)/health-monitoring" as any);
+                  }}
+                  style={({ pressed }) => [
+                    styles.confirmModalBtn,
+                    styles.confirmModalBtnPrimary,
+                    { opacity: pressed ? 0.92 : 1 },
+                  ]}
+                >
+                  <Text style={styles.confirmModalBtnPrimaryText}>
+                    Go to Health Monitoring
+                  </Text>
+                </Pressable>
+              </View>
+            </Pressable>
+          </Pressable>
         </Modal>
       </SafeAreaView>
     </View>
@@ -923,6 +1053,88 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     shadowOffset: { width: scale(0), height: verticalScale(6) },
     elevation: 8,
+  },
+  updateModalCard: {
+    padding: moderateScale(16),
+  },
+  updateModalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingBottom: verticalScale(12),
+    borderBottomWidth: 1,
+    borderBottomColor: "#E6EEEC",
+  },
+  updateModalIconBadge: {
+    width: scale(48),
+    height: verticalScale(48),
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#E5F3EE",
+    borderWidth: 1,
+    borderColor: "#C5E4DA",
+  },
+  updateModalHeaderText: {
+    flex: 1,
+    minWidth: 0,
+  },
+  updateModalEyebrow: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(10),
+    fontWeight: "800",
+    letterSpacing: 1,
+    color: ChickIntelPalette.green1,
+    marginBottom: 3,
+  },
+  updateModalTitle: {
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(19),
+    lineHeight: 24,
+    fontWeight: "800",
+    color: ChickIntelPalette.gray1,
+  },
+  updateModalBody: {
+    paddingVertical: verticalScale(12),
+    gap: 9,
+  },
+  updateModalBodyText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(14),
+    lineHeight: 20,
+    color: "#4F5D5A",
+  },
+  updateModalHistoryRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    padding: moderateScale(9),
+    borderRadius: 10,
+    backgroundColor: "#F2F8F6",
+  },
+  updateModalHistoryText: {
+    flex: 1,
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12),
+    lineHeight: 17,
+    fontWeight: "600",
+    color: ChickIntelPalette.green1,
+  },
+  updateModalButton: {
+    minHeight: verticalScale(48),
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: ChickIntelPalette.green1,
+    paddingHorizontal: moderateScale(16),
+    borderRadius: 12,
+  },
+  updateModalButtonText: {
+    fontFamily: ChickFont.sans,
+    color: "#FFFFFF",
+    fontWeight: "800",
+    fontSize: responsiveFontSize(14),
   },
   modalHeader: {
     backgroundColor: ChickIntelPalette.green1,
@@ -1122,5 +1334,76 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(12),
     color: "#5E6665",
     marginTop: 2,
+  },
+  confirmModalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(51, 51, 51, 0.38)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: moderateScale(24),
+  },
+  confirmModalCard: {
+    width: "100%",
+    maxWidth: scale(340),
+    borderRadius: 12,
+    padding: moderateScale(16),
+    backgroundColor: ChickIntelPalette.light1,
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.18)",
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    shadowOffset: { width: scale(0), height: verticalScale(8) },
+    elevation: 8,
+  },
+  confirmModalTitle: {
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(18),
+    fontWeight: "800",
+    color: ChickIntelPalette.gray1,
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  confirmModalMessage: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(14),
+    lineHeight: 20,
+    color: "rgba(51, 51, 51, 0.78)",
+    marginBottom: 16,
+    textAlign: "center",
+  },
+  confirmModalRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  confirmModalBtn: {
+    flex: 1,
+    minHeight: verticalScale(40),
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 10,
+    paddingHorizontal: moderateScale(12),
+  },
+  confirmModalBtnSecondary: {
+    backgroundColor: "rgba(49, 118, 103, 0.1)",
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.24)",
+  },
+  confirmModalBtnPrimary: {
+    backgroundColor: ChickIntelPalette.green1,
+  },
+  confirmModalBtnSecondaryText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(14),
+    fontWeight: "700",
+    color: ChickIntelPalette.green1,
+    textAlign: "center",
+  },
+  confirmModalBtnPrimaryText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(14),
+    fontWeight: "700",
+    color: "#FFFFFF",
+    textAlign: "center",
   },
 });

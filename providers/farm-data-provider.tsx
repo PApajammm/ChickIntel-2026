@@ -21,6 +21,7 @@ import {
     updateInventoryItem,
     type SupabaseInventoryItem,
 } from "@/utils/supabase-inventory";
+import { recordDeletedInventoryItem } from "@/utils/supabase-inventory-history";
 import {
     completeScheduleTask,
     createScheduleTask,
@@ -187,15 +188,23 @@ export function FarmDataProvider({ children }: { children: React.ReactNode }) {
       const targetItem = rawItems.find((i) => i.id === itemId);
       if (!targetItem) return;
 
-      const currentPhysicalQty = Number.isFinite(targetItem.qty)
-        ? targetItem.qty
-        : 0;
+      const targetEffectiveItem = effectiveItems.find(
+        (item) => item.id === itemId,
+      );
+      if (!targetEffectiveItem) return;
 
-      const newPhysicalQty =
-        restockQty > 0 ? currentPhysicalQty + restockQty : currentPhysicalQty;
+      const currentTotalQty = Number.isFinite(targetEffectiveItem.baseQty)
+        ? targetEffectiveItem.baseQty
+        : targetItem.totalQty;
+      const currentRemainingQty = targetEffectiveItem.remainingQty;
+      const newRemainingQty = currentRemainingQty + restockQty;
+      const newTotalQty = Math.max(currentTotalQty, newRemainingQty);
+      const newRestockCreditQty =
+        targetItem.restockCreditQty + Math.max(0, restockQty);
 
       await updateInventoryItem(activeFarm.id, itemId, {
-        qty: newPhysicalQty,
+        totalQty: newTotalQty,
+        restockCreditQty: newRestockCreditQty,
         statusPercent: restockQty > 0 ? 100 : undefined,
         deliveredDate: extra?.deliveredDate,
         expirationDate: extra?.expirationDate,
@@ -207,7 +216,8 @@ export function FarmDataProvider({ children }: { children: React.ReactNode }) {
           item.id === itemId
             ? {
                 ...item,
-                qty: newPhysicalQty,
+                totalQty: newTotalQty,
+                restockCreditQty: newRestockCreditQty,
                 statusPercent: restockQty > 0 ? 100 : item.statusPercent,
                 deliveryDate: extra?.deliveredDate ?? item.deliveryDate,
                 expirationDate: extra?.expirationDate ?? item.expirationDate,
@@ -219,7 +229,7 @@ export function FarmDataProvider({ children }: { children: React.ReactNode }) {
       // Trigger full sync to guarantee consistency
       void refreshFarmData();
     },
-    [activeFarm?.id, rawItems, refreshFarmData],
+    [activeFarm?.id, effectiveItems, rawItems, refreshFarmData],
   );
 
   const completeTask = useCallback(
@@ -287,11 +297,14 @@ export function FarmDataProvider({ children }: { children: React.ReactNode }) {
   const removeInventoryItem = useCallback(
     async (itemId: string) => {
       if (!activeFarm?.id) return;
+      const item = rawItems.find((entry) => entry.id === itemId);
+      if (!item) return;
+      await recordDeletedInventoryItem(activeFarm.id, item);
       await deleteInventoryItem(activeFarm.id, itemId);
       setRawItems((prev) => prev.filter((i) => i.id !== itemId));
       void refreshFarmData();
     },
-    [activeFarm?.id, refreshFarmData],
+    [activeFarm?.id, rawItems, refreshFarmData],
   );
 
   const value = useMemo(

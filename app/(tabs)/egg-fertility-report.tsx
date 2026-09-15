@@ -801,7 +801,9 @@ export default function EggFertilityReportScreen() {
               />
             </TouchableOpacity>
             <View style={styles.headerCopy}>
-              <Text style={styles.screenTitle} numberOfLines={1}>Egg Fertility Report</Text>
+              <Text style={styles.screenTitle} numberOfLines={1}>
+                Egg Fertility Report
+              </Text>
               <Text style={styles.headerSubtitle} numberOfLines={1}>
                 {scopeLabel}
               </Text>
@@ -1012,7 +1014,23 @@ export default function EggFertilityReportScreen() {
               style={styles.scopeModalCard}
               onPress={(event) => event.stopPropagation()}
             >
-              <Text style={styles.scopeModalTitle}>Select Egg Batch Scope</Text>
+              <View style={styles.scopeModalHeading}>
+                <View style={styles.scopeModalIconBadge}>
+                  <MaterialCommunityIcons
+                    name="filter-variant"
+                    size={18}
+                    color={ChickIntelPalette.green1}
+                  />
+                </View>
+                <View style={styles.scopeModalHeadingCopy}>
+                  <Text style={styles.scopeModalTitle}>
+                    Select Egg Batch Scope
+                  </Text>
+                  <Text style={styles.scopeModalSubtitle}>
+                    Choose the egg records to include in this report.
+                  </Text>
+                </View>
+              </View>
               <ScrollView
                 style={styles.scopeModalList}
                 showsVerticalScrollIndicator={false}
@@ -1033,14 +1051,30 @@ export default function EggFertilityReportScreen() {
                       ]}
                     >
                       {option.key === "overall" ? (
-                        <Text
-                          style={[
-                            styles.scopeOptionText,
-                            isSelected ? styles.scopeOptionTextSelected : null,
-                          ]}
-                        >
-                          {option.label}
-                        </Text>
+                        <View style={styles.scopeOptionContent}>
+                          <View style={styles.scopeOptionIconBadge}>
+                            <MaterialCommunityIcons
+                              name="chart-donut"
+                              size={17}
+                              color={ChickIntelPalette.green1}
+                            />
+                          </View>
+                          <View style={styles.scopeOptionCopy}>
+                            <Text
+                              style={[
+                                styles.scopeOptionText,
+                                isSelected
+                                  ? styles.scopeOptionTextSelected
+                                  : null,
+                              ]}
+                            >
+                              Overall Egg Fertility Rate
+                            </Text>
+                            <Text style={styles.scopeOptionHint}>
+                              All egg batches in this farm
+                            </Text>
+                          </View>
+                        </View>
                       ) : (
                         <View style={styles.scopeOptionContent}>
                           <View
@@ -1052,17 +1086,29 @@ export default function EggFertilityReportScreen() {
                               },
                             ]}
                           />
-                          <Text
-                            style={[
-                              styles.scopeOptionText,
-                              isSelected
-                                ? styles.scopeOptionTextSelected
-                                : null,
-                            ]}
-                            numberOfLines={1}
-                          >
-                            {option.label}
-                          </Text>
+                          <View style={styles.scopeOptionCopy}>
+                            <Text
+                              style={[
+                                styles.scopeOptionText,
+                                isSelected
+                                  ? styles.scopeOptionTextSelected
+                                  : null,
+                              ]}
+                              numberOfLines={1}
+                            >
+                              {option.colorName || "Unspecified color"}
+                            </Text>
+                            <Text
+                              style={styles.scopeOptionHint}
+                              numberOfLines={1}
+                            >
+                              {option.originBatchNo
+                                ? `Chicken batch C${option.originBatchNo
+                                    .replace(/\D/g, "")
+                                    .padStart(3, "0")}`
+                                : "Unknown chicken batch"}
+                            </Text>
+                          </View>
                         </View>
                       )}
                       {isSelected ? (
@@ -1484,7 +1530,7 @@ const styles = StyleSheet.create({
   scopeModalCard: {
     backgroundColor: "#F8FCFA",
     borderRadius: 18,
-    padding: moderateScale(16),
+    padding: moderateScale(14),
     borderWidth: 1,
     borderColor: "rgba(67, 139, 123, 0.18)",
     shadowColor: "#000",
@@ -1495,10 +1541,33 @@ const styles = StyleSheet.create({
   },
   scopeModalTitle: {
     fontFamily: ChickFont.display,
-    fontSize: responsiveFontSize(16),
-    fontWeight: "700",
+    fontSize: responsiveFontSize(17),
+    fontWeight: "800",
     color: ChickIntelPalette.gray1,
-    marginBottom: 10,
+  },
+  scopeModalHeading: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 8,
+  },
+  scopeModalIconBadge: {
+    width: scale(34),
+    height: verticalScale(34),
+    borderRadius: 10,
+    backgroundColor: "rgba(49, 118, 103, 0.12)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  scopeModalHeadingCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  scopeModalSubtitle: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12),
+    lineHeight: 17,
+    color: "#526660",
   },
   scopeModalList: {
     maxHeight: 360,
@@ -1507,13 +1576,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    minHeight: verticalScale(48),
-    paddingHorizontal: moderateScale(12),
+    minHeight: verticalScale(54),
+    paddingHorizontal: moderateScale(10),
     borderRadius: 12,
     borderWidth: 1,
     borderColor: "transparent",
     backgroundColor: "rgba(255,255,255,0.54)",
-    marginBottom: 6,
+    marginBottom: 4,
   },
   scopeOptionRowSelected: {
     backgroundColor: "rgba(202, 227, 221, 0.82)",
@@ -1522,8 +1591,18 @@ const styles = StyleSheet.create({
   scopeOptionText: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(14),
-    fontWeight: "600",
+    fontWeight: "700",
     color: ChickIntelPalette.gray1,
+  },
+  scopeOptionCopy: {
+    flex: 1,
+    gap: 1,
+  },
+  scopeOptionHint: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12),
+    lineHeight: 16,
+    color: "#526660",
   },
   scopeOptionTextSelected: {
     color: ChickIntelPalette.green1,
@@ -1541,5 +1620,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+  },
+  scopeOptionIconBadge: {
+    width: scale(28),
+    height: verticalScale(28),
+    borderRadius: 8,
+    backgroundColor: "rgba(49, 118, 103, 0.1)",
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

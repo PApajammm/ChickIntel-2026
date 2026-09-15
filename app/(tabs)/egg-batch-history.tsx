@@ -1,0 +1,232 @@
+import BackgroundGradient from "@/assets_imported/background-gradient.svg";
+import { BlurCard } from "@/components/ui/blur-card";
+import { ChickFont } from "@/constants/chick-fonts";
+import { ChickIntelPalette } from "@/constants/chickintel-palette";
+import { useAuth } from "@/providers/auth-provider";
+import {
+    fetchDeletedEggBatches,
+    type EggBatchHistoryItem,
+} from "@/utils/supabase-egg-batch-history";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useState } from "react";
+import {
+    ActivityIndicator,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+
+function formatDate(value: string) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? "Date unavailable"
+    : date.toLocaleString();
+}
+
+export default function EggBatchHistoryScreen() {
+  const router = useRouter();
+  const { activeFarm } = useAuth();
+  const [items, setItems] = useState<EggBatchHistoryItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadHistory = useCallback(async () => {
+    if (!activeFarm?.id) {
+      setItems([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      setItems(await fetchDeletedEggBatches(activeFarm.id));
+    } catch (loadError) {
+      setError(
+        loadError instanceof Error
+          ? loadError.message
+          : "Unable to load egg batch history.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [activeFarm?.id]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadHistory();
+    }, [loadHistory]),
+  );
+
+  return (
+    <View style={styles.screen}>
+      <BackgroundGradient
+        width="110%"
+        height="110%"
+        preserveAspectRatio="xMidYMid slice"
+        style={StyleSheet.absoluteFill}
+      />
+      <SafeAreaView style={styles.safeArea} edges={["top"]}>
+        <View style={styles.header}>
+          <Pressable
+            style={styles.headerButton}
+            onPress={() =>
+              router.replace({
+                pathname: "/(tabs)/profiles" as any,
+                params: { mode: "egg" },
+              })
+            }
+            accessibilityRole="button"
+            accessibilityLabel="Back to egg batches"
+          >
+            <MaterialCommunityIcons name="arrow-left" size={22} color="#FFF" />
+          </Pressable>
+          <Text style={styles.title}>Egg Batch History</Text>
+        </View>
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+        >
+          {loading ? (
+            <ActivityIndicator color={ChickIntelPalette.green1} />
+          ) : null}
+          {error ? <Text style={styles.emptyText}>{error}</Text> : null}
+          {!loading && !error && items.length === 0 ? (
+            <Text style={styles.emptyText}>No deleted egg batches yet.</Text>
+          ) : null}
+          {items.map((item) => (
+            <BlurCard
+              key={item.historyId}
+              style={styles.card}
+              borderRadius={16}
+              intensity={20}
+            >
+              <View style={styles.cardHeader}>
+                <View style={styles.batchBadge}>
+                  <MaterialCommunityIcons
+                    name="egg-outline"
+                    size={14}
+                    color={ChickIntelPalette.green1}
+                  />
+                  <Text style={styles.batchText}>
+                    BATCH E{item.batchNo.replace(/\D/g, "").padStart(3, "0")}
+                  </Text>
+                </View>
+                <Text style={styles.deletedText}>
+                  Deleted {formatDate(item.deletedAt)}
+                </Text>
+              </View>
+              <Text style={styles.breed}>{item.colorName || "Egg batch"}</Text>
+              <Text style={styles.meta}>
+                Origin: {item.origin || "Unknown"} | Created:{" "}
+                {formatDate(item.createdAt)}
+              </Text>
+              <View style={styles.metrics}>
+                <Text style={styles.metric}>Eggs: {item.eggQty}</Text>
+                <Text style={styles.metric}>Hatched: {item.hatchedQty}</Text>
+                <Text style={styles.metric}>Damaged: {item.damagedQty}</Text>
+                <Text style={styles.metric}>
+                  Unhatched: {item.unhatchedQty}
+                </Text>
+              </View>
+            </BlurCard>
+          ))}
+        </ScrollView>
+      </SafeAreaView>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: ChickIntelPalette.light1 },
+  safeArea: { flex: 1 },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    marginTop: 10,
+    marginBottom: 12,
+  },
+  headerButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    backgroundColor: ChickIntelPalette.green1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  title: {
+    flex: 1,
+    textAlign: "center",
+    fontFamily: ChickFont.display,
+    fontSize: 19,
+    fontWeight: "800",
+    color: ChickIntelPalette.gray1,
+  },
+  scroll: { flex: 1 },
+  content: { padding: 20, gap: 10, paddingBottom: 30 },
+  card: { padding: 16, backgroundColor: "rgba(255,255,255,0.94)" },
+  cardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  batchBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: "rgba(49,118,103,0.12)",
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  batchText: {
+    fontFamily: ChickFont.display,
+    fontSize: 12,
+    fontWeight: "800",
+    color: ChickIntelPalette.green1,
+  },
+  deletedText: {
+    flex: 1,
+    textAlign: "right",
+    fontFamily: ChickFont.sans,
+    fontSize: 10,
+    color: ChickIntelPalette.gray2,
+  },
+  breed: {
+    marginTop: 10,
+    fontFamily: ChickFont.display,
+    fontSize: 16,
+    fontWeight: "800",
+    color: ChickIntelPalette.gray1,
+  },
+  meta: {
+    marginTop: 2,
+    fontFamily: ChickFont.sans,
+    fontSize: 11,
+    color: ChickIntelPalette.gray2,
+  },
+  metrics: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 12 },
+  metric: {
+    fontFamily: ChickFont.sans,
+    fontSize: 11,
+    color: ChickIntelPalette.gray1,
+    backgroundColor: "rgba(244,248,247,0.8)",
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  emptyText: {
+    textAlign: "center",
+    paddingVertical: 20,
+    fontFamily: ChickFont.sans,
+    fontSize: 14,
+    color: ChickIntelPalette.gray2,
+  },
+});

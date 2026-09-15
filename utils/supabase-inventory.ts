@@ -1,10 +1,13 @@
 import { supabase } from "@/lib/supabase";
+import { fetchInventoryCategoryOptions } from "./supabase-lookups";
 
 export type SupabaseInventoryItem = {
   id: string;
   type: string;
   name: string;
   qty: number;
+  totalQty: number;
+  restockCreditQty: number;
   unit: string;
   statusPercent: number;
   orderDate: Date;
@@ -17,6 +20,8 @@ type InventoryRow = {
   item_type: string;
   item_name: string;
   qty: number;
+  total_qty?: number | null;
+  restock_credit_qty?: number | null;
   unit: string;
   status_percent: number;
   purchased_date: string | null;
@@ -63,6 +68,8 @@ function mapInventoryRow(row: InventoryRow): SupabaseInventoryItem {
     type: normalizeInventoryType(row.item_type),
     name: row.item_name,
     qty: Number(row.qty),
+    totalQty: Number(row.total_qty ?? row.qty),
+    restockCreditQty: Number(row.restock_credit_qty ?? 0),
     unit: row.unit,
     statusPercent: row.status_percent,
     orderDate: parseDatabaseDate(row.purchased_date) ?? new Date(),
@@ -71,14 +78,12 @@ function mapInventoryRow(row: InventoryRow): SupabaseInventoryItem {
   };
 }
 
-import { fetchInventoryCategoryOptions } from "./supabase-lookups";
-
 export async function fetchInventoryItems(farmId: string) {
   const [{ data, error }, activeCategoryOptions] = await Promise.all([
     supabase
       .from("inventory_items")
       .select(
-        "id, item_type, item_name, qty, unit, status_percent, purchased_date, delivered_date, expiration_date",
+        "id, item_type, item_name, qty, total_qty, restock_credit_qty, unit, status_percent, purchased_date, delivered_date, expiration_date",
       )
       .eq("farm_id", farmId)
       .order("created_at", { ascending: false }),
@@ -127,7 +132,7 @@ export async function createInventoryItem(
   const { data: existingRows, error: lookupError } = await supabase
     .from("inventory_items")
     .select(
-      "id, item_type, item_name, qty, unit, status_percent, purchased_date, delivered_date, expiration_date",
+      "id, item_type, item_name, qty, total_qty, restock_credit_qty, unit, status_percent, purchased_date, delivered_date, expiration_date",
     )
     .eq("farm_id", farmId)
     .order("created_at", { ascending: false });
@@ -147,10 +152,13 @@ export async function createInventoryItem(
 
   if (existingMatch) {
     const nextQty = Number(existingMatch.qty) + input.qty;
+    const nextTotalQty =
+      Number(existingMatch.total_qty ?? existingMatch.qty) + input.qty;
     const { data, error } = await supabase
       .from("inventory_items")
       .update({
         qty: nextQty,
+        total_qty: nextTotalQty,
         unit: input.unit,
         price: input.price ?? null,
         purchased_date: formatDatabaseDate(input.purchasedDate),
@@ -176,15 +184,19 @@ export async function createInventoryItem(
       item_type: normalizedType,
       item_name: input.name,
       qty: input.qty,
+      total_qty: input.qty,
+      restock_credit_qty: 0,
       unit: input.unit,
       price: input.price ?? null,
       status_percent: 100,
       purchased_date: formatDatabaseDate(input.purchasedDate),
-      delivered_date: formatDatabaseDate(input.deliveredDate ?? input.purchasedDate),
+      delivered_date: formatDatabaseDate(
+        input.deliveredDate ?? input.purchasedDate,
+      ),
       expiration_date: formatDatabaseDate(input.expirationDate),
     })
     .select(
-      "id, item_type, item_name, qty, unit, status_percent, purchased_date, delivered_date, expiration_date",
+      "id, item_type, item_name, qty, total_qty, restock_credit_qty, unit, status_percent, purchased_date, delivered_date, expiration_date",
     )
     .single();
 
@@ -215,6 +227,8 @@ export async function updateInventoryItem(
   input: {
     qty?: number;
     statusPercent?: number;
+    totalQty?: number;
+    restockCreditQty?: number;
     deliveredDate?: Date;
     expirationDate?: Date;
   },
@@ -225,6 +239,10 @@ export async function updateInventoryItem(
   }
   if (input.statusPercent !== undefined) {
     payload.status_percent = input.statusPercent;
+  }
+  if (input.totalQty !== undefined) payload.total_qty = input.totalQty;
+  if (input.restockCreditQty !== undefined) {
+    payload.restock_credit_qty = input.restockCreditQty;
   }
   if (input.deliveredDate !== undefined) {
     payload.delivered_date = formatDatabaseDate(input.deliveredDate);

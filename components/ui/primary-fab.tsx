@@ -10,42 +10,53 @@ type PrimaryFabProps = {
     onPress: () => void;
     bottom?: number;
     centered?: boolean;
+    size?: number;
+    iconSize?: number;
     accessibilityLabel: string;
 };
 
-const FAB_SIZE = scale(60);
+const DEFAULT_FAB_SIZE = scale(92);
 
 export function PrimaryFab({
     iconName,
     onPress,
     bottom,
     centered,
+    size = DEFAULT_FAB_SIZE,
+    iconSize,
     accessibilityLabel,
 }: PrimaryFabProps) {
+    const computedIconSize = iconSize ?? Math.round(size * 0.48);
+    const computedBorderRadius = Math.round(size * 0.28);
+
     return (
         <Pressable
             onPress={onPress}
             style={({ pressed }) => [
                 styles.fab,
                 {
-                    width: FAB_SIZE,
-                    height: FAB_SIZE,
-                    marginLeft: -FAB_SIZE / 2,
+                    width: size,
+                    height: size,
+                    borderRadius: computedBorderRadius,
+                    marginLeft: -size / 2,
                     bottom,
                 },
                 centered && {
                     top: "50%",
-                    marginTop: -FAB_SIZE / 2,
+                    marginTop: -size / 2,
                 },
-                { opacity: pressed ? 0.88 : 1 },
+                {
+                    opacity: pressed ? 0.82 : 1,
+                    transform: [{ scale: pressed ? 0.95 : 1 }],
+                },
             ]}
             accessibilityRole="button"
             accessibilityLabel={accessibilityLabel}
         >
             <MaterialCommunityIcons
                 name={iconName}
-                size={scale(28)}
-                color={ChickIntelPalette.green1}
+                size={computedIconSize}
+                color="#FFFFFF"
             />
         </Pressable>
     );
@@ -55,18 +66,16 @@ const styles = StyleSheet.create({
     fab: {
         position: "absolute",
         left: "50%",
-        borderRadius: 999,
-        backgroundColor: ChickIntelPalette.light1,
-        borderWidth: 2,
-        borderColor: ChickIntelPalette.green1,
+        backgroundColor: ChickIntelPalette.green1,
+        borderWidth: 1.5,
+        borderColor: "rgba(49, 118, 103, 0.25)",
         alignItems: "center",
         justifyContent: "center",
-        shadowColor: "#000000",
-        shadowOpacity: 0.18,
-        shadowRadius: 16,
-        shadowOffset: { width: 0, height: verticalScale(8) },
-        elevation: 6,
+        shadowColor: "#317667",
+        shadowOpacity: 0.32,
+        shadowRadius: 12,
+        shadowOffset: { width: 0, height: verticalScale(5) },
+        elevation: 8,
         zIndex: 20,
     },
-    fabCentered: {},
 });

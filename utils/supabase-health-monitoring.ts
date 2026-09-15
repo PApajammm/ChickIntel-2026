@@ -1,8 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { adjustFarmBatchHealthCounters } from "@/utils/supabase-batches";
 import {
-  createHealthJournalEntry,
-  type HealthJournalSavedScan,
+    type HealthJournalSavedScan
 } from "./supabase-health-journal";
 
 export type HealthMonitoringRecord = {
@@ -127,8 +126,6 @@ function readStoredOverrides(farmId: string) {
   }
 }
 
-
-
 function writeStoredOverride(
   farmId: string,
   id: string,
@@ -180,7 +177,8 @@ function isMissingMonitoringScansTable(error: unknown) {
     err?.code === "42P01" || // undefined_table
     err?.code === "PGRST204" || // missing relationship
     err?.code === "42501" || // RLS policy violation / permission denied
-    (message.includes("health_monitoring_scans") && message.includes("does not exist")) ||
+    (message.includes("health_monitoring_scans") &&
+      message.includes("does not exist")) ||
     message.includes("row-level security") ||
     message.includes("security policy")
   );
@@ -284,41 +282,6 @@ export async function fetchHealthMonitoringScanHistory(
 
   const mapped = (data ?? []).map((row: any) => mapHealthLogRow(row));
 
-  // Auto-heal unlinked initial scan created when this health_monitoring record was first added
-  if (record.createdAt) {
-    const recordTime = new Date(record.createdAt).getTime();
-    if (!Number.isNaN(recordTime)) {
-      const windowStart = new Date(recordTime - 15 * 60 * 1000).toISOString();
-      const windowEnd = new Date(recordTime + 5 * 60 * 1000).toISOString();
-
-      const existingIds = new Set(mapped.map((s) => s.id));
-      const { data: unlinkedData } = await supabase
-        .from("health_logs")
-        .select(HEALTH_LOG_SELECT)
-        .eq("farm_id", farmId)
-        .is("health_monitoring_id", null)
-        .gte("saved_at", windowStart)
-        .lte("saved_at", windowEnd);
-
-      if (unlinkedData && unlinkedData.length > 0) {
-        for (const unlinkedRow of unlinkedData) {
-          const scan = mapHealthLogRow(unlinkedRow);
-          if (!existingIds.has(scan.id)) {
-            // Auto-link back in database for future queries
-            void supabase
-              .from("health_logs")
-              .update({ health_monitoring_id: monitoringId })
-              .eq("farm_id", farmId)
-              .eq("id", scan.id);
-
-            mapped.push(scan);
-            existingIds.add(scan.id);
-          }
-        }
-      }
-    }
-  }
-
   const merged = mergeHealthLogIntoHistory(mapped, record.healthLog);
   // Sort reverse-chronological (newest scan first)
   merged.sort(
@@ -375,7 +338,10 @@ export async function getNextChtNumber(farmId: string): Promise<number> {
     .eq("farm_id", farmId);
 
   if (error) {
-    console.warn("[health-monitoring] getNextChtNumber warning:", error.message);
+    console.warn(
+      "[health-monitoring] getNextChtNumber warning:",
+      error.message,
+    );
     return 1;
   }
 
@@ -506,7 +472,9 @@ async function fetchHealthMonitoringRecordsWithManualJoin(
 ): Promise<HealthMonitoringRecord[]> {
   let query = supabase
     .from("health_monitoring")
-    .select("id, farm_id, health_log_id, cht_tag, batch_no, monitoring_status, monitoring_completed_at, created_at, updated_at")
+    .select(
+      "id, farm_id, health_log_id, cht_tag, batch_no, monitoring_status, monitoring_completed_at, created_at, updated_at",
+    )
     .eq("farm_id", farmId)
     .order("created_at", { ascending: false });
 
@@ -630,7 +598,11 @@ export async function fetchHealthMonitoringByChtTag(
 
   if (!error && data) return mapSingleRow(farmId, data);
 
-  const fallback = await fetchHealthMonitoringRecordsWithManualJoin(farmId, undefined, chtTag);
+  const fallback = await fetchHealthMonitoringRecordsWithManualJoin(
+    farmId,
+    undefined,
+    chtTag,
+  );
   return fallback[0] ?? null;
 }
 

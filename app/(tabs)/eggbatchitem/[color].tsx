@@ -447,7 +447,15 @@ export default function EggBatchColorScreen() {
                 </TouchableOpacity>
               </>
             ) : (
-              <View style={styles.headerRightPlaceholder} />
+              <TouchableOpacity
+                style={styles.headerCloseBtn}
+                onPress={() => router.push("/(tabs)/egg-batch-history" as any)}
+                activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel="Open egg batch history"
+              >
+                <MaterialCommunityIcons name="history" size={22} color="#FFF" />
+              </TouchableOpacity>
             )}
           </View>
         </View>

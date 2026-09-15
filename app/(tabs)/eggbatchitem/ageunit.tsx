@@ -410,7 +410,7 @@ export default function EggBatchAgeUnitScreen() {
               />
               <Text style={styles.kickerText}>Egg production</Text>
             </View>
-            <Text style={styles.pageTitle}>Create Egg Batch</Text>
+            <Text style={styles.pageTitle}>Create New Egg Batch</Text>
             <Text style={styles.pageSubtitle}>
               Connect this egg set to a chicken batch and track quantity, line
               age, and color origin.

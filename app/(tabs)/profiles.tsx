@@ -487,25 +487,44 @@ export default function ProfilesScreen() {
           </Text>
 
           {mode === "egg" ? (
+            <View style={styles.headerActions}>
+              <Pressable
+                onPress={() =>
+                  router.push({
+                    pathname: "/(tabs)/egg-fertility-report" as any,
+                    params: { overview: "Weekly" },
+                  })
+                }
+                style={styles.eggAnalyticsIconButton}
+                accessibilityRole="button"
+                accessibilityLabel="Open egg fertility report"
+              >
+                <MaterialCommunityIcons
+                  name="chart-donut"
+                  size={18}
+                  color="#FFF"
+                />
+              </Pressable>
+              <Pressable
+                onPress={() => router.push("/(tabs)/egg-batch-history" as any)}
+                style={styles.eggAnalyticsIconButton}
+                accessibilityRole="button"
+                accessibilityLabel="Open egg batch history"
+              >
+                <MaterialCommunityIcons name="history" size={21} color="#FFF" />
+              </Pressable>
+            </View>
+          ) : (
             <Pressable
               onPress={() =>
-                router.push({
-                  pathname: "/(tabs)/egg-fertility-report" as any,
-                  params: { overview: "Weekly" },
-                })
+                router.push("/(tabs)/chicken-batch-history" as any)
               }
               style={styles.eggAnalyticsIconButton}
               accessibilityRole="button"
-              accessibilityLabel="Open egg fertility report"
+              accessibilityLabel="Open chicken batch history"
             >
-              <MaterialCommunityIcons
-                name="chart-donut"
-                size={18}
-                color="#FFF"
-              />
+              <MaterialCommunityIcons name="history" size={21} color="#FFF" />
             </Pressable>
-          ) : (
-            <View style={styles.headerRightPlaceholder} />
           )}
         </View>
         <View style={styles.segmentStickyHeader}>
@@ -1315,6 +1334,11 @@ const styles = StyleSheet.create({
   },
   headerRightPlaceholder: {
     width: scale(42),
+  },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
   segmentStickyHeader: {
     backgroundColor: "transparent",

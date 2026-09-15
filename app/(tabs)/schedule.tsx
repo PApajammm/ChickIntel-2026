@@ -1,14 +1,19 @@
 import {
+    ChickDatePickerModal,
+    ChickTimePickerModal,
+} from "@/components/ui/chick-date-picker-modal";
+import {
     moderateScale,
     responsiveFontSize,
     scale,
     verticalScale,
 } from "@/utils/responsive";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
 import {
-  ChickDatePickerModal,
-  ChickTimePickerModal,
-} from "@/components/ui/chick-date-picker-modal";
+    excludeScheduleTaskOccurrence,
+    fetchScheduleOccurrenceExclusions,
+    type ScheduleOccurrenceExclusion,
+} from "@/utils/supabase-schedule-occurrences";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -60,15 +65,15 @@ import {
 import {
     computeTaskStatus,
     createScheduleTask,
-    deleteScheduleTask,
     fetchScheduleTaskCompletions,
     fetchScheduleTasks,
     formatScheduleDateKey,
     SCHEDULE_DAYS_OF_WEEK,
     scheduleTaskMatchesDate,
     type SupabaseScheduleTask,
-    type SupabaseScheduleTaskCompletion,
+    type SupabaseScheduleTaskCompletion
 } from "@/utils/supabase-schedule";
+import { recordDeletedScheduleTask } from "@/utils/supabase-schedule-history";
 
 const DAYS_OF_WEEK = [...SCHEDULE_DAYS_OF_WEEK];
 const MONTHS = [
@@ -222,10 +227,22 @@ const getTaskColorByLabel = (label: string) => {
   return getFallbackTaskColor(normalized);
 };
 
-const getTaskColorsForDate = (tasks: ScheduleTask[], date: Date) => [
+const getTaskColorsForDate = (
+  tasks: ScheduleTask[],
+  date: Date,
+  exclusions: ScheduleOccurrenceExclusion[] = [],
+) => [
   ...new Set(
     tasks
-      .filter((task) => scheduleTaskMatchesDate(task, date))
+      .filter(
+        (task) =>
+          scheduleTaskMatchesDate(task, date) &&
+          !exclusions.some(
+            (exclusion) =>
+              exclusion.taskId === task.id &&
+              exclusion.occurrenceDate === formatScheduleDateKey(date),
+          ),
+      )
       .map(getTaskColor),
   ),
 ];
@@ -236,6 +253,17 @@ const groupTasksByDate = (tasks: SupabaseScheduleTask[]) =>
     accumulator[key] = [...(accumulator[key] ?? []), task];
     return accumulator;
   }, {});
+
+const isExcludedOccurrence = (
+  task: ScheduleTask,
+  date: Date,
+  exclusions: ScheduleOccurrenceExclusion[],
+) =>
+  exclusions.some(
+    (exclusion) =>
+      exclusion.taskId === task.id &&
+      exclusion.occurrenceDate === formatScheduleDateKey(date),
+  );
 
 export default function ScheduleScreen() {
   const router = useRouter();
@@ -434,6 +462,9 @@ export default function ScheduleScreen() {
   const [completions, setCompletions] = useState<
     SupabaseScheduleTaskCompletion[]
   >([]);
+  const [occurrenceExclusions, setOccurrenceExclusions] = useState<
+    ScheduleOccurrenceExclusion[]
+  >([]);
 
   const loadScheduleTasks = useCallback(async () => {
     if (!configured || !activeFarm?.id) {
@@ -446,15 +477,18 @@ export default function ScheduleScreen() {
     setLoadingTasks(true);
 
     try {
-      const [tasks, loadedCompletions] = await Promise.all([
+      const [tasks, loadedCompletions, loadedExclusions] = await Promise.all([
         fetchScheduleTasks(activeFarm.id),
         fetchScheduleTaskCompletions(activeFarm.id),
+        fetchScheduleOccurrenceExclusions(activeFarm.id),
       ]);
       setDayTasks(groupTasksByDate(tasks));
       setCompletions(loadedCompletions);
+      setOccurrenceExclusions(loadedExclusions);
     } catch (error) {
       setDayTasks({});
       setCompletions([]);
+      setOccurrenceExclusions([]);
       logError("Schedule task load failed", error, {
         farmId: activeFarm.id,
       });
@@ -665,7 +699,11 @@ export default function ScheduleScreen() {
   const currentDayTasks = useMemo(
     () =>
       allTasks
-        .filter((task) => scheduleTaskMatchesDate(task, selectedDate))
+        .filter(
+          (task) =>
+            scheduleTaskMatchesDate(task, selectedDate) &&
+            !isExcludedOccurrence(task, selectedDate, occurrenceExclusions),
+        )
         .sort((left, right) => left.time.localeCompare(right.time)),
     [allTasks, selectedDate],
   );
@@ -681,7 +719,10 @@ export default function ScheduleScreen() {
         const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
         for (let d = 1; d <= daysInMonth; d++) {
           const testDate = new Date(viewYear, viewMonth, d);
-          if (scheduleTaskMatchesDate(task, testDate)) {
+          if (
+            scheduleTaskMatchesDate(task, testDate) &&
+            !isExcludedOccurrence(task, testDate, occurrenceExclusions)
+          ) {
             return true;
           }
         }
@@ -692,7 +733,13 @@ export default function ScheduleScreen() {
           ? left.time.localeCompare(right.time)
           : left.startDate.localeCompare(right.startDate),
       );
-  }, [allTasks, previewBaseDate, previewTimeframe, viewDate]);
+  }, [
+    allTasks,
+    occurrenceExclusions,
+    previewBaseDate,
+    previewTimeframe,
+    viewDate,
+  ]);
 
   const currentWeeklyTasks = useMemo(() => {
     // Determine the week of the previewBaseDate (Sunday - Saturday)
@@ -709,7 +756,10 @@ export default function ScheduleScreen() {
       .filter((task) => {
         const cur = new Date(startOfWeek);
         while (cur <= endOfWeek) {
-          if (scheduleTaskMatchesDate(task, cur)) {
+          if (
+            scheduleTaskMatchesDate(task, cur) &&
+            !isExcludedOccurrence(task, cur, occurrenceExclusions)
+          ) {
             return true;
           }
           cur.setDate(cur.getDate() + 1);
@@ -721,7 +771,7 @@ export default function ScheduleScreen() {
           ? left.time.localeCompare(right.time)
           : left.startDate.localeCompare(right.startDate),
       );
-  }, [allTasks, previewBaseDate]);
+  }, [allTasks, occurrenceExclusions, previewBaseDate]);
 
   const displayedPreviewTasks =
     previewTimeframe === "Weekly" ? currentWeeklyTasks : currentMonthTasks;
@@ -967,21 +1017,24 @@ export default function ScheduleScreen() {
       });
   };
 
-  const handleDeleteTask = (taskId: string) => {
+  const handleDeleteTask = (taskId: string, occurrenceDate: string) => {
     if (!activeFarm?.id) return;
+    const deletedTask = Object.values(dayTasks)
+      .flat()
+      .find((task) => task.id === taskId);
+    if (!deletedTask) return;
 
-    void deleteScheduleTask(activeFarm.id, taskId)
+    void recordDeletedScheduleTask(activeFarm.id, deletedTask)
+      .then(() =>
+        excludeScheduleTaskOccurrence(activeFarm.id!, taskId, occurrenceDate),
+      )
       .then(() => {
-        setDayTasks((prev) => {
-          const nextEntries = Object.entries(prev)
-            .map(
-              ([dateKey, tasks]) =>
-                [dateKey, tasks.filter((task) => task.id !== taskId)] as const,
-            )
-            .filter(([, tasks]) => tasks.length > 0);
-
-          return Object.fromEntries(nextEntries);
-        });
+        setOccurrenceExclusions((prev) => [
+          ...prev,
+          { taskId, occurrenceDate },
+        ]);
+      })
+      .then(() => {
         void refreshFarmData();
         void loadTaskMetadata();
       })
@@ -1025,7 +1078,15 @@ export default function ScheduleScreen() {
         >
           Schedule
         </Text>
-        <View style={styles.headerRightPlaceholder} />
+        <TouchableOpacity
+          style={styles.headerHistoryButton}
+          onPress={() => router.push("/(tabs)/schedule-history" as any)}
+          activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel="Open schedule history"
+        >
+          <MaterialCommunityIcons name="history" size={22} color="#FFF" />
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -1163,9 +1224,7 @@ export default function ScheduleScreen() {
                     hitSlop={15}
                     accessibilityRole="button"
                     accessibilityLabel={
-                      calendarViewMode === "week"
-                        ? "Next week"
-                        : "Next month"
+                      calendarViewMode === "week" ? "Next week" : "Next month"
                     }
                   >
                     <MaterialCommunityIcons
@@ -1192,6 +1251,7 @@ export default function ScheduleScreen() {
                       const taskColors = getTaskColorsForDate(
                         allTasks,
                         slot.date,
+                        occurrenceExclusions,
                       );
 
                       return (
@@ -1364,7 +1424,9 @@ export default function ScheduleScreen() {
                               {formatDisplayTime(task.time)}
                             </Text>
                             <Pressable
-                              onPress={() => handleDeleteTask(task.id)}
+                              onPress={() =>
+                                handleDeleteTask(task.id, selectedKey)
+                              }
                               hitSlop={10}
                               style={styles.deleteTaskBtn}
                             >
@@ -1596,7 +1658,9 @@ export default function ScheduleScreen() {
                             {formatDisplayTime(task.time)}
                           </Text>
                           <Pressable
-                            onPress={() => handleDeleteTask(task.id)}
+                            onPress={() =>
+                              handleDeleteTask(task.id, task.startDate)
+                            }
                             hitSlop={10}
                             style={styles.deleteTaskBtn}
                           >
@@ -1681,7 +1745,8 @@ export default function ScheduleScreen() {
                 </View>
                 <Text style={styles.modalPageTitle}>Add New Task</Text>
                 <Text style={styles.modalPageSubtitle}>
-                  Set up feeding, treatment, egg collection, or custom flock tasks.
+                  Set up feeding, treatment, egg collection, or custom flock
+                  tasks.
                 </Text>
               </View>
 
@@ -1877,7 +1942,8 @@ export default function ScheduleScreen() {
                       color={ChickIntelPalette.green1}
                     />
                     <Text style={styles.dateRowText}>
-                      Time: {formatDisplayTime(formatTimeValue(newTaskStartDate))}
+                      Time:{" "}
+                      {formatDisplayTime(formatTimeValue(newTaskStartDate))}
                     </Text>
                   </View>
                   <MaterialCommunityIcons
@@ -2126,6 +2192,21 @@ const styles = StyleSheet.create({
   },
   headerRightPlaceholder: {
     width: scale(42),
+  },
+  headerHistoryButton: {
+    width: scale(42),
+    height: verticalScale(42),
+    borderRadius: 14,
+    backgroundColor: ChickIntelPalette.green1,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.25)",
+    shadowColor: "#317667",
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
+    shadowOffset: { width: scale(0), height: verticalScale(4) },
+    elevation: 4,
   },
   backButton: {
     width: scale(42),

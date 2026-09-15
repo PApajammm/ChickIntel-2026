@@ -1,5 +1,6 @@
 import BackgroundGradient from "@/assets_imported/background-gradient.svg";
 import { BlurCard } from "@/components/ui/blur-card";
+import { ChickDatePickerModal } from "@/components/ui/chick-date-picker-modal";
 import {
     ChickSelectionModal,
     ChickSelectRow,
@@ -24,7 +25,6 @@ import {
 } from "@/utils/stock-alerts";
 import type { SupabaseInventoryItem } from "@/utils/supabase-inventory";
 import { fetchInventoryCategoryOptions } from "@/utils/supabase-lookups";
-import { ChickDatePickerModal } from "@/components/ui/chick-date-picker-modal";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
@@ -1121,28 +1121,37 @@ export default function InventoryScreen() {
             accessibilityRole="button"
             accessibilityLabel="Go back"
           >
-            <MaterialCommunityIcons
-              name="arrow-left"
-              size={22}
-              color="#FFF"
-            />
+            <MaterialCommunityIcons name="arrow-left" size={22} color="#FFF" />
           </TouchableOpacity>
-          <Text style={styles.screenTitle} numberOfLines={1}>Inventory</Text>
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={() => {
-              setNewItemType(
-                inventoryTabs.find((tab) => tab.id === selectedTab)?.label ||
-                  "Select Category",
-              );
-              setAddModalVisible(true);
-            }}
-            activeOpacity={0.8}
-            accessibilityRole="button"
-            accessibilityLabel="Add inventory item"
-          >
-            <MaterialCommunityIcons name="plus" size={24} color="#FFF" />
-          </TouchableOpacity>
+          <Text style={styles.screenTitle} numberOfLines={1}>
+            Inventory
+          </Text>
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              style={styles.headerHistoryButton}
+              onPress={() => router.push("/(tabs)/inventory-history" as any)}
+              activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel="Open inventory history"
+            >
+              <MaterialCommunityIcons name="history" size={22} color="#FFF" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => {
+                setNewItemType(
+                  inventoryTabs.find((tab) => tab.id === selectedTab)?.label ||
+                    "Select Category",
+                );
+                setAddModalVisible(true);
+              }}
+              activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel="Add inventory item"
+            >
+              <MaterialCommunityIcons name="plus" size={24} color="#FFF" />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Expiration Alert Summary Banner with Guaranteed Blinking Animation */}
@@ -1391,7 +1400,7 @@ export default function InventoryScreen() {
                   Items
                 </Text>
                 <Text style={styles.tabEmptySubtitle}>
-                  You don't have any items under this category yet.
+                  You don&apos;t have any items under this category yet.
                 </Text>
                 <TouchableOpacity
                   style={styles.tabEmptyAddBtn}
@@ -2062,6 +2071,11 @@ const styles = StyleSheet.create({
     marginTop: 2,
     marginBottom: 4,
   },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
   fixedAlertWrapper: {
     paddingHorizontal: moderateScale(16),
     marginTop: verticalScale(2),
@@ -2224,6 +2238,21 @@ const styles = StyleSheet.create({
     shadowOffset: { width: scale(0), height: verticalScale(4) },
     elevation: 4,
     flexShrink: 0,
+  },
+  headerHistoryButton: {
+    width: scale(42),
+    height: verticalScale(42),
+    borderRadius: 14,
+    backgroundColor: ChickIntelPalette.green1,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.25)",
+    shadowColor: "#317667",
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
+    shadowOffset: { width: scale(0), height: verticalScale(4) },
+    elevation: 4,
   },
   backButton: {
     width: scale(42),

@@ -763,7 +763,7 @@ export default function DevelopersScreen() {
               {/* Footer Attribution with Semi-Bold Maroon BPSU Text */}
               <View style={styles.aboutFooter}>
                 <Text style={styles.footerBpsuText}>
-                  Developed for BPSU BSCS CS4A Capstone Project 2026
+                  Developed for BPSU BSCS SD4A Thesis Project 2026
                 </Text>
                 <Text style={styles.footerSubText}>
                   ChickIntel · Smart Poultry Management & Diagnostics
