@@ -197,7 +197,25 @@ export default function EggBatchColorScreen() {
     };
   }, [filteredBatches]);
 
-  const hasSelectedEggs = selectedIds.size > 0;
+  const validSelectedIds = useMemo(() => {
+    const valid = new Set<string>();
+    for (const egg of filteredBatches) {
+      if (selectedIds.has(egg.id)) {
+        valid.add(egg.id);
+      }
+    }
+    return valid;
+  }, [selectedIds, filteredBatches]);
+
+  const hasSelectedEggs = validSelectedIds.size > 0;
+  const isAllSelected =
+    filteredBatches.length > 0 &&
+    validSelectedIds.size === filteredBatches.length;
+
+  // Clear stale selections when switching colors or batch origins
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [colorName, targetBatchNo]);
 
   const toggleSelection = (eggId: string) => {
     setSelectedIds((prev) => {
@@ -211,9 +229,25 @@ export default function EggBatchColorScreen() {
     });
   };
 
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredBatches.map((b) => b.id)));
+    }
+  };
+
   const clearSelection = () => {
     setSelectedIds(new Set());
   };
+
+  const [deleteTarget, setDeleteTarget] = useState<{
+    type: "single" | "bulk";
+    egg?: EggBatchItem;
+    count: number;
+  } | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const openEdit = (egg: EggBatchItem) => {
     setSelectedEgg(egg);
@@ -229,76 +263,62 @@ export default function EggBatchColorScreen() {
     setSelectedEgg(null);
   };
 
-  const confirmDeleteEgg = (egg: EggBatchItem) => {
-    Alert.alert("Delete egg batch", `Delete batch ${egg.batchNo}?`, [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          if (!activeFarm?.id) return;
-
-          try {
-            await deleteFarmEggBatch(activeFarm.id, egg.id);
-            setSavedEggBatches((prev) =>
-              prev.filter((item) => item.id !== egg.id),
-            );
-            setSelectedIds((prev) => {
-              const next = new Set(prev);
-              next.delete(egg.id);
-              return next;
-            });
-          } catch (error) {
-            logError("Egg batch color screen delete failed", error, {
-              farmId: activeFarm.id,
-              eggBatchId: egg.id,
-            });
-            Alert.alert(
-              "Delete failed",
-              "Unable to delete this egg batch right now.",
-            );
-          }
-        },
-      },
-    ]);
+  const requestDeleteEgg = (egg: EggBatchItem) => {
+    setDeleteError(null);
+    setDeleteTarget({
+      type: "single",
+      egg,
+      count: 1,
+    });
   };
 
-  const confirmDeleteSelectedEggs = () => {
-    if (!activeFarm?.id || selectedIds.size === 0) return;
+  const requestDeleteSelectedEggs = () => {
+    if (!activeFarm?.id || validSelectedIds.size === 0) return;
+    setDeleteError(null);
+    setDeleteTarget({
+      type: "bulk",
+      count: validSelectedIds.size,
+    });
+  };
 
-    Alert.alert(
-      "Delete selected egg batches",
-      `Delete ${selectedIds.size} selected batch${selectedIds.size === 1 ? "" : "es"}?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await Promise.all(
-                [...selectedIds].map((eggId) =>
-                  deleteFarmEggBatch(activeFarm.id!, eggId),
-                ),
-              );
-              setSavedEggBatches((prev) =>
-                prev.filter((egg) => !selectedIds.has(egg.id)),
-              );
-              clearSelection();
-            } catch (error) {
-              logError("Egg batch color screen bulk delete failed", error, {
-                farmId: activeFarm.id,
-                selectedCount: selectedIds.size,
-              });
-              Alert.alert(
-                "Bulk delete failed",
-                "Unable to delete all selected egg batches right now.",
-              );
-            }
-          },
-        },
-      ],
-    );
+  const executeDelete = async () => {
+    if (!activeFarm?.id || !deleteTarget) return;
+
+    setIsDeleting(true);
+    try {
+      if (deleteTarget.type === "single" && deleteTarget.egg) {
+        const eggId = deleteTarget.egg.id;
+        await deleteFarmEggBatch(activeFarm.id, eggId);
+        setSavedEggBatches((prev) => prev.filter((item) => item.id !== eggId));
+        setSelectedIds((prev) => {
+          const next = new Set(prev);
+          next.delete(eggId);
+          return next;
+        });
+      } else if (deleteTarget.type === "bulk") {
+        const idsToDelete = [...validSelectedIds];
+        await Promise.all(
+          idsToDelete.map((eggId) => deleteFarmEggBatch(activeFarm.id!, eggId)),
+        );
+        setSavedEggBatches((prev) =>
+          prev.filter((egg) => !validSelectedIds.has(egg.id)),
+        );
+        setSelectedIds(new Set());
+      }
+      setDeleteTarget(null);
+    } catch (error) {
+      logError("Egg batch delete failed", error, {
+        farmId: activeFarm.id,
+        target: deleteTarget,
+      });
+      setDeleteError(
+        deleteTarget.type === "single"
+          ? "Unable to delete this egg batch right now. Please try again."
+          : "Unable to delete selected egg batches right now. Please try again.",
+      );
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const saveEdit = async () => {
@@ -413,7 +433,7 @@ export default function EggBatchColorScreen() {
                   <MaterialCommunityIcons name="close" size={22} color="#FFF" />
                 </TouchableOpacity>
                 <TouchableOpacity
-                  onPress={confirmDeleteSelectedEggs}
+                  onPress={requestDeleteSelectedEggs}
                   style={styles.headerDeleteBtn}
                   accessibilityRole="button"
                   accessibilityLabel="Delete selected egg batches"
@@ -433,9 +453,28 @@ export default function EggBatchColorScreen() {
         </View>
 
         <View style={styles.selectionHintWrap}>
-          <Text style={styles.selectionHint}>
-            Tap the circle on a card to select multiple egg batches.
-          </Text>
+          <View style={styles.selectionHintRow}>
+            <Text style={styles.selectionHint}>
+              {hasSelectedEggs
+                ? `${validSelectedIds.size} of ${filteredBatches.length} batch${filteredBatches.length === 1 ? "" : "es"} selected`
+                : "Tap the circle on a card to select multiple egg batches."}
+            </Text>
+            {filteredBatches.length > 0 ? (
+              <TouchableOpacity
+                onPress={toggleSelectAll}
+                activeOpacity={0.7}
+                style={styles.selectAllBtn}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  isAllSelected ? "Deselect all batches" : "Select all batches"
+                }
+              >
+                <Text style={styles.selectAllBtnText}>
+                  {isAllSelected ? "Deselect All" : "Select All"}
+                </Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
         </View>
 
         <View style={styles.list}>
@@ -449,7 +488,7 @@ export default function EggBatchColorScreen() {
           ) : filteredBatches.length ? (
             filteredBatches.map((egg) => {
               const fertility = formatEggFertilityPercent(egg);
-              const isSelected = selectedIds.has(egg.id);
+              const isSelected = validSelectedIds.has(egg.id);
               const unhatchedCount = getDerivedUnhatchedQty(
                 egg.eggQty ?? 0,
                 egg.hatchedQty ?? 0,
@@ -537,7 +576,7 @@ export default function EggBatchColorScreen() {
                         </Pressable>
 
                         <Pressable
-                          onPress={() => confirmDeleteEgg(egg)}
+                          onPress={() => requestDeleteEgg(egg)}
                           hitSlop={8}
                           style={({ pressed }) => [
                             styles.actionIconBtn,
@@ -903,6 +942,93 @@ export default function EggBatchColorScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Delete Confirmation Modal (matching Monitoring Page Modal Style) */}
+      <Modal
+        visible={deleteTarget !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          if (!isDeleting) setDeleteTarget(null);
+        }}
+      >
+        <Pressable
+          style={styles.confirmModalBackdrop}
+          onPress={() => {
+            if (!isDeleting) setDeleteTarget(null);
+          }}
+        >
+          <Pressable
+            style={styles.confirmModalCard}
+            onPress={(event) => event.stopPropagation()}
+          >
+            <Text style={styles.confirmModalTitle}>Confirm</Text>
+            <Text style={styles.confirmModalMessage}>
+              {deleteTarget?.type === "single"
+                ? `Are you sure you want to delete batch ${deleteTarget.egg?.batchNo ?? ""}?`
+                : `Are you sure you want to delete ${deleteTarget?.count ?? 0} selected batch${(deleteTarget?.count ?? 0) === 1 ? "" : "es"}?`}
+            </Text>
+            <View style={styles.confirmModalRow}>
+              <Pressable
+                onPress={() => setDeleteTarget(null)}
+                disabled={isDeleting}
+                style={({ pressed }) => [
+                  styles.confirmModalBtn,
+                  styles.confirmModalBtnSecondary,
+                  { opacity: pressed ? 0.85 : 1 },
+                ]}
+              >
+                <Text style={styles.confirmModalBtnSecondaryText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => void executeDelete()}
+                disabled={isDeleting}
+                style={({ pressed }) => [
+                  styles.confirmModalBtn,
+                  styles.confirmModalBtnPrimary,
+                  { opacity: pressed ? 0.92 : 1 },
+                ]}
+              >
+                <Text style={styles.confirmModalBtnPrimaryText}>
+                  {isDeleting ? "Deleting..." : "Confirm"}
+                </Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* Delete Error Modal (matching Monitoring Page Modal Style) */}
+      <Modal
+        visible={deleteError !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDeleteError(null)}
+      >
+        <Pressable
+          style={styles.confirmModalBackdrop}
+          onPress={() => setDeleteError(null)}
+        >
+          <Pressable
+            style={styles.confirmModalCard}
+            onPress={(event) => event.stopPropagation()}
+          >
+            <Text style={styles.confirmModalTitle}>Delete failed</Text>
+            <Text style={styles.confirmModalMessage}>{deleteError}</Text>
+            <Pressable
+              onPress={() => setDeleteError(null)}
+              style={({ pressed }) => [
+                styles.confirmModalBtn,
+                styles.confirmModalBtnPrimary,
+                styles.confirmModalBtnFull,
+                { opacity: pressed ? 0.92 : 1 },
+              ]}
+            >
+              <Text style={styles.confirmModalBtnPrimaryText}>OK</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -940,36 +1066,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   headerCloseBtn: {
-    width: scale(42),
-    height: verticalScale(42),
+    width: scale(38),
+    height: verticalScale(38),
     borderRadius: 14,
-    backgroundColor: ChickIntelPalette.green1,
-    justifyContent: "center",
+    backgroundColor: ChickIntelPalette.gray2,
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.25)",
-    shadowColor: "#317667",
-    shadowOpacity: 0.22,
-    shadowRadius: 10,
-    shadowOffset: { width: scale(0), height: verticalScale(4) },
-    elevation: 4,
-    flexShrink: 0,
+    justifyContent: "center",
   },
   headerDeleteBtn: {
-    width: scale(42),
-    height: verticalScale(42),
+    width: scale(38),
+    height: verticalScale(38),
     borderRadius: 14,
-    backgroundColor: "#DC2626",
-    justifyContent: "center",
+    backgroundColor: "#923737",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(220, 38, 38, 0.35)",
-    shadowColor: "#DC2626",
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    shadowOffset: { width: scale(0), height: verticalScale(4) },
-    elevation: 4,
-    flexShrink: 0,
+    justifyContent: "center",
   },
   backButton: {
     width: scale(42),
@@ -1014,10 +1124,31 @@ const styles = StyleSheet.create({
   selectionHintWrap: {
     paddingHorizontal: moderateScale(2),
   },
+  selectionHintRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 8,
+  },
   selectionHint: {
+    flex: 1,
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(12),
     color: ChickIntelPalette.gray2,
+  },
+  selectAllBtn: {
+    paddingVertical: verticalScale(3),
+    paddingHorizontal: moderateScale(8),
+    borderRadius: 6,
+    backgroundColor: "rgba(49, 118, 103, 0.1)",
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.2)",
+  },
+  selectAllBtnText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(11),
+    fontWeight: "700",
+    color: ChickIntelPalette.green1,
   },
   backBtn: {
     width: scale(38),
@@ -1044,6 +1175,8 @@ const styles = StyleSheet.create({
   },
   cardSelected: {
     backgroundColor: "#FFFFFF",
+    borderColor: ChickIntelPalette.green1,
+    borderWidth: 1,
   },
   statusAccentBar: {
     position: "absolute",
@@ -1445,6 +1578,79 @@ const styles = StyleSheet.create({
   discrepancyModalBtnText: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(13.5),
+    fontWeight: "700",
+    color: "#FFFFFF",
+  },
+  confirmModalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(51, 51, 51, 0.38)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: moderateScale(24),
+  },
+  confirmModalCard: {
+    width: "100%",
+    maxWidth: scale(340),
+    borderRadius: 12,
+    padding: moderateScale(16),
+    backgroundColor: ChickIntelPalette.light1,
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.18)",
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    shadowOffset: { width: scale(0), height: verticalScale(8) },
+    elevation: 8,
+  },
+  confirmModalTitle: {
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(18),
+    fontWeight: "800",
+    color: ChickIntelPalette.gray1,
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  confirmModalMessage: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(14),
+    lineHeight: 20,
+    color: "rgba(51, 51, 51, 0.78)",
+    marginBottom: 16,
+    textAlign: "center",
+  },
+  confirmModalRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  confirmModalBtn: {
+    flex: 1,
+    minHeight: verticalScale(40),
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 10,
+    paddingHorizontal: moderateScale(12),
+  },
+  confirmModalBtnFull: {
+    flex: 0,
+    width: "100%",
+  },
+  confirmModalBtnSecondary: {
+    backgroundColor: "rgba(49, 118, 103, 0.1)",
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.24)",
+  },
+  confirmModalBtnPrimary: {
+    backgroundColor: ChickIntelPalette.green1,
+  },
+  confirmModalBtnSecondaryText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(14),
+    fontWeight: "700",
+    color: ChickIntelPalette.green1,
+  },
+  confirmModalBtnPrimaryText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(14),
     fontWeight: "700",
     color: "#FFFFFF",
   },

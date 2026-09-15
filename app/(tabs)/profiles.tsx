@@ -318,37 +318,41 @@ export default function ProfilesScreen() {
     closeEggEdit();
   }
 
+  const [deleteBatchId, setDeleteBatchId] = useState<string | null>(null);
+  const [isDeletingBatch, setIsDeletingBatch] = useState(false);
+  const [batchDeleteError, setBatchDeleteError] = useState<string | null>(null);
+
   function confirmRemove(id: string) {
-    Alert.alert("Delete batch", "Are you sure you want to delete this batch?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          if (!activeFarm?.id) {
-            Alert.alert("Farm missing", "No active farm was found.");
-            return;
-          }
-          try {
-            await deleteFarmBatch(activeFarm.id, id);
-            setChickenData((prev) => prev.filter((item) => item.id !== id));
-            logStep("Profiles chicken batch deleted", {
-              farmId: activeFarm.id,
-              batchNo: id,
-            });
-          } catch (error) {
-            Alert.alert(
-              "Delete failed",
-              "Unable to delete this batch right now.",
-            );
-            logError("Profiles chicken batch delete failed", error, {
-              farmId: activeFarm.id,
-              batchNo: id,
-            });
-          }
-        },
-      },
-    ]);
+    setBatchDeleteError(null);
+    setDeleteBatchId(id);
+  }
+
+  async function executeDeleteBatch() {
+    if (!deleteBatchId) return;
+    if (!activeFarm?.id) {
+      setBatchDeleteError("No active farm was found.");
+      return;
+    }
+    setIsDeletingBatch(true);
+    try {
+      await deleteFarmBatch(activeFarm.id, deleteBatchId);
+      setChickenData((prev) =>
+        prev.filter((item) => item.id !== deleteBatchId),
+      );
+      logStep("Profiles chicken batch deleted", {
+        farmId: activeFarm.id,
+        batchNo: deleteBatchId,
+      });
+      setDeleteBatchId(null);
+    } catch (error) {
+      logError("Profiles chicken batch delete failed", error, {
+        farmId: activeFarm.id,
+        batchNo: deleteBatchId,
+      });
+      setBatchDeleteError("Unable to delete this batch right now.");
+    } finally {
+      setIsDeletingBatch(false);
+    }
   }
 
   const eggColorCards = useMemo<EggColorCard[]>(() => {
@@ -1188,6 +1192,91 @@ export default function ProfilesScreen() {
           </View>
         </Pressable>
       </Modal>
+
+      {/* Chicken Batch Delete Confirmation Modal (matching Monitoring Page Modal Style) */}
+      <Modal
+        visible={deleteBatchId !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          if (!isDeletingBatch) setDeleteBatchId(null);
+        }}
+      >
+        <Pressable
+          style={styles.confirmModalBackdrop}
+          onPress={() => {
+            if (!isDeletingBatch) setDeleteBatchId(null);
+          }}
+        >
+          <Pressable
+            style={styles.confirmModalCard}
+            onPress={(event) => event.stopPropagation()}
+          >
+            <Text style={styles.confirmModalTitle}>Confirm</Text>
+            <Text style={styles.confirmModalMessage}>
+              Are you sure you want to delete batch {deleteBatchId ?? ""}?
+            </Text>
+            <View style={styles.confirmModalRow}>
+              <Pressable
+                onPress={() => setDeleteBatchId(null)}
+                disabled={isDeletingBatch}
+                style={({ pressed }) => [
+                  styles.confirmModalBtn,
+                  styles.confirmModalBtnSecondary,
+                  { opacity: pressed ? 0.85 : 1 },
+                ]}
+              >
+                <Text style={styles.confirmModalBtnSecondaryText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => void executeDeleteBatch()}
+                disabled={isDeletingBatch}
+                style={({ pressed }) => [
+                  styles.confirmModalBtn,
+                  styles.confirmModalBtnPrimary,
+                  { opacity: pressed ? 0.92 : 1 },
+                ]}
+              >
+                <Text style={styles.confirmModalBtnPrimaryText}>
+                  {isDeletingBatch ? "Deleting..." : "Confirm"}
+                </Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* Batch Delete Error Modal (matching Monitoring Page Modal Style) */}
+      <Modal
+        visible={batchDeleteError !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setBatchDeleteError(null)}
+      >
+        <Pressable
+          style={styles.confirmModalBackdrop}
+          onPress={() => setBatchDeleteError(null)}
+        >
+          <Pressable
+            style={styles.confirmModalCard}
+            onPress={(event) => event.stopPropagation()}
+          >
+            <Text style={styles.confirmModalTitle}>Delete failed</Text>
+            <Text style={styles.confirmModalMessage}>{batchDeleteError}</Text>
+            <Pressable
+              onPress={() => setBatchDeleteError(null)}
+              style={({ pressed }) => [
+                styles.confirmModalBtn,
+                styles.confirmModalBtnPrimary,
+                styles.confirmModalBtnFull,
+                { opacity: pressed ? 0.92 : 1 },
+              ]}
+            >
+              <Text style={styles.confirmModalBtnPrimaryText}>OK</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -1698,5 +1787,78 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: responsiveFontSize(14),
     fontWeight: "700",
+  },
+  confirmModalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(51, 51, 51, 0.38)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: moderateScale(24),
+  },
+  confirmModalCard: {
+    width: "100%",
+    maxWidth: scale(340),
+    borderRadius: 12,
+    padding: moderateScale(16),
+    backgroundColor: ChickIntelPalette.light1,
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.18)",
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    shadowOffset: { width: scale(0), height: verticalScale(8) },
+    elevation: 8,
+  },
+  confirmModalTitle: {
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(18),
+    fontWeight: "800",
+    color: ChickIntelPalette.gray1,
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  confirmModalMessage: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(14),
+    lineHeight: 20,
+    color: "rgba(51, 51, 51, 0.78)",
+    marginBottom: 16,
+    textAlign: "center",
+  },
+  confirmModalRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  confirmModalBtn: {
+    flex: 1,
+    minHeight: verticalScale(40),
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 10,
+    paddingHorizontal: moderateScale(12),
+  },
+  confirmModalBtnFull: {
+    flex: 0,
+    width: "100%",
+  },
+  confirmModalBtnSecondary: {
+    backgroundColor: "rgba(49, 118, 103, 0.1)",
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.24)",
+  },
+  confirmModalBtnPrimary: {
+    backgroundColor: ChickIntelPalette.green1,
+  },
+  confirmModalBtnSecondaryText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(14),
+    fontWeight: "700",
+    color: ChickIntelPalette.green1,
+  },
+  confirmModalBtnPrimaryText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(14),
+    fontWeight: "700",
+    color: "#FFFFFF",
   },
 });
