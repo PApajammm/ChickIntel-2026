@@ -9,8 +9,55 @@ export type BatchItem = {
   killedCount: number;
   colorName: string;
   colorHex: string;
-  notes?: Array<{ id: string; text: string; createdAt: string }>;
+  notes?: { id: string; text: string; createdAt: string }[];
 };
+
+function parseInitialAgeDays(ageLabel: string) {
+  const match = ageLabel
+    .trim()
+    .match(/(\d+(?:\.\d+)?)\s*(day|days|week|weeks)?/i);
+  if (!match) return 0;
+
+  const amount = Number.parseFloat(match[1]);
+  if (!Number.isFinite(amount)) return 0;
+
+  return /week/i.test(match[2] ?? "")
+    ? Math.round(amount * 7)
+    : Math.round(amount);
+}
+
+function elapsedCalendarDays(createdAt: string, now = new Date()) {
+  const created = new Date(createdAt);
+  if (Number.isNaN(created.getTime())) return 0;
+
+  const createdDate = new Date(
+    created.getFullYear(),
+    created.getMonth(),
+    created.getDate(),
+  );
+  const currentDate = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+  );
+
+  return Math.max(
+    0,
+    Math.floor((currentDate.getTime() - createdDate.getTime()) / 86400000),
+  );
+}
+
+export function getCurrentBatchAgeLabel(
+  batch: Pick<BatchItem, "ageLabel" | "createdAt">,
+  now = new Date(),
+) {
+  if (!batch.createdAt) return batch.ageLabel;
+
+  const currentAgeDays =
+    parseInitialAgeDays(batch.ageLabel) +
+    elapsedCalendarDays(batch.createdAt, now);
+  return `${currentAgeDays} ${currentAgeDays === 1 ? "Day" : "Days"} old`;
+}
 
 /** Egg inventory batch (separate from live-chicken batches). */
 export type EggBatchItem = {

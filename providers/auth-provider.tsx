@@ -40,6 +40,7 @@ export type FarmMembership = {
 type AuthContextValue = {
   initialized: boolean;
   session: Session | null;
+  guestMode: boolean;
   user: User | null;
   profile: AppProfile | null;
   memberships: FarmMembership[];
@@ -51,6 +52,8 @@ type AuthContextValue = {
     email: string,
     password: string,
   ) => Promise<{ success: boolean; error: string | null }>;
+  enterGuestMode: () => void;
+  exitGuestMode: () => void;
   signOut: () => Promise<void>;
   refreshOwnership: (userId?: string) => Promise<void>;
   clearError: () => void;
@@ -91,6 +94,7 @@ function pickActiveFarm(
 export function AuthProvider({ children }: PropsWithChildren) {
   const [initialized, setInitialized] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
+  const [guestMode, setGuestMode] = useState(false);
   const [profile, setProfile] = useState<AppProfile | null>(null);
   const [memberships, setMemberships] = useState<FarmMembership[]>([]);
   const [loading, setLoading] = useState(false);
@@ -330,6 +334,15 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setError(null);
   }
 
+  function enterGuestMode() {
+    setGuestMode(true);
+    setError(null);
+  }
+
+  function exitGuestMode() {
+    setGuestMode(false);
+  }
+
   async function signIn(
     email: string,
     password: string,
@@ -343,6 +356,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
     setLoading(true);
     setError(null);
+  setGuestMode(false);
 
     try {
       const normalizedEmail = email.trim().toLowerCase();
@@ -435,6 +449,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     () => ({
       initialized,
       session,
+      guestMode,
       user: session?.user ?? null,
       profile,
       memberships,
@@ -443,11 +458,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
       error,
       configured: isSupabaseConfigured,
       signIn,
+      enterGuestMode,
+      exitGuestMode,
       signOut,
       refreshOwnership,
       clearError,
     }),
-    [error, initialized, loading, memberships, profile, session],
+    [error, guestMode, initialized, loading, memberships, profile, session],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1,9 +1,9 @@
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
 import type { SupabaseInventoryItem } from "@/utils/supabase-inventory";
 import {
-  formatScheduleDateKey,
-  type SupabaseScheduleTask,
-  type SupabaseScheduleTaskCompletion,
+    formatScheduleDateKey,
+    type SupabaseScheduleTask,
+    type SupabaseScheduleTaskCompletion,
 } from "@/utils/supabase-schedule";
 
 export type EffectiveInventoryItem = SupabaseInventoryItem & {
@@ -262,9 +262,9 @@ export function computeEffectiveInventoryItems(
         (task.feedDailyAmount ?? 0) > 0,
     );
 
-    const storedQty = Number.isFinite(item.qty) ? item.qty : 0;
+    const storedQty = Number.isFinite(item.qty) ? Math.max(item.qty, 0) : 0;
     const restockCreditQty = Number.isFinite(item.restockCreditQty)
-      ? item.restockCreditQty
+      ? Math.max(item.restockCreditQty, 0)
       : 0;
     const currentQty = storedQty + restockCreditQty;
     const baseQty = Number.isFinite(item.baseQty)
@@ -272,7 +272,9 @@ export function computeEffectiveInventoryItems(
       : Number.isFinite(item.totalQty)
         ? item.totalQty
         : storedQty;
-    const safeBaseQty = Number.isFinite(baseQty) ? Number(baseQty) : storedQty;
+    const storedBaseQty = Number.isFinite(baseQty)
+      ? Number(baseQty)
+      : storedQty;
     const completedDatesByTaskId = new Map<string, Set<string>>();
 
     completions.forEach((completion) => {
@@ -288,8 +290,18 @@ export function computeEffectiveInventoryItems(
     });
 
     if (relatedConsumableTasks.length === 0) {
+      const safeBaseQty = Math.max(storedBaseQty, currentQty);
+      const derivedStatusPercent =
+        safeBaseQty > 0
+          ? Math.max(
+              0,
+              Math.min(100, Math.round((currentQty / safeBaseQty) * 100)),
+            )
+          : 0;
+
       return {
         ...item,
+        statusPercent: derivedStatusPercent,
         baseQty: safeBaseQty,
         remainingQty: currentQty,
         consumedQty: 0,
@@ -320,6 +332,7 @@ export function computeEffectiveInventoryItems(
     }, 0);
 
     const remainingQty = Math.max(currentQty - consumedQty, 0);
+    const safeBaseQty = Math.max(storedBaseQty, remainingQty);
     const derivedStatusPercent =
       safeBaseQty > 0
         ? Math.max(

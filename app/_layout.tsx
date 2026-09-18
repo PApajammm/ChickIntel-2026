@@ -2,10 +2,7 @@ import { useColorScheme } from "@/hooks/use-color-scheme";
 import { AuthProvider } from "@/providers/auth-provider";
 import { FarmDataProvider } from "@/providers/farm-data-provider";
 import { StockAlertProvider } from "@/providers/stock-alert-provider";
-import {
-    DefaultTheme,
-    ThemeProvider
-} from "@react-navigation/native";
+import { DefaultTheme, ThemeProvider } from "@react-navigation/native";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
@@ -47,7 +44,15 @@ export default function RootLayout() {
                   options={{ headerShown: false }}
                 />
                 <Stack.Screen
+                  name="splashscreen"
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
                   name="loginscreen"
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name="guest-mode"
                   options={{ headerShown: false }}
                 />
                 <Stack.Screen name="(tabs)" options={{ headerShown: false }} />

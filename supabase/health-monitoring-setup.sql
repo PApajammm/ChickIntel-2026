@@ -20,6 +20,185 @@ alter table public.health_monitoring
 alter table public.health_monitoring
     add column if not exists batch_no text;
 
+create table if not exists public.health_monitoring_tasks (
+    id uuid primary key default gen_random_uuid(),
+    farm_id uuid not null references public.farms (id) on delete cascade,
+    health_monitoring_id uuid not null references public.health_monitoring (id) on delete cascade,
+    title text not null,
+    description text,
+    task_type text not null default 'Treatment',
+    due_at timestamptz,
+    status text not null default 'Pending',
+    completed boolean not null default false,
+    completed_at timestamptz,
+    completed_by uuid references auth.users (id) on delete set null,
+    treatment_note text,
+    schedule_task_id uuid references public.schedule_tasks (id) on delete set null,
+    frequency text not null default 'Never',
+    start_date date,
+    end_date date,
+    scheduled_times text[] not null default '{}',
+    sort_order integer not null default 0,
+    created_at timestamptz not null default timezone('utc', now()),
+    updated_at timestamptz not null default timezone('utc', now())
+);
+
+alter table public.health_monitoring_tasks
+    add column if not exists description text;
+alter table public.health_monitoring_tasks
+    add column if not exists task_type text not null default 'Treatment';
+alter table public.health_monitoring_tasks
+    add column if not exists due_at timestamptz;
+alter table public.health_monitoring_tasks
+    add column if not exists status text not null default 'Pending';
+alter table public.health_monitoring_tasks
+    add column if not exists completed_by uuid references auth.users (id) on delete set null;
+alter table public.health_monitoring_tasks
+    add column if not exists treatment_note text;
+alter table public.health_monitoring_tasks
+    add column if not exists schedule_task_id uuid references public.schedule_tasks (id) on delete set null;
+alter table public.health_monitoring_tasks
+    add column if not exists frequency text not null default 'Never';
+alter table public.health_monitoring_tasks
+    add column if not exists start_date date;
+alter table public.health_monitoring_tasks
+    add column if not exists end_date date;
+alter table public.health_monitoring_tasks
+    add column if not exists scheduled_times text[] not null default '{}';
+
+update public.health_monitoring_tasks
+set status = case when completed then 'Completed' else 'Pending' end
+where status is null;
+
+drop trigger if exists health_monitoring_tasks_set_updated_at on public.health_monitoring_tasks;
+create trigger health_monitoring_tasks_set_updated_at
+before update on public.health_monitoring_tasks
+for each row execute procedure public.set_updated_at();
+
+create index if not exists idx_health_monitoring_tasks_monitoring_id
+    on public.health_monitoring_tasks (health_monitoring_id, sort_order);
+
+create table if not exists public.health_monitoring_task_occurrences (
+    id uuid primary key default gen_random_uuid(),
+    farm_id uuid not null references public.farms (id) on delete cascade,
+    health_monitoring_task_id uuid not null references public.health_monitoring_tasks (id) on delete cascade,
+    due_at timestamptz not null,
+    completed boolean not null default false,
+    completed_at timestamptz,
+    completed_by uuid references auth.users (id) on delete set null,
+    treatment_note text,
+    created_at timestamptz not null default timezone('utc', now()),
+    updated_at timestamptz not null default timezone('utc', now())
+);
+
+create index if not exists idx_health_monitoring_task_occurrences_task_due
+    on public.health_monitoring_task_occurrences (health_monitoring_task_id, due_at);
+
+-- Preserve treatment tasks created before occurrence support was added.
+insert into public.health_monitoring_task_occurrences (
+    farm_id,
+    health_monitoring_task_id,
+    due_at,
+    completed,
+    completed_at,
+    completed_by,
+    treatment_note
+)
+select
+    task.farm_id,
+    task.id,
+    coalesce(task.due_at, task.created_at),
+    task.completed,
+    task.completed_at,
+    task.completed_by,
+    task.treatment_note
+from public.health_monitoring_tasks task
+where not exists (
+    select 1
+    from public.health_monitoring_task_occurrences occurrence
+    where occurrence.health_monitoring_task_id = task.id
+);
+
+drop trigger if exists health_monitoring_task_occurrences_set_updated_at
+on public.health_monitoring_task_occurrences;
+create trigger health_monitoring_task_occurrences_set_updated_at
+before update on public.health_monitoring_task_occurrences
+for each row execute procedure public.set_updated_at();
+
+alter table public.health_monitoring_task_occurrences enable row level security;
+
+drop policy if exists "health_monitoring_task_occurrences_select_farm_members"
+on public.health_monitoring_task_occurrences;
+create policy "health_monitoring_task_occurrences_select_farm_members"
+on public.health_monitoring_task_occurrences for select to authenticated
+using (exists (
+    select 1 from public.farm_members fm
+    where fm.farm_id = health_monitoring_task_occurrences.farm_id
+      and fm.user_id = auth.uid()
+));
+
+drop policy if exists "health_monitoring_task_occurrences_insert_farm_members"
+on public.health_monitoring_task_occurrences;
+create policy "health_monitoring_task_occurrences_insert_farm_members"
+on public.health_monitoring_task_occurrences for insert to authenticated
+with check (exists (
+    select 1 from public.farm_members fm
+    where fm.farm_id = health_monitoring_task_occurrences.farm_id
+      and fm.user_id = auth.uid()
+));
+
+drop policy if exists "health_monitoring_task_occurrences_update_farm_members"
+on public.health_monitoring_task_occurrences;
+create policy "health_monitoring_task_occurrences_update_farm_members"
+on public.health_monitoring_task_occurrences for update to authenticated
+using (exists (
+    select 1 from public.farm_members fm
+    where fm.farm_id = health_monitoring_task_occurrences.farm_id
+      and fm.user_id = auth.uid()
+))
+with check (exists (
+    select 1 from public.farm_members fm
+    where fm.farm_id = health_monitoring_task_occurrences.farm_id
+      and fm.user_id = auth.uid()
+));
+
+alter table public.health_monitoring_tasks enable row level security;
+
+drop policy if exists "health_monitoring_tasks_select_farm_members"
+on public.health_monitoring_tasks;
+create policy "health_monitoring_tasks_select_farm_members"
+on public.health_monitoring_tasks for select to authenticated
+using (exists (
+    select 1 from public.farm_members fm
+    where fm.farm_id = health_monitoring_tasks.farm_id
+      and fm.user_id = auth.uid()
+));
+
+drop policy if exists "health_monitoring_tasks_insert_farm_members"
+on public.health_monitoring_tasks;
+create policy "health_monitoring_tasks_insert_farm_members"
+on public.health_monitoring_tasks for insert to authenticated
+with check (exists (
+    select 1 from public.farm_members fm
+    where fm.farm_id = health_monitoring_tasks.farm_id
+      and fm.user_id = auth.uid()
+));
+
+drop policy if exists "health_monitoring_tasks_update_farm_members"
+on public.health_monitoring_tasks;
+create policy "health_monitoring_tasks_update_farm_members"
+on public.health_monitoring_tasks for update to authenticated
+using (exists (
+    select 1 from public.farm_members fm
+    where fm.farm_id = health_monitoring_tasks.farm_id
+      and fm.user_id = auth.uid()
+))
+with check (exists (
+    select 1 from public.farm_members fm
+    where fm.farm_id = health_monitoring_tasks.farm_id
+      and fm.user_id = auth.uid()
+));
+
 update public.health_monitoring
 set monitoring_status = 'Active'
 where monitoring_status is null;

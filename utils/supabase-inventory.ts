@@ -52,6 +52,26 @@ function normalizeInventoryName(name: string) {
   return name.trim().toLowerCase();
 }
 
+export function isExpirationBatchType(type: string) {
+  const normalized = type.trim().toLowerCase();
+  return normalized === "medicine" || normalized === "vitamins";
+}
+
+function getDateKey(value?: Date | string | null) {
+  if (!value) return null;
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : formatDatabaseDate(value);
+  }
+  return value.slice(0, 10);
+}
+
+export function haveSameExpirationDate(
+  left?: Date | string | null,
+  right?: Date | string | null,
+) {
+  return getDateKey(left) === getDateKey(right);
+}
+
 function parseDatabaseDate(dateStr?: string | null): Date | undefined {
   if (!dateStr) return undefined;
   if (dateStr.includes("T")) return new Date(dateStr);
@@ -121,6 +141,7 @@ export async function createInventoryItem(
     qty: number;
     unit: string;
     price?: number;
+    currentRemainingQty?: number;
     purchasedDate?: Date;
     deliveredDate?: Date;
     expirationDate?: Date;
@@ -146,29 +167,57 @@ export async function createInventoryItem(
     const rowName = normalizeInventoryName(
       typeof row.item_name === "string" ? row.item_name : "",
     );
+    const sameExpirationDate = haveSameExpirationDate(
+      row.expiration_date,
+      input.expirationDate,
+    );
 
-    return rowType === normalizedType && rowName === normalizedName;
+    return (
+      rowType === normalizedType &&
+      rowName === normalizedName &&
+      (!isExpirationBatchType(normalizedType) || sameExpirationDate)
+    );
   });
 
   if (existingMatch) {
-    const nextQty = Number(existingMatch.qty) + input.qty;
-    const nextTotalQty =
-      Number(existingMatch.total_qty ?? existingMatch.qty) + input.qty;
+    const safeInputQty = Number.isFinite(input.qty)
+      ? Math.max(0, input.qty)
+      : 0;
+    const currentQty = Math.max(0, Number(existingMatch.qty) || 0);
+    const currentTotalQty = Math.max(
+      currentQty,
+      Number(existingMatch.total_qty ?? existingMatch.qty) || currentQty,
+    );
+    const currentRestockCreditQty = Math.max(
+      0,
+      Number(existingMatch.restock_credit_qty ?? 0) || 0,
+    );
+    const currentAvailableQty =
+      Number.isFinite(input.currentRemainingQty) &&
+      input.currentRemainingQty !== undefined
+        ? Math.max(0, input.currentRemainingQty)
+        : currentQty + currentRestockCreditQty;
+    const nextAvailableQty = currentAvailableQty + safeInputQty;
+    const updatePayload: Record<string, unknown> = {
+      qty: currentQty,
+      total_qty:
+        nextAvailableQty > currentTotalQty ? nextAvailableQty : currentTotalQty,
+      restock_credit_qty: currentRestockCreditQty + safeInputQty,
+      unit: input.unit,
+      price: input.price ?? null,
+      purchased_date: formatDatabaseDate(input.purchasedDate),
+      delivered_date: formatDatabaseDate(input.deliveredDate),
+      expiration_date: formatDatabaseDate(input.expirationDate),
+    };
+    if (safeInputQty > 0) updatePayload.status_percent = 100;
+
     const { data, error } = await supabase
       .from("inventory_items")
-      .update({
-        qty: nextQty,
-        total_qty: nextTotalQty,
-        unit: input.unit,
-        price: input.price ?? null,
-        purchased_date: formatDatabaseDate(input.purchasedDate),
-        delivered_date: formatDatabaseDate(input.deliveredDate),
-        expiration_date: formatDatabaseDate(input.expirationDate),
-      })
+      .update(updatePayload)
       .eq("farm_id", farmId)
       .eq("id", existingMatch.id)
       .select(
-        "id, item_type, item_name, qty, unit, status_percent, purchased_date, delivered_date, expiration_date",
+        "id, item_type, item_name, qty, total_qty, restock_credit_qty, unit, status_percent, purchased_date, delivered_date, expiration_date",
       )
       .single();
 

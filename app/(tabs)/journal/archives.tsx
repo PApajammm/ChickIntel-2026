@@ -7,10 +7,11 @@ import {
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
     FlatList,
     Platform,
+    ScrollView,
     StyleSheet,
     Text,
     TouchableOpacity,
@@ -30,7 +31,9 @@ import { mapBehaviorIdsToLabels } from "@/utils/supabase-behaviors";
 import {
     fetchArchivedHealthJournalEntries,
     formatJournalDateTime,
+    matchesJournalStatus,
     type HealthJournalSavedScan,
+    type JournalStatusFilter,
 } from "@/utils/supabase-health-journal";
 
 export default function ArchivesScreen() {
@@ -39,6 +42,7 @@ export default function ArchivesScreen() {
   const { activeFarm, configured } = useAuth();
   const [entries, setEntries] = useState<HealthJournalSavedScan[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<JournalStatusFilter>("all");
   const { behaviors: behaviorItems } = useBehaviors();
 
   const handleBack = () => {
@@ -70,6 +74,21 @@ export default function ArchivesScreen() {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  const filteredEntries = useMemo(
+    () =>
+      entries.filter((entry) =>
+        matchesJournalStatus(entry.actionStatus, statusFilter),
+      ),
+    [entries, statusFilter],
+  );
+
+  const statusFilters: { label: string; value: JournalStatusFilter }[] = [
+    { label: "Monitor", value: "monitor" },
+    { label: "Isolated", value: "isolated" },
+    { label: "Deceased", value: "deceased" },
+    { label: "Recovered", value: "recovered" },
+  ];
 
   return (
     <View style={styles.screen}>
@@ -106,7 +125,7 @@ export default function ArchivesScreen() {
         </View>
 
         <FlatList
-          data={entries}
+          data={filteredEntries}
           keyExtractor={(item) => item.id}
           refreshing={refreshing}
           onRefresh={() => void refresh()}
@@ -126,6 +145,9 @@ export default function ArchivesScreen() {
                 behaviorItems,
               )}
               additionalObservation={item.additionalObservation}
+              noteValue={item.additionalObservation ?? ""}
+              noteSavedAt={item.noteSavedAt}
+              noteHistory={item.noteHistory}
               selected={false}
               onToggleSelect={() => {}}
               hideCheckbox
@@ -141,6 +163,49 @@ export default function ArchivesScreen() {
                 here.
               </Text>
             </View>
+          }
+          ListHeaderComponent={
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.filterRow}
+            >
+              <TouchableOpacity
+                style={[
+                  styles.filterPill,
+                  statusFilter === "all" && styles.filterPillActive,
+                ]}
+                onPress={() => setStatusFilter("all")}
+              >
+                <Text
+                  style={[
+                    styles.filterText,
+                    statusFilter === "all" && styles.filterTextActive,
+                  ]}
+                >
+                  All
+                </Text>
+              </TouchableOpacity>
+              {statusFilters.map((filter) => (
+                <TouchableOpacity
+                  key={filter.value}
+                  style={[
+                    styles.filterPill,
+                    statusFilter === filter.value && styles.filterPillActive,
+                  ]}
+                  onPress={() => setStatusFilter(filter.value)}
+                >
+                  <Text
+                    style={[
+                      styles.filterText,
+                      statusFilter === filter.value && styles.filterTextActive,
+                    ]}
+                  >
+                    {filter.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
           }
           contentContainerStyle={{
             paddingBottom: 15,
@@ -219,6 +284,31 @@ const styles = StyleSheet.create({
   emptyText: {
     ...HealthTypography.meta,
     textAlign: "center",
+  },
+  filterRow: {
+    gap: 8,
+    paddingBottom: verticalScale(12),
+  },
+  filterPill: {
+    paddingHorizontal: moderateScale(12),
+    paddingVertical: verticalScale(7),
+    borderRadius: 999,
+    backgroundColor: "rgba(202, 227, 221, 0.42)",
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.18)",
+  },
+  filterPillActive: {
+    backgroundColor: ChickIntelPalette.green1,
+    borderColor: ChickIntelPalette.green1,
+  },
+  filterText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12),
+    fontWeight: "700",
+    color: ChickIntelPalette.gray1,
+  },
+  filterTextActive: {
+    color: "#FFFFFF",
   },
   modalBackdrop: {
     flex: 1,

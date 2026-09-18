@@ -15,6 +15,8 @@ import {
 } from "@/utils/supabase-schedule-occurrences";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
+import { Image } from "expo-image";
+import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, {
@@ -52,7 +54,12 @@ import { ChickFont } from "@/constants/chick-fonts";
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
 import { useAuth } from "@/providers/auth-provider";
 import { useFarmData } from "@/providers/farm-data-provider";
+import { optimizePhotoForInference } from "@/utils/image-crop-helper";
 import { logError } from "@/utils/logger";
+import {
+    cancelTaskNotifications,
+    scheduleTaskNotifications,
+} from "@/utils/schedule-notifications";
 import { computeEffectiveInventoryItems } from "@/utils/stock-alerts";
 import {
     fetchInventoryItems,
@@ -71,7 +78,7 @@ import {
     SCHEDULE_DAYS_OF_WEEK,
     scheduleTaskMatchesDate,
     type SupabaseScheduleTask,
-    type SupabaseScheduleTaskCompletion
+    type SupabaseScheduleTaskCompletion,
 } from "@/utils/supabase-schedule";
 import { recordDeletedScheduleTask } from "@/utils/supabase-schedule-history";
 
@@ -110,7 +117,7 @@ type PreviewTimeframeOption = (typeof PREVIEW_TIMEFRAME_OPTIONS)[number];
 type ScheduleTask = SupabaseScheduleTask;
 type FeedInventoryOption = Pick<
   SupabaseInventoryItem,
-  "id" | "name" | "unit" | "type" | "qty"
+  "id" | "name" | "unit" | "type" | "qty" | "expirationDate"
 >;
 
 const formatAppDate = (dateOrKey?: Date | string | null) => {
@@ -129,6 +136,12 @@ const formatAppDate = (dateOrKey?: Date | string | null) => {
   const d = String(date.getDate()).padStart(2, "0");
   const y = date.getFullYear();
   return `${m}/${d}/${y}`;
+};
+
+const formatInventoryOptionLabel = (item: FeedInventoryOption) => {
+  const type = item.type.trim().toLowerCase();
+  if (type !== "medicine" && type !== "vitamins") return item.name;
+  return `${item.name} • Exp: ${item.expirationDate ? formatAppDate(item.expirationDate) : "No date"}`;
 };
 
 const initialTasksByDate: Record<string, ScheduleTask[]> = {};
@@ -307,6 +320,8 @@ export default function ScheduleScreen() {
   const [newConsumableInventoryName, setNewConsumableInventoryName] = useState(
     "Choose inventory item",
   );
+  const [newConsumableInventoryLabel, setNewConsumableInventoryLabel] =
+    useState("Choose inventory item");
   const [newConsumableInventoryId, setNewConsumableInventoryId] = useState<
     string | null
   >(null);
@@ -322,6 +337,18 @@ export default function ScheduleScreen() {
     "Medication",
     "Egg Collecting",
   ]);
+  const [evidenceModalVisible, setEvidenceModalVisible] = useState(false);
+  const [evidenceUri, setEvidenceUri] = useState<string | null>(null);
+  const [evidenceBusy, setEvidenceBusy] = useState(false);
+  const [pendingCompletion, setPendingCompletion] = useState<{
+    task: ScheduleTask;
+    dateKey: string;
+  } | null>(null);
+  const [completionDetails, setCompletionDetails] = useState<{
+    task: ScheduleTask;
+    dateKey: string;
+    completion: SupabaseScheduleTaskCompletion;
+  } | null>(null);
 
   const resetAddTaskForm = (baseDate = selectedDate) => {
     setNewTaskTitle(FEEDING_TASK_LABEL);
@@ -334,6 +361,7 @@ export default function ScheduleScreen() {
     setCustomRepeatDays([]);
     endDateManuallySetRef.current = false;
     setNewConsumableInventoryName("Choose inventory item");
+    setNewConsumableInventoryLabel("Choose inventory item");
     setNewConsumableInventoryId(null);
     setNewConsumableInventoryUnit("");
     setNewConsumableInventoryQty(null);
@@ -452,6 +480,7 @@ export default function ScheduleScreen() {
           unit: item.unit,
           type: item.type,
           qty: item.remainingQty,
+          expirationDate: item.expirationDate,
         })),
       );
     } catch (error) {
@@ -499,34 +528,127 @@ export default function ScheduleScreen() {
 
   const { completeTask, refreshFarmData } = useFarmData();
 
-  const handleMarkComplete = useCallback(
-    async (task: ScheduleTask, dateKey: string) => {
-      if (!activeFarm?.id) return;
-
-      try {
-        const savedCompletion = await completeTask(task, dateKey);
-        if (savedCompletion) {
-          setCompletions((prev) => [
-            ...prev.filter(
-              (c) => !(c.taskId === task.id && c.completionDate === dateKey),
-            ),
-            savedCompletion,
-          ]);
-          void loadTaskMetadata();
-        }
-      } catch (error) {
-        logError("Task completion failed", error, {
-          farmId: activeFarm.id,
-          taskId: task.id,
-          dateKey,
-        });
-        Alert.alert(
-          "Unable to complete task",
-          "Could not record task completion right now. Please try again.",
-        );
-      }
+  const openEvidenceModal = useCallback(
+    (task: ScheduleTask, dateKey: string) => {
+      setPendingCompletion({ task, dateKey });
+      setEvidenceUri(null);
+      setEvidenceModalVisible(true);
     },
-    [activeFarm?.id, completeTask, loadTaskMetadata],
+    [],
+  );
+
+  const chooseEvidence = useCallback(async (source: "camera" | "library") => {
+    setEvidenceBusy(true);
+    try {
+      const permission =
+        source === "camera"
+          ? await ImagePicker.requestCameraPermissionsAsync()
+          : await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert(
+          "Evidence required",
+          "Allow photo access to attach evidence.",
+        );
+        return;
+      }
+
+      const result =
+        source === "camera"
+          ? await ImagePicker.launchCameraAsync({
+              mediaTypes: ["images"],
+              quality: 0.85,
+              exif: false,
+            })
+          : await ImagePicker.launchImageLibraryAsync({
+              mediaTypes: ["images"],
+              quality: 0.85,
+              exif: false,
+              selectionLimit: 1,
+            });
+
+      const asset = result.canceled ? null : result.assets[0];
+      if (!asset?.uri) return;
+
+      const optimized = await optimizePhotoForInference({
+        photoUri: asset.uri,
+        photoWidth: asset.width,
+        photoHeight: asset.height,
+        maxDimension: 1280,
+        quality: 0.82,
+      });
+      setEvidenceUri(optimized.uri);
+    } catch (error) {
+      logError("Schedule evidence selection failed", error);
+      Alert.alert("Evidence unavailable", "Could not prepare that image.");
+    } finally {
+      setEvidenceBusy(false);
+    }
+  }, []);
+
+  const confirmCompletion = useCallback(async () => {
+    if (!pendingCompletion || !evidenceUri) {
+      Alert.alert(
+        "Evidence required",
+        "Attach an evidence photo before completing the task.",
+      );
+      return;
+    }
+
+    setEvidenceBusy(true);
+    try {
+      const savedCompletion = await completeTask(
+        pendingCompletion.task,
+        pendingCompletion.dateKey,
+        evidenceUri,
+      );
+      if (savedCompletion) {
+        setCompletions((prev) => [
+          ...prev.filter(
+            (c) =>
+              !(
+                c.taskId === pendingCompletion.task.id &&
+                c.completionDate === pendingCompletion.dateKey
+              ),
+          ),
+          savedCompletion,
+        ]);
+        void loadTaskMetadata();
+      }
+      setEvidenceModalVisible(false);
+      setPendingCompletion(null);
+      setEvidenceUri(null);
+    } catch (error) {
+      logError("Task completion failed", error, {
+        farmId: activeFarm?.id,
+        taskId: pendingCompletion.task.id,
+        dateKey: pendingCompletion.dateKey,
+      });
+      Alert.alert(
+        "Unable to complete task",
+        "Could not save the task evidence right now.",
+      );
+    } finally {
+      setEvidenceBusy(false);
+    }
+  }, [
+    activeFarm?.id,
+    completeTask,
+    evidenceUri,
+    loadTaskMetadata,
+    pendingCompletion,
+  ]);
+
+  const handleMarkComplete = openEvidenceModal;
+
+  const openCompletionDetails = useCallback(
+    (
+      task: ScheduleTask,
+      dateKey: string,
+      completion: SupabaseScheduleTaskCompletion,
+    ) => {
+      setCompletionDetails({ task, dateKey, completion });
+    },
+    [],
   );
 
   useEffect(() => {
@@ -776,6 +898,12 @@ export default function ScheduleScreen() {
   const displayedPreviewTasks =
     previewTimeframe === "Weekly" ? currentWeeklyTasks : currentMonthTasks;
 
+  useEffect(() => {
+    allTasks.forEach((task) => {
+      void scheduleTaskNotifications(task);
+    });
+  }, [allTasks]);
+
   const previewTimeframeTitle = useMemo(() => {
     if (previewTimeframe === "Weekly") {
       const startOfWeek = new Date(previewBaseDate);
@@ -912,6 +1040,7 @@ export default function ScheduleScreen() {
     setNewTaskTitle(taskLabel);
     // Reset linked inventory selections because the task category has changed
     setNewConsumableInventoryName("Choose inventory item");
+    setNewConsumableInventoryLabel("Choose inventory item");
     setNewConsumableInventoryId(null);
     setNewConsumableInventoryUnit("");
     setNewConsumableDailyAmount("");
@@ -1006,6 +1135,7 @@ export default function ScheduleScreen() {
         closeAddTaskModal();
         void refreshFarmData();
         void loadTaskMetadata();
+        void scheduleTaskNotifications(createdTask);
       })
       .catch((error: any) => {
         logError("Schedule task create failed", error, {
@@ -1037,6 +1167,7 @@ export default function ScheduleScreen() {
       .then(() => {
         void refreshFarmData();
         void loadTaskMetadata();
+        void cancelTaskNotifications(taskId);
       })
       .catch((error) => {
         logError("Schedule task delete failed", error, {
@@ -1352,7 +1483,20 @@ export default function ScheduleScreen() {
                       );
 
                       return (
-                        <View key={task.id} style={styles.taskItem}>
+                        <Pressable
+                          key={task.id}
+                          style={styles.taskItem}
+                          disabled={!statusResult.isCompleted || !completion}
+                          onPress={() => {
+                            if (completion) {
+                              openCompletionDetails(
+                                task,
+                                selectedKey,
+                                completion,
+                              );
+                            }
+                          }}
+                        >
                           <View style={styles.taskLeft}>
                             <View
                               style={[
@@ -1437,7 +1581,7 @@ export default function ScheduleScreen() {
                               />
                             </Pressable>
                           </View>
-                        </View>
+                        </Pressable>
                       );
                     })
                   ) : (
@@ -1582,9 +1726,19 @@ export default function ScheduleScreen() {
                     );
 
                     return (
-                      <View
+                      <Pressable
                         key={`preview-${task.id}`}
                         style={styles.previewTaskItem}
+                        disabled={!statusResult.isCompleted || !completion}
+                        onPress={() => {
+                          if (completion) {
+                            openCompletionDetails(
+                              task,
+                              task.startDate,
+                              completion,
+                            );
+                          }
+                        }}
                       >
                         <View style={styles.taskLeft}>
                           <View
@@ -1671,7 +1825,7 @@ export default function ScheduleScreen() {
                             />
                           </Pressable>
                         </View>
-                      </View>
+                      </Pressable>
                     );
                   })}
                 </View>
@@ -1821,7 +1975,7 @@ export default function ScheduleScreen() {
                 {newTaskTitle !== "Egg Collecting" ? (
                   <>
                     <ChickSelectRow
-                      value={newConsumableInventoryName}
+                      value={newConsumableInventoryLabel}
                       placeholder="Choose inventory item"
                       rowStyle={styles.compactSelectRow}
                       onPress={() => {
@@ -1837,18 +1991,24 @@ export default function ScheduleScreen() {
                         setSelectionModal({
                           visible: true,
                           title: "Select Inventory Item",
-                          options: filteredOptions.map((item) => item.name),
+                          options: filteredOptions.map(
+                            formatInventoryOptionLabel,
+                          ),
                           value:
-                            newConsumableInventoryName ===
+                            newConsumableInventoryLabel ===
                             "Choose inventory item"
                               ? ""
-                              : newConsumableInventoryName,
+                              : newConsumableInventoryLabel,
                           onSelect: (value) => {
                             const selectedItem = filteredOptions.find(
-                              (item) => item.name === value,
+                              (item) =>
+                                formatInventoryOptionLabel(item) === value,
                             );
 
-                            setNewConsumableInventoryName(value);
+                            setNewConsumableInventoryName(
+                              selectedItem?.name ?? value,
+                            );
+                            setNewConsumableInventoryLabel(value);
                             setNewConsumableInventoryId(
                               selectedItem?.id ?? null,
                             );
@@ -2132,6 +2292,161 @@ export default function ScheduleScreen() {
               </View>
             </ScrollView>
           </KeyboardAvoidingView>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={evidenceModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          if (!evidenceBusy) setEvidenceModalVisible(false);
+        }}
+      >
+        <View style={styles.evidenceOverlay}>
+          <View style={styles.evidenceCard}>
+            <View style={styles.modalFormSectionHeader}>
+              <MaterialCommunityIcons
+                name="camera-plus-outline"
+                size={20}
+                color={ChickIntelPalette.green1}
+              />
+              <Text style={styles.modalFormSectionTitle}>
+                Task evidence required
+              </Text>
+            </View>
+            <Text style={styles.evidenceText}>
+              Attach a photo before marking this task as completed.
+            </Text>
+            {evidenceUri ? (
+              <Image
+                source={{ uri: evidenceUri }}
+                style={styles.evidencePreview}
+                contentFit="cover"
+              />
+            ) : null}
+            <View style={styles.evidenceActionRow}>
+              <Pressable
+                onPress={() => void chooseEvidence("camera")}
+                style={styles.evidenceSecondaryButton}
+                disabled={evidenceBusy}
+              >
+                <MaterialCommunityIcons
+                  name="camera-outline"
+                  size={17}
+                  color={ChickIntelPalette.green1}
+                />
+                <Text style={styles.evidenceSecondaryText}>Take photo</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => void chooseEvidence("library")}
+                style={styles.evidenceSecondaryButton}
+                disabled={evidenceBusy}
+              >
+                <MaterialCommunityIcons
+                  name="image-outline"
+                  size={17}
+                  color={ChickIntelPalette.green1}
+                />
+                <Text style={styles.evidenceSecondaryText}>Choose photo</Text>
+              </Pressable>
+            </View>
+            <View style={styles.modalActionRow}>
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={() => setEvidenceModalVisible(false)}
+                disabled={evidenceBusy}
+              >
+                <Text style={styles.modalCancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <Pressable
+                style={[
+                  styles.modalSaveButton,
+                  (!evidenceUri || evidenceBusy) && { opacity: 0.45 },
+                ]}
+                onPress={() => void confirmCompletion()}
+                disabled={!evidenceUri || evidenceBusy}
+              >
+                <Text style={styles.modalSaveButtonText}>
+                  {evidenceBusy ? "Saving..." : "Complete Task"}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={completionDetails !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setCompletionDetails(null)}
+      >
+        <View style={styles.evidenceOverlay}>
+          <View style={styles.evidenceCard}>
+            <View style={styles.modalFormSectionHeader}>
+              <MaterialCommunityIcons
+                name="clipboard-check-outline"
+                size={20}
+                color={ChickIntelPalette.green1}
+              />
+              <Text style={styles.modalFormSectionTitle}>
+                Completed task details
+              </Text>
+            </View>
+            {completionDetails ? (
+              <>
+                <Text style={styles.detailsTitle}>
+                  {completionDetails.task.title}
+                </Text>
+                <View style={styles.detailsGrid}>
+                  <Text style={styles.detailsItem}>
+                    Category: {completionDetails.task.category}
+                  </Text>
+                  <Text style={styles.detailsItem}>
+                    Date: {formatAppDate(completionDetails.dateKey)}
+                  </Text>
+                  <Text style={styles.detailsItem}>
+                    Scheduled: {formatDisplayTime(completionDetails.task.time)}
+                  </Text>
+                  <Text style={styles.detailsItem}>
+                    Status: {completionDetails.completion.completionStatus}
+                  </Text>
+                  <Text style={styles.detailsItem}>
+                    Completed:{" "}
+                    {new Date(
+                      completionDetails.completion.completedAt,
+                    ).toLocaleString()}
+                  </Text>
+                  {completionDetails.task.feedInventoryItemName ? (
+                    <Text style={styles.detailsItem}>
+                      Inventory: {completionDetails.task.feedInventoryItemName}
+                      {completionDetails.task.feedDailyAmount
+                        ? ` (${formatQuantityValue(completionDetails.task.feedDailyAmount)} ${completionDetails.task.feedDailyUnit ?? ""})`
+                        : ""}
+                    </Text>
+                  ) : null}
+                </View>
+                {completionDetails.completion.evidenceUri ? (
+                  <Image
+                    source={{ uri: completionDetails.completion.evidenceUri }}
+                    style={styles.evidencePreview}
+                    contentFit="cover"
+                  />
+                ) : (
+                  <Text style={styles.evidenceText}>
+                    No evidence image was stored for this completion.
+                  </Text>
+                )}
+              </>
+            ) : null}
+            <Pressable
+              style={styles.modalSaveButton}
+              onPress={() => setCompletionDetails(null)}
+            >
+              <Text style={styles.modalSaveButtonText}>Close</Text>
+            </Pressable>
+          </View>
         </View>
       </Modal>
 
@@ -2691,6 +3006,69 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(15),
     fontWeight: "700",
+  },
+  evidenceOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: moderateScale(20),
+  },
+  evidenceCard: {
+    width: "100%",
+    maxWidth: scale(420),
+    borderRadius: 16,
+    padding: moderateScale(18),
+    backgroundColor: "#FFFFFF",
+    gap: 12,
+  },
+  evidenceText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(13),
+    lineHeight: 19,
+    color: ChickIntelPalette.gray2,
+  },
+  evidencePreview: {
+    width: "100%",
+    height: verticalScale(190),
+    borderRadius: 12,
+    backgroundColor: "#EEF2F1",
+  },
+  evidenceActionRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  evidenceSecondaryButton: {
+    flex: 1,
+    minHeight: verticalScale(42),
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(49,118,103,0.25)",
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 6,
+  },
+  evidenceSecondaryText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12),
+    fontWeight: "700",
+    color: ChickIntelPalette.green1,
+  },
+  detailsTitle: {
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(18),
+    fontWeight: "800",
+    color: ChickIntelPalette.gray1,
+  },
+  detailsGrid: {
+    gap: 6,
+  },
+  detailsItem: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12),
+    lineHeight: 18,
+    color: ChickIntelPalette.gray2,
   },
   customRepeatContainer: {
     gap: 8,

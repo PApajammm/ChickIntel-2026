@@ -1,7 +1,7 @@
 import * as FileSystem from "expo-file-system/legacy";
 
-import { supabase } from "@/lib/supabase";
 import type { BreedScanAttributes } from "@/constants/breed-scan";
+import { supabase } from "@/lib/supabase";
 
 export type BreedImagePrediction = {
   className: string;
@@ -13,6 +13,23 @@ export type BreedImageInferenceResult = {
   topPrediction: BreedImagePrediction | null;
   predictions: BreedImagePrediction[];
 };
+
+const MIN_BREED_CONFIDENCE = 35;
+
+function isUsablePrediction(
+  prediction: unknown,
+): prediction is BreedImagePrediction {
+  if (!prediction || typeof prediction !== "object") return false;
+
+  const candidate = prediction as Partial<BreedImagePrediction>;
+  return (
+    typeof candidate.className === "string" &&
+    candidate.className.trim().length > 0 &&
+    typeof candidate.confidence === "number" &&
+    Number.isFinite(candidate.confidence) &&
+    candidate.confidence >= MIN_BREED_CONFIDENCE
+  );
+}
 
 async function photoUriToBase64(photoUri: string) {
   try {
@@ -96,27 +113,29 @@ export function resolveBestBreedPrediction(
     return { prediction: null, isNonChicken: false };
   }
 
-  const topPrediction = inference.topPrediction;
+  const allPredictions = (
+    Array.isArray(inference.predictions) ? inference.predictions : []
+  )
+    .filter(isUsablePrediction)
+    .sort((left, right) => right.confidence - left.confidence);
+  const topPrediction = isUsablePrediction(inference.topPrediction)
+    ? inference.topPrediction
+    : (allPredictions[0] ?? null);
   if (!topPrediction) {
     return { prediction: null, isNonChicken: false };
   }
 
-  const allPredictions = Array.isArray(inference.predictions)
-    ? inference.predictions
-    : [topPrediction];
-
   // Find the highest-scoring candidate that is NOT a non-chicken label
   const bestBreedCandidate = allPredictions.find(
-    (p) => !isNonChickenClassifierLabel(p.className) && p.className.trim().length > 0,
+    (p) =>
+      !isNonChickenClassifierLabel(p.className) &&
+      mapBreedPredictionToAttributes(p).type !== "Unknown",
   );
 
   if (isNonChickenClassifierLabel(topPrediction.className)) {
     // If nonchicken is overwhelmingly dominant (>= 75%) and runner-up is negligible (< 10%),
     // consider it truly a non-chicken image.
-    if (
-      topPrediction.confidence >= 75 &&
-      (!bestBreedCandidate || bestBreedCandidate.confidence < 10)
-    ) {
+    if (!bestBreedCandidate && topPrediction.confidence >= 75) {
       return { prediction: null, isNonChicken: true };
     }
 
@@ -129,7 +148,12 @@ export function resolveBestBreedPrediction(
     return { prediction: null, isNonChicken: true };
   }
 
-  // Top prediction is already a chicken breed
+  // Ignore labels outside the supported breed list instead of displaying them
+  // as if they were a valid breed.
+  if (mapBreedPredictionToAttributes(topPrediction).type === "Unknown") {
+    return { prediction: bestBreedCandidate ?? null, isNonChicken: false };
+  }
+
   return { prediction: topPrediction, isNonChicken: false };
 }
 
@@ -143,8 +167,13 @@ function titleCase(str: string) {
 export function mapBreedPredictionToAttributes(
   prediction: BreedImagePrediction,
 ): BreedScanAttributes {
-  const normalized = normalizeClassifierLabel(prediction.className);
-  const breedName = prediction.className.trim();
+  const rawBreedName =
+    typeof prediction?.className === "string"
+      ? prediction.className.trim()
+      : "";
+  const normalized = normalizeClassifierLabel(rawBreedName);
+  const compactNormalized = normalized.replace(/\s+/g, "");
+  const breedName = rawBreedName;
 
   const knownBreeds: {
     contains: string;
@@ -156,6 +185,62 @@ export function mapBreedPredictionToAttributes(
         breedName: "White Leghorn",
         temperament: "Low",
         type: "Layer",
+      },
+    },
+    {
+      contains: "turken",
+      attributes: {
+        breedName: "Turken (Naked Neck)",
+        temperament: "Active",
+        type: "Dual-purpose",
+      },
+    },
+    {
+      contains: "new hampshire",
+      attributes: {
+        breedName: "New Hampshire Red",
+        temperament: "Hardy",
+        type: "Dual-purpose",
+      },
+    },
+    {
+      contains: "plymouth rock",
+      attributes: {
+        breedName: "Plymouth Rock",
+        temperament: "Docile",
+        type: "Dual-purpose",
+      },
+    },
+    {
+      contains: "fayoumi",
+      attributes: {
+        breedName: "Fayoumi",
+        temperament: "Active",
+        type: "Layer",
+      },
+    },
+    {
+      contains: "black orpington",
+      attributes: {
+        breedName: "Black Orpington",
+        temperament: "Docile",
+        type: "Dual-purpose",
+      },
+    },
+    {
+      contains: "buckeye",
+      attributes: {
+        breedName: "Buckeye",
+        temperament: "Calm",
+        type: "Dual-purpose",
+      },
+    },
+    {
+      contains: "bielefelder",
+      attributes: {
+        breedName: "Bielefelder",
+        temperament: "Calm",
+        type: "Dual-purpose",
       },
     },
     {
@@ -200,8 +285,10 @@ export function mapBreedPredictionToAttributes(
     },
   ];
 
-  const matched = knownBreeds.find((option) =>
-    normalized.includes(option.contains),
+  const matched = knownBreeds.find(
+    (option) =>
+      normalized.includes(option.contains) ||
+      compactNormalized.includes(option.contains.replace(/\s+/g, "")),
   );
 
   if (matched) {
@@ -209,7 +296,7 @@ export function mapBreedPredictionToAttributes(
   }
 
   return {
-    breedName: titleCase(breedName),
+    breedName: breedName ? titleCase(breedName) : "Unknown breed",
     temperament: "Unknown",
     type: "Unknown",
   };

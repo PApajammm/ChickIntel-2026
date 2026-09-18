@@ -5,9 +5,17 @@ create table if not exists public.schedule_task_completions (
     completion_date date not null,
     completed_at timestamptz not null default timezone('utc', now()),
     completion_status text not null check (completion_status in ('Completed On Time', 'Completed Late')),
+    evidence_uri text,
+    evidence_captured_at timestamptz,
     created_at timestamptz not null default timezone('utc', now()),
     unique (task_id, completion_date)
 );
+
+alter table public.schedule_task_completions
+    add column if not exists evidence_uri text;
+
+alter table public.schedule_task_completions
+    add column if not exists evidence_captured_at timestamptz;
 
 create index if not exists idx_schedule_task_completions_farm_date
     on public.schedule_task_completions (farm_id, completion_date);

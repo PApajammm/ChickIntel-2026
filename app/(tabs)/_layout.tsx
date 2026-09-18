@@ -11,7 +11,8 @@ import { pushPath } from "@/utils/nav-history";
 
 export default function TabLayout() {
   const router = useRouter();
-  const { initialized, session, signOut } = useAuth();
+  const pathname = usePathname();
+  const { initialized, session, guestMode, signOut, exitGuestMode } = useAuth();
   const [logoutOpen, setLogoutOpen] = useState(false);
 
   useEffect(() => {
@@ -32,18 +33,30 @@ export default function TabLayout() {
     } catch {
       // ignore
     }
+    exitGuestMode();
     router.replace("/loginscreen");
   }
 
-  if (initialized && !session) {
+  const isGuestAllowedRoute =
+    pathname.includes("/scanner") ||
+    pathname.includes("/breed-result") ||
+    pathname.includes("/scanned-health");
+
+  if (initialized && !session && !guestMode) {
     return <Redirect href="/loginscreen" />;
+  }
+
+  if (initialized && guestMode && !isGuestAllowedRoute) {
+    return <Redirect href="/(tabs)/scanner" />;
   }
 
   return (
     <>
       <Tabs
         tabBar={(props) => (
-          <ChickTabBar {...props} onLogoutPress={() => setLogoutOpen(true)} />
+          guestMode ? null : (
+            <ChickTabBar {...props} onLogoutPress={() => setLogoutOpen(true)} />
+          )
         )}
         screenOptions={{
           headerShown: false,

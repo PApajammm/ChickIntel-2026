@@ -148,7 +148,8 @@ function formatBatchOptionLabel(batch: BatchItem) {
 
 export default function ScannedHealthResultScreen() {
   const router = useRouter();
-  const { activeFarm } = useAuth();
+  const { activeFarm, guestMode, session } = useAuth();
+  const isGuestExperience = guestMode && !session;
   const params = useLocalSearchParams<{
     photoUri?: string;
     detectedIllness?: string;
@@ -435,6 +436,13 @@ export default function ScannedHealthResultScreen() {
       });
   }
 
+  function returnToHealthScanner() {
+    router.replace({
+      pathname: "/(tabs)/scanner",
+      params: { initialMode: "health" },
+    });
+  }
+
   async function openChtDialog() {
     if (!activeFarm?.id || !savedHealthLogId) return;
 
@@ -503,6 +511,7 @@ export default function ScannedHealthResultScreen() {
         savedHealthLogId,
         chtTag,
         selectedBatchNo,
+        imageMatchedDisease?.treatmentProtocol ?? treatmentSteps,
       );
 
       setChtDialogVisible(false);
@@ -555,9 +564,18 @@ export default function ScannedHealthResultScreen() {
           <View style={styles.headerTitleRow}>
             <TouchableOpacity
               style={styles.backButton}
-              onPress={() =>
-                router.canGoBack() ? router.back() : router.replace("/(tabs)")
-              }
+              onPress={() => {
+                if (isGuestExperience) {
+                  returnToHealthScanner();
+                  return;
+                }
+
+                if (router.canGoBack()) {
+                  router.back();
+                } else {
+                  router.replace("/(tabs)");
+                }
+              }}
               activeOpacity={0.8}
               accessibilityRole="button"
               accessibilityLabel="Go back"
@@ -578,9 +596,11 @@ export default function ScannedHealthResultScreen() {
           <Text style={styles.pageSubtitle}>
             {isAnalyzingImage
               ? "Analyzing the captured image before finalizing the report."
-              : isMonitoringRescan
-                ? `This update will be added to ${chtTag || "this chicken"}'s record. Previous notes are kept.`
-                : "This report will be saved to your Behavior Journal."}
+              : isGuestExperience
+                ? "Review the health detection and scan another chicken when ready."
+                : isMonitoringRescan
+                  ? `This update will be added to ${chtTag || "this chicken"}'s record. Previous notes are kept.`
+                  : "This report will be saved to your Behavior Journal."}
           </Text>
         </View>
 
@@ -621,6 +641,7 @@ export default function ScannedHealthResultScreen() {
             selectedLabels={selectedLabels}
             additionalObservation={additionalObservation}
             showKicker={false}
+            summaryLabel={isGuestExperience ? "Health Snapshot" : undefined}
           />
 
           <View style={styles.cardSpacer} />
@@ -636,12 +657,32 @@ export default function ScannedHealthResultScreen() {
             durationValue={imageMatchedDisease?.recoveryDuration ?? ""}
           />
 
-          <HealthFlowFooterButton
-            variant="save"
-            label={isMonitoringRescan ? "Update record" : undefined}
-            onPress={onSave}
-            disabled={isAnalyzingImage || isSaving}
-          />
+          {isGuestExperience ? (
+            <>
+              <Text style={styles.guestModeNote}>
+                Guest mode: this detection can be viewed but is not saved.
+              </Text>
+              <HealthFlowFooterButton
+                variant="save"
+                label={
+                  isAnalyzingImage
+                    ? "Analyzing..."
+                    : hasStrongPrediction
+                      ? "Done"
+                      : "Retry"
+                }
+                onPress={returnToHealthScanner}
+                disabled={isAnalyzingImage}
+              />
+            </>
+          ) : (
+            <HealthFlowFooterButton
+              variant="save"
+              label={isMonitoringRescan ? "Update record" : undefined}
+              onPress={onSave}
+              disabled={isAnalyzingImage || isSaving}
+            />
+          )}
         </ScrollView>
 
         {/* Save dialog with optional Add to Health Monitoring */}
@@ -1277,5 +1318,13 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(12),
     color: "#5E6665",
     marginTop: 2,
+  },
+  guestModeNote: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12),
+    lineHeight: 18,
+    color: ChickIntelPalette.gray2,
+    textAlign: "center",
+    paddingVertical: verticalScale(12),
   },
 });

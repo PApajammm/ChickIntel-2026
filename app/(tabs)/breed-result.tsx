@@ -10,10 +10,11 @@ import * as FileSystem from "expo-file-system/legacy";
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  BackHandler,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -42,7 +43,10 @@ export default function BreedResultScreen() {
   const router = useRouter();
   const isFocused = useIsFocused();
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{ photoUri?: string }>();
+  const params = useLocalSearchParams<{
+    photoUri?: string;
+    initialMode?: string;
+  }>();
 
   const photoUri = params.photoUri || "";
   const photoUriRef = useRef(photoUri);
@@ -54,6 +58,25 @@ export default function BreedResultScreen() {
   );
   const [isNonChicken, setIsNonChicken] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const returnToBreedScanner = useCallback(() => {
+    router.replace({
+      pathname: "/(tabs)/scanner",
+      params: { initialMode: "breed" },
+    });
+  }, [router]);
+
+  useEffect(() => {
+    const subscription = BackHandler.addEventListener(
+      "hardwareBackPress",
+      () => {
+        returnToBreedScanner();
+        return true;
+      },
+    );
+
+    return () => subscription.remove();
+  }, [returnToBreedScanner]);
 
   // Automatically delete the temporary captured photo when the user leaves this screen
   useEffect(() => {
@@ -163,11 +186,7 @@ export default function BreedResultScreen() {
         <View style={styles.headerRow}>
           <TouchableOpacity
             style={styles.backButton}
-            onPress={() =>
-              router.canGoBack()
-                ? router.back()
-                : router.replace("/(tabs)/scanner")
-            }
+            onPress={returnToBreedScanner}
             activeOpacity={0.8}
             accessibilityRole="button"
             accessibilityLabel="Go back"
@@ -325,19 +344,31 @@ export default function BreedResultScreen() {
         </View>
 
         <Pressable
+          disabled={isAnalyzingImage}
           style={({ pressed }) => [
             styles.doneBtn,
-            { opacity: pressed ? 0.9 : 1 },
+            {
+              opacity: isAnalyzingImage ? 0.55 : pressed ? 0.9 : 1,
+            },
           ]}
-          onPress={() => router.replace("/(tabs)/scanner")}
+          onPress={() => {
+            if (isAnalyzingImage) return;
+            returnToBreedScanner();
+          }}
         >
-          <MaterialCommunityIcons
-            name={isNonChicken || error ? "refresh" : "check"}
-            size={18}
-            color="#FFF"
-          />
+          {(isAnalyzingImage || isNonChicken || error) && (
+            <MaterialCommunityIcons
+              name={isAnalyzingImage ? "loading" : "refresh"}
+              size={18}
+              color="#FFF"
+            />
+          )}
           <Text style={styles.doneBtnText}>
-            {isNonChicken || error ? "Scan Again" : "Done"}
+            {isAnalyzingImage
+              ? "Scanning..."
+              : isNonChicken || error
+                ? "Scan Again"
+                : "Done"}
           </Text>
         </Pressable>
       </ScrollView>

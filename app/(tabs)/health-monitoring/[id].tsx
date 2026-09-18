@@ -10,11 +10,13 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+    Modal,
     Platform,
     Pressable,
     ScrollView,
     StyleSheet,
     Text,
+    TextInput,
     TouchableOpacity,
     View,
 } from "react-native";
@@ -38,7 +40,11 @@ import type { HealthJournalSavedScan } from "@/utils/supabase-health-journal";
 import {
     fetchHealthMonitoringRecordById,
     fetchHealthMonitoringScanHistory,
+    fetchHealthMonitoringTasks,
+    updateHealthMonitoringTaskOccurrence,
     type HealthMonitoringRecord,
+    type HealthMonitoringTask,
+    type HealthMonitoringTaskOccurrence,
 } from "@/utils/supabase-health-monitoring";
 
 function formatScanDate(savedAt?: string) {
@@ -55,6 +61,13 @@ function formatScanDate(savedAt?: string) {
   return `${m}/${day}/${y} • ${displayHours}:${minutes} ${suffix}`;
 }
 
+function getMonitoringDays(startedAt: string, completedAt?: string) {
+  const start = new Date(startedAt).getTime();
+  const end = new Date(completedAt ?? Date.now()).getTime();
+  if (!Number.isFinite(start) || !Number.isFinite(end)) return 0;
+  return Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60 * 24)));
+}
+
 export default function HealthMonitoringDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -66,6 +79,17 @@ export default function HealthMonitoringDetailScreen() {
   const id = Array.isArray(idParam) ? idParam[0] : idParam;
   const [record, setRecord] = useState<HealthMonitoringRecord | undefined>();
   const [scanHistory, setScanHistory] = useState<HealthJournalSavedScan[]>([]);
+  const [treatmentTasks, setTreatmentTasks] = useState<HealthMonitoringTask[]>(
+    [],
+  );
+  const [treatmentNotes, setTreatmentNotes] = useState<Record<string, string>>(
+    {},
+  );
+  const [noteModalContext, setNoteModalContext] = useState<{
+    task: HealthMonitoringTask;
+    occurrence: HealthMonitoringTaskOccurrence;
+  } | null>(null);
+  const [isProtocolExpanded, setIsProtocolExpanded] = useState(true);
   const [diseaseDetails, setDiseaseDetails] = useState<DiseaseDetails | null>(
     null,
   );
@@ -79,9 +103,10 @@ export default function HealthMonitoringDetailScreen() {
     }
 
     try {
-      const [nextRecord, history] = await Promise.all([
+      const [nextRecord, history, tasks] = await Promise.all([
         fetchHealthMonitoringRecordById(activeFarm.id, id),
         fetchHealthMonitoringScanHistory(activeFarm.id, id),
+        fetchHealthMonitoringTasks(activeFarm.id, id),
       ]);
 
       if (!nextRecord) {
@@ -91,6 +116,7 @@ export default function HealthMonitoringDetailScreen() {
 
       setRecord(nextRecord);
       setScanHistory(history);
+      setTreatmentTasks(tasks);
     } catch (error) {
       logError("Health monitoring detail load failed", error, {
         farmId: activeFarm.id,
@@ -169,6 +195,93 @@ export default function HealthMonitoringDetailScreen() {
     } as never);
   }, [cameraPermission?.granted, record, requestCameraPermission, router]);
 
+  const toggleTreatmentOccurrence = useCallback(
+    async (
+      task: HealthMonitoringTask,
+      occurrence: HealthMonitoringTaskOccurrence,
+    ) => {
+      if (!activeFarm?.id || occurrence.completed) return;
+      const completed = true;
+      const completedAt = new Date().toISOString();
+      setTreatmentTasks((previous) =>
+        previous.map((entry) =>
+          entry.id === task.id
+            ? {
+                ...entry,
+                occurrences: entry.occurrences.map((item) =>
+                  item.id === occurrence.id
+                    ? { ...item, completed, completedAt }
+                    : item,
+                ),
+              }
+            : entry,
+        ),
+      );
+      try {
+        await updateHealthMonitoringTaskOccurrence(
+          activeFarm.id,
+          occurrence.id,
+          completed,
+        );
+      } catch (error) {
+        logError("Treatment occurrence update failed", error, {
+          occurrenceId: occurrence.id,
+        });
+        void refresh();
+      }
+    },
+    [activeFarm?.id, refresh],
+  );
+
+  const saveTreatmentNote = useCallback(
+    async (
+      task: HealthMonitoringTask,
+      occurrence: HealthMonitoringTaskOccurrence,
+    ) => {
+      if (!activeFarm?.id) return;
+      const treatmentNote = treatmentNotes[occurrence.id] ?? "";
+      try {
+        await updateHealthMonitoringTaskOccurrence(
+          activeFarm.id,
+          occurrence.id,
+          occurrence.completed,
+          treatmentNote,
+        );
+        setTreatmentTasks((previous) =>
+          previous.map((entry) =>
+            entry.id === task.id
+              ? {
+                  ...entry,
+                  occurrences: entry.occurrences.map((item) =>
+                    item.id === occurrence.id
+                      ? { ...item, treatmentNote }
+                      : item,
+                  ),
+                }
+              : entry,
+          ),
+        );
+      } catch (error) {
+        logError("Treatment occurrence note update failed", error, {
+          occurrenceId: occurrence.id,
+        });
+      }
+      setNoteModalContext(null);
+    },
+    [activeFarm?.id, treatmentNotes],
+  );
+
+  const openNoteEditor = useCallback(
+    (task: HealthMonitoringTask, occurrence: HealthMonitoringTaskOccurrence) => {
+    setTreatmentNotes((previous) => ({
+      ...previous,
+      [occurrence.id]: previous[occurrence.id] ?? occurrence.treatmentNote ?? "",
+    }));
+    setNoteModalContext({ task, occurrence });
+    },
+    [],
+  );
+
   if (!record) {
     return null;
   }
@@ -179,17 +292,108 @@ export default function HealthMonitoringDetailScreen() {
     diseaseDetails?.severity === "high" ||
     diseaseDetails?.severity === "critical";
   const canRescan = record.monitoringStatus === "Active";
+  const monitoringDays = getMonitoringDays(
+    record.createdAt,
+    record.monitoringCompletedAt,
+  );
+  const treatmentOccurrences = treatmentTasks.flatMap((task) =>
+    task.occurrences.map((occurrence) => ({ task, occurrence })),
+  );
+  const completedOccurrenceCount = treatmentOccurrences.filter(
+    ({ occurrence }) => occurrence.completed,
+  ).length;
+  const pendingTreatmentOccurrences = treatmentOccurrences.filter(
+    ({ occurrence }) => !occurrence.completed,
+  );
+  const completedTreatmentOccurrences = treatmentOccurrences.filter(
+    ({ occurrence }) => occurrence.completed,
+  );
+
+  const renderTreatmentOccurrence = ({
+    task,
+    occurrence,
+  }: {
+    task: HealthMonitoringTask;
+    occurrence: HealthMonitoringTaskOccurrence;
+  }) => (
+    <View key={occurrence.id} style={styles.protocolTaskCard}>
+      <View style={styles.protocolTaskRow}>
+        <Pressable
+          style={styles.protocolTaskToggle}
+          onPress={() => void toggleTreatmentOccurrence(task, occurrence)}
+          disabled={occurrence.completed}
+          accessibilityRole="checkbox"
+          accessibilityState={{
+            checked: occurrence.completed,
+            disabled: occurrence.completed,
+          }}
+        >
+          <MaterialCommunityIcons
+            name={
+              occurrence.completed
+                ? "checkbox-marked"
+                : "checkbox-blank-outline"
+            }
+            size={22}
+            color={
+              occurrence.completed
+                ? ChickIntelPalette.green1
+                : ChickIntelPalette.gray2
+            }
+          />
+          <View style={styles.protocolTaskCopy}>
+            <Text
+              style={[
+                styles.protocolTaskText,
+                occurrence.completed && styles.protocolTaskTextCompleted,
+              ]}
+            >
+              {task.title}
+            </Text>
+            {task.description ? (
+              <Text style={styles.protocolTaskDescription}>
+                {task.description}
+              </Text>
+            ) : null}
+            {occurrence.dueAt ? (
+              <Text style={styles.protocolTaskMeta}>
+                Due: {formatScanDate(occurrence.dueAt)}
+              </Text>
+            ) : null}
+            {occurrence.completedAt ? (
+              <Text style={styles.protocolTaskMeta}>
+                Completed: {formatScanDate(occurrence.completedAt)}
+              </Text>
+            ) : null}
+            {occurrence.completedBy ? (
+              <Text style={styles.protocolTaskMeta}>Completed by: Farmer</Text>
+            ) : null}
+          </View>
+        </Pressable>
+        <TouchableOpacity
+          style={styles.protocolNoteIconButton}
+          onPress={() => openNoteEditor(task, occurrence)}
+          accessibilityRole="button"
+          accessibilityLabel={`Add note for ${task.title}`}
+        >
+          <MaterialCommunityIcons
+            name="pencil-outline"
+            size={17}
+            color={ChickIntelPalette.green1}
+          />
+        </TouchableOpacity>
+      </View>
+      <Text style={styles.protocolTaskMeta}>
+        {formatScanDate(occurrence.dueAt)}
+        {occurrence.treatmentNote
+          ? ` • Note: ${occurrence.treatmentNote}`
+          : ""}
+      </Text>
+    </View>
+  );
 
   const dateAdded = record.createdAt
     ? new Date(record.createdAt).toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      })
-    : "";
-
-  const lastUpdated = record.updatedAt
-    ? new Date(record.updatedAt).toLocaleDateString("en-US", {
         year: "numeric",
         month: "short",
         day: "numeric",
@@ -247,9 +451,61 @@ export default function HealthMonitoringDetailScreen() {
             <Text style={styles.metaValue}>{dateAdded}</Text>
           </View>
           <View style={styles.metaItem}>
-            <Text style={styles.metaLabel}>Last Updated</Text>
-            <Text style={styles.metaValue}>{lastUpdated}</Text>
+            <Text style={styles.metaLabel}>Monitoring Days</Text>
+            <Text style={styles.metaValue}>{monitoringDays} days</Text>
           </View>
+        </View>
+
+        <View style={styles.protocolSection}>
+          <TouchableOpacity
+            style={styles.protocolHeader}
+            onPress={() => setIsProtocolExpanded((expanded) => !expanded)}
+            activeOpacity={0.75}
+            accessibilityRole="button"
+            accessibilityLabel={
+              isProtocolExpanded
+                ? "Hide treatment protocol tasks"
+                : "Show treatment protocol tasks"
+            }
+            accessibilityState={{ expanded: isProtocolExpanded }}
+          >
+            <View>
+              <Text style={styles.protocolTitle}>Treatment Protocol</Text>
+              <Text style={styles.protocolSubtitle}>
+                {treatmentOccurrences.length > 0
+                  ? `${completedOccurrenceCount}/${treatmentOccurrences.length} occurrences completed`
+                  : "No treatment tasks were provided for this result."}
+              </Text>
+            </View>
+            <View style={styles.protocolHeaderActions}>
+              <MaterialCommunityIcons
+                name="medical-bag"
+                size={22}
+                color={ChickIntelPalette.green1}
+              />
+              <MaterialCommunityIcons
+                name={isProtocolExpanded ? "chevron-up" : "chevron-down"}
+                size={24}
+                color={ChickIntelPalette.gray1}
+              />
+            </View>
+          </TouchableOpacity>
+          {isProtocolExpanded ? (
+            <>
+              {pendingTreatmentOccurrences.length > 0 ? (
+                <>
+                  <Text style={styles.protocolGroupTitle}>Pending</Text>
+                  {pendingTreatmentOccurrences.map(renderTreatmentOccurrence)}
+                </>
+              ) : null}
+              {completedTreatmentOccurrences.length > 0 ? (
+                <>
+                  <Text style={styles.protocolGroupTitle}>Completed</Text>
+                  {completedTreatmentOccurrences.map(renderTreatmentOccurrence)}
+                </>
+              ) : null}
+            </>
+          ) : null}
         </View>
 
         {canRescan ? (
@@ -340,6 +596,78 @@ export default function HealthMonitoringDetailScreen() {
           </>
         )}
       </ScrollView>
+
+      <Modal
+        visible={noteModalContext !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setNoteModalContext(null)}
+      >
+        <View style={styles.noteModalBackdrop}>
+          <View style={styles.noteModalCard}>
+            <View style={styles.noteModalHeader}>
+              <View style={styles.noteModalTitleWrap}>
+                <MaterialCommunityIcons
+                  name="note-edit-outline"
+                  size={20}
+                  color={ChickIntelPalette.green1}
+                />
+                <Text style={styles.noteModalTitle}>Treatment Note</Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setNoteModalContext(null)}
+                accessibilityRole="button"
+                accessibilityLabel="Close treatment note editor"
+              >
+                <MaterialCommunityIcons
+                  name="close"
+                  size={21}
+                  color={ChickIntelPalette.gray2}
+                />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.noteModalTaskTitle}>
+              {noteModalContext?.task.title}
+            </Text>
+            <TextInput
+              autoFocus
+              value={
+                noteModalContext
+                  ? (treatmentNotes[noteModalContext.occurrence.id] ??
+                    noteModalContext.occurrence.treatmentNote ??
+                    "")
+                  : ""
+              }
+              onChangeText={(value) => {
+                if (!noteModalContext) return;
+                setTreatmentNotes((previous) => ({
+                  ...previous,
+                  [noteModalContext.occurrence.id]: value,
+                }));
+              }}
+              placeholder="What happened during this treatment?"
+              placeholderTextColor={ChickIntelPalette.gray2}
+              style={styles.noteModalInput}
+              multiline
+              textAlignVertical="top"
+            />
+            <TouchableOpacity
+              style={styles.noteModalSaveButton}
+              onPress={() => {
+                if (noteModalContext) {
+                  void saveTreatmentNote(
+                    noteModalContext.task,
+                    noteModalContext.occurrence,
+                  );
+                }
+              }}
+              accessibilityRole="button"
+            >
+              <Text style={styles.noteModalSaveText}>Save Note</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -455,6 +783,189 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(14),
     fontWeight: "700",
+    color: "#FFFFFF",
+  },
+  protocolSection: {
+    marginBottom: 14,
+    padding: moderateScale(14),
+    borderRadius: 12,
+    backgroundColor: "rgba(255, 255, 255, 0.92)",
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.18)",
+    gap: 8,
+  },
+  protocolHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  protocolHeaderActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  protocolTitle: {
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(16),
+    fontWeight: "800",
+    color: ChickIntelPalette.green1,
+  },
+  protocolSubtitle: {
+    marginTop: 2,
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12),
+    color: ChickIntelPalette.gray2,
+  },
+  protocolTaskRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    paddingVertical: 5,
+  },
+  protocolTaskToggle: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+  },
+  protocolTaskCard: {
+    borderTopWidth: 1,
+    borderTopColor: "rgba(49, 118, 103, 0.12)",
+    paddingTop: 8,
+  },
+  protocolTaskCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  protocolTaskText: {
+    flex: 1,
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(13),
+    lineHeight: 19,
+    color: ChickIntelPalette.gray1,
+  },
+  protocolTaskTextCompleted: {
+    color: ChickIntelPalette.gray2,
+    textDecorationLine: "line-through",
+  },
+  protocolTaskDescription: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(11),
+    lineHeight: 16,
+    color: ChickIntelPalette.gray2,
+  },
+  protocolTaskMeta: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(10),
+    color: ChickIntelPalette.gray2,
+  },
+  protocolGroupTitle: {
+    marginTop: 6,
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(12),
+    fontWeight: "800",
+    color: ChickIntelPalette.gray1,
+    textTransform: "uppercase",
+  },
+  protocolNoteInput: {
+    minHeight: 38,
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.18)",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12),
+    color: ChickIntelPalette.gray1,
+    backgroundColor: "rgba(244, 248, 247, 0.7)",
+  },
+  protocolNoteButton: {
+    alignSelf: "flex-end",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 7,
+    backgroundColor: ChickIntelPalette.green1,
+  },
+  protocolNoteButtonText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(10),
+    fontWeight: "700",
+    color: "#FFFFFF",
+  },
+  protocolSavedNote: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(11),
+    lineHeight: 16,
+    color: ChickIntelPalette.gray1,
+  },
+  protocolNoteIconButton: {
+    width: 32,
+    height: 32,
+    marginTop: 2,
+    flexShrink: 0,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(49, 118, 103, 0.1)",
+  },
+  noteModalBackdrop: {
+    flex: 1,
+    justifyContent: "center",
+    paddingHorizontal: moderateScale(18),
+    backgroundColor: "rgba(20, 31, 29, 0.42)",
+  },
+  noteModalCard: {
+    borderRadius: 14,
+    padding: moderateScale(16),
+    backgroundColor: "#FFFFFF",
+    gap: 10,
+  },
+  noteModalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  noteModalTitleWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+  },
+  noteModalTitle: {
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(16),
+    fontWeight: "800",
+    color: ChickIntelPalette.gray1,
+  },
+  noteModalTaskTitle: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(13),
+    fontWeight: "700",
+    color: ChickIntelPalette.green1,
+  },
+  noteModalInput: {
+    minHeight: 120,
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.2)",
+    borderRadius: 9,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(13),
+    lineHeight: 19,
+    color: ChickIntelPalette.gray1,
+    backgroundColor: "rgba(244, 248, 247, 0.7)",
+  },
+  noteModalSaveButton: {
+    alignItems: "center",
+    paddingVertical: 10,
+    borderRadius: 9,
+    backgroundColor: ChickIntelPalette.green1,
+  },
+  noteModalSaveText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(13),
+    fontWeight: "800",
     color: "#FFFFFF",
   },
   historySection: {

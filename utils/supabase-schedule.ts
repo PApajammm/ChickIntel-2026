@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { ensurePersistentImageUri } from "@/utils/persistent-image-storage";
 
 export const SCHEDULE_DAYS_OF_WEEK = [
   "SUN",
@@ -417,6 +418,8 @@ export type SupabaseScheduleTaskCompletion = {
   completionDate: string;
   completedAt: string;
   completionStatus: "Completed On Time" | "Completed Late";
+  evidenceUri?: string;
+  evidenceCapturedAt?: string;
 };
 
 export type ScheduleTaskStatusResult = {
@@ -522,7 +525,7 @@ export async function fetchScheduleTaskCompletions(farmId: string) {
   const { data, error } = await supabase
     .from("schedule_task_completions")
     .select(
-      "id, farm_id, task_id, completion_date, completed_at, completion_status",
+      "id, farm_id, task_id, completion_date, completed_at, completion_status, evidence_uri, evidence_captured_at",
     )
     .eq("farm_id", farmId);
 
@@ -535,6 +538,8 @@ export async function fetchScheduleTaskCompletions(farmId: string) {
     completionDate: row.completion_date,
     completedAt: row.completed_at,
     completionStatus: row.completion_status,
+    evidenceUri: row.evidence_uri ?? undefined,
+    evidenceCapturedAt: row.evidence_captured_at ?? undefined,
   })) as SupabaseScheduleTaskCompletion[];
 }
 
@@ -543,6 +548,7 @@ export async function completeScheduleTask(
   taskId: string,
   dateKey: string,
   taskTime: string,
+  evidenceUri: string,
 ) {
   const now = new Date();
   const [hours, minutes] = (taskTime || "00:00").split(":").map(Number);
@@ -560,19 +566,22 @@ export async function completeScheduleTask(
       ? "Completed On Time"
       : "Completed Late";
 
+  const persistentEvidenceUri = await ensurePersistentImageUri(evidenceUri);
   const payload = {
     farm_id: farmId,
     task_id: taskId,
     completion_date: dateKey,
     completed_at: now.toISOString(),
     completion_status: completionStatus,
+    evidence_uri: persistentEvidenceUri || null,
+    evidence_captured_at: now.toISOString(),
   };
 
   const { data, error } = await supabase
     .from("schedule_task_completions")
     .upsert(payload, { onConflict: "task_id, completion_date" })
     .select(
-      "id, farm_id, task_id, completion_date, completed_at, completion_status",
+      "id, farm_id, task_id, completion_date, completed_at, completion_status, evidence_uri, evidence_captured_at",
     )
     .single();
 
@@ -581,7 +590,7 @@ export async function completeScheduleTask(
     const { data: existing, error: fetchErr } = await supabase
       .from("schedule_task_completions")
       .select(
-        "id, farm_id, task_id, completion_date, completed_at, completion_status",
+        "id, farm_id, task_id, completion_date, completed_at, completion_status, evidence_uri, evidence_captured_at",
       )
       .eq("task_id", taskId)
       .eq("completion_date", dateKey)
@@ -595,6 +604,8 @@ export async function completeScheduleTask(
         completionDate: existing.completion_date,
         completedAt: existing.completed_at,
         completionStatus: existing.completion_status,
+        evidenceUri: existing.evidence_uri ?? undefined,
+        evidenceCapturedAt: existing.evidence_captured_at ?? undefined,
       } as SupabaseScheduleTaskCompletion;
     }
 
@@ -608,5 +619,7 @@ export async function completeScheduleTask(
     completionDate: data.completion_date,
     completedAt: data.completed_at,
     completionStatus: data.completion_status,
+    evidenceUri: data.evidence_uri ?? undefined,
+    evidenceCapturedAt: data.evidence_captured_at ?? undefined,
   } as SupabaseScheduleTaskCompletion;
 }

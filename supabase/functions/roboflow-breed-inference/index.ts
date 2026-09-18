@@ -8,7 +8,7 @@ const corsHeaders = {
 };
 
 const CHICKEN_BREED_MODEL_ID =
-  "donut-ep62e/chicken-breed-identifier-2-vit-base-patch16-224-in21k-t1";
+  "donut-ep62e/chicken-breed-identifier-3-vit-base-patch16-224-in21k-t1";
 
 type BreedPrediction = {
   className: string;
@@ -39,8 +39,15 @@ function jsonResponse(status: number, body: unknown) {
 }
 
 function normalizeConfidence(value: unknown) {
-  if (typeof value !== "number" || Number.isNaN(value)) return 0;
-  const percentage = value > 1 ? value : value * 100;
+  const numericValue =
+    typeof value === "number"
+      ? value
+      : typeof value === "string" && value.trim()
+        ? Number(value)
+        : Number.NaN;
+
+  if (!Number.isFinite(numericValue)) return 0;
+  const percentage = numericValue > 1 ? numericValue : numericValue * 100;
   return Math.max(0, Math.min(100, Math.round(percentage * 100) / 100));
 }
 
@@ -85,17 +92,6 @@ function collectPredictions(value: unknown, predictions: BreedPrediction[]) {
       className: record.top,
       confidence: normalizeConfidence(record.confidence),
     });
-  }
-
-  if (Array.isArray(record.predicted_classes)) {
-    for (const predictedClass of record.predicted_classes) {
-      if (typeof predictedClass === "string") {
-        predictions.push({
-          className: predictedClass,
-          confidence: 0,
-        });
-      }
-    }
   }
 
   Object.values(record).forEach((nestedValue) =>

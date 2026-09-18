@@ -1,3 +1,4 @@
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
@@ -6,10 +7,16 @@ import {
     ScrollView,
     StyleSheet,
     Text,
+    TouchableOpacity,
     View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { moderateScale, responsiveFontSize, scale } from "@/utils/responsive";
+import {
+    moderateScale,
+    responsiveFontSize,
+    scale,
+    verticalScale,
+} from "@/utils/responsive";
 
 import ChickenLogo from "@/assets_imported/splash-chicken.svg";
 import { AuthFrame, FarmButton, FarmInput } from "@/components/farm-auth";
@@ -18,7 +25,14 @@ import { logStep } from "@/utils/logger";
 
 export default function LoginScreen() {
     const insets = useSafeAreaInsets();
-    const { configured, error, loading, session, signIn, clearError } = useAuth();
+    const {
+        configured,
+        error,
+        loading,
+        session,
+        signIn,
+        clearError,
+    } = useAuth();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [submitError, setSubmitError] = useState<string | null>(null);
@@ -75,6 +89,19 @@ export default function LoginScreen() {
                     showsVerticalScrollIndicator={false}
                 >
                     <View style={styles.container}>
+                        <TouchableOpacity
+                            style={styles.backButton}
+                            onPress={() => router.replace("/logoscreen")}
+                            activeOpacity={0.8}
+                            accessibilityRole="button"
+                            accessibilityLabel="Go back"
+                        >
+                            <MaterialCommunityIcons
+                                name="arrow-left"
+                                size={22}
+                                color="#FFF"
+                            />
+                        </TouchableOpacity>
                         <ChickenLogo
                             width={420}
                             height={420}
@@ -158,6 +185,25 @@ const styles = StyleSheet.create({
         gap: 18,
         marginBottom: 48,
         zIndex: 1,
+    },
+    backButton: {
+        position: "absolute",
+        top: 28,
+        left: moderateScale(20),
+        width: scale(42),
+        height: verticalScale(42),
+        borderRadius: 14,
+        backgroundColor: "#317667",
+        justifyContent: "center",
+        alignItems: "center",
+        borderWidth: 1,
+        borderColor: "rgba(49, 118, 103, 0.25)",
+        shadowColor: "#317667",
+        shadowOpacity: 0.22,
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 4 },
+        elevation: 4,
+        zIndex: 3,
     },
     formStack: {
         gap: 16,

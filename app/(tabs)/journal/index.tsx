@@ -9,7 +9,7 @@ import * as Haptics from "expo-haptics";
 import type { Href } from "expo-router";
 import { useFocusEffect, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
     Alert,
     FlatList,
@@ -17,6 +17,7 @@ import {
     Modal,
     Platform,
     Pressable,
+    ScrollView,
     StyleSheet,
     Text,
     View,
@@ -39,6 +40,8 @@ import {
     fetchHealthJournalEntries,
     formatJournalDateTime,
     type HealthJournalSavedScan,
+    type JournalStatusFilter,
+    matchesJournalStatus,
     removeHealthJournalEntries,
     updateHealthJournalEntryNote,
 } from "@/utils/supabase-health-journal";
@@ -54,6 +57,7 @@ export default function JournalIndexScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
   const [archiveModalVisible, setArchiveModalVisible] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<JournalStatusFilter>("all");
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const { behaviors: behaviorItems } = useBehaviors();
   const fabBottom = TAB_BAR_OFFSET - 2 - FAB_OFFSET_FROM_TAB_TOP;
@@ -192,6 +196,8 @@ export default function JournalIndexScreen() {
         behaviorLabels={mapBehaviorIdsToLabels(item.behaviorIds, behaviorItems)}
         additionalObservation={item.additionalObservation}
         noteValue={item.additionalObservation ?? ""}
+        noteSavedAt={item.noteSavedAt}
+        noteHistory={item.noteHistory}
         onNoteSave={(note) => saveEntryNote(item.id, note)}
         selected={selected.has(item.id)}
         onToggleSelect={() => toggle(item.id)}
@@ -204,6 +210,20 @@ export default function JournalIndexScreen() {
   );
 
   const selectionKey = `${isSelecting}-${[...selected].sort().join(",")}`;
+  const filteredEntries = useMemo(
+    () =>
+      entries.filter((entry) =>
+        matchesJournalStatus(entry.actionStatus, statusFilter),
+      ),
+    [entries, statusFilter],
+  );
+
+  const statusFilters: { label: string; value: JournalStatusFilter }[] = [
+    { label: "Monitor", value: "monitor" },
+    { label: "Isolated", value: "isolated" },
+    { label: "Deceased", value: "deceased" },
+    { label: "Recovered", value: "recovered" },
+  ];
 
   return (
     <View style={styles.screen}>
@@ -236,7 +256,7 @@ export default function JournalIndexScreen() {
         />
 
         <FlatList
-          data={entries}
+          data={filteredEntries}
           keyExtractor={(item) => item.id}
           extraData={selectionKey}
           renderItem={renderItem}
@@ -248,7 +268,6 @@ export default function JournalIndexScreen() {
           removeClippedSubviews={Platform.OS !== "web"}
           contentContainerStyle={[styles.listContent, { paddingBottom: 15 }]}
           ItemSeparatorComponent={() => <View style={styles.sep} />}
-          ListHeaderComponent={<View style={styles.listTop} />}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Text style={styles.empty}>
@@ -258,6 +277,53 @@ export default function JournalIndexScreen() {
             </View>
           }
           showsVerticalScrollIndicator={false}
+          ListHeaderComponent={
+            <View>
+              <View style={styles.listTop} />
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.filterRow}
+              >
+                <Pressable
+                  style={[
+                    styles.filterPill,
+                    statusFilter === "all" && styles.filterPillActive,
+                  ]}
+                  onPress={() => setStatusFilter("all")}
+                >
+                  <Text
+                    style={[
+                      styles.filterText,
+                      statusFilter === "all" && styles.filterTextActive,
+                    ]}
+                  >
+                    All
+                  </Text>
+                </Pressable>
+                {statusFilters.map((filter) => (
+                  <Pressable
+                    key={filter.value}
+                    style={[
+                      styles.filterPill,
+                      statusFilter === filter.value && styles.filterPillActive,
+                    ]}
+                    onPress={() => setStatusFilter(filter.value)}
+                  >
+                    <Text
+                      style={[
+                        styles.filterText,
+                        statusFilter === filter.value &&
+                          styles.filterTextActive,
+                      ]}
+                    >
+                      {filter.label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            </View>
+          }
         />
       </View>
 
@@ -328,6 +394,31 @@ const styles = StyleSheet.create({
   },
   listTop: {
     height: verticalScale(14),
+  },
+  filterRow: {
+    gap: 8,
+    paddingBottom: verticalScale(12),
+  },
+  filterPill: {
+    paddingHorizontal: moderateScale(12),
+    paddingVertical: verticalScale(7),
+    borderRadius: 999,
+    backgroundColor: "rgba(202, 227, 221, 0.42)",
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.18)",
+  },
+  filterPillActive: {
+    backgroundColor: ChickIntelPalette.green1,
+    borderColor: ChickIntelPalette.green1,
+  },
+  filterText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12),
+    fontWeight: "700",
+    color: ChickIntelPalette.gray1,
+  },
+  filterTextActive: {
+    color: "#FFFFFF",
   },
   listContent: {
     flexGrow: 1,

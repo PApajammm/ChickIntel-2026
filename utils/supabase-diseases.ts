@@ -36,6 +36,12 @@ export type DiseaseDetails = {
     status: string;
     recoveryDuration: string;
     treatmentSteps: string[];
+    treatmentProtocol: DiseaseTreatmentStep[];
+};
+
+export type DiseaseTreatmentStep = {
+    title: string;
+    description: string;
 };
 
 export type MatchedDisease = DiseaseDetails & {
@@ -66,16 +72,20 @@ function normalizeSeverity(
     return severity ?? "medium";
 }
 
-function buildTreatmentSteps(treatments: TreatmentRow[]) {
+function buildTreatmentProtocol(treatments: TreatmentRow[]) {
     return treatments
         .sort((left, right) => {
             const leftOrder = left.display_order ?? left.sort_order ?? 0;
             const rightOrder = right.display_order ?? right.sort_order ?? 0;
             return leftOrder - rightOrder;
         })
-        .map((treatment) => treatment.description ?? treatment.treatment_text ?? "")
-        .map((description) => description.trim())
-        .filter(Boolean);
+        .map((treatment) => ({
+            title: treatment.title.trim(),
+            description: (
+                treatment.description ?? treatment.treatment_text ?? ""
+            ).trim(),
+        }))
+        .filter((step) => step.title && step.description);
 }
 
 function buildDiseaseDetails(
@@ -87,6 +97,10 @@ function buildDiseaseDetails(
     const status = disease.status ?? "";
     const recoveryDuration = disease.recovery_duration ?? "";
 
+    const treatmentProtocol = buildTreatmentProtocol(
+        treatments.filter((row) => row.disease_id === disease.id),
+    );
+
     return {
         diseaseId: disease.id,
         diseaseName,
@@ -95,9 +109,10 @@ function buildDiseaseDetails(
         severity: normalizeSeverity(disease.severity),
         status,
         recoveryDuration,
-        treatmentSteps: buildTreatmentSteps(
-            treatments.filter((row) => row.disease_id === disease.id),
+        treatmentSteps: treatmentProtocol.map(
+            (step) => `${step.title}: ${step.description}`,
         ),
+        treatmentProtocol,
     };
 }
 

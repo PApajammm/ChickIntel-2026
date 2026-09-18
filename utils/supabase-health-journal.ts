@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { ensurePersistentImageUri } from "@/utils/persistent-image-storage";
 
 export type HealthJournalSavedScan = {
   id: string;
@@ -10,6 +11,9 @@ export type HealthJournalSavedScan = {
   detectionSource?: string;
   behaviorIds: string[];
   additionalObservation?: string;
+  noteSavedAt?: string;
+  noteHistory?: JournalNote[];
+  archivedAt?: string;
   resultSummary: string;
   recommendationText: string;
   actionStatus: string;
@@ -17,6 +21,42 @@ export type HealthJournalSavedScan = {
   healthMonitoringId?: string;
   chtTag?: string;
 };
+
+export type JournalNote = {
+  text: string;
+  savedAt: string;
+};
+
+export type JournalStatusFilter =
+  | "all"
+  | "monitor"
+  | "isolated"
+  | "deceased"
+  | "recovered";
+
+export function matchesJournalStatus(
+  status: string | undefined,
+  filter: JournalStatusFilter,
+): boolean {
+  if (filter === "all") return true;
+
+  const normalized = (status ?? "").toLowerCase().trim();
+  if (filter === "deceased") {
+    return normalized === "deceased" || normalized === "dead";
+  }
+  if (filter === "recovered") return normalized === "recovered";
+  if (filter === "isolated") {
+    return normalized === "isolated" || normalized === "isolation";
+  }
+
+  return (
+    normalized === "" ||
+    normalized === "active" ||
+    normalized === "monitor" ||
+    normalized === "monitored" ||
+    normalized === "monitoring"
+  );
+}
 
 type HealthLogRow = {
   id: string;
@@ -28,6 +68,9 @@ type HealthLogRow = {
   detection_source?: string | null;
   behavior_ids?: string[] | null;
   additional_observation?: string | null;
+  note_saved_at?: string | null;
+  note_history?: unknown;
+  archived_at?: string | null;
   result_summary?: string | null;
   recommendation_text?: string | null;
   action_status?: string | null;
@@ -37,6 +80,27 @@ type HealthLogRow = {
 };
 
 function mapHealthLogRow(row: HealthLogRow): HealthJournalSavedScan {
+  const parsedHistory = Array.isArray(row.note_history)
+    ? row.note_history.filter(
+        (note): note is JournalNote =>
+          Boolean(note) &&
+          typeof note === "object" &&
+          typeof (note as JournalNote).text === "string" &&
+          typeof (note as JournalNote).savedAt === "string",
+      )
+    : [];
+  const noteHistory = parsedHistory.length
+    ? parsedHistory
+    : row.additional_observation
+      ? [
+          {
+            text: row.additional_observation,
+            savedAt:
+              row.note_saved_at ?? row.saved_at ?? new Date().toISOString(),
+          },
+        ]
+      : [];
+
   return {
     id: row.id,
     savedAt: row.saved_at ?? new Date().toISOString(),
@@ -47,6 +111,9 @@ function mapHealthLogRow(row: HealthLogRow): HealthJournalSavedScan {
     detectionSource: row.detection_source ?? undefined,
     behaviorIds: Array.isArray(row.behavior_ids) ? row.behavior_ids : [],
     additionalObservation: row.additional_observation ?? undefined,
+    noteSavedAt: row.note_saved_at ?? undefined,
+    noteHistory,
+    archivedAt: row.archived_at ?? undefined,
     resultSummary: row.result_summary ?? "",
     recommendationText: row.recommendation_text ?? "",
     actionStatus: row.action_status ?? "",
@@ -55,8 +122,6 @@ function mapHealthLogRow(row: HealthLogRow): HealthJournalSavedScan {
     chtTag: row.cht_tag ?? undefined,
   };
 }
-
-import { ensurePersistentImageUri } from "@/utils/persistent-image-storage";
 
 export async function createHealthJournalEntry(
   farmId: string,
@@ -73,6 +138,17 @@ export async function createHealthJournalEntry(
     detection_source: entry.detectionSource ?? null,
     behavior_ids: entry.behaviorIds,
     additional_observation: entry.additionalObservation?.trim() || null,
+    note_history: entry.additionalObservation?.trim()
+      ? [
+          {
+            text: entry.additionalObservation.trim(),
+            savedAt: new Date().toISOString(),
+          },
+        ]
+      : [],
+    note_saved_at: entry.additionalObservation?.trim()
+      ? new Date().toISOString()
+      : null,
     result_summary: entry.resultSummary,
     recommendation_text: entry.recommendationText,
     action_status: entry.actionStatus,
@@ -120,28 +196,26 @@ export async function createHealthJournalEntry(
   const saved = mapHealthLogRow(data as HealthLogRow);
 
   try {
-    await supabase
-      .from("scan_records")
-      .insert({
-        farm_id: farmId,
-        scan_type: "health",
-        image_uri: saved.photoUri || null,
-        disease_id: saved.diseaseId ?? null,
-        confidence: saved.confidence ?? null,
-        detected_illness: saved.detectedIllness,
-        raw_result: {
-          diseaseId: saved.diseaseId,
-          confidence: saved.confidence,
-          detectionSource: saved.detectionSource,
-          behaviorIds: saved.behaviorIds,
-          additionalObservation: saved.additionalObservation,
-          resultSummary: saved.resultSummary,
-          recommendationText: saved.recommendationText,
-          actionStatus: saved.actionStatus,
-          durationValue: saved.durationValue,
-        },
-        additional_observation: saved.additionalObservation ?? null,
-      });
+    await supabase.from("scan_records").insert({
+      farm_id: farmId,
+      scan_type: "health",
+      image_uri: saved.photoUri || null,
+      disease_id: saved.diseaseId ?? null,
+      confidence: saved.confidence ?? null,
+      detected_illness: saved.detectedIllness,
+      raw_result: {
+        diseaseId: saved.diseaseId,
+        confidence: saved.confidence,
+        detectionSource: saved.detectionSource,
+        behaviorIds: saved.behaviorIds,
+        additionalObservation: saved.additionalObservation,
+        resultSummary: saved.resultSummary,
+        recommendationText: saved.recommendationText,
+        actionStatus: saved.actionStatus,
+        durationValue: saved.durationValue,
+      },
+      additional_observation: saved.additionalObservation ?? null,
+    });
   } catch (scanRecordErr) {
     console.warn(
       "[supabase-health-journal] scan_records insert skipped:",
@@ -191,7 +265,9 @@ async function attachChtTagsToScans(
       const tag =
         scan.chtTag ||
         chtMapByLogId.get(scan.id) ||
-        (scan.healthMonitoringId ? chtMapByMonId.get(scan.healthMonitoringId) : undefined);
+        (scan.healthMonitoringId
+          ? chtMapByMonId.get(scan.healthMonitoringId)
+          : undefined);
       return tag ? { ...scan, chtTag: tag } : scan;
     });
   } catch {
@@ -199,7 +275,10 @@ async function attachChtTagsToScans(
   }
 }
 
-export async function fetchHealthJournalEntries(farmId: string, forceRefresh = false): Promise<HealthJournalSavedScan[]> {
+export async function fetchHealthJournalEntries(
+  farmId: string,
+  forceRefresh = false,
+): Promise<HealthJournalSavedScan[]> {
   try {
     let rows: HealthLogRow[];
 
@@ -214,7 +293,10 @@ export async function fetchHealthJournalEntries(farmId: string, forceRefresh = f
         .limit(50);
 
       if (error) {
-        console.warn("[supabase-health-journal] fetchHealthJournalEntries warning:", error.message);
+        console.warn(
+          "[supabase-health-journal] fetchHealthJournalEntries warning:",
+          error.message,
+        );
         if (journalCacheMap.has(farmId)) {
           rows = journalCacheMap.get(farmId)!;
         } else {
@@ -226,11 +308,17 @@ export async function fetchHealthJournalEntries(farmId: string, forceRefresh = f
       }
     }
 
-    const activeRows = rows.filter((r) => (r.action_status ?? "") !== "archived");
+    const activeRows = rows.filter(
+      (r) => (r.action_status ?? "") !== "archived" && !r.archived_at,
+    );
 
     activeRows.sort((a, b) => {
-      const timeA = new Date(a.saved_at || (a as any).created_at || 0).getTime();
-      const timeB = new Date(b.saved_at || (b as any).created_at || 0).getTime();
+      const timeA = new Date(
+        a.saved_at || (a as any).created_at || 0,
+      ).getTime();
+      const timeB = new Date(
+        b.saved_at || (b as any).created_at || 0,
+      ).getTime();
       return timeB - timeA;
     });
 
@@ -243,7 +331,8 @@ export async function fetchHealthJournalEntries(farmId: string, forceRefresh = f
 
     withTags.forEach((scan) => {
       const groupKey =
-        scan.healthMonitoringId || (scan.chtTag ? `cht:${scan.chtTag}` : undefined);
+        scan.healthMonitoringId ||
+        (scan.chtTag ? `cht:${scan.chtTag}` : undefined);
 
       if (groupKey) {
         if (!groupedMap.has(groupKey)) {
@@ -261,12 +350,18 @@ export async function fetchHealthJournalEntries(farmId: string, forceRefresh = f
 
     return result;
   } catch (err) {
-    console.warn("[supabase-health-journal] fetchHealthJournalEntries catch:", err);
+    console.warn(
+      "[supabase-health-journal] fetchHealthJournalEntries catch:",
+      err,
+    );
     return [];
   }
 }
 
-export async function fetchArchivedHealthJournalEntries(farmId: string, forceRefresh = false): Promise<HealthJournalSavedScan[]> {
+export async function fetchArchivedHealthJournalEntries(
+  farmId: string,
+  forceRefresh = false,
+): Promise<HealthJournalSavedScan[]> {
   try {
     let rows: HealthLogRow[];
 
@@ -281,7 +376,10 @@ export async function fetchArchivedHealthJournalEntries(farmId: string, forceRef
         .limit(50);
 
       if (error) {
-        console.warn("[supabase-health-journal] fetchArchivedHealthJournalEntries warning:", error.message);
+        console.warn(
+          "[supabase-health-journal] fetchArchivedHealthJournalEntries warning:",
+          error.message,
+        );
         if (journalCacheMap.has(farmId)) {
           rows = journalCacheMap.get(farmId)!;
         } else {
@@ -293,23 +391,35 @@ export async function fetchArchivedHealthJournalEntries(farmId: string, forceRef
       }
     }
 
-    const archivedRows = rows.filter((r) => r.action_status === "archived");
+    const archivedRows = rows.filter(
+      (r) => r.action_status === "archived" || Boolean(r.archived_at),
+    );
 
     archivedRows.sort((a, b) => {
-      const timeA = new Date(a.saved_at || (a as any).created_at || 0).getTime();
-      const timeB = new Date(b.saved_at || (b as any).created_at || 0).getTime();
+      const timeA = new Date(
+        a.saved_at || (a as any).created_at || 0,
+      ).getTime();
+      const timeB = new Date(
+        b.saved_at || (b as any).created_at || 0,
+      ).getTime();
       return timeB - timeA;
     });
 
     const mapped = archivedRows.map(mapHealthLogRow);
     return await attachChtTagsToScans(farmId, mapped);
   } catch (err) {
-    console.warn("[supabase-health-journal] fetchArchivedHealthJournalEntries catch:", err);
+    console.warn(
+      "[supabase-health-journal] fetchArchivedHealthJournalEntries catch:",
+      err,
+    );
     return [];
   }
 }
 
-export async function fetchHealthJournalEntryById(farmId: string, id: string): Promise<HealthJournalSavedScan | undefined> {
+export async function fetchHealthJournalEntryById(
+  farmId: string,
+  id: string,
+): Promise<HealthJournalSavedScan | undefined> {
   try {
     const { data, error } = await supabase
       .from("health_logs")
@@ -319,14 +429,20 @@ export async function fetchHealthJournalEntryById(farmId: string, id: string): P
       .maybeSingle();
 
     if (error) {
-      console.warn("[supabase-health-journal] fetchHealthJournalEntryById warning:", error.message);
+      console.warn(
+        "[supabase-health-journal] fetchHealthJournalEntryById warning:",
+        error.message,
+      );
       return undefined;
     }
     if (!data) return undefined;
 
     return mapHealthLogRow(data as HealthLogRow);
   } catch (err) {
-    console.warn("[supabase-health-journal] fetchHealthJournalEntryById catch:", err);
+    console.warn(
+      "[supabase-health-journal] fetchHealthJournalEntryById catch:",
+      err,
+    );
     return undefined;
   }
 }
@@ -337,10 +453,31 @@ export async function updateHealthJournalEntryNote(
   note: string | undefined,
 ) {
   const normalizedNote = note?.trim() ? note.trim() : null;
+  if (!normalizedNote) return;
+
+  const { data: currentRow, error: fetchError } = await supabase
+    .from("health_logs")
+    .select("note_history, additional_observation, note_saved_at, saved_at")
+    .eq("farm_id", farmId)
+    .eq("id", id)
+    .maybeSingle<HealthLogRow>();
+
+  if (fetchError) throw fetchError;
+
+  const current = currentRow ? mapHealthLogRow(currentRow) : undefined;
+  const savedAt = new Date().toISOString();
+  const noteHistory = [
+    ...(current?.noteHistory ?? []),
+    { text: normalizedNote, savedAt },
+  ];
 
   const { error } = await supabase
     .from("health_logs")
-    .update({ additional_observation: normalizedNote })
+    .update({
+      additional_observation: normalizedNote,
+      note_saved_at: savedAt,
+      note_history: noteHistory,
+    })
     .eq("farm_id", farmId)
     .eq("id", id);
 
@@ -357,7 +494,10 @@ export async function removeHealthJournalEntries(
   // Replace deletion with archiving by marking action_status
   const { error } = await supabase
     .from("health_logs")
-    .update({ action_status: "archived" })
+    .update({
+      action_status: "archived",
+      archived_at: new Date().toISOString(),
+    })
     .eq("farm_id", farmId)
     .in("id", ids);
 
@@ -373,7 +513,7 @@ export async function unarchiveHealthJournalEntries(
 
   const { error } = await supabase
     .from("health_logs")
-    .update({ action_status: "" })
+    .update({ action_status: "", archived_at: null })
     .eq("farm_id", farmId)
     .in("id", ids);
 
@@ -381,9 +521,7 @@ export async function unarchiveHealthJournalEntries(
   invalidateHealthJournalCache(farmId);
 }
 
-export async function clearArchivedHealthJournalEntries(
-  farmId: string,
-) {
+export async function clearArchivedHealthJournalEntries(farmId: string) {
   const { error } = await supabase
     .from("health_logs")
     .delete()

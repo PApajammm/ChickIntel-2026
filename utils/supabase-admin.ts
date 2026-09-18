@@ -5,8 +5,18 @@ const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? "";
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? "";
 const ADMIN_CONSOLE_BREEDS = new Set([
   "barred rock",
+  "bielefelder",
+  "black orpington",
+  "brahma",
+  "buckeye",
+  "fayoumi",
+  "leghorn",
+  "new hampshire",
+  "plymouth rock",
   "rhode island red",
   "silkie",
+  "sussex",
+  "turken",
 ]);
 
 export type FarmerData = {

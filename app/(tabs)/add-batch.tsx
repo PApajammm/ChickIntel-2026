@@ -52,6 +52,7 @@ import { fetchBreedOptions } from "@/utils/supabase-lookups";
 const MAX_SCAN_ZOOM = 0.7;
 
 const AGE_UNIT_OPTIONS = ["Days old", "Weeks old"] as const;
+const MIN_BATCH_AGE_WEEKS = 10;
 
 const DEFAULT_BREED_OPTIONS = [
   "Rhode Island Red",
@@ -569,12 +570,15 @@ export default function AddBatchScreen() {
                     onChangeText={(v) =>
                       setDurationCount(v.replace(/[^0-9]/g, ""))
                     }
-                    placeholder="1"
+                    placeholder={ageUnit === "Weeks old" ? "10" : "70"}
                     keyboardType="number-pad"
                     style={styles.input}
                     textAlignVertical="center"
                     placeholderTextColor="#8F9696"
                   />
+                  <Text style={styles.ageLimitHint}>
+                    Minimum: {ageUnit === "Weeks old" ? "10 weeks" : "70 days"}
+                  </Text>
                 </View>
                 <View style={styles.halfField}>
                   <Text style={styles.fieldLabel}>Age unit</Text>
@@ -701,6 +705,19 @@ export default function AddBatchScreen() {
                   Alert.alert(
                     "Breed required",
                     "Select a breed before saving.",
+                  );
+                  return;
+                }
+
+                const enteredAge = Number.parseInt(durationCount || "0", 10);
+                const ageInDays =
+                  (Number.isFinite(enteredAge) ? enteredAge : 0) *
+                  (ageUnit === "Weeks old" ? 7 : 1);
+
+                if (ageInDays < MIN_BATCH_AGE_WEEKS * 7) {
+                  Alert.alert(
+                    "Chicken is too young",
+                    `Chicken batches must be at least ${MIN_BATCH_AGE_WEEKS} weeks old.`,
                   );
                   return;
                 }
@@ -1405,6 +1422,13 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(12),
     fontWeight: "600",
     color: "#5E6666",
+  },
+  ageLimitHint: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(10),
+    lineHeight: 14,
+    fontWeight: "600",
+    color: ChickIntelPalette.green1,
   },
   input: {
     height: verticalScale(46),

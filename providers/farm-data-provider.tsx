@@ -18,6 +18,8 @@ import {
     createInventoryItem,
     deleteInventoryItem,
     fetchInventoryItems,
+    haveSameExpirationDate,
+    isExpirationBatchType,
     updateInventoryItem,
     type SupabaseInventoryItem,
 } from "@/utils/supabase-inventory";
@@ -47,6 +49,7 @@ type FarmDataContextType = {
   completeTask: (
     task: SupabaseScheduleTask,
     dateKey: string,
+    evidenceUri: string,
   ) => Promise<SupabaseScheduleTaskCompletion | undefined>;
   removeTask: (taskId: string) => Promise<void>;
   addTask: (
@@ -193,19 +196,45 @@ export function FarmDataProvider({ children }: { children: React.ReactNode }) {
       );
       if (!targetEffectiveItem) return;
 
-      const currentTotalQty = Number.isFinite(targetEffectiveItem.baseQty)
-        ? targetEffectiveItem.baseQty
-        : targetItem.totalQty;
+      const safeRestockQty = Number.isFinite(restockQty)
+        ? Math.max(0, restockQty)
+        : 0;
+      const currentTotalQty = Number.isFinite(targetItem.totalQty)
+        ? Math.max(0, targetItem.totalQty)
+        : targetEffectiveItem.baseQty;
       const currentRemainingQty = targetEffectiveItem.remainingQty;
-      const newRemainingQty = currentRemainingQty + restockQty;
-      const newTotalQty = Math.max(currentTotalQty, newRemainingQty);
+      const newRemainingQty = currentRemainingQty + safeRestockQty;
+      const newTotalQty =
+        newRemainingQty > currentTotalQty ? newRemainingQty : currentTotalQty;
       const newRestockCreditQty =
-        targetItem.restockCreditQty + Math.max(0, restockQty);
+        Math.max(0, targetItem.restockCreditQty) + safeRestockQty;
+
+      if (
+        safeRestockQty > 0 &&
+        isExpirationBatchType(targetItem.type) &&
+        !haveSameExpirationDate(
+          targetItem.expirationDate,
+          extra?.expirationDate,
+        )
+      ) {
+        const createdBatch = await createInventoryItem(activeFarm.id, {
+          type: targetItem.type,
+          name: targetItem.name,
+          qty: safeRestockQty,
+          unit: targetItem.unit,
+          currentRemainingQty: targetEffectiveItem.remainingQty,
+          purchasedDate: targetItem.orderDate,
+          deliveredDate: extra?.deliveredDate,
+          expirationDate: extra?.expirationDate,
+        });
+        setRawItems((prev) => [createdBatch, ...prev]);
+        void refreshFarmData();
+        return;
+      }
 
       await updateInventoryItem(activeFarm.id, itemId, {
         totalQty: newTotalQty,
         restockCreditQty: newRestockCreditQty,
-        statusPercent: restockQty > 0 ? 100 : undefined,
         deliveredDate: extra?.deliveredDate,
         expirationDate: extra?.expirationDate,
       });
@@ -218,7 +247,6 @@ export function FarmDataProvider({ children }: { children: React.ReactNode }) {
                 ...item,
                 totalQty: newTotalQty,
                 restockCreditQty: newRestockCreditQty,
-                statusPercent: restockQty > 0 ? 100 : item.statusPercent,
                 deliveryDate: extra?.deliveredDate ?? item.deliveryDate,
                 expirationDate: extra?.expirationDate ?? item.expirationDate,
               }
@@ -233,7 +261,11 @@ export function FarmDataProvider({ children }: { children: React.ReactNode }) {
   );
 
   const completeTask = useCallback(
-    async (task: SupabaseScheduleTask, dateKey: string) => {
+    async (
+      task: SupabaseScheduleTask,
+      dateKey: string,
+      evidenceUri: string,
+    ) => {
       if (!activeFarm?.id) return;
 
       const savedCompletion = await completeScheduleTask(
@@ -241,6 +273,7 @@ export function FarmDataProvider({ children }: { children: React.ReactNode }) {
         task.id,
         dateKey,
         task.time,
+        evidenceUri,
       );
 
       // Optimistically update local completions state
@@ -283,7 +316,23 @@ export function FarmDataProvider({ children }: { children: React.ReactNode }) {
   const addInventoryItem = useCallback(
     async (input: Parameters<typeof createInventoryItem>[1]) => {
       if (!activeFarm?.id) throw new Error("No active farm");
-      const created = await createInventoryItem(activeFarm.id, input);
+      const normalizedType = input.type.trim().toLowerCase();
+      const effectiveType =
+        normalizedType === "chicken feed" ? "feeds" : normalizedType;
+      const normalizedName = input.name.trim().toLowerCase();
+      const existingEffectiveItem = effectiveItems.find(
+        (item) =>
+          item.name.trim().toLowerCase() === normalizedName &&
+          (item.type.trim().toLowerCase() === effectiveType ||
+            (effectiveType === "feeds" &&
+              item.type.trim().toLowerCase() === "chicken feed")) &&
+          (!isExpirationBatchType(input.type) ||
+            haveSameExpirationDate(item.expirationDate, input.expirationDate)),
+      );
+      const created = await createInventoryItem(activeFarm.id, {
+        ...input,
+        currentRemainingQty: existingEffectiveItem?.remainingQty,
+      });
       setRawItems((prev) => [
         created,
         ...prev.filter((i) => i.id !== created.id),
@@ -291,7 +340,7 @@ export function FarmDataProvider({ children }: { children: React.ReactNode }) {
       void refreshFarmData();
       return created;
     },
-    [activeFarm?.id, refreshFarmData],
+    [activeFarm?.id, effectiveItems, refreshFarmData],
   );
 
   const removeInventoryItem = useCallback(

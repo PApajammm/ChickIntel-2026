@@ -3,6 +3,7 @@ import { BlurCard } from "@/components/ui/blur-card";
 import { ChickFont } from "@/constants/chick-fonts";
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
 import { useAuth } from "@/providers/auth-provider";
+import { getCurrentBatchAgeLabel } from "@/utils/batch-store";
 import {
     fetchDeletedChickenBatches,
     type ChickenBatchHistoryItem,
@@ -132,7 +133,9 @@ export default function ChickenBatchHistoryScreen() {
               <View style={styles.metrics}>
                 <Text style={styles.metric}>Females: {item.femaleCount}</Text>
                 <Text style={styles.metric}>Males: {item.maleCount}</Text>
-                <Text style={styles.metric}>Age: {item.ageLabel}</Text>
+                <Text style={styles.metric}>
+                  Age: {getCurrentBatchAgeLabel(item)}
+                </Text>
                 <Text style={styles.metric}>Loss: {item.killedCount}</Text>
               </View>
             </BlurCard>

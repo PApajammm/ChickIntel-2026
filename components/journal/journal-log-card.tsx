@@ -25,6 +25,10 @@ import {
     scale,
     verticalScale,
 } from "@/utils/responsive";
+import {
+    formatJournalDateTime,
+    type JournalNote,
+} from "@/utils/supabase-health-journal";
 type JournalLogCardProps = {
   chtTag?: string;
   detectedIllness: string;
@@ -34,6 +38,8 @@ type JournalLogCardProps = {
   behaviorLabels?: string[];
   additionalObservation?: string;
   noteValue?: string;
+  noteSavedAt?: string;
+  noteHistory?: JournalNote[];
   photoUri?: string;
   onNoteSave?: (value: string) => Promise<void> | void;
   selected: boolean;
@@ -94,6 +100,8 @@ export const JournalLogCard = memo(function JournalLogCard({
   behaviorLabels,
   additionalObservation,
   noteValue = "",
+  noteSavedAt,
+  noteHistory = [],
   photoUri,
   onNoteSave,
   selected,
@@ -146,7 +154,7 @@ export const JournalLogCard = memo(function JournalLogCard({
   }, [animatedOpacity, animatedScale, animatedTranslateY, index]);
 
   const handleOpenNoteModal = () => {
-    setModalNoteText(currentNote);
+    setModalNoteText("");
     setModalVisible(true);
   };
 
@@ -158,6 +166,7 @@ export const JournalLogCard = memo(function JournalLogCard({
         await onNoteSave(trimmed);
       }
       setCurrentNote(trimmed);
+      setModalNoteText("");
       setModalVisible(false);
     } catch {
       // best-effort
@@ -316,10 +325,24 @@ export const JournalLogCard = memo(function JournalLogCard({
 
               <View style={styles.noteTextWrap}>
                 {currentNote.trim() ? (
-                  <Text style={styles.notePreviewText} numberOfLines={1}>
-                    <Text style={styles.notePrefix}>Note: </Text>
-                    {currentNote.trim()}
-                  </Text>
+                  <View>
+                    {(noteHistory.length
+                      ? noteHistory
+                      : [{ text: currentNote.trim(), savedAt: noteSavedAt }]
+                    ).map((note, index) => (
+                      <View key={`${note.savedAt ?? "note"}-${index}`}>
+                        <Text style={styles.notePreviewText} numberOfLines={1}>
+                          <Text style={styles.notePrefix}>Note: </Text>
+                          {note.text}
+                        </Text>
+                        {note.savedAt ? (
+                          <Text style={styles.noteTimestamp}>
+                            Saved {formatJournalDateTime(note.savedAt)}
+                          </Text>
+                        ) : null}
+                      </View>
+                    ))}
+                  </View>
                 ) : (
                   <Text style={styles.addNotePlaceholder}>
                     Add chicken observation note...
@@ -617,6 +640,12 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(12),
     lineHeight: 16,
     color: ChickIntelPalette.gray1,
+  },
+  noteTimestamp: {
+    marginTop: 2,
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(10),
+    color: ChickIntelPalette.gray2,
   },
   notePrefix: {
     fontWeight: "700",

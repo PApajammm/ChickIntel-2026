@@ -1,8 +1,10 @@
 import { supabase } from "@/lib/supabase";
 import { adjustFarmBatchHealthCounters } from "@/utils/supabase-batches";
 import {
-    type HealthJournalSavedScan
-} from "./supabase-health-journal";
+    createScheduleTask,
+    formatScheduleDateKey,
+} from "@/utils/supabase-schedule";
+import { type HealthJournalSavedScan } from "./supabase-health-journal";
 
 export type HealthMonitoringRecord = {
   id: string;
@@ -22,6 +24,42 @@ export type HealthMonitoringRecord = {
 
 export type HealthMonitoringStatus = "Active" | "Recovered" | "Deceased";
 
+export type HealthMonitoringTask = {
+  id: string;
+  monitoringId: string;
+  title: string;
+  description?: string;
+  taskType?: string;
+  dueAt?: string;
+  status: "Pending" | "Completed";
+  completed: boolean;
+  completedAt?: string;
+  completedBy?: string;
+  treatmentNote?: string;
+  scheduleTaskId?: string;
+  frequency?: string;
+  startDate?: string;
+  endDate?: string;
+  scheduledTimes?: string[];
+  occurrences: HealthMonitoringTaskOccurrence[];
+  sortOrder: number;
+};
+
+export type HealthMonitoringTaskOccurrence = {
+  id: string;
+  taskId: string;
+  dueAt: string;
+  completed: boolean;
+  completedAt?: string;
+  completedBy?: string;
+  treatmentNote?: string;
+};
+
+type TreatmentPlanStep = {
+  title: string;
+  description?: string;
+};
+
 type LocalMonitoringOverride = {
   monitoringStatus: HealthMonitoringStatus;
   monitoringCompletedAt?: string;
@@ -39,6 +77,50 @@ type HealthMonitoringRow = {
   created_at: string;
   updated_at: string;
 };
+
+type HealthMonitoringTaskRow = {
+  id: string;
+  health_monitoring_id: string;
+  title: string;
+  description?: string | null;
+  task_type?: string | null;
+  due_at?: string | null;
+  status?: "Pending" | "Completed" | null;
+  completed: boolean;
+  completed_at?: string | null;
+  completed_by?: string | null;
+  treatment_note?: string | null;
+  schedule_task_id?: string | null;
+  frequency?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  scheduled_times?: string[] | null;
+  sort_order: number;
+};
+
+type HealthMonitoringTaskOccurrenceRow = {
+  id: string;
+  health_monitoring_task_id: string;
+  due_at: string;
+  completed: boolean;
+  completed_at?: string | null;
+  completed_by?: string | null;
+  treatment_note?: string | null;
+};
+
+function isMissingTreatmentTaskColumnError(error: unknown) {
+  const value = error as { code?: string; message?: string } | null;
+  const message = value?.message?.toLowerCase() ?? "";
+  return (
+    value?.code === "42703" ||
+    value?.code === "PGRST204" ||
+    message.includes("health_monitoring_tasks") ||
+    message.includes("completed_by") ||
+    message.includes("treatment_note") ||
+    message.includes("task_type") ||
+    message.includes("schedule_task_id")
+  );
+}
 
 const localStatusOverrides = new Map<string, LocalMonitoringOverride>();
 
@@ -100,6 +182,51 @@ function normalizeMonitoringStatus(
 ): HealthMonitoringStatus {
   if (status === "Recovered" || status === "Deceased") return status;
   return "Active";
+}
+
+function addCalendarDays(date: Date, days: number) {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+function getTreatmentReminderConfig(title: string, now: Date) {
+  const normalized = title.toLowerCase();
+  const durationMatch = normalized.match(/for\s+(\d+)\s+days?/i);
+  const weekDurationMatch = normalized.match(/for\s+(\d+)\s+weeks?/i);
+  const durationDays = durationMatch
+    ? Number(durationMatch[1])
+    : weekDurationMatch
+      ? Number(weekDurationMatch[1]) * 7
+      : 0;
+  const isWeekly = /\bweekly\b|once\s+a\s+week|every\s+week/i.test(
+    normalized,
+  );
+  const isDaily =
+    durationDays > 0 ||
+    /\bdaily\b|each day|per day|every day/i.test(normalized);
+  const isTwiceDaily =
+    /twice\s+(?:a|per)\s+day|2\s+times\s+(?:a|per)\s+day|every\s+12\s+hours/i.test(
+      normalized,
+    );
+  const startDate = formatScheduleDateKey(now);
+  const endDate = durationDays
+    ? formatScheduleDateKey(addCalendarDays(now, durationDays - 1))
+    : startDate;
+
+  return {
+    repeat: isWeekly ? "Weekly" : isDaily ? "Daily" : "Never",
+    dayStep: isWeekly ? 7 : 1,
+    startDate,
+    endDate,
+    times: isTwiceDaily
+      ? ["08:00", "20:00"]
+      : [
+          `${String(now.getHours()).padStart(2, "0")}:${String(
+            now.getMinutes(),
+          ).padStart(2, "0")}`,
+        ],
+  };
 }
 
 function localOverrideKey(farmId: string, id: string) {
@@ -301,7 +428,11 @@ async function createOutcomeAssessmentForMonitoring(
 
   const { error } = await supabase
     .from("health_logs")
-    .update({ action_status: monitoringStatus })
+    .update({
+      action_status: monitoringStatus,
+      archived_at:
+        monitoringStatus === "Deceased" ? new Date().toISOString() : null,
+    })
     .eq("farm_id", farmId)
     .eq("id", logId);
 
@@ -389,6 +520,7 @@ export async function createHealthMonitoringRecord(
   healthLogId: string,
   chtTag: string,
   batchNo?: string,
+  treatmentSteps: (string | TreatmentPlanStep)[] = [],
 ): Promise<HealthMonitoringRecord> {
   const normalizedBatchNo = batchNo?.trim() || undefined;
   const payload = {
@@ -454,12 +586,279 @@ export async function createHealthMonitoringRecord(
     );
   }
 
+  if (treatmentSteps.length > 0) {
+    const now = new Date();
+
+    for (const [index, rawStep] of treatmentSteps.entries()) {
+      const step =
+        typeof rawStep === "string"
+          ? { title: rawStep, description: undefined }
+          : rawStep;
+      const title = step.title.trim();
+      if (!title) continue;
+
+      const reminderConfig = getTreatmentReminderConfig(title, now);
+      let scheduleTaskId: string | undefined;
+      for (const [timeIndex, reminderTime] of reminderConfig.times.entries()) {
+        try {
+          const scheduleTask = await createScheduleTask(farmId, {
+            title: `Treatment: ${title}${
+              reminderConfig.times.length > 1 ? ` (${timeIndex + 1}/2)` : ""
+            }`,
+            time: reminderTime,
+            category: "Treatment",
+            repeat: reminderConfig.repeat,
+            customRepeatDays: [],
+            startDate: reminderConfig.startDate,
+            endDate: reminderConfig.endDate,
+            feedInventoryItemId: null,
+            feedInventoryItemName: null,
+            feedDailyAmount: null,
+            feedDailyUnit: null,
+          });
+          scheduleTaskId ??= scheduleTask.id;
+        } catch (scheduleError) {
+          console.warn(
+            "[health-monitoring] Treatment reminder could not be scheduled:",
+            scheduleError,
+          );
+        }
+      }
+
+      const taskRow = {
+        farm_id: farmId,
+        health_monitoring_id: record.id,
+        title,
+        description:
+          step.description?.trim() ||
+          `Follow the validated treatment protocol for ${record.chtTag}.`,
+        task_type: "Treatment",
+        due_at: new Date(
+          `${reminderConfig.startDate}T${reminderConfig.times[0]}:00`,
+        ).toISOString(),
+        status: "Pending",
+        completed: false,
+        schedule_task_id: scheduleTaskId ?? null,
+        frequency: reminderConfig.repeat,
+        start_date: reminderConfig.startDate,
+        end_date: reminderConfig.endDate,
+        scheduled_times: reminderConfig.times,
+        sort_order: index,
+      };
+      const { data: taskData, error: taskError } = await supabase
+        .from("health_monitoring_tasks")
+        .insert(taskRow)
+        .select("id")
+        .single();
+
+      if (taskError || !taskData) {
+        console.warn(
+          "[health-monitoring] Treatment task could not be saved:",
+          taskError?.message,
+        );
+        continue;
+      }
+
+      const occurrenceRows = [];
+      const start = new Date(`${reminderConfig.startDate}T00:00:00`);
+      const end = new Date(`${reminderConfig.endDate}T00:00:00`);
+      for (
+        const date = new Date(start);
+        date <= end;
+        date.setDate(date.getDate() + reminderConfig.dayStep)
+      ) {
+        for (const time of reminderConfig.times) {
+          occurrenceRows.push({
+            farm_id: farmId,
+            health_monitoring_task_id: taskData.id,
+            due_at: new Date(
+              `${formatScheduleDateKey(date)}T${time}:00`,
+            ).toISOString(),
+          });
+        }
+      }
+
+      const { error: occurrenceError } = await supabase
+        .from("health_monitoring_task_occurrences")
+        .insert(occurrenceRows);
+      if (occurrenceError) {
+        console.warn(
+          "[health-monitoring] Treatment occurrences could not be saved:",
+          occurrenceError.message,
+        );
+      }
+    }
+  }
+
   invalidateHealthMonitoringCache(farmId);
 
   return {
     ...record,
     batchNo: normalizedBatchNo ?? record.batchNo,
   };
+}
+
+function mapMonitoringTaskRow(
+  row: HealthMonitoringTaskRow,
+): HealthMonitoringTask {
+  return {
+    id: row.id,
+    monitoringId: row.health_monitoring_id,
+    title: row.title,
+    description: row.description ?? undefined,
+    taskType: row.task_type ?? undefined,
+    dueAt: row.due_at ?? undefined,
+    status: row.status ?? (row.completed ? "Completed" : "Pending"),
+    completed: Boolean(row.completed),
+    completedAt: row.completed_at ?? undefined,
+    completedBy: row.completed_by ?? undefined,
+    treatmentNote: row.treatment_note ?? undefined,
+    scheduleTaskId: row.schedule_task_id ?? undefined,
+    frequency: row.frequency ?? undefined,
+    startDate: row.start_date ?? undefined,
+    endDate: row.end_date ?? undefined,
+    scheduledTimes: row.scheduled_times ?? undefined,
+    occurrences: [],
+    sortOrder: Number(row.sort_order ?? 0),
+  };
+}
+
+function mapMonitoringTaskOccurrenceRow(
+  row: HealthMonitoringTaskOccurrenceRow,
+): HealthMonitoringTaskOccurrence {
+  return {
+    id: row.id,
+    taskId: row.health_monitoring_task_id,
+    dueAt: row.due_at,
+    completed: Boolean(row.completed),
+    completedAt: row.completed_at ?? undefined,
+    completedBy: row.completed_by ?? undefined,
+    treatmentNote: row.treatment_note ?? undefined,
+  };
+}
+
+export async function fetchHealthMonitoringTasks(
+  farmId: string,
+  monitoringId: string,
+): Promise<HealthMonitoringTask[]> {
+  const { data, error } = await supabase
+    .from("health_monitoring_tasks")
+    .select(
+      "id, health_monitoring_id, title, description, task_type, due_at, status, completed, completed_at, completed_by, treatment_note, schedule_task_id, frequency, start_date, end_date, scheduled_times, sort_order",
+    )
+    .eq("farm_id", farmId)
+    .eq("health_monitoring_id", monitoringId)
+    .order("sort_order", { ascending: true });
+
+  if (error) {
+    if (!isMissingTreatmentTaskColumnError(error)) {
+      console.warn(
+        "[health-monitoring] Treatment task fetch skipped:",
+        error.message,
+      );
+      return [];
+    }
+
+    const fallback = await supabase
+      .from("health_monitoring_tasks")
+      .select(
+        "id, health_monitoring_id, title, completed, completed_at, sort_order",
+      )
+      .eq("farm_id", farmId)
+      .eq("health_monitoring_id", monitoringId)
+      .order("sort_order", { ascending: true });
+
+    if (fallback.error) throw fallback.error;
+    const legacyTasks = (fallback.data ?? []).map((row) =>
+      mapMonitoringTaskRow(row as HealthMonitoringTaskRow),
+    );
+    return legacyTasks;
+  }
+
+  const tasks = (data ?? []).map((row) =>
+    mapMonitoringTaskRow(row as HealthMonitoringTaskRow),
+  );
+  if (tasks.length === 0) return tasks;
+
+  const { data: occurrenceRows, error: occurrenceError } = await supabase
+    .from("health_monitoring_task_occurrences")
+    .select(
+      "id, health_monitoring_task_id, due_at, completed, completed_at, completed_by, treatment_note",
+    )
+    .eq("farm_id", farmId)
+    .in(
+      "health_monitoring_task_id",
+      tasks.map((task) => task.id),
+    )
+    .order("due_at", { ascending: true });
+
+  if (occurrenceError) return tasks;
+  const occurrences = (occurrenceRows ?? []).map((row) =>
+    mapMonitoringTaskOccurrenceRow(row as HealthMonitoringTaskOccurrenceRow),
+  );
+  return tasks.map((task) => ({
+    ...task,
+    occurrences: occurrences.filter((occurrence) => occurrence.taskId === task.id),
+  }));
+}
+
+export async function updateHealthMonitoringTask(
+  farmId: string,
+  taskId: string,
+  completed: boolean,
+  treatmentNote?: string,
+): Promise<void> {
+  const { data: userData } = await supabase.auth.getUser();
+  const basePayload = {
+    completed,
+    completed_at: completed ? new Date().toISOString() : null,
+  };
+  const { error } = await supabase
+    .from("health_monitoring_tasks")
+    .update({
+      ...basePayload,
+      status: completed ? "Completed" : "Pending",
+      completed_by: completed ? (userData.user?.id ?? null) : null,
+      ...(treatmentNote !== undefined
+        ? { treatment_note: treatmentNote.trim() || null }
+        : {}),
+    })
+    .eq("farm_id", farmId)
+    .eq("id", taskId);
+
+  if (!error) return;
+  if (!isMissingTreatmentTaskColumnError(error)) throw error;
+
+  const fallback = await supabase
+    .from("health_monitoring_tasks")
+    .update(basePayload)
+    .eq("farm_id", farmId)
+    .eq("id", taskId);
+
+  if (fallback.error) throw fallback.error;
+}
+
+export async function updateHealthMonitoringTaskOccurrence(
+  farmId: string,
+  occurrenceId: string,
+  completed: boolean,
+  treatmentNote?: string,
+): Promise<void> {
+  const { data: userData } = await supabase.auth.getUser();
+  const { error } = await supabase
+    .from("health_monitoring_task_occurrences")
+    .update({
+      completed,
+      completed_at: completed ? new Date().toISOString() : null,
+      completed_by: completed ? userData.user?.id ?? null : null,
+      ...(treatmentNote !== undefined
+        ? { treatment_note: treatmentNote.trim() || null }
+        : {}),
+    })
+    .eq("farm_id", farmId)
+    .eq("id", occurrenceId);
+
+  if (error) throw error;
 }
 
 /**

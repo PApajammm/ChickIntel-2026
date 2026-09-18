@@ -35,6 +35,7 @@ import { ViewfinderOverlay } from "@/components/scanner/viewfinder-overlay";
 import { ChickFont } from "@/constants/chick-fonts";
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
 import { DEFAULT_IMAGE_BASED_DETECTION } from "@/constants/health-scan-behaviors";
+import { useAuth } from "@/providers/auth-provider";
 import {
     assessHealthCapture,
     buildHealthCaptureGuidance,
@@ -42,8 +43,8 @@ import {
 import { logError, logStep } from "@/utils/logger";
 
 import {
-  cropPhotoToViewfinder,
-  optimizePhotoForInference,
+    cropPhotoToViewfinder,
+    optimizePhotoForInference,
 } from "@/utils/image-crop-helper";
 
 /** Keep controls near the bottom edge, just clear of the tab bar. */
@@ -84,7 +85,9 @@ export default function ScannerScreen() {
   const isFocused = useIsFocused();
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
+  const { guestMode, session } = useAuth();
   const cameraRef = useRef<CameraViewportRef>(null);
+  const isGuestExperience = guestMode && !session;
 
   const [mode, setMode] = useState<ScannerMode>("health");
   const [torchEnabled, setTorchEnabled] = useState(false);
@@ -99,6 +102,8 @@ export default function ScannerScreen() {
   useEffect(() => {
     if (params.initialMode === "health" || isMonitoringRescan) {
       setMode("health");
+    } else if (params.initialMode === "breed") {
+      setMode("breed");
     }
   }, [isMonitoringRescan, params.initialMode]);
 
@@ -118,11 +123,27 @@ export default function ScannerScreen() {
       }
     : MODE_COPY[mode];
 
+  function handleBack() {
+    if (isGuestExperience) {
+      router.replace("/guest-mode");
+      return;
+    }
+
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace("/(tabs)");
+    }
+  }
+
   function openHealthFlow(photoUri: string, width?: number, height?: number) {
     const capturedAt = new Date().toISOString();
+    const healthPathname = isGuestExperience
+      ? "/(tabs)/scanned-health/result"
+      : "/(tabs)/scanned-health";
 
     router.push({
-      pathname: "/(tabs)/scanned-health",
+      pathname: healthPathname,
       params: {
         photoUri,
         detectedIllness: DEFAULT_IMAGE_BASED_DETECTION,
@@ -251,6 +272,7 @@ export default function ScannerScreen() {
           pathname: "/(tabs)/breed-result",
           params: {
             photoUri: photo.uri,
+            initialMode: "breed",
           },
         } as any);
       }
@@ -277,9 +299,7 @@ export default function ScannerScreen() {
       <View style={styles.overlay} pointerEvents="box-none">
         <View style={[styles.topRow, { paddingTop: insets.top + 10 }]}>
           <TouchableOpacity
-            onPress={() =>
-              router.canGoBack() ? router.back() : router.replace("/(tabs)")
-            }
+            onPress={handleBack}
             style={styles.backButton}
             activeOpacity={0.8}
             accessibilityRole="button"
@@ -366,7 +386,7 @@ export default function ScannerScreen() {
             isCompactScreen && { gap: 4 },
           ]}
         >
-          {!isMonitoringRescan ? (
+          {!isMonitoringRescan && !isGuestExperience ? (
             <View style={styles.cardWrap}>
               <ModeSelectorCard mode={mode} onModeChange={setMode} />
             </View>

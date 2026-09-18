@@ -7,13 +7,13 @@ import {
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
     ScrollView,
     StyleSheet,
     Text,
     TouchableOpacity,
-    View
+    View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -55,13 +55,13 @@ export default function JournalDetailScreen() {
   );
   const { behaviors: behaviorItems } = useBehaviors();
 
-  const handleBack = () => {
+  const handleBack = useCallback(() => {
     if (router.canGoBack()) {
       router.back();
     } else {
       router.replace("/(tabs)/journal");
     }
-  };
+  }, [router]);
 
   const behaviorLabels = useMemo(
     () =>
@@ -131,7 +131,7 @@ export default function JournalDetailScreen() {
     return () => {
       cancelled = true;
     };
-  }, [activeFarm?.id, configured, id]);
+  }, [activeFarm?.id, configured, handleBack, id]);
 
   if (!entry) {
     return null;
@@ -222,6 +222,8 @@ export default function JournalDetailScreen() {
           detectedIllness={entry.detectedIllness}
           detectionDescription={diseaseDetails?.description}
           additionalObservation={entry.additionalObservation}
+          noteSavedAt={entry.noteSavedAt}
+          noteHistory={entry.noteHistory}
         />
 
         <View style={styles.cardSpacer} />

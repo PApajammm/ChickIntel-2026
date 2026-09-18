@@ -18,6 +18,9 @@ alter table public.health_logs add column if not exists disease_id uuid referenc
 alter table public.health_logs add column if not exists confidence double precision;
 alter table public.health_logs add column if not exists detection_source text;
 alter table public.health_logs add column if not exists additional_observation text;
+alter table public.health_logs add column if not exists note_saved_at timestamptz;
+alter table public.health_logs add column if not exists note_history jsonb not null default '[]'::jsonb;
+alter table public.health_logs add column if not exists archived_at timestamptz;
 alter table public.health_logs add column if not exists action_status text default '';
 alter table public.health_logs add column if not exists duration_value text default '';
 alter table public.health_logs add column if not exists health_monitoring_id uuid;

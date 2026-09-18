@@ -38,6 +38,7 @@ import {
     type BatchItem,
     type EggBatchItem,
     formatEggFertilityPercent,
+    getCurrentBatchAgeLabel,
 } from "@/utils/batch-store";
 import { logError, logStep } from "@/utils/logger";
 import {
@@ -54,6 +55,7 @@ import {
 const TAB_BAR_OFFSET = 55;
 const FAB_OFFSET_FROM_TAB_TOP = 50;
 const AGE_UNIT_OPTIONS = ["Days old", "Weeks old"] as const;
+const MIN_BATCH_AGE_WEEKS = 10;
 
 type EggColorCard = {
   id: string;
@@ -72,11 +74,16 @@ type ChickenEditFormState = {
   maleCount: string;
   isolatedCount: string;
   killedCount: string;
+  ageCount: string;
   ageLabel: (typeof AGE_UNIT_OPTIONS)[number];
 };
 
 function parseCount(value: string) {
   return Math.max(0, Number.parseInt(value || "0", 10) || 0);
+}
+
+function parseAgeLabel(value: string) {
+  return value.match(/\d+(?:\.\d+)?/)?.[0] ?? "0";
 }
 
 function clampNonNegative(value: number) {
@@ -144,6 +151,7 @@ export default function ProfilesScreen() {
     maleCount: "",
     isolatedCount: "",
     killedCount: "",
+    ageCount: "",
     ageLabel: AGE_UNIT_OPTIONS[0],
   });
 
@@ -229,7 +237,8 @@ export default function ProfilesScreen() {
       maleCount: String(item.maleCount ?? 0),
       isolatedCount: String(item.isolatedCount ?? 0),
       killedCount: String(item.killedCount ?? 0),
-      ageLabel: item.ageLabel.includes("Week")
+      ageCount: parseAgeLabel(item.ageLabel),
+      ageLabel: item.ageLabel.toLowerCase().includes("week")
         ? AGE_UNIT_OPTIONS[1]
         : AGE_UNIT_OPTIONS[0],
     });
@@ -243,6 +252,17 @@ export default function ProfilesScreen() {
 
   async function saveEdit() {
     if (!selectedBatch) return closeEdit();
+    const enteredAge = parseCount(formState.ageCount);
+    const ageInDays = enteredAge * (formState.ageLabel === "Weeks old" ? 7 : 1);
+
+    if (ageInDays < MIN_BATCH_AGE_WEEKS * 7) {
+      Alert.alert(
+        "Chicken is too young",
+        `Chicken batches must be at least ${MIN_BATCH_AGE_WEEKS} weeks old.`,
+      );
+      return;
+    }
+
     const updated: BatchItem = {
       ...selectedBatch,
       breed: formState.breed,
@@ -250,7 +270,7 @@ export default function ProfilesScreen() {
       maleCount: parseCount(formState.maleCount),
       isolatedCount: parseCount(formState.isolatedCount),
       killedCount: parseCount(formState.killedCount),
-      ageLabel: formState.ageLabel,
+      ageLabel: `${enteredAge} ${formState.ageLabel.toLowerCase()}`,
     };
     if (!activeFarm?.id) {
       Alert.alert("Farm missing", "No active farm was found.");
@@ -718,7 +738,7 @@ export default function ProfilesScreen() {
                         <Text style={styles.metricChipLabel}>Age</Text>
                       </View>
                       <Text style={styles.metricChipValue}>
-                        {item.ageLabel}
+                        {getCurrentBatchAgeLabel(item)}
                       </Text>
                     </View>
 
@@ -996,20 +1016,43 @@ export default function ProfilesScreen() {
                   </View>
 
                   <Text style={styles.modalLabel}>Age</Text>
-                  <Pressable
-                    onPress={() => setAgeUnitMenuVisible(true)}
-                    style={styles.modalSelect}
-                    accessibilityRole="button"
-                  >
-                    <Text style={styles.modalSelectText}>
-                      {formState.ageLabel}
-                    </Text>
-                    <MaterialCommunityIcons
-                      name="chevron-down"
-                      size={18}
-                      color={ChickIntelPalette.gray2}
+                  <View style={styles.ageEditRow}>
+                    <TextInput
+                      value={formState.ageCount}
+                      onChangeText={(value) =>
+                        setFormState((state) => ({
+                          ...state,
+                          ageCount: value.replace(/[^0-9]/g, ""),
+                        }))
+                      }
+                      keyboardType="number-pad"
+                      style={[styles.modalInput, styles.ageCountInput]}
+                      placeholder={
+                        formState.ageLabel === "Weeks old" ? "10" : "70"
+                      }
+                      placeholderTextColor={ChickIntelPalette.gray2}
                     />
-                  </Pressable>
+                    <Pressable
+                      onPress={() => setAgeUnitMenuVisible(true)}
+                      style={[styles.modalSelect, styles.ageUnitSelect]}
+                      accessibilityRole="button"
+                    >
+                      <Text style={styles.modalSelectText}>
+                        {formState.ageLabel}
+                      </Text>
+                      <MaterialCommunityIcons
+                        name="chevron-down"
+                        size={18}
+                        color={ChickIntelPalette.gray2}
+                      />
+                    </Pressable>
+                  </View>
+                  <Text style={styles.ageLimitHint}>
+                    Minimum:{" "}
+                    {formState.ageLabel === "Weeks old"
+                      ? "10 weeks"
+                      : "70 days"}
+                  </Text>
 
                   <View style={styles.modalActions}>
                     <Pressable
@@ -1632,6 +1675,23 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+  },
+  ageEditRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  ageCountInput: {
+    flex: 1,
+  },
+  ageUnitSelect: {
+    flex: 1.5,
+  },
+  ageLimitHint: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(10),
+    lineHeight: 14,
+    fontWeight: "600",
+    color: ChickIntelPalette.green1,
   },
   modalSelectText: {
     fontFamily: ChickFont.sans,

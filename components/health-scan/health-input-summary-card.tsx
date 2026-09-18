@@ -13,6 +13,10 @@ import {
     scale,
     verticalScale,
 } from "@/utils/responsive";
+import {
+    formatJournalDateTime,
+    type JournalNote,
+} from "@/utils/supabase-health-journal";
 
 type HealthInputSummaryCardProps = {
   photoUri: string;
@@ -24,7 +28,10 @@ type HealthInputSummaryCardProps = {
   /** When set (e.g. on the result screen), lists chosen behaviors. */
   selectedLabels?: string[];
   additionalObservation?: string;
+  noteSavedAt?: string;
+  noteHistory?: JournalNote[];
   showKicker?: boolean;
+  summaryLabel?: string;
 };
 
 function formatCapturedAt(capturedAt?: string) {
@@ -53,7 +60,10 @@ export function HealthInputSummaryCard({
   captureHeight,
   selectedLabels,
   additionalObservation,
+  noteSavedAt,
+  noteHistory = [],
   showKicker = true,
+  summaryLabel = "Behavior & Health Snapshot",
 }: HealthInputSummaryCardProps) {
   const [imageFailed, setImageFailed] = useState(false);
   const capturedMeta = formatCapturedAt(capturedAt);
@@ -113,7 +123,7 @@ export function HealthInputSummaryCard({
           </View>
 
           <View style={styles.copyStack}>
-            <Text style={styles.blockLabel}>Behavior & Health Snapshot</Text>
+            <Text style={styles.blockLabel}>{summaryLabel}</Text>
             <Text style={styles.detailHeadline}>{detectedIllness}</Text>
             {detectionDescription ? (
               <Text style={styles.detailDescription}>
@@ -143,11 +153,23 @@ export function HealthInputSummaryCard({
         {additionalObservation?.trim() ? (
           <View style={styles.observationSection}>
             <Text style={styles.subHeader}>Notes & Observations</Text>
-            <Text style={styles.observationText}>
-              {'"'}
-              {additionalObservation.trim()}
-              {'"'}
-            </Text>
+            {(noteHistory.length
+              ? noteHistory
+              : [{ text: additionalObservation.trim(), savedAt: noteSavedAt }]
+            ).map((note, index) => (
+              <View key={`${note.savedAt ?? "note"}-${index}`}>
+                <Text style={styles.observationText}>
+                  {'"'}
+                  {note.text}
+                  {'"'}
+                </Text>
+                {note.savedAt ? (
+                  <Text style={styles.observationTimestamp}>
+                    Saved {formatJournalDateTime(note.savedAt)}
+                  </Text>
+                ) : null}
+              </View>
+            ))}
           </View>
         ) : null}
       </View>
@@ -303,5 +325,11 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: "#5A6262",
     fontStyle: "italic",
+  },
+  observationTimestamp: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(10),
+    fontWeight: "600",
+    color: ChickIntelPalette.gray2,
   },
 });

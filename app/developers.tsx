@@ -4,27 +4,33 @@ import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Animated,
-  Dimensions,
-  Easing,
-  Linking,
-  Modal,
-  NativeScrollEvent,
-  NativeSyntheticEvent,
-  PanResponder,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
+    Animated,
+    BackHandler,
+    Dimensions,
+    Easing,
+    Linking,
+    Modal,
+    NativeScrollEvent,
+    NativeSyntheticEvent,
+    PanResponder,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import BackgroundGradient from "@/assets_imported/background-gradient.svg";
 import { ChickFont } from "@/constants/chick-fonts";
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
-import { moderateScale, responsiveFontSize, scale, verticalScale } from "@/utils/responsive";
+import {
+    moderateScale,
+    responsiveFontSize,
+    scale,
+    verticalScale,
+} from "@/utils/responsive";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CARD_WIDTH = Math.round(Math.min(SCREEN_WIDTH * 0.46, 175));
@@ -227,13 +233,32 @@ function create3DInterpolations(cardIndex: number, animValue: Animated.Value) {
 export default function DevelopersScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [activeTab, setActiveTab] = useState<"about-app" | "about-us">("about-app");
+  const [activeTab, setActiveTab] = useState<"about-app" | "about-us">(
+    "about-app",
+  );
+  const returnToSplashScreen = useCallback(() => {
+    router.replace("/splashscreen");
+  }, [router]);
+
+  useEffect(() => {
+    const subscription = BackHandler.addEventListener(
+      "hardwareBackPress",
+      () => {
+        returnToSplashScreen();
+        return true;
+      },
+    );
+
+    return () => subscription.remove();
+  }, [returnToSplashScreen]);
 
   // Carousel & 3D state for "About Us" tab
   const animValue = useRef(new Animated.Value(0)).current;
   const currentStep = useRef(0);
   const [activeCardIndex, setActiveCardIndex] = useState(0);
-  const [selectedContact, setSelectedContact] = useState<ContactChannel | null>(null);
+  const [selectedContact, setSelectedContact] = useState<ContactChannel | null>(
+    null,
+  );
 
   // Slow, smooth upward entrance animation for "About App" tab
   const aboutAnim = useRef(new Animated.Value(0)).current;
@@ -261,7 +286,10 @@ export default function DevelopersScreen() {
   const smoothScrollYTo = useCallback(
     (targetY: number, duration = 4500, onComplete?: () => void) => {
       if (isUserInteractingRef.current) return;
-      const maxScroll = Math.max(0, contentHeightRef.current - containerHeightRef.current);
+      const maxScroll = Math.max(
+        0,
+        contentHeightRef.current - containerHeightRef.current,
+      );
       const clampedTarget = Math.max(0, Math.min(targetY, maxScroll));
       const startY = currentScrollYRef.current;
       const distance = clampedTarget - startY;
@@ -296,7 +324,7 @@ export default function DevelopersScreen() {
 
       scrollAnimationFrameRef.current = requestAnimationFrame(step);
     },
-    []
+    [],
   );
 
   // Starts the slow continuous scroll down and then up cycle
@@ -304,7 +332,10 @@ export default function DevelopersScreen() {
     stopAutoScroll();
     if (isUserInteractingRef.current || activeTab !== "about-app") return;
 
-    const maxScroll = Math.max(0, contentHeightRef.current - containerHeightRef.current);
+    const maxScroll = Math.max(
+      0,
+      contentHeightRef.current - containerHeightRef.current,
+    );
     if (maxScroll <= 30) return;
 
     // Wait a brief moment after entrance, then slowly scroll down (halved speed = 12s)
@@ -402,7 +433,7 @@ export default function DevelopersScreen() {
         }).start();
       }
     },
-    [animValue]
+    [animValue],
   );
 
   useEffect(() => {
@@ -438,7 +469,8 @@ export default function DevelopersScreen() {
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: (_, gestureState) => Math.abs(gestureState.dx) > 5,
+      onMoveShouldSetPanResponder: (_, gestureState) =>
+        Math.abs(gestureState.dx) > 5,
       onPanResponderGrant: () => {
         stopAutoPlay();
         animValue.stopAnimation();
@@ -449,11 +481,12 @@ export default function DevelopersScreen() {
       },
       onPanResponderRelease: (_, gestureState) => {
         const deltaStep = gestureState.dx / DRAG_SENSITIVITY;
-        const projectedStep = currentStep.current + deltaStep + gestureState.vx * 0.4;
+        const projectedStep =
+          currentStep.current + deltaStep + gestureState.vx * 0.4;
         const target = Math.round(projectedStep);
         rotateToStep(target);
       },
-    })
+    }),
   ).current;
 
   return (
@@ -478,16 +511,25 @@ export default function DevelopersScreen() {
         <View style={styles.fixedHeader}>
           <View style={styles.topBar}>
             <Pressable
-              onPress={() => (router.canGoBack() ? router.back() : router.replace("/(tabs)"))}
-              style={({ pressed }) => [styles.backBtn, pressed && styles.backBtnPressed]}
+              onPress={returnToSplashScreen}
+              style={({ pressed }) => [
+                styles.backBtn,
+                pressed && styles.backBtnPressed,
+              ]}
               hitSlop={12}
               accessibilityRole="button"
               accessibilityLabel="Go back"
             >
-              <MaterialCommunityIcons name="arrow-left" size={22} color="#FFF" />
+              <MaterialCommunityIcons
+                name="arrow-left"
+                size={22}
+                color="#FFF"
+              />
             </Pressable>
             <Text style={styles.headerTitle}>
-              {activeTab === "about-app" ? "About ChickIntel" : "The Developers"}
+              {activeTab === "about-app"
+                ? "About ChickIntel"
+                : "The Developers"}
             </Text>
             <View style={styles.headerRightPlaceholder} />
           </View>
@@ -499,7 +541,9 @@ export default function DevelopersScreen() {
                 onPress={() => setActiveTab("about-app")}
                 style={[
                   styles.segment,
-                  activeTab === "about-app" ? styles.segmentActive : styles.segmentInactive,
+                  activeTab === "about-app"
+                    ? styles.segmentActive
+                    : styles.segmentInactive,
                 ]}
               >
                 <Text
@@ -518,7 +562,9 @@ export default function DevelopersScreen() {
                 onPress={() => setActiveTab("about-us")}
                 style={[
                   styles.segment,
-                  activeTab === "about-us" ? styles.segmentActive : styles.segmentInactive,
+                  activeTab === "about-us"
+                    ? styles.segmentActive
+                    : styles.segmentInactive,
                 ]}
               >
                 <Text
@@ -603,12 +649,21 @@ export default function DevelopersScreen() {
               <View style={styles.infoCard}>
                 <View style={styles.cardHeaderRow}>
                   <View style={styles.iconCircle}>
-                    <MaterialCommunityIcons name="information" size={18} color={ChickIntelPalette.green1} />
+                    <MaterialCommunityIcons
+                      name="information"
+                      size={18}
+                      color={ChickIntelPalette.green1}
+                    />
                   </View>
                   <Text style={styles.infoCardTitle}>Overview & Purpose</Text>
                 </View>
                 <Text style={styles.infoCardBody}>
-                  ChickIntel is an integrated smart poultry management platform tailored for backyard raisers, commercial farm technicians, and poultry farm managers. It streamlines daily operations by unifying batch profiles, inventory tracking, routine task schedules, egg production metrics, and AI-assisted health screening.
+                  ChickIntel is an integrated smart poultry management platform
+                  tailored for backyard raisers, commercial farm technicians,
+                  and poultry farm managers. It streamlines daily operations by
+                  unifying batch profiles, inventory tracking, routine task
+                  schedules, egg production metrics, and AI-assisted health
+                  screening.
                 </Text>
               </View>
 
@@ -616,7 +671,11 @@ export default function DevelopersScreen() {
               <View style={styles.infoCard}>
                 <View style={styles.cardHeaderRow}>
                   <View style={styles.iconCircle}>
-                    <MaterialCommunityIcons name="star-shooting" size={18} color={ChickIntelPalette.green1} />
+                    <MaterialCommunityIcons
+                      name="star-shooting"
+                      size={18}
+                      color={ChickIntelPalette.green1}
+                    />
                   </View>
                   <Text style={styles.infoCardTitle}>Key Capabilities</Text>
                 </View>
@@ -625,12 +684,20 @@ export default function DevelopersScreen() {
                   {/* Capability 1: Health & Behavior Diagnostics */}
                   <View style={styles.featureItem}>
                     <View style={styles.featureBullet}>
-                      <MaterialCommunityIcons name="stethoscope" size={16} color={ChickIntelPalette.green1} />
+                      <MaterialCommunityIcons
+                        name="stethoscope"
+                        size={16}
+                        color={ChickIntelPalette.green1}
+                      />
                     </View>
                     <View style={styles.featureTextWrap}>
-                      <Text style={styles.featureTitle}>AI Health & Behavior Diagnostics</Text>
+                      <Text style={styles.featureTitle}>
+                        AI Health & Behavior Diagnostics
+                      </Text>
                       <Text style={styles.featureDesc}>
-                        Visual symptom scanning combined with behavioral observations to screen poultry condition status, assess severity levels, and generate biosecurity guidance.
+                        Visual symptom scanning combined with behavioral
+                        observations to screen poultry condition status, assess
+                        severity levels, and generate biosecurity guidance.
                       </Text>
                     </View>
                   </View>
@@ -638,12 +705,20 @@ export default function DevelopersScreen() {
                   {/* Capability 2: Fertility Rate Analysis */}
                   <View style={styles.featureItem}>
                     <View style={styles.featureBullet}>
-                      <MaterialCommunityIcons name="egg-outline" size={16} color={ChickIntelPalette.green1} />
+                      <MaterialCommunityIcons
+                        name="egg-outline"
+                        size={16}
+                        color={ChickIntelPalette.green1}
+                      />
                     </View>
                     <View style={styles.featureTextWrap}>
-                      <Text style={styles.featureTitle}>Egg Batch & Fertility Rate Analysis</Text>
+                      <Text style={styles.featureTitle}>
+                        Egg Batch & Fertility Rate Analysis
+                      </Text>
                       <Text style={styles.featureDesc}>
-                        Batch-level monitoring of egg collection, fertile vs. infertile distribution, unhatched/damaged records, and computed fertility percentages for incubator efficiency.
+                        Batch-level monitoring of egg collection, fertile vs.
+                        infertile distribution, unhatched/damaged records, and
+                        computed fertility percentages for incubator efficiency.
                       </Text>
                     </View>
                   </View>
@@ -651,14 +726,20 @@ export default function DevelopersScreen() {
                   {/* Capability 3: Inventory & Smart Scheduling */}
                   <View style={styles.featureItem}>
                     <View style={styles.featureBullet}>
-                      <MaterialCommunityIcons name="clipboard-list-outline" size={16} color={ChickIntelPalette.green1} />
+                      <MaterialCommunityIcons
+                        name="clipboard-list-outline"
+                        size={16}
+                        color={ChickIntelPalette.green1}
+                      />
                     </View>
                     <View style={styles.featureTextWrap}>
                       <Text style={styles.featureTitle}>
                         Poultry Inventory & Task Scheduling Smart Management
                       </Text>
                       <Text style={styles.featureDesc}>
-                        Real-time tracking of feed stocks, biologics, medicines, and equipment supplies alongside customizable repeat schedules for feeding, watering, and flock vaccinations.
+                        Real-time tracking of feed stocks, biologics, medicines,
+                        and equipment supplies alongside customizable repeat
+                        schedules for feeding, watering, and flock vaccinations.
                       </Text>
                     </View>
                   </View>
@@ -666,12 +747,20 @@ export default function DevelopersScreen() {
                   {/* Capability 4: Production Insights */}
                   <View style={styles.featureItem}>
                     <View style={styles.featureBullet}>
-                      <MaterialCommunityIcons name="chart-areaspline" size={16} color={ChickIntelPalette.green1} />
+                      <MaterialCommunityIcons
+                        name="chart-areaspline"
+                        size={16}
+                        color={ChickIntelPalette.green1}
+                      />
                     </View>
                     <View style={styles.featureTextWrap}>
-                      <Text style={styles.featureTitle}>Poultry Production Insights & Reports</Text>
+                      <Text style={styles.featureTitle}>
+                        Poultry Production Insights & Reports
+                      </Text>
                       <Text style={styles.featureDesc}>
-                        Automated summaries of flock mortality rates, egg production trends, feed utilization, and exportable PDF audit reports for farm decision-making.
+                        Automated summaries of flock mortality rates, egg
+                        production trends, feed utilization, and exportable PDF
+                        audit reports for farm decision-making.
                       </Text>
                     </View>
                   </View>
@@ -679,12 +768,20 @@ export default function DevelopersScreen() {
                   {/* Capability 5: Breed Identification */}
                   <View style={styles.featureItem}>
                     <View style={styles.featureBullet}>
-                      <MaterialCommunityIcons name="tag-outline" size={16} color={ChickIntelPalette.green1} />
+                      <MaterialCommunityIcons
+                        name="tag-outline"
+                        size={16}
+                        color={ChickIntelPalette.green1}
+                      />
                     </View>
                     <View style={styles.featureTextWrap}>
-                      <Text style={styles.featureTitle}>Chicken Breed Identification</Text>
+                      <Text style={styles.featureTitle}>
+                        Chicken Breed Identification
+                      </Text>
                       <Text style={styles.featureDesc}>
-                        Visual morphological identification and attribute profiling for supported pure chicken breeds: Silkie and Rhode Island Red.
+                        Visual morphological identification and attribute
+                        profiling for supported pure chicken breeds: Silkie and
+                        Rhode Island Red.
                       </Text>
                     </View>
                   </View>
@@ -695,7 +792,11 @@ export default function DevelopersScreen() {
               <View style={styles.solidLimitationCard}>
                 <View style={styles.cardHeaderRow}>
                   <View style={styles.warningIconCircle}>
-                    <MaterialCommunityIcons name="alert-decagram" size={18} color="#B45309" />
+                    <MaterialCommunityIcons
+                      name="alert-decagram"
+                      size={18}
+                      color="#B45309"
+                    />
                   </View>
                   <Text style={styles.limitationHeaderTitle}>
                     AI Health, Behavior & Breed Detection Limitations
@@ -706,15 +807,30 @@ export default function DevelopersScreen() {
                   {/* Condition Scope */}
                   <View style={styles.limitationItem}>
                     <View style={styles.limitationBullet}>
-                      <MaterialCommunityIcons name="virus-outline" size={16} color="#B45309" />
+                      <MaterialCommunityIcons
+                        name="virus-outline"
+                        size={16}
+                        color="#B45309"
+                      />
                     </View>
                     <View style={styles.limitationTextWrap}>
-                      <Text style={styles.limitationTitleText}>Limited Illness Detection Scope:</Text>
+                      <Text style={styles.limitationTitleText}>
+                        Limited Illness Detection Scope:
+                      </Text>
                       <Text style={styles.limitationDesc}>
-                        The AI model is specifically trained to detect and screen for{" "}
+                        The AI model is specifically trained to detect and
+                        screen for{" "}
                         <Text style={styles.boldInlineText}>Healthy</Text>,{" "}
-                        <Text style={styles.boldInlineText}>Infectious Coryza</Text>, and{" "}
-                        <Text style={styles.boldInlineText}>Fowlpox (Dry/Wet)</Text>. It does NOT detect general avian influenza, internal parasites, systemic bacterial septicemia, or nutritional deficiencies.
+                        <Text style={styles.boldInlineText}>
+                          Infectious Coryza
+                        </Text>
+                        , and{" "}
+                        <Text style={styles.boldInlineText}>
+                          Fowlpox (Dry/Wet)
+                        </Text>
+                        . It does NOT detect general avian influenza, internal
+                        parasites, systemic bacterial septicemia, or nutritional
+                        deficiencies.
                       </Text>
                     </View>
                   </View>
@@ -722,12 +838,21 @@ export default function DevelopersScreen() {
                   {/* Breed Scope: Silkie, Rhode Island Red only */}
                   <View style={styles.limitationItem}>
                     <View style={styles.limitationBullet}>
-                      <MaterialCommunityIcons name="feather" size={16} color="#B45309" />
+                      <MaterialCommunityIcons
+                        name="feather"
+                        size={16}
+                        color="#B45309"
+                      />
                     </View>
                     <View style={styles.limitationTextWrap}>
-                      <Text style={styles.limitationTitleText}>Supported Breeds: Silkie, Rhode Island Red only</Text>
+                      <Text style={styles.limitationTitleText}>
+                        Supported Breeds: Silkie, Rhode Island Red only
+                      </Text>
                       <Text style={styles.limitationDesc}>
-                        Breed recognition is currently trained and optimized strictly for Silkie and Rhode Island Red. Other breeds, native mixed crosses, or juvenile chicks cannot be reliably identified.
+                        Breed recognition is currently trained and optimized
+                        strictly for Silkie and Rhode Island Red. Other breeds,
+                        native mixed crosses, or juvenile chicks cannot be
+                        reliably identified.
                       </Text>
                     </View>
                   </View>
@@ -735,12 +860,21 @@ export default function DevelopersScreen() {
                   {/* Advisory Disclaimer */}
                   <View style={styles.limitationItem}>
                     <View style={styles.limitationBullet}>
-                      <MaterialCommunityIcons name="shield-alert-outline" size={16} color="#B45309" />
+                      <MaterialCommunityIcons
+                        name="shield-alert-outline"
+                        size={16}
+                        color="#B45309"
+                      />
                     </View>
                     <View style={styles.limitationTextWrap}>
-                      <Text style={styles.limitationTitleText}>Advisory Screening Only:</Text>
+                      <Text style={styles.limitationTitleText}>
+                        Advisory Screening Only:
+                      </Text>
                       <Text style={styles.limitationDesc}>
-                        Outputs provide early decision-support and must never replace diagnostic verification, laboratory bacterial/viral culture, or treatment prescription by a licensed veterinarian.
+                        Outputs provide early decision-support and must never
+                        replace diagnostic verification, laboratory
+                        bacterial/viral culture, or treatment prescription by a
+                        licensed veterinarian.
                       </Text>
                     </View>
                   </View>
@@ -748,12 +882,20 @@ export default function DevelopersScreen() {
                   {/* Capture Requirements */}
                   <View style={styles.limitationItem}>
                     <View style={styles.limitationBullet}>
-                      <MaterialCommunityIcons name="camera-iris" size={16} color="#B45309" />
+                      <MaterialCommunityIcons
+                        name="camera-iris"
+                        size={16}
+                        color="#B45309"
+                      />
                     </View>
                     <View style={styles.limitationTextWrap}>
-                      <Text style={styles.limitationTitleText}>Image Quality Requirement:</Text>
+                      <Text style={styles.limitationTitleText}>
+                        Image Quality Requirement:
+                      </Text>
                       <Text style={styles.limitationDesc}>
-                        Accurate inference depends on clear natural lighting, focused close-up shots of facial features (comb, eyes, wattle), and unobstructed plumage.
+                        Accurate inference depends on clear natural lighting,
+                        focused close-up shots of facial features (comb, eyes,
+                        wattle), and unobstructed plumage.
                       </Text>
                     </View>
                   </View>
@@ -781,7 +923,10 @@ export default function DevelopersScreen() {
 
               <View style={styles.carouselStage}>
                 {DEVELOPERS.map((dev, index) => {
-                  const animatedStyles = create3DInterpolations(index, animValue);
+                  const animatedStyles = create3DInterpolations(
+                    index,
+                    animValue,
+                  );
                   const isFront = activeCardIndex === index;
                   const zIndex = isFront ? 10 : 2;
 
@@ -798,9 +943,17 @@ export default function DevelopersScreen() {
                       ]}
                     >
                       {/* Modern Glassmorphic Card */}
-                      <View style={[styles.cardBox, isFront && styles.activeCardBox]}>
+                      <View
+                        style={[
+                          styles.cardBox,
+                          isFront && styles.activeCardBox,
+                        ]}
+                      >
                         {/* Glassmorphism Frosted Blur Backdrop */}
-                        <View style={styles.blurBackdropWrap} pointerEvents="none">
+                        <View
+                          style={styles.blurBackdropWrap}
+                          pointerEvents="none"
+                        >
                           <BlurView
                             intensity={
                               isFront
@@ -808,8 +961,8 @@ export default function DevelopersScreen() {
                                   ? 45
                                   : 32
                                 : Platform.OS === "ios"
-                                ? 28
-                                : 18
+                                  ? 28
+                                  : 18
                             }
                             tint="dark"
                             style={StyleSheet.absoluteFill}
@@ -908,7 +1061,8 @@ export default function DevelopersScreen() {
                       onPress={() => {
                         stopAutoPlay();
                         const currentMod =
-                          ((currentStep.current % NUM_ITEMS) + NUM_ITEMS) % NUM_ITEMS;
+                          ((currentStep.current % NUM_ITEMS) + NUM_ITEMS) %
+                          NUM_ITEMS;
                         let diff = idx - currentMod;
                         if (diff > NUM_ITEMS / 2) diff -= NUM_ITEMS;
                         if (diff < -NUM_ITEMS / 2) diff += NUM_ITEMS;
@@ -1020,7 +1174,9 @@ export default function DevelopersScreen() {
               </Pressable>
 
               <Pressable
-                onPress={() => selectedContact && handleOpenContact(selectedContact)}
+                onPress={() =>
+                  selectedContact && handleOpenContact(selectedContact)
+                }
                 style={({ pressed }) => [
                   styles.modalBtn,
                   styles.modalBtnPrimary,

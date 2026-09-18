@@ -25,7 +25,7 @@ export function ChickTabBar({ onLogoutPress, ..._rest }: ChickTabBarProps) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const pathname = usePathname();
-  const { profile } = useAuth();
+  const { guestMode, profile } = useAuth();
   const colorScheme = useColorScheme();
   const colors = getFarmColors(colorScheme);
 
@@ -72,28 +72,30 @@ export function ChickTabBar({ onLogoutPress, ..._rest }: ChickTabBarProps) {
         },
       ]}
     >
-      <Pressable
-        onPress={goHome}
-        style={({ pressed }) => [styles.item, { opacity: pressed ? 0.85 : 1 }]}
-        accessibilityRole="button"
-        accessibilityLabel="Home"
-      >
-        <MaterialCommunityIcons
-          name="home-variant"
-          size={28}
-          color={homeActive ? activeColor : inactiveColor}
-        />
-        <Text
-          style={[
-            styles.label,
-            { color: homeActive ? activeColor : inactiveColor },
-          ]}
+      {!guestMode && (
+        <Pressable
+          onPress={goHome}
+          style={({ pressed }) => [styles.item, { opacity: pressed ? 0.85 : 1 }]}
+          accessibilityRole="button"
+          accessibilityLabel="Home"
         >
-          Home
-        </Text>
-      </Pressable>
+          <MaterialCommunityIcons
+            name="home-variant"
+            size={28}
+            color={homeActive ? activeColor : inactiveColor}
+          />
+          <Text
+            style={[
+              styles.label,
+              { color: homeActive ? activeColor : inactiveColor },
+            ]}
+          >
+            Home
+          </Text>
+        </Pressable>
+      )}
 
-      {profile?.is_admin && (
+      {!guestMode && profile?.is_admin && (
         <Pressable
           onPress={() => router.push("/admin/dashboard")}
           style={({ pressed }) => [
@@ -115,7 +117,9 @@ export function ChickTabBar({ onLogoutPress, ..._rest }: ChickTabBarProps) {
         accessibilityLabel="Logout"
       >
         <MaterialCommunityIcons name="power" size={26} color={inactiveColor} />
-        <Text style={[styles.label, { color: inactiveColor }]}>Logout</Text>
+        <Text style={[styles.label, { color: inactiveColor }]}>
+          {guestMode ? "Exit Guest" : "Logout"}
+        </Text>
       </Pressable>
     </View>
   );
