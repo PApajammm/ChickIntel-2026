@@ -1,23 +1,30 @@
-import Constants, { ExecutionEnvironment } from "expo-constants";
 import type { SupabaseScheduleTask } from "@/utils/supabase-schedule";
 import {
-  formatScheduleDateKey,
-  scheduleTaskMatchesDate,
+    formatScheduleDateKey,
+    scheduleTaskMatchesDate,
 } from "@/utils/supabase-schedule";
+import Constants, { ExecutionEnvironment } from "expo-constants";
+import * as Notifications from "expo-notifications";
 
 const isExpoGo =
   Constants.executionEnvironment === ExecutionEnvironment.StoreClient ||
   (Constants as Record<string, unknown>).appOwnership === "expo";
 
-let NotificationsModule: typeof import("expo-notifications") | null = null;
+let NotificationsModule: typeof Notifications | null = Notifications;
 
-if (!isExpoGo) {
-  try {
-    NotificationsModule = require("expo-notifications");
-  } catch {
-    NotificationsModule = null;
-  }
+if (isExpoGo) {
+  NotificationsModule = Notifications;
 }
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
 
 const CHANNEL_ID = "schedule-task-alarms";
 const LOOKAHEAD_DAYS = 90;
@@ -65,11 +72,16 @@ export async function scheduleTaskNotifications(task: SupabaseScheduleTask) {
   if (!(await requestScheduleNotificationPermissions())) return;
 
   try {
-    const scheduled = (await NotificationsModule.getAllScheduledNotificationsAsync()) as unknown as ScheduledTaskNotification[];
+    const scheduled =
+      (await NotificationsModule.getAllScheduledNotificationsAsync()) as unknown as ScheduledTaskNotification[];
     await Promise.all(
       scheduled
         .filter((entry) => entry.content.data?.taskId === task.id)
-        .map((entry) => NotificationsModule?.cancelScheduledNotificationAsync(entry.identifier)),
+        .map((entry) =>
+          NotificationsModule?.cancelScheduledNotificationAsync(
+            entry.identifier,
+          ),
+        ),
     );
 
     const now = new Date();
@@ -86,12 +98,6 @@ export async function scheduleTaskNotifications(task: SupabaseScheduleTask) {
 
       const reminders = [
         {
-          date: new Date(exactTime.getTime() - 15 * 60 * 1000),
-          title: `Upcoming task: ${task.title}`,
-          body: "This scheduled task starts in 15 minutes.",
-          kind: "reminder",
-        },
-        {
           date: exactTime,
           title: `Task due now: ${task.title}`,
           body: "Your scheduled task is due now. Complete it with evidence.",
@@ -107,20 +113,25 @@ export async function scheduleTaskNotifications(task: SupabaseScheduleTask) {
             body: reminder.body,
             sound: "default",
             priority: reminder.kind === "alarm" ? "max" : "high",
+            channelId: CHANNEL_ID,
             data: {
               taskId: task.id,
               occurrenceDate: formatScheduleDateKey(date),
               kind: reminder.kind,
             },
-          },
+          } as never,
           trigger: {
             type: "date",
             date: reminder.date,
-            channelId: CHANNEL_ID,
           } as never,
         });
       }
     }
+    const scheduledAfter =
+      await NotificationsModule.getAllScheduledNotificationsAsync();
+    console.info(
+      `[schedule-notifications] Registered ${scheduledAfter.length} notifications for ${task.id}`,
+    );
   } catch {
     // Notifications are supplemental; scheduling failure must not block Schedule.
   }
@@ -130,11 +141,16 @@ export async function cancelTaskNotifications(taskId: string) {
   if (!NotificationsModule || !taskId) return;
 
   try {
-    const scheduled = (await NotificationsModule.getAllScheduledNotificationsAsync()) as unknown as ScheduledTaskNotification[];
+    const scheduled =
+      (await NotificationsModule.getAllScheduledNotificationsAsync()) as unknown as ScheduledTaskNotification[];
     await Promise.all(
       scheduled
         .filter((entry) => entry.content.data?.taskId === taskId)
-        .map((entry) => NotificationsModule?.cancelScheduledNotificationAsync(entry.identifier)),
+        .map((entry) =>
+          NotificationsModule?.cancelScheduledNotificationAsync(
+            entry.identifier,
+          ),
+        ),
     );
   } catch {
     // Ignore notification cleanup failures.

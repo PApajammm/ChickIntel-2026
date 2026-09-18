@@ -27,7 +27,7 @@
         "android.permission.SCHEDULE_EXACT_ALARM"
       ],
       "package": "com.chickintel.app",
-      "versionCode": 9
+      "versionCode": 10
     },
     "web": {
       "output": "static",
@@ -68,7 +68,7 @@
     ],
     "updates": {
       "enabled": true,
-      "checkAutomatically": "ON_LOAD",
+      "checkAutomatically": "NEVER",
       "fallbackToCacheTimeout": 30000,
       "url": "https://u.expo.dev/8283a1dd-e69b-41f1-9cd5-211270c5e351"
     },

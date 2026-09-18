@@ -1,21 +1,22 @@
-import React, { useMemo, useState, useEffect } from "react";
-import {
-  Modal,
-  Pressable,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import React, { useEffect, useMemo, useState } from "react";
+import {
+    Modal,
+    Pressable,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from "react-native";
 
 import { ChickFont } from "@/constants/chick-fonts";
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
 import {
-  moderateScale,
-  responsiveFontSize,
-  scale,
-  verticalScale,
+    moderateScale,
+    responsiveFontSize,
+    scale,
+    verticalScale,
 } from "@/utils/responsive";
 
 const MONTH_NAMES = [
@@ -164,10 +165,32 @@ export function ChickDatePickerModal({
 
   const isDayDisabled = (day: number) => {
     const dateToCheck = new Date(viewYear, viewMonth, day, 23, 59, 59);
-    if (minDate && dateToCheck < new Date(minDate.getFullYear(), minDate.getMonth(), minDate.getDate(), 0, 0, 0)) {
+    if (
+      minDate &&
+      dateToCheck <
+        new Date(
+          minDate.getFullYear(),
+          minDate.getMonth(),
+          minDate.getDate(),
+          0,
+          0,
+          0,
+        )
+    ) {
       return true;
     }
-    if (maxDate && dateToCheck > new Date(maxDate.getFullYear(), maxDate.getMonth(), maxDate.getDate(), 23, 59, 59)) {
+    if (
+      maxDate &&
+      dateToCheck >
+        new Date(
+          maxDate.getFullYear(),
+          maxDate.getMonth(),
+          maxDate.getDate(),
+          23,
+          59,
+          59,
+        )
+    ) {
       return true;
     }
     return false;
@@ -187,7 +210,10 @@ export function ChickDatePickerModal({
       onRequestClose={onCancel}
     >
       <Pressable style={styles.modalOverlay} onPress={onCancel}>
-        <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
+        <Pressable
+          style={styles.modalCard}
+          onPress={(e) => e.stopPropagation()}
+        >
           {/* Green Top Header */}
           <View style={styles.header}>
             <Text style={styles.headerYear}>{selectedDate.getFullYear()}</Text>
@@ -359,6 +385,18 @@ export function ChickTimePickerModal({
     setSelectedMinute(next);
   };
 
+  const handleHourInput = (value: string) => {
+    const parsed = Number.parseInt(value.replace(/\D/g, ""), 10);
+    if (Number.isNaN(parsed)) return;
+    setSelectedHour(Math.min(12, Math.max(1, parsed)));
+  };
+
+  const handleMinuteInput = (value: string) => {
+    const parsed = Number.parseInt(value.replace(/\D/g, ""), 10);
+    if (Number.isNaN(parsed)) return;
+    setSelectedMinute(Math.min(59, Math.max(0, parsed)));
+  };
+
   const handleOk = () => {
     let finalHour = selectedHour % 12;
     if (!isAm) finalHour += 12;
@@ -384,7 +422,10 @@ export function ChickTimePickerModal({
       onRequestClose={onCancel}
     >
       <Pressable style={styles.modalOverlay} onPress={onCancel}>
-        <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
+        <Pressable
+          style={styles.modalCard}
+          onPress={(e) => e.stopPropagation()}
+        >
           {/* Green Top Header */}
           <View style={styles.header}>
             <Text style={styles.headerYear}>{title || "SELECT TIME"}</Text>
@@ -409,9 +450,15 @@ export function ChickTimePickerModal({
                   />
                 </TouchableOpacity>
                 <View style={styles.timeValueBox}>
-                  <Text style={styles.timeValueText}>
-                    {selectedHour.toString().padStart(2, "0")}
-                  </Text>
+                  <TextInput
+                    value={selectedHour.toString().padStart(2, "0")}
+                    onChangeText={handleHourInput}
+                    keyboardType="number-pad"
+                    maxLength={2}
+                    selectTextOnFocus
+                    style={styles.timeValueInput}
+                    accessibilityLabel="Hour"
+                  />
                 </View>
                 <TouchableOpacity
                   onPress={() => handleHourChange(-1)}
@@ -443,9 +490,15 @@ export function ChickTimePickerModal({
                   />
                 </TouchableOpacity>
                 <View style={styles.timeValueBox}>
-                  <Text style={styles.timeValueText}>
-                    {selectedMinute.toString().padStart(2, "0")}
-                  </Text>
+                  <TextInput
+                    value={selectedMinute.toString().padStart(2, "0")}
+                    onChangeText={handleMinuteInput}
+                    keyboardType="number-pad"
+                    maxLength={2}
+                    selectTextOnFocus
+                    style={styles.timeValueInput}
+                    accessibilityLabel="Minute"
+                  />
                 </View>
                 <TouchableOpacity
                   onPress={() => handleMinuteChange(-5)}
@@ -718,6 +771,16 @@ const styles = StyleSheet.create({
     borderColor: "rgba(49, 118, 103, 0.25)",
     alignItems: "center",
     justifyContent: "center",
+  },
+  timeValueInput: {
+    width: "100%",
+    height: "100%",
+    padding: 0,
+    textAlign: "center",
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(22),
+    fontWeight: "800",
+    color: ChickIntelPalette.gray1,
   },
   timeValueText: {
     fontFamily: ChickFont.display,
