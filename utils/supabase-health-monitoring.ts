@@ -199,9 +199,7 @@ function getTreatmentReminderConfig(title: string, now: Date) {
     : weekDurationMatch
       ? Number(weekDurationMatch[1]) * 7
       : 0;
-  const isWeekly = /\bweekly\b|once\s+a\s+week|every\s+week/i.test(
-    normalized,
-  );
+  const isWeekly = /\bweekly\b|once\s+a\s+week|every\s+week/i.test(normalized);
   const isDaily =
     durationDays > 0 ||
     /\bdaily\b|each day|per day|every day/i.test(normalized);
@@ -798,7 +796,9 @@ export async function fetchHealthMonitoringTasks(
   );
   return tasks.map((task) => ({
     ...task,
-    occurrences: occurrences.filter((occurrence) => occurrence.taskId === task.id),
+    occurrences: occurrences.filter(
+      (occurrence) => occurrence.taskId === task.id,
+    ),
   }));
 }
 
@@ -850,7 +850,7 @@ export async function updateHealthMonitoringTaskOccurrence(
     .update({
       completed,
       completed_at: completed ? new Date().toISOString() : null,
-      completed_by: completed ? userData.user?.id ?? null : null,
+      completed_by: completed ? (userData.user?.id ?? null) : null,
       ...(treatmentNote !== undefined
         ? { treatment_note: treatmentNote.trim() || null }
         : {}),

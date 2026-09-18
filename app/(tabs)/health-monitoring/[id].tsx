@@ -272,12 +272,16 @@ export default function HealthMonitoringDetailScreen() {
   );
 
   const openNoteEditor = useCallback(
-    (task: HealthMonitoringTask, occurrence: HealthMonitoringTaskOccurrence) => {
-    setTreatmentNotes((previous) => ({
-      ...previous,
-      [occurrence.id]: previous[occurrence.id] ?? occurrence.treatmentNote ?? "",
-    }));
-    setNoteModalContext({ task, occurrence });
+    (
+      task: HealthMonitoringTask,
+      occurrence: HealthMonitoringTaskOccurrence,
+    ) => {
+      setTreatmentNotes((previous) => ({
+        ...previous,
+        [occurrence.id]:
+          previous[occurrence.id] ?? occurrence.treatmentNote ?? "",
+      }));
+      setNoteModalContext({ task, occurrence });
     },
     [],
   );
@@ -385,9 +389,7 @@ export default function HealthMonitoringDetailScreen() {
       </View>
       <Text style={styles.protocolTaskMeta}>
         {formatScanDate(occurrence.dueAt)}
-        {occurrence.treatmentNote
-          ? ` • Note: ${occurrence.treatmentNote}`
-          : ""}
+        {occurrence.treatmentNote ? ` • Note: ${occurrence.treatmentNote}` : ""}
       </Text>
     </View>
   );
