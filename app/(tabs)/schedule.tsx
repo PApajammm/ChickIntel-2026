@@ -191,7 +191,8 @@ const formatTimeValue = (date: Date) => {
   return `${h}:${min}`;
 };
 
-const formatDisplayTime = (time: string) => {
+const formatDisplayTime = (time?: string | null) => {
+  if (!time) return "Time unavailable";
   const [hourValue, minuteValue] = time.split(":").map(Number);
   if (Number.isNaN(hourValue) || Number.isNaN(minuteValue)) {
     return time;
@@ -202,8 +203,8 @@ const formatDisplayTime = (time: string) => {
   return `${normalizedHour}:${String(minuteValue).padStart(2, "0")} ${suffix}`;
 };
 
-const normalizeTaskLabel = (label: string) =>
-  label.trim().toLowerCase().replace(/\s+/g, " ");
+const normalizeTaskLabel = (label?: string | null) =>
+  (label ?? "Task").trim().toLowerCase().replace(/\s+/g, " ");
 
 const getFallbackTaskColor = (label: string) => {
   const normalized = normalizeTaskLabel(label);
@@ -262,7 +263,7 @@ const getTaskColorsForDate = (
 
 const groupTasksByDate = (tasks: SupabaseScheduleTask[]) =>
   tasks.reduce<Record<string, ScheduleTask[]>>((accumulator, task) => {
-    const key = task.startDate;
+    const key = task.startDate || formatScheduleDateKey(new Date());
     accumulator[key] = [...(accumulator[key] ?? []), task];
     return accumulator;
   }, {});
@@ -2482,7 +2483,68 @@ export default function ScheduleScreen() {
   );
 }
 
+export function ErrorBoundary({
+  error,
+  retry,
+}: {
+  error: Error;
+  retry: () => void;
+}) {
+  return (
+    <View style={styles.errorScreen}>
+      <MaterialCommunityIcons
+        name="calendar-alert"
+        size={42}
+        color={ChickIntelPalette.green1}
+      />
+      <Text style={styles.errorTitle}>Schedule could not be opened</Text>
+      <Text style={styles.errorMessage}>
+        Please try again. Your saved schedule data was not changed.
+      </Text>
+      <TouchableOpacity style={styles.errorRetryButton} onPress={retry}>
+        <Text style={styles.errorRetryText}>Retry</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  errorScreen: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: moderateScale(24),
+    backgroundColor: ChickIntelPalette.light1,
+    gap: 10,
+  },
+  errorTitle: {
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(18),
+    fontWeight: "800",
+    color: ChickIntelPalette.gray1,
+    textAlign: "center",
+  },
+  errorMessage: {
+    maxWidth: 300,
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(13),
+    lineHeight: 19,
+    color: ChickIntelPalette.gray2,
+    textAlign: "center",
+  },
+  errorRetryButton: {
+    marginTop: 6,
+    paddingHorizontal: moderateScale(18),
+    paddingVertical: verticalScale(10),
+    borderRadius: 9,
+    backgroundColor: ChickIntelPalette.green1,
+  },
+  errorRetryText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(13),
+    fontWeight: "800",
+    color: "#FFFFFF",
+  },
   screen: {
     flex: 1,
     backgroundColor: ChickIntelPalette.light1,
