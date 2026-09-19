@@ -58,7 +58,7 @@ import { optimizePhotoForInference } from "@/utils/image-crop-helper";
 import { logError } from "@/utils/logger";
 import {
     cancelTaskNotifications,
-    scheduleTaskNotifications,
+    scheduleTasksNotifications,
 } from "@/utils/schedule-notifications";
 import { computeEffectiveInventoryItems } from "@/utils/stock-alerts";
 import {
@@ -379,115 +379,123 @@ export default function ScheduleScreen() {
     resetAddTaskForm(selectedDate);
   };
 
-  const loadTaskMetadata = useCallback(async () => {
-    try {
-      const [, , inventoryItems, tasks, completions] = await Promise.all([
-        fetchVitaminOptions(),
-        fetchMedicationOptions(),
-        activeFarm?.id
-          ? fetchInventoryItems(activeFarm.id)
-          : Promise.resolve([]),
-        activeFarm?.id
-          ? fetchScheduleTasks(activeFarm.id)
-          : Promise.resolve([]),
-        activeFarm?.id
-          ? fetchScheduleTaskCompletions(activeFarm.id)
-          : Promise.resolve([]),
-      ]);
+  const loadTaskMetadata = useCallback(
+    async (scheduleData?: {
+      tasks: ScheduleTask[];
+      completions: SupabaseScheduleTaskCompletion[];
+    }) => {
+      try {
+        const [, , inventoryItems, tasks, completions] = await Promise.all([
+          fetchVitaminOptions(),
+          fetchMedicationOptions(),
+          activeFarm?.id
+            ? fetchInventoryItems(activeFarm.id)
+            : Promise.resolve([]),
+          scheduleData?.tasks ??
+            (activeFarm?.id
+              ? fetchScheduleTasks(activeFarm.id)
+              : Promise.resolve([])),
+          scheduleData?.completions ??
+            (activeFarm?.id
+              ? fetchScheduleTaskCompletions(activeFarm.id)
+              : Promise.resolve([])),
+        ]);
 
-      const effectiveItems = computeEffectiveInventoryItems(
-        inventoryItems,
-        tasks,
-        new Date(),
-        completions,
-      );
+        const effectiveItems = computeEffectiveInventoryItems(
+          inventoryItems,
+          tasks,
+          new Date(),
+          completions,
+        );
 
-      // Get unique categories currently in the inventory (including equipment)
-      const currentCategories = new Set(
-        inventoryItems.map((item) => item.type?.trim()),
-      );
+        // Get unique categories currently in the inventory (including equipment)
+        const currentCategories = new Set(
+          inventoryItems.map((item) => item.type?.trim()),
+        );
 
-      const nextOptions: string[] = [];
+        const nextOptions: string[] = [];
 
-      // Map categories to standard task labels if they exist in the inventory
-      const hasFeeds = Array.from(currentCategories).some((cat) => {
-        const c = cat?.trim().toLowerCase();
-        return c === "feeds" || c === "chicken feed";
-      });
-      const hasVitamins = Array.from(currentCategories).some(
-        (cat) => cat?.trim().toLowerCase() === "vitamins",
-      );
-      const hasMedication = Array.from(currentCategories).some((cat) => {
-        const c = cat?.trim().toLowerCase();
-        return c === "medication" || c === "medicine";
-      });
-      const hasEquipment = Array.from(currentCategories).some((cat) => {
-        const c = cat?.trim().toLowerCase();
-        return c === "equipment" || c === "equipments";
-      });
+        // Map categories to standard task labels if they exist in the inventory
+        const hasFeeds = Array.from(currentCategories).some((cat) => {
+          const c = cat?.trim().toLowerCase();
+          return c === "feeds" || c === "chicken feed";
+        });
+        const hasVitamins = Array.from(currentCategories).some(
+          (cat) => cat?.trim().toLowerCase() === "vitamins",
+        );
+        const hasMedication = Array.from(currentCategories).some((cat) => {
+          const c = cat?.trim().toLowerCase();
+          return c === "medication" || c === "medicine";
+        });
+        const hasEquipment = Array.from(currentCategories).some((cat) => {
+          const c = cat?.trim().toLowerCase();
+          return c === "equipment" || c === "equipments";
+        });
 
-      if (hasFeeds) {
-        nextOptions.push("Feeding");
-      }
-      if (hasVitamins) {
-        nextOptions.push("Vitamins");
-      }
-      if (hasMedication) {
-        nextOptions.push("Medication");
-      }
-      if (hasEquipment) {
-        nextOptions.push("Equipment");
-      }
-
-      // Add any other categories that are not the standard four, as capitalized task options
-      currentCategories.forEach((cat) => {
-        if (cat) {
-          const c = cat.trim();
-          const cLower = c.toLowerCase();
-          if (
-            cLower !== "feeds" &&
-            cLower !== "chicken feed" &&
-            cLower !== "vitamins" &&
-            cLower !== "medication" &&
-            cLower !== "medicine" &&
-            cLower !== "equipment" &&
-            cLower !== "equipments" &&
-            cLower !== "other"
-          ) {
-            nextOptions.push(c.charAt(0).toUpperCase() + c.slice(1));
-          }
+        if (hasFeeds) {
+          nextOptions.push("Feeding");
         }
-      });
+        if (hasVitamins) {
+          nextOptions.push("Vitamins");
+        }
+        if (hasMedication) {
+          nextOptions.push("Medication");
+        }
+        if (hasEquipment) {
+          nextOptions.push("Equipment");
+        }
 
-      nextOptions.push("Egg Collecting");
+        // Add any other categories that are not the standard four, as capitalized task options
+        currentCategories.forEach((cat) => {
+          if (cat) {
+            const c = cat.trim();
+            const cLower = c.toLowerCase();
+            if (
+              cLower !== "feeds" &&
+              cLower !== "chicken feed" &&
+              cLower !== "vitamins" &&
+              cLower !== "medication" &&
+              cLower !== "medicine" &&
+              cLower !== "equipment" &&
+              cLower !== "equipments" &&
+              cLower !== "other"
+            ) {
+              nextOptions.push(c.charAt(0).toUpperCase() + c.slice(1));
+            }
+          }
+        });
 
-      // If we only have "Egg Collecting" (no other categories in inventory), fall back to defaults
-      const finalOptions =
-        nextOptions.length > 1
-          ? nextOptions
-          : [
-              FEEDING_TASK_LABEL,
-              "Vitamins",
-              "Medication",
-              "Equipment",
-              "Egg Collecting",
-            ];
+        nextOptions.push("Egg Collecting");
 
-      setTaskOptions([...new Set(finalOptions)]);
-      setConsumableInventoryOptions(
-        effectiveItems.map((item) => ({
-          id: item.id,
-          name: item.name,
-          unit: item.unit,
-          type: item.type,
-          qty: item.remainingQty,
-          expirationDate: item.expirationDate,
-        })),
-      );
-    } catch (error) {
-      logError("Schedule task lookup load failed", error);
-    }
-  }, [activeFarm?.id]);
+        // If we only have "Egg Collecting" (no other categories in inventory), fall back to defaults
+        const finalOptions =
+          nextOptions.length > 1
+            ? nextOptions
+            : [
+                FEEDING_TASK_LABEL,
+                "Vitamins",
+                "Medication",
+                "Equipment",
+                "Egg Collecting",
+              ];
+
+        setTaskOptions([...new Set(finalOptions)]);
+        setConsumableInventoryOptions(
+          effectiveItems.map((item) => ({
+            id: item.id,
+            name: item.name,
+            unit: item.unit,
+            type: item.type,
+            qty: item.remainingQty,
+            expirationDate: item.expirationDate,
+          })),
+        );
+      } catch (error) {
+        logError("Schedule task lookup load failed", error);
+      }
+    },
+    [activeFarm?.id],
+  );
 
   const [completions, setCompletions] = useState<
     SupabaseScheduleTaskCompletion[]
@@ -501,7 +509,7 @@ export default function ScheduleScreen() {
       setDayTasks({});
       setCompletions([]);
       setLoadingTasks(false);
-      return;
+      return { tasks: [], completions: [] as SupabaseScheduleTaskCompletion[] };
     }
 
     setLoadingTasks(true);
@@ -515,6 +523,7 @@ export default function ScheduleScreen() {
       setDayTasks(groupTasksByDate(tasks));
       setCompletions(loadedCompletions);
       setOccurrenceExclusions(loadedExclusions);
+      return { tasks, completions: loadedCompletions };
     } catch (error) {
       setDayTasks({});
       setCompletions([]);
@@ -522,6 +531,7 @@ export default function ScheduleScreen() {
       logError("Schedule task load failed", error, {
         farmId: activeFarm.id,
       });
+      return { tasks: [], completions: [] as SupabaseScheduleTaskCompletion[] };
     } finally {
       setLoadingTasks(false);
     }
@@ -652,18 +662,12 @@ export default function ScheduleScreen() {
     [],
   );
 
-  useEffect(() => {
-    void loadTaskMetadata();
-  }, [loadTaskMetadata]);
-
-  useEffect(() => {
-    void loadScheduleTasks();
-  }, [loadScheduleTasks]);
-
   useFocusEffect(
     useCallback(() => {
-      void loadTaskMetadata();
-      void loadScheduleTasks();
+      void (async () => {
+        const scheduleData = await loadScheduleTasks();
+        await loadTaskMetadata(scheduleData);
+      })();
     }, [loadScheduleTasks, loadTaskMetadata]),
   );
 
@@ -900,9 +904,7 @@ export default function ScheduleScreen() {
     previewTimeframe === "Weekly" ? currentWeeklyTasks : currentMonthTasks;
 
   useEffect(() => {
-    allTasks.forEach((task) => {
-      void scheduleTaskNotifications(task);
-    });
+    void scheduleTasksNotifications(allTasks);
   }, [allTasks]);
 
   const previewTimeframeTitle = useMemo(() => {
@@ -1136,7 +1138,7 @@ export default function ScheduleScreen() {
         closeAddTaskModal();
         void refreshFarmData();
         void loadTaskMetadata();
-        void scheduleTaskNotifications(createdTask);
+        void scheduleTasksNotifications([createdTask]);
       })
       .catch((error: any) => {
         logError("Schedule task create failed", error, {

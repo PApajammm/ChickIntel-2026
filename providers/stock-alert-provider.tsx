@@ -1,26 +1,15 @@
-import { BlurCard } from "@/components/ui/blur-card";
 import { ChickFont } from "@/constants/chick-fonts";
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
 import { useAuth } from "@/providers/auth-provider";
+import { useFarmData } from "@/providers/farm-data-provider";
 import { logError } from "@/utils/logger";
 import {
-    computeEffectiveInventoryItems,
     getStockSeverity,
     getStockSeverityMeta,
     type EffectiveInventoryItem,
     type StockSeverity,
 } from "@/utils/stock-alerts";
-import {
-    fetchInventoryItems,
-    type SupabaseInventoryItem,
-} from "@/utils/supabase-inventory";
-import {
-    fetchScheduleTaskCompletions,
-    fetchScheduleTasks,
-    type SupabaseScheduleTask,
-    type SupabaseScheduleTaskCompletion,
-} from "@/utils/supabase-schedule";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import Constants, { ExecutionEnvironment } from "expo-constants";
 import {
     createContext,
     useCallback,
@@ -34,14 +23,9 @@ import {
 import {
     Animated,
     Easing,
-    Pressable,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+    StyleSheet
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Constants, { ExecutionEnvironment } from "expo-constants";
 
 const isExpoGo =
   Constants.executionEnvironment === ExecutionEnvironment.StoreClient ||
@@ -85,7 +69,6 @@ type StockAlertContextValue = {
 
 const StockAlertContext = createContext<StockAlertContextValue | null>(null);
 const ALERT_DURATION_MS = 5000;
-const POLL_INTERVAL_MS = 30000;
 const ZERO_STOCK_REMINDER_INTERVAL_MS = 20000;
 const ZERO_STOCK_REMINDER_COUNT = 5;
 const FADE_ANIMATION_MS = 220;
@@ -99,6 +82,7 @@ type ZeroReminderState = {
 export function StockAlertProvider({ children }: PropsWithChildren) {
   const insets = useSafeAreaInsets();
   const { activeFarm } = useAuth();
+  const { effectiveItems } = useFarmData();
   const [currentNotification, setCurrentNotification] =
     useState<GlobalNotification | null>(null);
   const currentNotificationRef = useRef<GlobalNotification | null>(null);
@@ -236,52 +220,48 @@ export function StockAlertProvider({ children }: PropsWithChildren) {
     showNextNotification();
   }, [showNextNotification, clearZeroReminders]);
 
-  const notify = useCallback(
-    (notification: Omit<GlobalNotification, "id">) => {
-      const sanitizedTitle =
-        typeof notification.title === "string" ? notification.title.trim() : "";
-      const sanitizedMessage =
-        typeof notification.message === "string"
-          ? notification.message.trim()
-          : "";
+  const notify = useCallback((notification: Omit<GlobalNotification, "id">) => {
+    const sanitizedTitle =
+      typeof notification.title === "string" ? notification.title.trim() : "";
+    const sanitizedMessage =
+      typeof notification.message === "string"
+        ? notification.message.trim()
+        : "";
 
-      if (!sanitizedTitle || !sanitizedMessage) {
-        return;
+    if (!sanitizedTitle || !sanitizedMessage) {
+      return;
+    }
+
+    const dedupeKey =
+      notification.dedupeKey ?? `${sanitizedTitle}:${sanitizedMessage}`;
+
+    const isDuplicateCurrent =
+      currentNotificationRef.current?.dedupeKey === dedupeKey;
+    const isDuplicateQueued = queueRef.current.some(
+      (queued) =>
+        (queued.dedupeKey ?? `${queued.title}:${queued.message}`) === dedupeKey,
+    );
+
+    if (isDuplicateCurrent || isDuplicateQueued) {
+      return;
+    }
+
+    // Schedule real OS system notification strictly on the phone device
+    try {
+      if (NotificationsModule?.scheduleNotificationAsync) {
+        void NotificationsModule.scheduleNotificationAsync({
+          content: {
+            title: sanitizedTitle,
+            body: sanitizedMessage,
+            sound: true,
+          },
+          trigger: null,
+        }).catch(() => {});
       }
-
-      const dedupeKey =
-        notification.dedupeKey ?? `${sanitizedTitle}:${sanitizedMessage}`;
-
-      const isDuplicateCurrent =
-        currentNotificationRef.current?.dedupeKey === dedupeKey;
-      const isDuplicateQueued = queueRef.current.some(
-        (queued) =>
-          (queued.dedupeKey ?? `${queued.title}:${queued.message}`) ===
-          dedupeKey,
-      );
-
-      if (isDuplicateCurrent || isDuplicateQueued) {
-        return;
-      }
-
-      // Schedule real OS system notification strictly on the phone device
-      try {
-        if (NotificationsModule?.scheduleNotificationAsync) {
-          void NotificationsModule.scheduleNotificationAsync({
-            content: {
-              title: sanitizedTitle,
-              body: sanitizedMessage,
-              sound: true,
-            },
-            trigger: null,
-          }).catch(() => {});
-        }
-      } catch {
-        // Fallback for non-native environments
-      }
-    },
-    [],
-  );
+    } catch {
+      // Fallback for non-native environments
+    }
+  }, []);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -401,24 +381,9 @@ export function StockAlertProvider({ children }: PropsWithChildren) {
       zeroReminderStateRef.current[item.id].intervalId = intervalId;
     };
 
-    const checkStockLevels = async () => {
+    const checkStockLevels = () => {
       try {
-        const [items, tasks, completions] = await Promise.all([
-          fetchInventoryItems(activeFarm.id),
-          fetchScheduleTasks(activeFarm.id),
-          fetchScheduleTaskCompletions(activeFarm.id),
-        ]);
-
-        if (cancelled) {
-          return;
-        }
-
-        const effectiveItems = computeEffectiveInventoryItems(
-          items as SupabaseInventoryItem[],
-          tasks as SupabaseScheduleTask[],
-          new Date(),
-          completions as SupabaseScheduleTaskCompletion[],
-        );
+        if (cancelled) return;
 
         // Update tracked quantities and unsilence if stock increased
         effectiveItems.forEach((item) => {
@@ -550,16 +515,12 @@ export function StockAlertProvider({ children }: PropsWithChildren) {
       }
     };
 
-    void checkStockLevels();
-    const intervalId = setInterval(() => {
-      void checkStockLevels();
-    }, POLL_INTERVAL_MS);
+    checkStockLevels();
 
     return () => {
       cancelled = true;
-      clearInterval(intervalId);
     };
-  }, [activeFarm?.id, notify, clearZeroReminders]);
+  }, [activeFarm?.id, effectiveItems, notify, clearZeroReminders]);
 
   const notificationMeta = currentNotification
     ? currentNotification.severity === "depleted"

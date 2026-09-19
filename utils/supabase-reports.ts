@@ -731,13 +731,16 @@ export async function fetchFarmReportSnapshot(input: {
         "egg_qty, hatched_qty, damaged_qty, unhatched_qty, color_name, origin, batch_no, created_at",
       )
       .eq("farm_id", input.farmId)
-      .gte("created_at", reportStart),
+      .gte("created_at", reportStart)
+      .lte("created_at", now.toISOString()),
     supabase
       .from("batches")
       .select(
         "batch_no, female_count, male_count, isolated_count, killed_count, created_at",
       )
-      .eq("farm_id", input.farmId),
+      .eq("farm_id", input.farmId)
+      .gte("created_at", reportStart)
+      .lte("created_at", now.toISOString()),
     supabase
       .from("inventory_items")
       .select(
@@ -805,7 +808,8 @@ export async function fetchEggFertilityReportSnapshot(input: {
       "egg_qty, hatched_qty, damaged_qty, unhatched_qty, color_name, origin, batch_no, created_at",
     )
     .eq("farm_id", input.farmId)
-    .gte("created_at", reportStart);
+    .gte("created_at", reportStart)
+    .lte("created_at", now.toISOString());
 
   if (error) throw error;
 

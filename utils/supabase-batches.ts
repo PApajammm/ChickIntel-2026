@@ -6,8 +6,10 @@ type BatchRow = {
   batch_no: string;
   created_at: string;
   breed_name: string;
+  total_count?: number;
   female_count: number;
   male_count: number;
+  unknown_count?: number;
   age_label: string;
   isolated_count: number;
   killed_count: number;
@@ -20,8 +22,10 @@ function mapBatchRow(row: BatchRow): BatchItem {
     id: row.batch_no,
     createdAt: row.created_at,
     breed: row.breed_name,
+    totalCount: row.total_count ?? row.female_count + row.male_count,
     femaleCount: row.female_count,
     maleCount: row.male_count,
+    unknownCount: row.unknown_count ?? 0,
     ageLabel: row.age_label,
     isolatedCount: row.isolated_count,
     killedCount: row.killed_count,
@@ -32,7 +36,19 @@ function mapBatchRow(row: BatchRow): BatchItem {
 }
 
 export async function fetchFarmBatches(farmId: string) {
-  const { data, error } = await supabase
+  const current = await supabase
+    .from("batches")
+    .select(
+      "id, batch_no, breed_name, total_count, female_count, male_count, unknown_count, age_label, isolated_count, killed_count, color_name, color_hex, created_at",
+    )
+    .eq("farm_id", farmId)
+    .order("created_at", { ascending: false });
+
+  if (!current.error) {
+    return (current.data ?? []).map((row) => mapBatchRow(row as BatchRow));
+  }
+
+  const legacy = await supabase
     .from("batches")
     .select(
       "id, batch_no, breed_name, female_count, male_count, age_label, isolated_count, killed_count, color_name, color_hex, created_at",
@@ -40,9 +56,8 @@ export async function fetchFarmBatches(farmId: string) {
     .eq("farm_id", farmId)
     .order("created_at", { ascending: false });
 
-  if (error) throw error;
-
-  return (data ?? []).map((row) => mapBatchRow(row as BatchRow));
+  if (legacy.error) throw current.error;
+  return (legacy.data ?? []).map((row) => mapBatchRow(row as BatchRow));
 }
 
 async function resolveBatchNo(farmId: string, requestedBatchNo?: string) {
@@ -94,8 +109,10 @@ export async function createFarmBatch(
       farm_id: farmId,
       batch_no: resolvedBatchNo,
       breed_name: input.breed,
+      total_count: input.totalCount,
       female_count: input.femaleCount,
       male_count: input.maleCount,
+      unknown_count: input.unknownCount,
       age_label: input.ageLabel,
       isolated_count: input.isolatedCount,
       killed_count: input.killedCount,
@@ -118,8 +135,10 @@ export async function updateFarmBatch(
   input: Pick<
     BatchItem,
     | "breed"
+    | "totalCount"
     | "femaleCount"
     | "maleCount"
+    | "unknownCount"
     | "ageLabel"
     | "isolatedCount"
     | "killedCount"
@@ -129,8 +148,10 @@ export async function updateFarmBatch(
     .from("batches")
     .update({
       breed_name: input.breed,
+      total_count: input.totalCount,
       female_count: input.femaleCount,
       male_count: input.maleCount,
+      unknown_count: input.unknownCount,
       age_label: input.ageLabel,
       isolated_count: input.isolatedCount,
       killed_count: input.killedCount,
@@ -155,7 +176,7 @@ export async function adjustFarmBatchHealthCounters(
   const { data, error } = await supabase
     .from("batches")
     .select(
-      "id, batch_no, breed_name, female_count, male_count, age_label, isolated_count, killed_count, color_name, color_hex",
+      "id, batch_no, breed_name, total_count, female_count, male_count, unknown_count, age_label, isolated_count, killed_count, color_name, color_hex",
     )
     .eq("farm_id", farmId)
     .eq("batch_no", normalizedBatchNo)
@@ -173,8 +194,10 @@ export async function adjustFarmBatchHealthCounters(
 
   await updateFarmBatch(farmId, normalizedBatchNo, {
     breed: batch.breed,
+    totalCount: batch.totalCount,
     femaleCount: batch.femaleCount,
     maleCount: batch.maleCount,
+    unknownCount: batch.unknownCount,
     ageLabel: batch.ageLabel,
     isolatedCount: nextIsolated,
     killedCount: nextKilled,

@@ -29,7 +29,11 @@ import BackgroundGradient from "@/assets_imported/background-gradient.svg";
 import { ChickFont } from "@/constants/chick-fonts";
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
 import { useAuth } from "@/providers/auth-provider";
-import type { BatchItem } from "@/utils/batch-store";
+import { getCurrentBatchAgeLabel, type BatchItem } from "@/utils/batch-store";
+import {
+    EGG_PRODUCTION_AGE_WEEKS,
+    isEggProductionReady,
+} from "@/utils/chicken-batch-rules";
 import { logError } from "@/utils/logger";
 import { fetchFarmBatches } from "@/utils/supabase-batches";
 import {
@@ -45,7 +49,7 @@ type BatchColorOption = {
   colorHex: string;
 };
 
-const ageUnitOptions = ["Days old", "Weeks old"] as const;
+const ageUnitOptions = ["Days old"] as const;
 
 function normalizeParam(value: string | string[] | undefined) {
   if (Array.isArray(value)) return value[0] ?? "";
@@ -53,7 +57,7 @@ function normalizeParam(value: string | string[] | undefined) {
 }
 
 function buildColorOptions(items: BatchItem[]): BatchColorOption[] {
-  return items.map((item) => {
+  return items.filter(isEggProductionReady).map((item) => {
     const rawId = item.id.trim();
 
     return {
@@ -156,33 +160,7 @@ export default function EggBatchAgeUnitScreen() {
       const rows = await fetchFarmBatches(activeFarm.id);
       const liveOptions = buildColorOptions(rows);
 
-      if (liveOptions.length) {
-        setBatchColors(liveOptions);
-        return;
-      }
-
-      if (colorParam) {
-        setBatchColors([
-          {
-            id: colorParam.trim().toLowerCase(),
-            batchNo: colorParam,
-            label: colorParam,
-            colorName: colorParam,
-            colorHex: colorHexParam || ChickIntelPalette.gray2,
-          },
-        ]);
-        return;
-      }
-
-      setBatchColors([
-        {
-          id: "unspecified",
-          batchNo: "0001",
-          label: "Unspecified",
-          colorName: "Unspecified",
-          colorHex: ChickIntelPalette.gray2,
-        },
-      ]);
+      setBatchColors(liveOptions);
     } catch (error) {
       logError("Egg batch age-unit colors load failed", error, {
         farmId: activeFarm.id,
@@ -319,6 +297,29 @@ export default function EggBatchAgeUnitScreen() {
     const targetColorName =
       selectedBatchColor.colorName || selectedBatchColor.label || "Unspecified";
 
+    if (!activeFarm?.id) {
+      Alert.alert("Farm missing", "No active farm was found.");
+      return;
+    }
+
+    const currentBatches = await fetchFarmBatches(activeFarm.id);
+    const selectedBatch = currentBatches.find(
+      (item) =>
+        item.id.trim().toLowerCase() ===
+        targetParentBatchNo.trim().toLowerCase(),
+    );
+    if (!selectedBatch || !isEggProductionReady(selectedBatch)) {
+      Alert.alert(
+        "Chicken batch not ready",
+        `Egg recording starts at ${EGG_PRODUCTION_AGE_WEEKS} weeks using the batch's current age. ${
+          selectedBatch
+            ? `It is currently ${getCurrentBatchAgeLabel(selectedBatch)}.`
+            : "Choose an eligible chicken batch."
+        }`,
+      );
+      return;
+    }
+
     const newEgg = {
       batchNo: targetEggBatchNo,
       eggQty: parseCount(eggQty),
@@ -331,11 +332,6 @@ export default function EggBatchAgeUnitScreen() {
       colorHex: selectedBatchColor.colorHex,
       origin: targetParentBatchNo,
     };
-    if (!activeFarm?.id) {
-      Alert.alert("Farm missing", "No active farm was found.");
-      return;
-    }
-
     try {
       await createFarmEggBatch(activeFarm.id, newEgg);
       router.push({
@@ -643,6 +639,10 @@ export default function EggBatchAgeUnitScreen() {
                 <Text style={styles.menuTitle}>Chicken profile colors</Text>
                 <Text style={styles.menuCount}>
                   {filteredBatchColors.length} of {batchColors.length} colors
+                </Text>
+                <Text style={styles.menuHint}>
+                  Only batches {EGG_PRODUCTION_AGE_WEEKS} weeks or older can
+                  produce eggs.
                 </Text>
               </View>
               <Pressable
@@ -1029,6 +1029,14 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(11),
     color: ChickIntelPalette.gray2,
+  },
+  menuHint: {
+    marginTop: 4,
+    maxWidth: scale(240),
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(10),
+    lineHeight: 14,
+    color: ChickIntelPalette.green1,
   },
   menuCloseButton: {
     width: scale(34),

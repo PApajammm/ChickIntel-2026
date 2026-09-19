@@ -2,8 +2,10 @@ export type BatchItem = {
   id: string;
   createdAt?: string;
   breed: string;
+  totalCount: number;
   femaleCount: number;
   maleCount: number;
+  unknownCount: number;
   ageLabel: string;
   isolatedCount: number;
   killedCount: number;
@@ -56,7 +58,11 @@ export function getCurrentBatchAgeLabel(
   const currentAgeDays =
     parseInitialAgeDays(batch.ageLabel) +
     elapsedCalendarDays(batch.createdAt, now);
-  return `${currentAgeDays} ${currentAgeDays === 1 ? "Day" : "Days"} old`;
+  const currentAgeWeeks = currentAgeDays / 7;
+  const formattedWeeks = Number.isInteger(currentAgeWeeks)
+    ? String(currentAgeWeeks)
+    : currentAgeWeeks.toFixed(1);
+  return `${formattedWeeks} ${currentAgeWeeks === 1 ? "Week" : "Weeks"} old`;
 }
 
 /** Egg inventory batch (separate from live-chicken batches). */
@@ -81,8 +87,10 @@ const initialBatches: BatchItem[] = [
   {
     id: "0014",
     breed: "Rhode Island Red",
+    totalCount: 31,
     femaleCount: 26,
     maleCount: 5,
+    unknownCount: 0,
     ageLabel: "17 weeks",
     isolatedCount: 1,
     killedCount: 0,
@@ -92,8 +100,10 @@ const initialBatches: BatchItem[] = [
   {
     id: "0015",
     breed: "White Leghorn",
+    totalCount: 35,
     femaleCount: 31,
     maleCount: 4,
+    unknownCount: 0,
     ageLabel: "12 weeks",
     isolatedCount: 0,
     killedCount: 1,
@@ -103,8 +113,10 @@ const initialBatches: BatchItem[] = [
   {
     id: "0016",
     breed: "Plymouth Rock",
+    totalCount: 28,
     femaleCount: 22,
     maleCount: 6,
+    unknownCount: 0,
     ageLabel: "9 weeks",
     isolatedCount: 2,
     killedCount: 0,
@@ -114,8 +126,10 @@ const initialBatches: BatchItem[] = [
   {
     id: "0017",
     breed: "Australorp",
+    totalCount: 21,
     femaleCount: 18,
     maleCount: 3,
+    unknownCount: 0,
     ageLabel: "7 weeks",
     isolatedCount: 0,
     killedCount: 0,

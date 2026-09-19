@@ -13,18 +13,20 @@ const isExpoGo =
 let NotificationsModule: typeof Notifications | null = Notifications;
 
 if (isExpoGo) {
-  NotificationsModule = Notifications;
+  NotificationsModule = null;
 }
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
+if (NotificationsModule) {
+  NotificationsModule.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+      shouldShowBanner: true,
+      shouldShowList: true,
+    }),
+  });
+}
 
 const CHANNEL_ID = "schedule-task-alarms";
 const LOOKAHEAD_DAYS = 90;
@@ -131,6 +133,74 @@ export async function scheduleTaskNotifications(task: SupabaseScheduleTask) {
       await NotificationsModule.getAllScheduledNotificationsAsync();
     console.info(
       `[schedule-notifications] Registered ${scheduledAfter.length} notifications for ${task.id}`,
+    );
+  } catch {
+    // Notifications are supplemental; scheduling failure must not block Schedule.
+  }
+}
+
+export async function scheduleTasksNotifications(
+  tasks: SupabaseScheduleTask[],
+) {
+  if (!NotificationsModule || tasks.length === 0) return;
+  if (!(await requestScheduleNotificationPermissions())) return;
+
+  try {
+    const scheduled =
+      (await NotificationsModule.getAllScheduledNotificationsAsync()) as unknown as ScheduledTaskNotification[];
+    const taskIds = new Set(tasks.map((task) => task.id));
+
+    await Promise.all(
+      scheduled
+        .filter((entry) => taskIds.has(entry.content.data?.taskId ?? ""))
+        .map((entry) =>
+          NotificationsModule?.cancelScheduledNotificationAsync(
+            entry.identifier,
+          ),
+        ),
+    );
+
+    const now = new Date();
+    const notifications = tasks.flatMap((task) => {
+      const occurrences: Array<{
+        date: Date;
+        task: SupabaseScheduleTask;
+      }> = [];
+
+      for (let offset = 0; offset < LOOKAHEAD_DAYS; offset += 1) {
+        const date = new Date(now);
+        date.setHours(0, 0, 0, 0);
+        date.setDate(date.getDate() + offset);
+        if (task.endDate && formatScheduleDateKey(date) > task.endDate) break;
+        if (!scheduleTaskMatchesDate(task, date)) continue;
+
+        const exactTime = buildOccurrenceDate(date, task.time);
+        if (exactTime.getTime() > now.getTime()) {
+          occurrences.push({ date: exactTime, task });
+        }
+      }
+
+      return occurrences;
+    });
+
+    await Promise.all(
+      notifications.map(({ date, task }) =>
+        NotificationsModule!.scheduleNotificationAsync({
+          content: {
+            title: `Task due now: ${task.title}`,
+            body: "Your scheduled task is due now. Complete it with evidence.",
+            sound: "default",
+            priority: "max",
+            channelId: CHANNEL_ID,
+            data: {
+              taskId: task.id,
+              occurrenceDate: formatScheduleDateKey(date),
+              kind: "alarm",
+            },
+          } as never,
+          trigger: { type: "date", date } as never,
+        }),
+      ),
     );
   } catch {
     // Notifications are supplemental; scheduling failure must not block Schedule.

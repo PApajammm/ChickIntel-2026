@@ -12,7 +12,7 @@ import * as Haptics from "expo-haptics";
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
@@ -43,6 +43,10 @@ import {
     mapBreedPredictionToAttributes,
     resolveBestBreedPrediction,
 } from "@/utils/breed-image-inference";
+import {
+    MIN_CHICKEN_BATCH_AGE_WEEKS,
+    SEXING_START_AGE_WEEKS,
+} from "@/utils/chicken-batch-rules";
 import { optimizePhotoForInference } from "@/utils/image-crop-helper";
 import { logError, logStep } from "@/utils/logger";
 import { addRecentBreedScan } from "@/utils/recent-breed-scans";
@@ -51,8 +55,7 @@ import { fetchBreedOptions } from "@/utils/supabase-lookups";
 
 const MAX_SCAN_ZOOM = 0.7;
 
-const AGE_UNIT_OPTIONS = ["Days old", "Weeks old"] as const;
-const MIN_BATCH_AGE_WEEKS = 10;
+const AGE_UNIT_OPTIONS = ["Weeks old"] as const;
 
 const DEFAULT_BREED_OPTIONS = [
   "Rhode Island Red",
@@ -98,11 +101,14 @@ export default function AddBatchScreen() {
   const [mode] = useState<BatchMode>(initialMode);
   const router = useRouter();
   const cameraRef = useRef<CameraViewportRef>(null);
+  const sexCameraRef = useRef<CameraViewportRef>(null);
   const [breedModalOpen, setBreedModalOpen] = useState(false);
   const [breedScannerOpen, setBreedScannerOpen] = useState(false);
+  const [sexScannerOpen, setSexScannerOpen] = useState(false);
   const [torchEnabled, setTorchEnabled] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(0);
   const [breedCameraReady, setBreedCameraReady] = useState(false);
+  const [sexCameraReady, setSexCameraReady] = useState(false);
   const [isScanningBreed, setIsScanningBreed] = useState(false);
   const [capturedPhotoUri, setCapturedPhotoUri] = useState<string | null>(null);
   const [colorModalOpen, setColorModalOpen] = useState(false);
@@ -140,9 +146,19 @@ export default function AddBatchScreen() {
   const [breed, setBreed] = useState("");
   const [maleCount, setMaleCount] = useState("50");
   const [femaleCount, setFemaleCount] = useState("50");
+  const [unknownCount, setUnknownCount] = useState("0");
   const [breedOptions, setBreedOptions] = useState<string[]>([
     ...DEFAULT_BREED_OPTIONS,
   ]);
+
+  useEffect(() => {
+    const ageInDays = parseCount(durationCount) * 7;
+    if (ageInDays < SEXING_START_AGE_WEEKS * 7 && totalCount) {
+      setMaleCount("0");
+      setFemaleCount("0");
+      setUnknownCount(totalCount);
+    }
+  }, [ageUnit, durationCount, totalCount]);
 
   const resetForm = useCallback(() => {
     setBatchNo("");
@@ -153,11 +169,14 @@ export default function AddBatchScreen() {
     setBreed("");
     setMaleCount("50");
     setFemaleCount("50");
+    setUnknownCount("0");
     setBreedModalOpen(false);
     setBreedScannerOpen(false);
+    setSexScannerOpen(false);
     setTorchEnabled(false);
     setZoomLevel(0);
     setBreedCameraReady(false);
+    setSexCameraReady(false);
     setIsScanningBreed(false);
     setCapturedPhotoUri(null);
   }, []);
@@ -244,14 +263,24 @@ export default function AddBatchScreen() {
     if (!clean) {
       setMaleCount("");
       setFemaleCount("");
+      setUnknownCount("");
       return;
     }
 
     const n = Number.parseInt(clean, 10);
+    const enteredAge =
+      parseCount(durationCount) * (ageUnit === "Weeks old" ? 7 : 1);
+    if (enteredAge < SEXING_START_AGE_WEEKS * 7) {
+      setMaleCount("0");
+      setFemaleCount("0");
+      setUnknownCount(String(n));
+      return;
+    }
     const nextMale = Math.floor(n / 2);
     const nextFemale = n - nextMale;
     setMaleCount(String(nextMale));
     setFemaleCount(String(nextFemale));
+    setUnknownCount("0");
   }
 
   function onChangeMaleCount(next: string) {
@@ -268,6 +297,7 @@ export default function AddBatchScreen() {
 
     setMaleCount(String(nextMale));
     setFemaleCount(String(nextFemale));
+    setUnknownCount("0");
   }
 
   function onChangeFemaleCount(next: string) {
@@ -284,6 +314,57 @@ export default function AddBatchScreen() {
 
     setFemaleCount(String(nextFemale));
     setMaleCount(String(nextMale));
+    setUnknownCount("0");
+  }
+
+  function closeSexScanner() {
+    setSexScannerOpen(false);
+    setSexCameraReady(false);
+  }
+
+  async function handleSexCameraCapture() {
+    if (!sexCameraReady || !sexCameraRef.current) {
+      Alert.alert("Camera starting", "Please wait until the camera is ready.");
+      return;
+    }
+
+    try {
+      await sexCameraRef.current.takePictureAsync({
+        quality: 0.8,
+        skipProcessing: Platform.OS === "ios",
+      });
+      closeSexScanner();
+      Alert.alert("Sex result", "Choose the sex for the captured chicken.", [
+        {
+          text: "Male",
+          onPress: () => setSexCount("male"),
+        },
+        {
+          text: "Female",
+          onPress: () => setSexCount("female"),
+        },
+        {
+          text: "Unknown",
+          onPress: () => setSexCount("unknown"),
+        },
+      ]);
+    } catch (error) {
+      Alert.alert("Capture failed", "Unable to capture the chicken photo.");
+      logError("Add batch sex camera capture failed", error);
+    }
+  }
+
+  function setSexCount(sex: "male" | "female" | "unknown") {
+    const total = parseCount(totalCount);
+    const currentMale = parseCount(maleCount);
+    const currentFemale = parseCount(femaleCount);
+    const currentUnknown = parseCount(unknownCount);
+    const currentAssigned = currentMale + currentFemale + currentUnknown;
+    if (!total || currentAssigned >= total) return;
+
+    setMaleCount(String(currentMale + (sex === "male" ? 1 : 0)));
+    setFemaleCount(String(currentFemale + (sex === "female" ? 1 : 0)));
+    setUnknownCount(String(currentUnknown + (sex === "unknown" ? 1 : 0)));
   }
 
   function closeBreedScanner() {
@@ -570,37 +651,19 @@ export default function AddBatchScreen() {
                     onChangeText={(v) =>
                       setDurationCount(v.replace(/[^0-9]/g, ""))
                     }
-                    placeholder={ageUnit === "Weeks old" ? "10" : "70"}
+                    placeholder="2"
                     keyboardType="number-pad"
                     style={styles.input}
                     textAlignVertical="center"
                     placeholderTextColor="#8F9696"
                   />
-                  <Text style={styles.ageLimitHint}>
-                    Minimum: {ageUnit === "Weeks old" ? "10 weeks" : "70 days"}
-                  </Text>
+                  <Text style={styles.ageLimitHint}>Minimum: 2 weeks</Text>
                 </View>
                 <View style={styles.halfField}>
                   <Text style={styles.fieldLabel}>Age unit</Text>
-                  <Pressable
-                    onPress={() =>
-                      setAgeUnit((u) =>
-                        u === AGE_UNIT_OPTIONS[0]
-                          ? AGE_UNIT_OPTIONS[1]
-                          : AGE_UNIT_OPTIONS[0],
-                      )
-                    }
-                    style={styles.select}
-                    accessibilityRole="button"
-                    accessibilityLabel="Select age unit"
-                  >
+                  <View style={styles.select} accessibilityLabel="Age unit">
                     <Text style={styles.selectText}>{ageUnit}</Text>
-                    <MaterialCommunityIcons
-                      name="chevron-down"
-                      size={20}
-                      color={ChickIntelPalette.gray2}
-                    />
-                  </Pressable>
+                  </View>
                 </View>
               </View>
 
@@ -674,29 +737,58 @@ export default function AddBatchScreen() {
               </View>
 
               <View style={styles.resultRow}>
-                <View style={styles.resultField}>
-                  <Text style={styles.resultLabel}>Male</Text>
-                  <TextInput
-                    value={maleCount}
-                    onChangeText={onChangeMaleCount}
-                    keyboardType="number-pad"
-                    style={styles.resultInput}
-                    textAlignVertical="center"
-                    placeholderTextColor="#8F9696"
-                  />
-                </View>
-                <View style={styles.resultField}>
-                  <Text style={styles.resultLabel}>Female</Text>
-                  <TextInput
-                    value={femaleCount}
-                    onChangeText={onChangeFemaleCount}
-                    keyboardType="number-pad"
-                    style={styles.resultInput}
-                    textAlignVertical="center"
-                    placeholderTextColor="#8F9696"
-                  />
-                </View>
+                {parseCount(durationCount) *
+                  (ageUnit === "Weeks old" ? 7 : 1) >=
+                SEXING_START_AGE_WEEKS * 7 ? (
+                  <>
+                    <View style={styles.resultField}>
+                      <Text style={styles.resultLabel}>Male</Text>
+                      <TextInput
+                        value={maleCount}
+                        onChangeText={onChangeMaleCount}
+                        keyboardType="number-pad"
+                        style={styles.resultInput}
+                        textAlignVertical="center"
+                        placeholderTextColor="#8F9696"
+                      />
+                    </View>
+                    <View style={styles.resultField}>
+                      <Text style={styles.resultLabel}>Female</Text>
+                      <TextInput
+                        value={femaleCount}
+                        onChangeText={onChangeFemaleCount}
+                        keyboardType="number-pad"
+                        style={styles.resultInput}
+                        textAlignVertical="center"
+                        placeholderTextColor="#8F9696"
+                      />
+                    </View>
+                  </>
+                ) : null}
               </View>
+              {parseCount(durationCount) * 7 >= SEXING_START_AGE_WEEKS * 7 ? (
+                <Pressable
+                  onPress={() => setSexScannerOpen(true)}
+                  style={({ pressed }) => [
+                    styles.sexScanButton,
+                    { opacity: pressed ? 0.82 : 1 },
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Open sex camera"
+                >
+                  <MaterialCommunityIcons
+                    name="camera-outline"
+                    size={20}
+                    color={ChickIntelPalette.green1}
+                  />
+                  <View style={styles.sexScanButtonTextWrap}>
+                    <Text style={styles.sexScanButtonTitle}>Sex scan</Text>
+                    <Text style={styles.sexScanButtonSubtitle}>
+                      Capture a chicken to classify its sex
+                    </Text>
+                  </View>
+                </Pressable>
+              ) : null}
             </View>
 
             <Pressable
@@ -711,13 +803,24 @@ export default function AddBatchScreen() {
 
                 const enteredAge = Number.parseInt(durationCount || "0", 10);
                 const ageInDays =
-                  (Number.isFinite(enteredAge) ? enteredAge : 0) *
-                  (ageUnit === "Weeks old" ? 7 : 1);
+                  (Number.isFinite(enteredAge) ? enteredAge : 0) * 7;
 
-                if (ageInDays < MIN_BATCH_AGE_WEEKS * 7) {
+                if (ageInDays < MIN_CHICKEN_BATCH_AGE_WEEKS * 7) {
                   Alert.alert(
                     "Chicken is too young",
-                    `Chicken batches must be at least ${MIN_BATCH_AGE_WEEKS} weeks old.`,
+                    `Chicken batches must be at least ${MIN_CHICKEN_BATCH_AGE_WEEKS} weeks old.`,
+                  );
+                  return;
+                }
+
+                const parsedTotal = parseCount(totalCount);
+                const parsedMale = parseCount(maleCount);
+                const parsedFemale = parseCount(femaleCount);
+                const parsedUnknown = parseCount(unknownCount);
+                if (parsedMale + parsedFemale + parsedUnknown !== parsedTotal) {
+                  Alert.alert(
+                    "Check bird counts",
+                    "Male + Female + Unknown must equal the total chicken count.",
                   );
                   return;
                 }
@@ -731,8 +834,10 @@ export default function AddBatchScreen() {
                 const newBatch = {
                   id: generatedBatchNo,
                   breed: breed || "Unknown",
-                  femaleCount: Number.parseInt(femaleCount || "0", 10) || 0,
-                  maleCount: Number.parseInt(maleCount || "0", 10) || 0,
+                  totalCount: parsedTotal,
+                  femaleCount: parsedFemale,
+                  maleCount: parsedMale,
+                  unknownCount: parsedUnknown,
                   ageLabel: `${durationCount || "0"} ${ageUnit.toLowerCase()}`,
                   isolatedCount: 0,
                   killedCount: 0,
@@ -774,6 +879,59 @@ export default function AddBatchScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <Modal
+        visible={sexScannerOpen}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        statusBarTranslucent
+        navigationBarTranslucent
+        onRequestClose={closeSexScanner}
+      >
+        <View style={styles.cameraModalScreen}>
+          <StatusBar style="light" />
+          <CameraViewport
+            ref={sexCameraRef}
+            active={sexScannerOpen}
+            enableTorch={false}
+            zoom={0}
+            onReadyChange={setSexCameraReady}
+          />
+          <View style={styles.cameraOverlay} pointerEvents="box-none">
+            <View
+              style={[styles.cameraTopRow, { paddingTop: insets.top + 12 }]}
+            >
+              <View style={styles.cameraTitleStack}>
+                <Text style={styles.cameraTitle}>Sex camera</Text>
+                <Text style={styles.cameraSubtitle}>
+                  Capture one chicken, then choose its sex.
+                </Text>
+              </View>
+              <Pressable
+                onPress={closeSexScanner}
+                style={styles.cameraIconButton}
+                accessibilityRole="button"
+                accessibilityLabel="Close sex camera"
+              >
+                <MaterialCommunityIcons
+                  name="close"
+                  size={20}
+                  color={ChickIntelPalette.gray1}
+                />
+              </Pressable>
+            </View>
+            <View style={styles.cameraViewfinderArea}>
+              <ViewfinderOverlay size={viewfinderSize} />
+            </View>
+            <View style={[styles.cameraBottomColumn, { paddingBottom: 0 }]}>
+              <ScannerShutter
+                onPress={handleSexCameraCapture}
+                disabled={!sexCameraReady}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <Modal
         visible={breedModalOpen}
@@ -1624,6 +1782,40 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: ChickIntelPalette.gray1,
     textAlignVertical: "center",
+  },
+  resultValue: {
+    flex: 1,
+    textAlign: "center",
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(16),
+    fontWeight: "600",
+    color: ChickIntelPalette.gray1,
+  },
+  sexScanButton: {
+    minHeight: verticalScale(52),
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(67, 139, 123, 0.28)",
+    backgroundColor: "rgba(244, 248, 247, 0.96)",
+    paddingHorizontal: 14,
+  },
+  sexScanButtonTextWrap: {
+    flex: 1,
+    gap: 2,
+  },
+  sexScanButtonTitle: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(13),
+    fontWeight: "700",
+    color: ChickIntelPalette.gray1,
+  },
+  sexScanButtonSubtitle: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(10),
+    color: ChickIntelPalette.gray2,
   },
   saveButton: {
     marginTop: 8,

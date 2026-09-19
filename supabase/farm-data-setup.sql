@@ -3,8 +3,10 @@ create table if not exists public.batches (
     farm_id uuid not null references public.farms (id) on delete cascade,
     batch_no text not null,
     breed_name text not null,
+    total_count integer not null default 0 check (total_count >= 0),
     female_count integer not null default 0 check (female_count >= 0),
     male_count integer not null default 0 check (male_count >= 0),
+    unknown_count integer not null default 0 check (unknown_count >= 0),
     age_label text not null,
     isolated_count integer not null default 0 check (isolated_count >= 0),
     killed_count integer not null default 0 check (killed_count >= 0),
@@ -14,6 +16,12 @@ create table if not exists public.batches (
     updated_at timestamptz not null default timezone('utc', now()),
     unique (farm_id, batch_no)
 );
+
+alter table public.batches add column if not exists total_count integer not null default 0;
+alter table public.batches add column if not exists unknown_count integer not null default 0;
+update public.batches
+set total_count = female_count + male_count
+where total_count = 0;
 
 create table if not exists public.egg_batches (
     id uuid primary key default gen_random_uuid(),
@@ -46,11 +54,11 @@ create table if not exists public.inventory_items (
     purchased_date date,
     delivered_date date,
     expiration_date date,
-    created_at timestamptz not null default timezone('uttc', now())
+    created_at timestamptz not null default timezone('utc', now()),
+    updated_at timestamptz not null default timezone('utc', now())
 );
 
-alter table public.inventory_itemsc', now()),
-    updated_at timestamptz not null default timezone('u
+alter table public.inventory_items
     add column if not exists total_qty numeric(12, 2) not null default 0,
     add column if not exists restock_credit_qty numeric(12, 2) not null default 0;
 

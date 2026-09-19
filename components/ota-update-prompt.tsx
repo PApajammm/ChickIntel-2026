@@ -2,11 +2,13 @@ import * as Updates from "expo-updates";
 import { useEffect, useRef, useState } from "react";
 import {
     ActivityIndicator,
+    AppState,
     Modal,
     Pressable,
     StyleSheet,
     Text,
     View,
+    type AppStateStatus,
 } from "react-native";
 
 import { ChickFont } from "@/constants/chick-fonts";
@@ -18,7 +20,7 @@ const UPDATE_MESSAGE =
 export function OtaUpdatePrompt() {
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
-  const hasChecked = useRef(false);
+  const lastCheckAt = useRef(0);
   const isMounted = useRef(true);
 
   useEffect(() => {
@@ -28,21 +30,42 @@ export function OtaUpdatePrompt() {
   }, []);
 
   useEffect(() => {
-    if (hasChecked.current || !Updates.isEnabled) {
-      return;
-    }
+    if (!Updates.isEnabled) return;
 
-    hasChecked.current = true;
+    let cancelled = false;
 
-    Updates.checkForUpdateAsync()
-      .then((result) => {
-        if (isMounted.current && result.isAvailable) {
+    const checkForUpdate = async () => {
+      const now = Date.now();
+      if (now - lastCheckAt.current < 30_000) return;
+      lastCheckAt.current = now;
+
+      try {
+        const result = await Updates.checkForUpdateAsync();
+        if (!cancelled && isMounted.current && result.isAvailable) {
           setUpdateAvailable(true);
         }
-      })
-      .catch(() => {
+      } catch {
         // Update checks are optional and must never block app startup.
-      });
+      }
+    };
+
+    void checkForUpdate();
+
+    const handleAppStateChange = (nextState: AppStateStatus) => {
+      if (nextState === "active") {
+        void checkForUpdate();
+      }
+    };
+
+    const subscription = AppState.addEventListener(
+      "change",
+      handleAppStateChange,
+    );
+
+    return () => {
+      cancelled = true;
+      subscription.remove();
+    };
   }, []);
 
   async function installUpdate() {

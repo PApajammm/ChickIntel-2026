@@ -40,6 +40,7 @@ import {
     formatEggFertilityPercent,
     getCurrentBatchAgeLabel,
 } from "@/utils/batch-store";
+import { MIN_CHICKEN_BATCH_AGE_WEEKS } from "@/utils/chicken-batch-rules";
 import { logError, logStep } from "@/utils/logger";
 import {
     deleteFarmBatch,
@@ -54,8 +55,7 @@ import {
 
 const TAB_BAR_OFFSET = 55;
 const FAB_OFFSET_FROM_TAB_TOP = 50;
-const AGE_UNIT_OPTIONS = ["Days old", "Weeks old"] as const;
-const MIN_BATCH_AGE_WEEKS = 10;
+const AGE_UNIT_OPTIONS = ["Weeks old"] as const;
 
 type EggColorCard = {
   id: string;
@@ -70,8 +70,10 @@ type EggColorCard = {
 
 type ChickenEditFormState = {
   breed: string;
+  totalCount: string;
   femaleCount: string;
   maleCount: string;
+  unknownCount: string;
   isolatedCount: string;
   killedCount: string;
   ageCount: string;
@@ -147,8 +149,10 @@ export default function ProfilesScreen() {
   const [ageUnitMenuVisible, setAgeUnitMenuVisible] = useState(false);
   const [formState, setFormState] = useState<ChickenEditFormState>({
     breed: "",
+    totalCount: "",
     femaleCount: "",
     maleCount: "",
+    unknownCount: "",
     isolatedCount: "",
     killedCount: "",
     ageCount: "",
@@ -233,14 +237,14 @@ export default function ProfilesScreen() {
     setSelectedBatch(item);
     setFormState({
       breed: item.breed || "",
+      totalCount: String(item.totalCount ?? item.femaleCount + item.maleCount),
       femaleCount: String(item.femaleCount ?? 0),
       maleCount: String(item.maleCount ?? 0),
+      unknownCount: String(item.unknownCount ?? 0),
       isolatedCount: String(item.isolatedCount ?? 0),
       killedCount: String(item.killedCount ?? 0),
       ageCount: parseAgeLabel(item.ageLabel),
-      ageLabel: item.ageLabel.toLowerCase().includes("week")
-        ? AGE_UNIT_OPTIONS[1]
-        : AGE_UNIT_OPTIONS[0],
+      ageLabel: AGE_UNIT_OPTIONS[0],
     });
     setEditVisible(true);
   }
@@ -253,12 +257,24 @@ export default function ProfilesScreen() {
   async function saveEdit() {
     if (!selectedBatch) return closeEdit();
     const enteredAge = parseCount(formState.ageCount);
-    const ageInDays = enteredAge * (formState.ageLabel === "Weeks old" ? 7 : 1);
+    const ageInDays = enteredAge * 7;
 
-    if (ageInDays < MIN_BATCH_AGE_WEEKS * 7) {
+    if (ageInDays < MIN_CHICKEN_BATCH_AGE_WEEKS * 7) {
       Alert.alert(
         "Chicken is too young",
-        `Chicken batches must be at least ${MIN_BATCH_AGE_WEEKS} weeks old.`,
+        `Chicken batches must be at least ${MIN_CHICKEN_BATCH_AGE_WEEKS} weeks old.`,
+      );
+      return;
+    }
+
+    const totalCount = parseCount(formState.totalCount);
+    const femaleCount = parseCount(formState.femaleCount);
+    const maleCount = parseCount(formState.maleCount);
+    const unknownCount = parseCount(formState.unknownCount);
+    if (femaleCount + maleCount + unknownCount !== totalCount) {
+      Alert.alert(
+        "Check bird counts",
+        "Male + Female + Unknown must equal the total chicken count.",
       );
       return;
     }
@@ -266,8 +282,10 @@ export default function ProfilesScreen() {
     const updated: BatchItem = {
       ...selectedBatch,
       breed: formState.breed,
-      femaleCount: parseCount(formState.femaleCount),
-      maleCount: parseCount(formState.maleCount),
+      totalCount,
+      femaleCount,
+      maleCount,
+      unknownCount,
       isolatedCount: parseCount(formState.isolatedCount),
       killedCount: parseCount(formState.killedCount),
       ageLabel: `${enteredAge} ${formState.ageLabel.toLowerCase()}`,
@@ -955,6 +973,37 @@ export default function ProfilesScreen() {
 
                   <View style={styles.rowInputs}>
                     <View style={styles.halfInput}>
+                      <Text style={styles.modalLabel}>Total</Text>
+                      <TextInput
+                        value={formState.totalCount}
+                        onChangeText={(t) =>
+                          setFormState((s) => ({
+                            ...s,
+                            totalCount: t.replace(/[^0-9]/g, ""),
+                          }))
+                        }
+                        keyboardType="number-pad"
+                        style={styles.modalInput}
+                      />
+                    </View>
+                    <View style={styles.halfInput}>
+                      <Text style={styles.modalLabel}>Unknown</Text>
+                      <TextInput
+                        value={formState.unknownCount}
+                        onChangeText={(t) =>
+                          setFormState((s) => ({
+                            ...s,
+                            unknownCount: t.replace(/[^0-9]/g, ""),
+                          }))
+                        }
+                        keyboardType="number-pad"
+                        style={styles.modalInput}
+                      />
+                    </View>
+                  </View>
+
+                  <View style={styles.rowInputs}>
+                    <View style={styles.halfInput}>
                       <Text style={styles.modalLabel}>Females</Text>
                       <TextInput
                         value={formState.femaleCount}
@@ -1027,9 +1076,7 @@ export default function ProfilesScreen() {
                       }
                       keyboardType="number-pad"
                       style={[styles.modalInput, styles.ageCountInput]}
-                      placeholder={
-                        formState.ageLabel === "Weeks old" ? "10" : "70"
-                      }
+                      placeholder={"2"}
                       placeholderTextColor={ChickIntelPalette.gray2}
                     />
                     <Pressable
@@ -1047,12 +1094,7 @@ export default function ProfilesScreen() {
                       />
                     </Pressable>
                   </View>
-                  <Text style={styles.ageLimitHint}>
-                    Minimum:{" "}
-                    {formState.ageLabel === "Weeks old"
-                      ? "10 weeks"
-                      : "70 days"}
-                  </Text>
+                  <Text style={styles.ageLimitHint}>Minimum: 2 weeks</Text>
 
                   <View style={styles.modalActions}>
                     <Pressable
@@ -1169,7 +1211,7 @@ export default function ProfilesScreen() {
                       setEggForm((s) => ({ ...s, ageUnit: t }))
                     }
                     style={styles.modalInput}
-                    placeholder="Days old / Weeks old"
+                    placeholder="Weeks old"
                     placeholderTextColor={ChickIntelPalette.gray2}
                   />
 
