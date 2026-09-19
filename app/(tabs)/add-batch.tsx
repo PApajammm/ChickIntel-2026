@@ -48,8 +48,12 @@ import {
     SEXING_START_AGE_WEEKS,
 } from "@/utils/chicken-batch-rules";
 import { optimizePhotoForInference } from "@/utils/image-crop-helper";
-import { logError, logStep } from "@/utils/logger";
+import { logError, logStep, logWarn } from "@/utils/logger";
 import { addRecentBreedScan } from "@/utils/recent-breed-scans";
+import {
+    inferSexFromImage,
+    resolveSexDetails,
+} from "@/utils/sexing-image-inference";
 import { createFarmBatch, fetchFarmBatches } from "@/utils/supabase-batches";
 import { fetchBreedOptions } from "@/utils/supabase-lookups";
 
@@ -110,6 +114,7 @@ export default function AddBatchScreen() {
   const [breedCameraReady, setBreedCameraReady] = useState(false);
   const [sexCameraReady, setSexCameraReady] = useState(false);
   const [isScanningBreed, setIsScanningBreed] = useState(false);
+  const [isScanningSex, setIsScanningSex] = useState(false);
   const [capturedPhotoUri, setCapturedPhotoUri] = useState<string | null>(null);
   const [colorModalOpen, setColorModalOpen] = useState(false);
   const [colorSearchQuery, setColorSearchQuery] = useState("");
@@ -144,8 +149,8 @@ export default function AddBatchScreen() {
   // Total birds (keeps previous behavior for male/female auto-split)
   const [totalCount, setTotalCount] = useState("");
   const [breed, setBreed] = useState("");
-  const [maleCount, setMaleCount] = useState("50");
-  const [femaleCount, setFemaleCount] = useState("50");
+  const [maleCount, setMaleCount] = useState("");
+  const [femaleCount, setFemaleCount] = useState("");
   const [unknownCount, setUnknownCount] = useState("0");
   const [breedOptions, setBreedOptions] = useState<string[]>([
     ...DEFAULT_BREED_OPTIONS,
@@ -167,8 +172,8 @@ export default function AddBatchScreen() {
     setAgeUnit(AGE_UNIT_OPTIONS[0]);
     setTotalCount("");
     setBreed("");
-    setMaleCount("50");
-    setFemaleCount("50");
+    setMaleCount("");
+    setFemaleCount("");
     setUnknownCount("0");
     setBreedModalOpen(false);
     setBreedScannerOpen(false);
@@ -178,6 +183,7 @@ export default function AddBatchScreen() {
     setBreedCameraReady(false);
     setSexCameraReady(false);
     setIsScanningBreed(false);
+    setIsScanningSex(false);
     setCapturedPhotoUri(null);
   }, []);
 
@@ -210,8 +216,6 @@ export default function AddBatchScreen() {
   );
 
   const usedBatchColorSet = useMemo(() => new Set<string>(), []);
-  const allBatchColorsUsed = false;
-
   useFocusEffect(
     useCallback(() => {
       let active = true;
@@ -234,7 +238,6 @@ export default function AddBatchScreen() {
                 .filter(Boolean),
             ),
           );
-          const usedSet = new Set(used);
           const nextBatchNo = getNextBatchNo(batches.map((batch) => batch.id));
 
           if (!active) return;
@@ -289,6 +292,9 @@ export default function AddBatchScreen() {
 
     if (!total) {
       setMaleCount(clean);
+      const m = parseCount(clean);
+      const f = parseCount(femaleCount);
+      setTotalCount(String(m + f));
       return;
     }
 
@@ -306,6 +312,9 @@ export default function AddBatchScreen() {
 
     if (!total) {
       setFemaleCount(clean);
+      const f = parseCount(clean);
+      const m = parseCount(maleCount);
+      setTotalCount(String(m + f));
       return;
     }
 
@@ -319,52 +328,118 @@ export default function AddBatchScreen() {
 
   function closeSexScanner() {
     setSexScannerOpen(false);
+    setTorchEnabled(false);
+    setZoomLevel(0);
     setSexCameraReady(false);
+    setCapturedPhotoUri(null);
   }
 
   async function handleSexCameraCapture() {
-    if (!sexCameraReady || !sexCameraRef.current) {
+    if (!sexCameraReady || !sexCameraRef.current || isScanningSex) {
       Alert.alert("Camera starting", "Please wait until the camera is ready.");
       return;
     }
 
+    let photo: { uri: string; width: number; height: number } | null = null;
+
     try {
-      await sexCameraRef.current.takePictureAsync({
+      const rawPhoto = await sexCameraRef.current.takePictureAsync({
         quality: 0.8,
         skipProcessing: Platform.OS === "ios",
       });
-      closeSexScanner();
-      Alert.alert("Sex result", "Choose the sex for the captured chicken.", [
-        {
-          text: "Male",
-          onPress: () => setSexCount("male"),
-        },
-        {
-          text: "Female",
-          onPress: () => setSexCount("female"),
-        },
-        {
-          text: "Unknown",
-          onPress: () => setSexCount("unknown"),
-        },
-      ]);
+
+      photo = await optimizePhotoForInference({
+        photoUri: rawPhoto.uri,
+        photoWidth: rawPhoto.width,
+        photoHeight: rawPhoto.height,
+        maxDimension: 1024,
+        quality: 0.8,
+      });
+
+      setCapturedPhotoUri(photo.uri);
+      setIsScanningSex(true);
     } catch (error) {
-      Alert.alert("Capture failed", "Unable to capture the chicken photo.");
-      logError("Add batch sex camera capture failed", error);
+      closeSexScanner();
+      Alert.alert(
+        "Capture failed",
+        "Unable to capture the photo. Please reopen Camera Sexing and try again.",
+      );
+      logWarn("Add batch sex camera photo capture failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return;
+    }
+
+    try {
+      const inference = await inferSexFromImage(photo.uri);
+      const details = resolveSexDetails(inference);
+
+      closeSexScanner();
+
+      if (details.sex === "male") {
+        applyDetectedSex("male");
+      } else if (details.sex === "female") {
+        applyDetectedSex("female");
+      } else {
+        Alert.alert(
+          "No sex detected",
+          "The photo was captured, but Roboflow did not return a cock or hen result. Try another angle with the chicken centered.",
+        );
+      }
+
+      logStep("Add batch sex camera classified chicken", {
+        sex: details.sex,
+        label: details.label,
+        confidence: details.confidence,
+        modelId: inference?.modelId ?? "unknown",
+        error: inference?.error,
+      });
+    } catch (error) {
+      closeSexScanner();
+      Alert.alert(
+        "No sex detected",
+        "The photo was captured, but the sexing result could not be read. Try another angle with the chicken centered.",
+      );
+      logWarn("Add batch sex camera inference result could not be read", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    } finally {
+      setIsScanningSex(false);
     }
   }
 
-  function setSexCount(sex: "male" | "female" | "unknown") {
-    const total = parseCount(totalCount);
+  function applyDetectedSex(sex: "male" | "female") {
     const currentMale = parseCount(maleCount);
     const currentFemale = parseCount(femaleCount);
     const currentUnknown = parseCount(unknownCount);
-    const currentAssigned = currentMale + currentFemale + currentUnknown;
-    if (!total || currentAssigned >= total) return;
+    const currentTotal = parseCount(totalCount);
 
-    setMaleCount(String(currentMale + (sex === "male" ? 1 : 0)));
-    setFemaleCount(String(currentFemale + (sex === "female" ? 1 : 0)));
-    setUnknownCount(String(currentUnknown + (sex === "unknown" ? 1 : 0)));
+    if (sex === "male") {
+      const nextMale = currentMale + 1;
+      const nextUnknown = Math.max(0, currentUnknown - 1);
+      const nextTotal =
+        currentUnknown > 0
+          ? currentTotal
+          : Math.max(currentTotal + 1, nextMale + currentFemale);
+
+      setMaleCount(String(nextMale));
+      setFemaleCount(String(currentFemale));
+      setUnknownCount(String(nextUnknown));
+      setTotalCount(String(nextTotal));
+      return;
+    }
+
+    const nextFemale = currentFemale + 1;
+    const nextUnknown = Math.max(0, currentUnknown - 1);
+    const nextTotal =
+      currentUnknown > 0
+        ? currentTotal
+        : Math.max(currentTotal + 1, currentMale + nextFemale);
+
+    setFemaleCount(String(nextFemale));
+    setMaleCount(String(currentMale));
+    setUnknownCount(String(nextUnknown));
+    setTotalCount(String(nextTotal));
   }
 
   function closeBreedScanner() {
@@ -474,8 +549,7 @@ export default function AddBatchScreen() {
   }
 
   const pageTitle = useMemo(
-    () =>
-      mode === "chicken" ? "Add New Batch (chicken)" : "Add New Batch (egg)",
+    () => (mode === "chicken" ? "Create Chicken Batch" : "Add New Batch (egg)"),
     [mode],
   );
   const viewfinderSize = Math.min(width - 64, 320);
@@ -676,6 +750,15 @@ export default function AddBatchScreen() {
                     accessibilityRole="button"
                     accessibilityLabel="Choose breed"
                   >
+                    <MaterialCommunityIcons
+                      name="bird"
+                      size={18}
+                      color={
+                        breed
+                          ? ChickIntelPalette.green1
+                          : ChickIntelPalette.gray2
+                      }
+                    />
                     <Text
                       style={[
                         styles.selectText,
@@ -749,6 +832,7 @@ export default function AddBatchScreen() {
                         keyboardType="number-pad"
                         style={styles.resultInput}
                         textAlignVertical="center"
+                        placeholder="0"
                         placeholderTextColor="#8F9696"
                       />
                     </View>
@@ -760,6 +844,7 @@ export default function AddBatchScreen() {
                         keyboardType="number-pad"
                         style={styles.resultInput}
                         textAlignVertical="center"
+                        placeholder="0"
                         placeholderTextColor="#8F9696"
                       />
                     </View>
@@ -782,7 +867,7 @@ export default function AddBatchScreen() {
                     color={ChickIntelPalette.green1}
                   />
                   <View style={styles.sexScanButtonTextWrap}>
-                    <Text style={styles.sexScanButtonTitle}>Sex scan</Text>
+                    <Text style={styles.sexScanButtonTitle}>Camera Sexing</Text>
                     <Text style={styles.sexScanButtonSubtitle}>
                       Capture a chicken to classify its sex
                     </Text>
@@ -890,46 +975,131 @@ export default function AddBatchScreen() {
       >
         <View style={styles.cameraModalScreen}>
           <StatusBar style="light" />
-          <CameraViewport
-            ref={sexCameraRef}
-            active={sexScannerOpen}
-            enableTorch={false}
-            zoom={0}
-            onReadyChange={setSexCameraReady}
-          />
-          <View style={styles.cameraOverlay} pointerEvents="box-none">
-            <View
-              style={[styles.cameraTopRow, { paddingTop: insets.top + 12 }]}
-            >
-              <View style={styles.cameraTitleStack}>
-                <Text style={styles.cameraTitle}>Sex camera</Text>
-                <Text style={styles.cameraSubtitle}>
-                  Capture one chicken, then choose its sex.
+          {isScanningSex && capturedPhotoUri ? (
+            <View style={styles.scanLoadingOverlay}>
+              <Image
+                source={{ uri: capturedPhotoUri }}
+                style={styles.scanLoadingImage}
+              />
+              <View style={styles.scanLoadingContent}>
+                <ActivityIndicator size="large" color="#FFFFFF" />
+                <Text style={styles.scanLoadingText}>Scanning sex...</Text>
+                <Text style={styles.scanLoadingSubtitle}>
+                  Comparing cock and hen confidence
                 </Text>
               </View>
-              <Pressable
-                onPress={closeSexScanner}
-                style={styles.cameraIconButton}
-                accessibilityRole="button"
-                accessibilityLabel="Close sex camera"
-              >
-                <MaterialCommunityIcons
-                  name="close"
-                  size={20}
-                  color={ChickIntelPalette.gray1}
-                />
-              </Pressable>
             </View>
-            <View style={styles.cameraViewfinderArea}>
-              <ViewfinderOverlay size={viewfinderSize} />
-            </View>
-            <View style={[styles.cameraBottomColumn, { paddingBottom: 0 }]}>
-              <ScannerShutter
-                onPress={handleSexCameraCapture}
-                disabled={!sexCameraReady}
+          ) : (
+            <>
+              <CameraViewport
+                ref={sexCameraRef}
+                active={sexScannerOpen && !isScanningSex}
+                enableTorch={torchEnabled}
+                zoom={zoomLevel}
+                onReadyChange={setSexCameraReady}
               />
-            </View>
-          </View>
+              <View style={styles.cameraOverlay} pointerEvents="box-none">
+                <View
+                  style={[styles.cameraTopRow, { paddingTop: insets.top + 12 }]}
+                >
+                  <View style={styles.cameraTitleStack}>
+                    <Text style={styles.cameraTitle}>Camera Sexing</Text>
+                    <Text style={styles.cameraSubtitle}>
+                      Frame the chicken clearly, then capture to classify sex.
+                    </Text>
+                  </View>
+                  <Pressable
+                    onPress={() => setTorchEnabled((prev) => !prev)}
+                    style={({ pressed }) => [
+                      styles.cameraIconButton,
+                      { opacity: pressed ? 0.82 : 1 },
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                      torchEnabled ? "Turn flash off" : "Turn flash on"
+                    }
+                  >
+                    <MaterialCommunityIcons
+                      name={torchEnabled ? "flash" : "flash-off"}
+                      size={20}
+                      color={
+                        torchEnabled
+                          ? ChickIntelPalette.green1
+                          : ChickIntelPalette.gray1
+                      }
+                    />
+                  </Pressable>
+                  <Pressable
+                    onPress={closeSexScanner}
+                    style={({ pressed }) => [
+                      styles.cameraIconButton,
+                      { opacity: pressed ? 0.82 : 1 },
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel="Close sex camera"
+                  >
+                    <MaterialCommunityIcons
+                      name="close"
+                      size={20}
+                      color={ChickIntelPalette.gray1}
+                    />
+                  </Pressable>
+                </View>
+                <View
+                  style={[
+                    styles.cameraViewfinderArea,
+                    isNarrowPhone && styles.cameraViewfinderAreaNarrow,
+                  ]}
+                >
+                  <ViewfinderOverlay size={viewfinderSize} />
+                  <View style={styles.breedSupportedCard}>
+                    <View style={styles.breedSupportedHeadingRow}>
+                      <MaterialCommunityIcons
+                        name="gender-male-female"
+                        size={15}
+                        color={ChickIntelPalette.green1}
+                      />
+                      <Text style={styles.breedSupportedHeading}>
+                        SEXING LABELS
+                      </Text>
+                    </View>
+                    <Text style={styles.breedSupportedCategories}>
+                      Cock • Hen
+                    </Text>
+                    <Text style={styles.breedSupportedNote}>
+                      Keep the full chicken visible and centered.
+                    </Text>
+                  </View>
+                </View>
+                <View style={[styles.cameraBottomColumn, { paddingBottom: 0 }]}>
+                  <View style={styles.cameraZoomWrap}>
+                    <MaterialCommunityIcons
+                      name="magnify-minus-outline"
+                      size={16}
+                      color={ChickIntelPalette.gray2}
+                    />
+                    <Slider
+                      style={styles.cameraZoomSlider}
+                      minimumValue={0}
+                      maximumValue={MAX_SCAN_ZOOM}
+                      value={zoomLevel}
+                      step={0.01}
+                      onValueChange={setZoomLevel}
+                      minimumTrackTintColor={ChickIntelPalette.green1}
+                      maximumTrackTintColor="rgba(67, 139, 123, 0.18)"
+                      thumbTintColor={ChickIntelPalette.green2}
+                      accessibilityLabel="Sex camera zoom"
+                      accessibilityRole="adjustable"
+                    />
+                  </View>
+                  <ScannerShutter
+                    onPress={handleSexCameraCapture}
+                    disabled={!sexCameraReady || isScanningSex}
+                  />
+                </View>
+              </View>
+            </>
+          )}
         </View>
       </Modal>
 
@@ -944,31 +1114,89 @@ export default function AddBatchScreen() {
           onPress={() => setBreedModalOpen(false)}
         >
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Select Breed</Text>
-            {breedOptions.map((opt) => (
+            <View style={styles.breedModalHeader}>
+              <View style={styles.breedModalIcon}>
+                <MaterialCommunityIcons
+                  name="bird"
+                  size={19}
+                  color={ChickIntelPalette.green1}
+                />
+              </View>
+              <View style={styles.breedModalHeadingCopy}>
+                <Text style={styles.modalTitle}>Select Breed</Text>
+                <Text style={styles.breedModalSubtitle}>
+                  Choose from active breeds in the Admin Console.
+                </Text>
+              </View>
               <Pressable
-                key={opt}
-                onPress={() => {
-                  setBreed(opt);
-                  setBreedModalOpen(false);
-                }}
-                style={({ pressed }) => [
-                  styles.modalOption,
-                  {
-                    opacity: pressed ? 0.78 : 1,
-                    backgroundColor:
-                      breed === opt ? "rgba(156,213,201,0.45)" : "transparent",
-                  },
-                ]}
+                onPress={() => setBreedModalOpen(false)}
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel="Close breed selector"
               >
-                <Text style={styles.modalOptionText}>{opt}</Text>
+                <MaterialCommunityIcons
+                  name="close"
+                  size={21}
+                  color={ChickIntelPalette.gray2}
+                />
               </Pressable>
-            ))}
-            {!breedOptions.length ? (
-              <Text style={styles.modalOptionText}>
-                No breed options found.
-              </Text>
-            ) : null}
+            </View>
+            <ScrollView
+              style={styles.breedOptionsList}
+              contentContainerStyle={styles.breedOptionsContent}
+              showsVerticalScrollIndicator
+              nestedScrollEnabled
+            >
+              {breedOptions.map((opt) => {
+                const selected = breed === opt;
+                return (
+                  <Pressable
+                    key={opt}
+                    onPress={() => {
+                      setBreed(opt);
+                      setBreedModalOpen(false);
+                    }}
+                    style={({ pressed }) => [
+                      styles.modalOption,
+                      selected ? styles.modalOptionSelected : null,
+                      { opacity: pressed ? 0.78 : 1 },
+                    ]}
+                  >
+                    <View style={styles.modalOptionCopy}>
+                      <MaterialCommunityIcons
+                        name="bird"
+                        size={17}
+                        color={
+                          selected
+                            ? ChickIntelPalette.green1
+                            : ChickIntelPalette.gray2
+                        }
+                      />
+                      <Text
+                        style={[
+                          styles.modalOptionText,
+                          selected ? styles.modalOptionTextSelected : null,
+                        ]}
+                      >
+                        {opt}
+                      </Text>
+                    </View>
+                    {selected ? (
+                      <MaterialCommunityIcons
+                        name="check-circle"
+                        size={19}
+                        color={ChickIntelPalette.green1}
+                      />
+                    ) : null}
+                  </Pressable>
+                );
+              })}
+              {!breedOptions.length ? (
+                <Text style={styles.modalOptionText}>
+                  No active breeds found.
+                </Text>
+              ) : null}
+            </ScrollView>
           </View>
         </Pressable>
       </Modal>
@@ -1660,6 +1888,7 @@ const styles = StyleSheet.create({
   },
   breedSelect: {
     flex: 1,
+    gap: 8,
   },
   breedCameraButton: {
     width: scale(46),
@@ -1841,31 +2070,89 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "rgba(51,51,51,0.38)",
     justifyContent: "center",
-    paddingHorizontal: moderateScale(24),
+    paddingHorizontal: moderateScale(18),
   },
   modalCard: {
-    borderRadius: 5,
+    maxHeight: "72%",
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: "rgba(49,118,103,0.18)",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#F8FCFA",
     padding: moderateScale(14),
+    shadowColor: "#000",
+    shadowOpacity: 0.16,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 7,
+  },
+  breedModalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 9,
+    marginBottom: 10,
+  },
+  breedModalIcon: {
+    width: scale(36),
+    height: verticalScale(36),
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 11,
+    backgroundColor: "rgba(49, 118, 103, 0.12)",
+  },
+  breedModalHeadingCopy: {
+    flex: 1,
+    gap: 1,
+  },
+  breedModalSubtitle: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(11),
+    lineHeight: 16,
+    color: "#40524B",
+  },
+  breedOptionsList: {
+    flexGrow: 0,
+  },
+  breedOptionsContent: {
+    gap: 6,
+    paddingBottom: 2,
   },
   modalTitle: {
     fontFamily: ChickFont.display,
-    fontSize: responsiveFontSize(18),
-    fontWeight: "600",
+    fontSize: responsiveFontSize(17),
+    fontWeight: "800",
     color: ChickIntelPalette.gray1,
-    marginBottom: 8,
   },
   modalOption: {
-    paddingVertical: verticalScale(10),
+    minHeight: verticalScale(48),
+    paddingVertical: verticalScale(8),
     paddingHorizontal: moderateScale(10),
-    borderRadius: 10,
+    borderRadius: 11,
+    borderWidth: 1,
+    borderColor: "transparent",
+    backgroundColor: "rgba(255, 255, 255, 0.72)",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  modalOptionSelected: {
+    borderColor: "rgba(49, 118, 103, 0.2)",
+    backgroundColor: "rgba(202, 227, 221, 0.68)",
+  },
+  modalOptionCopy: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 9,
   },
   modalOptionText: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(14),
+    fontWeight: "600",
     color: ChickIntelPalette.gray1,
+  },
+  modalOptionTextSelected: {
+    fontWeight: "800",
+    color: ChickIntelPalette.green1,
   },
   cameraModalScreen: {
     flex: 1,

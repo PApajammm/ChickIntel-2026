@@ -3,22 +3,6 @@ import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? "";
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? "";
-const ADMIN_CONSOLE_BREEDS = new Set([
-  "barred rock",
-  "bielefelder",
-  "black orpington",
-  "brahma",
-  "buckeye",
-  "fayoumi",
-  "leghorn",
-  "new hampshire",
-  "plymouth rock",
-  "rhode island red",
-  "silkie",
-  "sussex",
-  "turken",
-]);
-
 export type FarmerData = {
   id: string;
   name: string;
@@ -236,11 +220,7 @@ export async function fetchBreeds(): Promise<BreedData[]> {
   if (error) throw error;
 
   return (data || [])
-    .filter(
-      (b: any) =>
-        typeof b.name === "string" &&
-        ADMIN_CONSOLE_BREEDS.has(b.name.trim().toLowerCase()),
-    )
+    .filter((b: any) => typeof b.name === "string")
     .map((b: any) => ({
       id: b.id,
       name: b.name,

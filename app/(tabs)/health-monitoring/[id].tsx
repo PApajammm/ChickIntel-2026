@@ -89,7 +89,14 @@ export default function HealthMonitoringDetailScreen() {
     task: HealthMonitoringTask;
     occurrence: HealthMonitoringTaskOccurrence;
   } | null>(null);
+  const [pendingTreatmentCompletion, setPendingTreatmentCompletion] = useState<{
+    task: HealthMonitoringTask;
+    occurrence: HealthMonitoringTaskOccurrence;
+  } | null>(null);
   const [isProtocolExpanded, setIsProtocolExpanded] = useState(true);
+  const [protocolTaskFilter, setProtocolTaskFilter] = useState<
+    "All" | "Pending" | "Completed"
+  >("All");
   const [diseaseDetails, setDiseaseDetails] = useState<DiseaseDetails | null>(
     null,
   );
@@ -196,42 +203,50 @@ export default function HealthMonitoringDetailScreen() {
   }, [cameraPermission?.granted, record, requestCameraPermission, router]);
 
   const toggleTreatmentOccurrence = useCallback(
-    async (
+    (
       task: HealthMonitoringTask,
       occurrence: HealthMonitoringTaskOccurrence,
     ) => {
       if (!activeFarm?.id || occurrence.completed) return;
-      const completed = true;
-      const completedAt = new Date().toISOString();
-      setTreatmentTasks((previous) =>
-        previous.map((entry) =>
-          entry.id === task.id
-            ? {
-                ...entry,
-                occurrences: entry.occurrences.map((item) =>
-                  item.id === occurrence.id
-                    ? { ...item, completed, completedAt }
-                    : item,
-                ),
-              }
-            : entry,
-        ),
-      );
-      try {
-        await updateHealthMonitoringTaskOccurrence(
-          activeFarm.id,
-          occurrence.id,
-          completed,
-        );
-      } catch (error) {
-        logError("Treatment occurrence update failed", error, {
-          occurrenceId: occurrence.id,
-        });
-        void refresh();
-      }
+      setPendingTreatmentCompletion({ task, occurrence });
     },
-    [activeFarm?.id, refresh],
+    [activeFarm?.id],
   );
+
+  const confirmTreatmentCompletion = useCallback(async () => {
+    if (!activeFarm?.id || !pendingTreatmentCompletion) return;
+
+    const { task, occurrence } = pendingTreatmentCompletion;
+    const completedAt = new Date().toISOString();
+    setPendingTreatmentCompletion(null);
+    setTreatmentTasks((previous) =>
+      previous.map((entry) =>
+        entry.id === task.id
+          ? {
+              ...entry,
+              occurrences: entry.occurrences.map((item) =>
+                item.id === occurrence.id
+                  ? { ...item, completed: true, completedAt }
+                  : item,
+              ),
+            }
+          : entry,
+      ),
+    );
+
+    try {
+      await updateHealthMonitoringTaskOccurrence(
+        activeFarm.id,
+        occurrence.id,
+        true,
+      );
+    } catch (error) {
+      logError("Treatment occurrence update failed", error, {
+        occurrenceId: occurrence.id,
+      });
+      void refresh();
+    }
+  }, [activeFarm?.id, pendingTreatmentCompletion, refresh]);
 
   const saveTreatmentNote = useCallback(
     async (
@@ -307,10 +322,14 @@ export default function HealthMonitoringDetailScreen() {
     ({ occurrence }) => occurrence.completed,
   ).length;
   const pendingTreatmentOccurrences = treatmentOccurrences.filter(
-    ({ occurrence }) => !occurrence.completed,
+    ({ occurrence }) =>
+      !occurrence.completed &&
+      (protocolTaskFilter === "All" || protocolTaskFilter === "Pending"),
   );
   const completedTreatmentOccurrences = treatmentOccurrences.filter(
-    ({ occurrence }) => occurrence.completed,
+    ({ occurrence }) =>
+      occurrence.completed &&
+      (protocolTaskFilter === "All" || protocolTaskFilter === "Completed"),
   );
 
   const renderTreatmentOccurrence = ({
@@ -458,58 +477,6 @@ export default function HealthMonitoringDetailScreen() {
           </View>
         </View>
 
-        <View style={styles.protocolSection}>
-          <TouchableOpacity
-            style={styles.protocolHeader}
-            onPress={() => setIsProtocolExpanded((expanded) => !expanded)}
-            activeOpacity={0.75}
-            accessibilityRole="button"
-            accessibilityLabel={
-              isProtocolExpanded
-                ? "Hide treatment protocol tasks"
-                : "Show treatment protocol tasks"
-            }
-            accessibilityState={{ expanded: isProtocolExpanded }}
-          >
-            <View>
-              <Text style={styles.protocolTitle}>Treatment Protocol</Text>
-              <Text style={styles.protocolSubtitle}>
-                {treatmentOccurrences.length > 0
-                  ? `${completedOccurrenceCount}/${treatmentOccurrences.length} occurrences completed`
-                  : "No treatment tasks were provided for this result."}
-              </Text>
-            </View>
-            <View style={styles.protocolHeaderActions}>
-              <MaterialCommunityIcons
-                name="medical-bag"
-                size={22}
-                color={ChickIntelPalette.green1}
-              />
-              <MaterialCommunityIcons
-                name={isProtocolExpanded ? "chevron-up" : "chevron-down"}
-                size={24}
-                color={ChickIntelPalette.gray1}
-              />
-            </View>
-          </TouchableOpacity>
-          {isProtocolExpanded ? (
-            <>
-              {pendingTreatmentOccurrences.length > 0 ? (
-                <>
-                  <Text style={styles.protocolGroupTitle}>Pending</Text>
-                  {pendingTreatmentOccurrences.map(renderTreatmentOccurrence)}
-                </>
-              ) : null}
-              {completedTreatmentOccurrences.length > 0 ? (
-                <>
-                  <Text style={styles.protocolGroupTitle}>Completed</Text>
-                  {completedTreatmentOccurrences.map(renderTreatmentOccurrence)}
-                </>
-              ) : null}
-            </>
-          ) : null}
-        </View>
-
         {canRescan ? (
           <Pressable
             onPress={() => void openRescan()}
@@ -551,6 +518,88 @@ export default function HealthMonitoringDetailScreen() {
               actionStatus={healthLog.actionStatus || record.monitoringStatus}
               durationValue={healthLog.durationValue}
             />
+            <View style={styles.protocolSection}>
+              <TouchableOpacity
+                style={styles.protocolHeader}
+                onPress={() => setIsProtocolExpanded((expanded) => !expanded)}
+                activeOpacity={0.75}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  isProtocolExpanded
+                    ? "Hide treatment protocol tasks"
+                    : "Show treatment protocol tasks"
+                }
+                accessibilityState={{ expanded: isProtocolExpanded }}
+              >
+                <View>
+                  <Text style={styles.protocolTitle}>Treatment Protocol</Text>
+                  <Text style={styles.protocolSubtitle}>
+                    {treatmentOccurrences.length > 0
+                      ? `${completedOccurrenceCount}/${treatmentOccurrences.length} occurrences completed`
+                      : "No treatment tasks were provided for this result."}
+                  </Text>
+                </View>
+                <View style={styles.protocolHeaderActions}>
+                  <MaterialCommunityIcons
+                    name="medical-bag"
+                    size={22}
+                    color={ChickIntelPalette.green1}
+                  />
+                  <MaterialCommunityIcons
+                    name={isProtocolExpanded ? "chevron-up" : "chevron-down"}
+                    size={24}
+                    color={ChickIntelPalette.gray1}
+                  />
+                </View>
+              </TouchableOpacity>
+              {isProtocolExpanded ? (
+                <>
+                  <View style={styles.protocolFilterRow}>
+                    {(["All", "Pending", "Completed"] as const).map(
+                      (filter) => (
+                        <Pressable
+                          key={filter}
+                          onPress={() => setProtocolTaskFilter(filter)}
+                          style={[
+                            styles.protocolFilterItem,
+                            protocolTaskFilter === filter
+                              ? styles.protocolFilterItemActive
+                              : null,
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.protocolFilterText,
+                              protocolTaskFilter === filter
+                                ? styles.protocolFilterTextActive
+                                : null,
+                            ]}
+                          >
+                            {filter}
+                          </Text>
+                        </Pressable>
+                      ),
+                    )}
+                  </View>
+                  {pendingTreatmentOccurrences.length > 0 ? (
+                    <>
+                      <Text style={styles.protocolGroupTitle}>Pending</Text>
+                      {pendingTreatmentOccurrences.map(
+                        renderTreatmentOccurrence,
+                      )}
+                    </>
+                  ) : null}
+                  {completedTreatmentOccurrences.length > 0 ? (
+                    <>
+                      <Text style={styles.protocolGroupTitle}>Completed</Text>
+                      {completedTreatmentOccurrences.map(
+                        renderTreatmentOccurrence,
+                      )}
+                    </>
+                  ) : null}
+                </>
+              ) : null}
+            </View>
             <View style={styles.historySection}>
               <Text style={styles.historyTitle}>Health History</Text>
               <Text style={styles.historySubtitle}>
@@ -598,6 +647,86 @@ export default function HealthMonitoringDetailScreen() {
           </>
         )}
       </ScrollView>
+
+      <Modal
+        visible={pendingTreatmentCompletion !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPendingTreatmentCompletion(null)}
+      >
+        <View style={styles.confirmModalBackdrop}>
+          <View style={styles.confirmModalCard}>
+            <View style={styles.confirmModalTopRow}>
+              <View style={styles.confirmIconBadge}>
+                <MaterialCommunityIcons
+                  name="medical-bag"
+                  size={23}
+                  color={ChickIntelPalette.green1}
+                />
+              </View>
+              <TouchableOpacity
+                onPress={() => setPendingTreatmentCompletion(null)}
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel="Close treatment confirmation"
+              >
+                <MaterialCommunityIcons
+                  name="close"
+                  size={20}
+                  color={ChickIntelPalette.gray2}
+                />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.confirmModalTitle}>Complete treatment?</Text>
+            <Text style={styles.confirmModalBody}>
+              Confirm this treatment was completed for this monitored chicken.
+            </Text>
+            <View style={styles.confirmDetailsBox}>
+              <View style={styles.confirmDetailRow}>
+                <Text style={styles.confirmDetailLabel}>Chicken</Text>
+                <Text style={styles.confirmDetailValue}>{record.chtTag}</Text>
+              </View>
+              <View style={styles.confirmDetailRow}>
+                <Text style={styles.confirmDetailLabel}>Task</Text>
+                <Text style={styles.confirmDetailValue} numberOfLines={2}>
+                  {pendingTreatmentCompletion?.task.title}
+                </Text>
+              </View>
+              <View style={styles.confirmDetailRow}>
+                <Text style={styles.confirmDetailLabel}>Due</Text>
+                <Text style={styles.confirmDetailValue}>
+                  {pendingTreatmentCompletion
+                    ? formatScanDate(
+                        pendingTreatmentCompletion.occurrence.dueAt,
+                      )
+                    : ""}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.confirmModalActions}>
+              <TouchableOpacity
+                style={styles.confirmCancelButton}
+                onPress={() => setPendingTreatmentCompletion(null)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.confirmCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.confirmDoneButton}
+                onPress={() => void confirmTreatmentCompletion()}
+                activeOpacity={0.8}
+              >
+                <MaterialCommunityIcons
+                  name="check"
+                  size={17}
+                  color="#FFFFFF"
+                />
+                <Text style={styles.confirmDoneText}>Mark as done</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <Modal
         visible={noteModalContext !== null}
@@ -788,6 +917,7 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
   },
   protocolSection: {
+    marginTop: 14,
     marginBottom: 14,
     padding: moderateScale(14),
     borderRadius: 12,
@@ -805,6 +935,31 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+  },
+  protocolFilterRow: {
+    flexDirection: "row",
+    gap: 6,
+    padding: 3,
+    borderRadius: 9,
+    backgroundColor: "rgba(49, 118, 103, 0.08)",
+  },
+  protocolFilterItem: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 6,
+    borderRadius: 7,
+  },
+  protocolFilterItemActive: {
+    backgroundColor: ChickIntelPalette.green1,
+  },
+  protocolFilterText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(11),
+    fontWeight: "700",
+    color: ChickIntelPalette.gray1,
+  },
+  protocolFilterTextActive: {
+    color: "#FFFFFF",
   },
   protocolTitle: {
     fontFamily: ChickFont.display,
@@ -1011,6 +1166,117 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(11),
     fontWeight: "700",
     color: ChickIntelPalette.gray2,
+  },
+  confirmModalBackdrop: {
+    flex: 1,
+    justifyContent: "center",
+    paddingHorizontal: moderateScale(20),
+    backgroundColor: "rgba(22, 38, 32, 0.48)",
+  },
+  confirmModalCard: {
+    borderRadius: 20,
+    padding: moderateScale(16),
+    backgroundColor: "#F8FCFA",
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.2)",
+    shadowColor: "#000",
+    shadowOpacity: 0.18,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 8,
+    gap: 7,
+  },
+  confirmIconBadge: {
+    width: scale(42),
+    height: verticalScale(42),
+    borderRadius: 13,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(49, 118, 103, 0.13)",
+  },
+  confirmModalTopRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+  },
+  confirmModalTitle: {
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(20),
+    fontWeight: "800",
+    color: ChickIntelPalette.gray1,
+  },
+  confirmModalBody: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(13),
+    lineHeight: 19,
+    color: ChickIntelPalette.gray2,
+  },
+  confirmDetailsBox: {
+    marginTop: 2,
+    padding: moderateScale(10),
+    borderRadius: 12,
+    backgroundColor: "rgba(49, 118, 103, 0.07)",
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.12)",
+    gap: 6,
+  },
+  confirmDetailRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  confirmDetailLabel: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(11),
+    fontWeight: "700",
+    color: ChickIntelPalette.gray2,
+    textTransform: "uppercase",
+  },
+  confirmDetailValue: {
+    flex: 1,
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12),
+    fontWeight: "700",
+    color: ChickIntelPalette.gray1,
+    textAlign: "right",
+  },
+  confirmModalActions: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 2,
+  },
+  confirmCancelButton: {
+    flex: 1,
+    minHeight: verticalScale(44),
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 11,
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.2)",
+    backgroundColor: "#FFFFFF",
+  },
+  confirmCancelText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(13),
+    fontWeight: "700",
+    color: ChickIntelPalette.gray1,
+  },
+  confirmDoneButton: {
+    flex: 1.3,
+    minHeight: verticalScale(44),
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    borderRadius: 11,
+    backgroundColor: ChickIntelPalette.green1,
+  },
+  confirmDoneText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(13),
+    fontWeight: "800",
+    color: "#FFFFFF",
   },
   historyEntryStatus: {
     fontFamily: ChickFont.sans,

@@ -1,7 +1,7 @@
+import { supabase } from "@/lib/supabase";
+import { decode } from "base64-arraybuffer";
 import * as FileSystem from "expo-file-system/legacy";
 import { manipulateAsync, SaveFormat } from "expo-image-manipulator";
-import { decode } from "base64-arraybuffer";
-import { supabase } from "@/lib/supabase";
 
 /**
  * Ensures an image URI is persistently saved via Supabase Storage Bucket ('health-scans'),
@@ -62,8 +62,15 @@ export async function ensurePersistentImageUri(
         .from("health-scans")
         .upload(filePath, decode(base64Data), {
           contentType: "image/jpeg",
-          upsert: true,
+          upsert: false,
         });
+
+      if (uploadError) {
+        console.warn(
+          "[persistent-image-storage] Health scan upload failed:",
+          uploadError.message,
+        );
+      }
 
       if (!uploadError && uploadData) {
         const { data: publicUrlData } = supabase.storage
@@ -77,7 +84,7 @@ export async function ensurePersistentImageUri(
     }
   } catch (storageError) {
     console.warn(
-      "[persistent-image-storage] Supabase storage upload fallback applied:",
+      "[persistent-image-storage] Supabase storage upload failed:",
       storageError,
     );
   }

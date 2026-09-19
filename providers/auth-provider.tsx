@@ -55,6 +55,7 @@ type AuthContextValue = {
   enterGuestMode: () => void;
   exitGuestMode: () => void;
   signOut: () => Promise<void>;
+  updateAccount: (displayName: string, password?: string) => Promise<void>;
   refreshOwnership: (userId?: string) => Promise<void>;
   clearError: () => void;
 };
@@ -356,7 +357,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
     setLoading(true);
     setError(null);
-  setGuestMode(false);
+    setGuestMode(false);
 
     try {
       const normalizedEmail = email.trim().toLowerCase();
@@ -445,6 +446,36 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
   }
 
+  async function updateAccount(displayName: string, password?: string) {
+    if (!session?.user?.id) {
+      throw new Error("You must be signed in to update your account.");
+    }
+
+    const normalizedName = displayName.trim();
+    if (!normalizedName) {
+      throw new Error("Enter your farmer name.");
+    }
+
+    const { error: profileError } = await supabase
+      .from("profiles")
+      .update({ display_name: normalizedName })
+      .eq("id", session.user.id);
+
+    if (profileError) throw profileError;
+
+    const authUpdate: { data: { display_name: string }; password?: string } = {
+      data: { display_name: normalizedName },
+    };
+    if (password?.trim()) {
+      authUpdate.password = password;
+    }
+
+    const { error: authError } = await supabase.auth.updateUser(authUpdate);
+    if (authError) throw authError;
+
+    await refreshOwnership(session.user.id);
+  }
+
   const value = useMemo<AuthContextValue>(
     () => ({
       initialized,
@@ -461,6 +492,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       enterGuestMode,
       exitGuestMode,
       signOut,
+      updateAccount,
       refreshOwnership,
       clearError,
     }),

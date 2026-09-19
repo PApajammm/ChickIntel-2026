@@ -11,10 +11,10 @@ import { getFarmColors } from "@/constants/farm-theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuth } from "@/providers/auth-provider";
 import {
-  moderateScale,
-  responsiveFontSize,
-  scale,
-  verticalScale,
+    moderateScale,
+    responsiveFontSize,
+    scale,
+    verticalScale,
 } from "@/utils/responsive";
 
 type ChickTabBarProps = Omit<BottomTabBarProps, "state"> & {
@@ -75,7 +75,10 @@ export function ChickTabBar({ onLogoutPress, ..._rest }: ChickTabBarProps) {
       {!guestMode && (
         <Pressable
           onPress={goHome}
-          style={({ pressed }) => [styles.item, { opacity: pressed ? 0.85 : 1 }]}
+          style={({ pressed }) => [
+            styles.item,
+            { opacity: pressed ? 0.85 : 1 },
+          ]}
           accessibilityRole="button"
           accessibilityLabel="Home"
         >
@@ -91,6 +94,36 @@ export function ChickTabBar({ onLogoutPress, ..._rest }: ChickTabBarProps) {
             ]}
           >
             Home
+          </Text>
+        </Pressable>
+      )}
+
+      {!guestMode && (
+        <Pressable
+          onPress={() => router.push("/(tabs)/account" as Href)}
+          style={({ pressed }) => [
+            styles.item,
+            { opacity: pressed ? 0.85 : 1 },
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel="My Account"
+        >
+          <MaterialCommunityIcons
+            name="account-edit-outline"
+            size={26}
+            color={pathname.includes("/account") ? activeColor : inactiveColor}
+          />
+          <Text
+            style={[
+              styles.label,
+              {
+                color: pathname.includes("/account")
+                  ? activeColor
+                  : inactiveColor,
+              },
+            ]}
+          >
+            Account
           </Text>
         </Pressable>
       )}

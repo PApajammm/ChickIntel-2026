@@ -53,16 +53,20 @@ export default function TabLayout() {
   return (
     <>
       <Tabs
-        tabBar={(props) => (
+        tabBar={(props) =>
           guestMode ? null : (
             <ChickTabBar {...props} onLogoutPress={() => setLogoutOpen(true)} />
           )
-        )}
+        }
         screenOptions={{
           headerShown: false,
         }}
       >
         <Tabs.Screen name="index" options={{ title: "Home" }} />
+        <Tabs.Screen
+          name="account"
+          options={{ title: "My Account", href: null }}
+        />
         <Tabs.Screen
           name="scanner"
           options={{ title: "Scanner", href: null }}

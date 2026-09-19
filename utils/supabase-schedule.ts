@@ -16,6 +16,8 @@ export type SupabaseScheduleTask = {
   title: string;
   time: string;
   category: string;
+  batchNo?: string | null;
+  batchNos?: string[];
   repeat: string;
   customRepeatDays?: string[];
   startDate: string;
@@ -43,6 +45,8 @@ type ScheduleTaskRow = {
 
 type EncodedScheduleCategory = {
   category: string;
+  batchNo?: string | null;
+  batchNos?: string[];
   endDate?: string | null;
   feedInventoryItemId?: string | null;
   feedInventoryItemName?: string | null;
@@ -99,6 +103,8 @@ function decodeScheduleCategoryValue(
 
     return {
       category: parsed.category || rawCategory,
+      batchNo: parsed.batchNo ?? null,
+      batchNos: parsed.batchNos ?? (parsed.batchNo ? [parsed.batchNo] : []),
       endDate: parsed.endDate ?? null,
       feedInventoryItemId: parsed.feedInventoryItemId ?? null,
       feedInventoryItemName: parsed.feedInventoryItemName ?? null,
@@ -284,6 +290,8 @@ function mapScheduleTaskRow(row: ScheduleTaskRow): SupabaseScheduleTask {
     title: row.title,
     time: normalizeTimeValue(row.task_time),
     category: decodedCategory.category,
+    batchNo: decodedCategory.batchNo ?? null,
+    batchNos: decodedCategory.batchNos ?? [],
     repeat: row.repeat_type,
     customRepeatDays: row.custom_repeat_days ?? [],
     startDate: row.start_date,
@@ -324,12 +332,20 @@ export async function fetchScheduleTasks(farmId: string) {
 
     if (fallback.error) throw fallback.error;
 
-    return (fallback.data ?? []).map((row) =>
-      mapScheduleTaskRow(row as ScheduleTaskRow),
-    );
+    return (fallback.data ?? [])
+      .map((row) => mapScheduleTaskRow(row as ScheduleTaskRow))
+      .filter(isScheduleOwnedTask);
   }
 
-  return (data ?? []).map((row) => mapScheduleTaskRow(row as ScheduleTaskRow));
+  return (data ?? [])
+    .map((row) => mapScheduleTaskRow(row as ScheduleTaskRow))
+    .filter(isScheduleOwnedTask);
+}
+
+function isScheduleOwnedTask(task: SupabaseScheduleTask) {
+  const category = task.category.trim().toLowerCase();
+  const title = task.title.trim().toLowerCase();
+  return category !== "treatment" && !title.startsWith("treatment:");
 }
 
 function formatTaskTimePayload(timeValue: string) {
@@ -352,6 +368,8 @@ export async function createScheduleTask(
     task_time: formattedTime,
     category: encodeScheduleCategoryValue({
       category: input.category,
+      batchNo: input.batchNo ?? null,
+      batchNos: input.batchNos ?? (input.batchNo ? [input.batchNo] : []),
       endDate: input.endDate ?? null,
       feedInventoryItemId: input.feedInventoryItemId ?? null,
       feedInventoryItemName: input.feedInventoryItemName ?? null,

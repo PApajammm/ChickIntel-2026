@@ -1,9 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { adjustFarmBatchHealthCounters } from "@/utils/supabase-batches";
-import {
-    createScheduleTask,
-    formatScheduleDateKey,
-} from "@/utils/supabase-schedule";
+import { formatScheduleDateKey } from "@/utils/supabase-schedule";
 import { type HealthJournalSavedScan } from "./supabase-health-journal";
 
 export type HealthMonitoringRecord = {
@@ -596,32 +593,6 @@ export async function createHealthMonitoringRecord(
       if (!title) continue;
 
       const reminderConfig = getTreatmentReminderConfig(title, now);
-      let scheduleTaskId: string | undefined;
-      for (const [timeIndex, reminderTime] of reminderConfig.times.entries()) {
-        try {
-          const scheduleTask = await createScheduleTask(farmId, {
-            title: `Treatment: ${title}${
-              reminderConfig.times.length > 1 ? ` (${timeIndex + 1}/2)` : ""
-            }`,
-            time: reminderTime,
-            category: "Treatment",
-            repeat: reminderConfig.repeat,
-            customRepeatDays: [],
-            startDate: reminderConfig.startDate,
-            endDate: reminderConfig.endDate,
-            feedInventoryItemId: null,
-            feedInventoryItemName: null,
-            feedDailyAmount: null,
-            feedDailyUnit: null,
-          });
-          scheduleTaskId ??= scheduleTask.id;
-        } catch (scheduleError) {
-          console.warn(
-            "[health-monitoring] Treatment reminder could not be scheduled:",
-            scheduleError,
-          );
-        }
-      }
 
       const taskRow = {
         farm_id: farmId,
@@ -636,7 +607,7 @@ export async function createHealthMonitoringRecord(
         ).toISOString(),
         status: "Pending",
         completed: false,
-        schedule_task_id: scheduleTaskId ?? null,
+        schedule_task_id: null,
         frequency: reminderConfig.repeat,
         start_date: reminderConfig.startDate,
         end_date: reminderConfig.endDate,

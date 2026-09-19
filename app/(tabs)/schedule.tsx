@@ -61,6 +61,7 @@ import {
     scheduleTasksNotifications,
 } from "@/utils/schedule-notifications";
 import { computeEffectiveInventoryItems } from "@/utils/stock-alerts";
+import { fetchFarmBatches } from "@/utils/supabase-batches";
 import {
     fetchInventoryItems,
     type SupabaseInventoryItem,
@@ -119,6 +120,10 @@ type FeedInventoryOption = Pick<
   SupabaseInventoryItem,
   "id" | "name" | "unit" | "type" | "qty" | "expirationDate"
 >;
+type BatchOption = {
+  batchNo: string;
+  label: string;
+};
 
 const formatAppDate = (dateOrKey?: Date | string | null) => {
   if (!dateOrKey) return "";
@@ -146,6 +151,7 @@ const formatInventoryOptionLabel = (item: FeedInventoryOption) => {
 
 const initialTasksByDate: Record<string, ScheduleTask[]> = {};
 const FEEDING_TASK_LABEL = "Feeding";
+const ALL_BATCHES_VALUE = "__all_batches__";
 
 const isConsumableInventoryType = (type: string) =>
   type.trim().toLowerCase() !== "equipment";
@@ -332,6 +338,16 @@ export default function ScheduleScreen() {
     number | null
   >(null);
   const [newConsumableDailyAmount, setNewConsumableDailyAmount] = useState("");
+  const [batchOptions, setBatchOptions] = useState<BatchOption[]>([]);
+  const [newTaskBatchNos, setNewTaskBatchNos] = useState<string[]>([]);
+  const [newTaskBatchLabels, setNewTaskBatchLabels] = useState<string[]>([
+    "All batches",
+  ]);
+  const [batchPickerSelection, setBatchPickerSelection] = useState<string[]>([
+    ALL_BATCHES_VALUE,
+  ]);
+  const [batchPickerVisible, setBatchPickerVisible] = useState(false);
+  const [batchSearchQuery, setBatchSearchQuery] = useState("");
   const [taskOptions, setTaskOptions] = useState<string[]>([
     "Feeding",
     "Vitamins",
@@ -367,6 +383,11 @@ export default function ScheduleScreen() {
     setNewConsumableInventoryUnit("");
     setNewConsumableInventoryQty(null);
     setNewConsumableDailyAmount("");
+    setNewTaskBatchNos([]);
+    setNewTaskBatchLabels(["All batches"]);
+    setBatchPickerSelection([ALL_BATCHES_VALUE]);
+    setBatchPickerVisible(false);
+    setBatchSearchQuery("");
   };
 
   const openAddTaskModal = (baseDate = selectedDate) => {
@@ -385,21 +406,32 @@ export default function ScheduleScreen() {
       completions: SupabaseScheduleTaskCompletion[];
     }) => {
       try {
-        const [, , inventoryItems, tasks, completions] = await Promise.all([
-          fetchVitaminOptions(),
-          fetchMedicationOptions(),
-          activeFarm?.id
-            ? fetchInventoryItems(activeFarm.id)
-            : Promise.resolve([]),
-          scheduleData?.tasks ??
-            (activeFarm?.id
-              ? fetchScheduleTasks(activeFarm.id)
-              : Promise.resolve([])),
-          scheduleData?.completions ??
-            (activeFarm?.id
-              ? fetchScheduleTaskCompletions(activeFarm.id)
-              : Promise.resolve([])),
-        ]);
+        const [, , inventoryItems, tasks, completions, batches] =
+          await Promise.all([
+            fetchVitaminOptions(),
+            fetchMedicationOptions(),
+            activeFarm?.id
+              ? fetchInventoryItems(activeFarm.id)
+              : Promise.resolve([]),
+            scheduleData?.tasks ??
+              (activeFarm?.id
+                ? fetchScheduleTasks(activeFarm.id)
+                : Promise.resolve([])),
+            scheduleData?.completions ??
+              (activeFarm?.id
+                ? fetchScheduleTaskCompletions(activeFarm.id)
+                : Promise.resolve([])),
+            activeFarm?.id
+              ? fetchFarmBatches(activeFarm.id)
+              : Promise.resolve([]),
+          ]);
+
+        setBatchOptions(
+          batches.map((batch) => ({
+            batchNo: batch.id,
+            label: `Batch ${batch.id}${batch.breed ? ` • ${batch.breed}` : ""}`,
+          })),
+        );
 
         const effectiveItems = computeEffectiveInventoryItems(
           inventoryItems,
@@ -815,6 +847,13 @@ export default function ScheduleScreen() {
   };
 
   const selectedKey = formatScheduleDateKey(selectedDate);
+  const filteredBatchOptions = useMemo(() => {
+    const query = batchSearchQuery.trim().toLowerCase();
+    if (!query) return batchOptions;
+    return batchOptions.filter((batch) =>
+      batch.label.toLowerCase().includes(query),
+    );
+  }, [batchOptions, batchSearchQuery]);
   const allTasks = useMemo(() => Object.values(dayTasks).flat(), [dayTasks]);
   const taskOptionColors = useMemo(
     () =>
@@ -1127,6 +1166,8 @@ export default function ScheduleScreen() {
         ? parsedConsumableDailyAmount
         : null,
       feedDailyUnit: hasLinkedInventoryItem ? newConsumableInventoryUnit : null,
+      batchNo: newTaskBatchNos[0] ?? null,
+      batchNos: newTaskBatchNos,
     };
 
     void createScheduleTask(activeFarm.id, newTask)
@@ -1538,6 +1579,15 @@ export default function ScheduleScreen() {
                                     : ""}
                                 </Text>
                               ) : null}
+                              {task.batchNos?.length || task.batchNo ? (
+                                <Text style={styles.taskMeta}>
+                                  Use for: Batch{" "}
+                                  {(task.batchNos?.length
+                                    ? task.batchNos
+                                    : [task.batchNo]
+                                  ).join(", Batch ")}
+                                </Text>
+                              ) : null}
                               <Text style={styles.taskRepeat}>
                                 {task.repeat === "Never"
                                   ? "One-time task"
@@ -1782,6 +1832,15 @@ export default function ScheduleScreen() {
                                   : ""}
                               </Text>
                             ) : null}
+                            {task.batchNos?.length || task.batchNo ? (
+                              <Text style={styles.taskMeta}>
+                                Use for: Batch{" "}
+                                {(task.batchNos?.length
+                                  ? task.batchNos
+                                  : [task.batchNo]
+                                ).join(", Batch ")}
+                              </Text>
+                            ) : null}
                             <Text style={styles.taskRepeat}>
                               {task.repeat === "Never"
                                 ? "One-time task"
@@ -1947,6 +2006,7 @@ export default function ScheduleScreen() {
                 { paddingBottom: insets.bottom + 24 },
               ]}
               showsVerticalScrollIndicator={false}
+              nestedScrollEnabled
               keyboardShouldPersistTaps="handled"
               keyboardDismissMode="on-drag"
             >
@@ -1973,6 +2033,26 @@ export default function ScheduleScreen() {
                       onSelect: handleTaskSelection,
                     })
                   }
+                />
+
+                <ChickSelectRow
+                  label="Use for batch"
+                  value={
+                    newTaskBatchLabels.length > 1
+                      ? `${newTaskBatchLabels.length} batches selected`
+                      : (newTaskBatchLabels[0] ?? "All batches")
+                  }
+                  placeholder="All batches"
+                  rowStyle={styles.compactSelectRow}
+                  onPress={() => {
+                    setBatchSearchQuery("");
+                    setBatchPickerSelection(
+                      newTaskBatchNos.length > 0
+                        ? [...newTaskBatchNos]
+                        : [ALL_BATCHES_VALUE],
+                    );
+                    setBatchPickerVisible(true);
+                  }}
                 />
 
                 {newTaskTitle !== "Egg Collecting" ? (
@@ -2449,6 +2529,187 @@ export default function ScheduleScreen() {
             >
               <Text style={styles.modalSaveButtonText}>Close</Text>
             </Pressable>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={batchPickerVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setBatchPickerVisible(false)}
+      >
+        <View style={styles.batchPickerBackdrop}>
+          <View style={styles.batchPickerCard}>
+            <View style={styles.batchPickerHeader}>
+              <View style={styles.batchPickerTitleWrap}>
+                <View style={styles.batchPickerIconBadge}>
+                  <MaterialCommunityIcons
+                    name="warehouse"
+                    size={19}
+                    color={ChickIntelPalette.green1}
+                  />
+                </View>
+                <View>
+                  <Text style={styles.batchPickerTitle}>Use task for</Text>
+                  <Text style={styles.batchPickerSubtitle}>
+                    Choose a flock batch or apply it to all.
+                  </Text>
+                </View>
+              </View>
+              <Pressable
+                onPress={() => setBatchPickerVisible(false)}
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel="Close batch picker"
+              >
+                <MaterialCommunityIcons
+                  name="close"
+                  size={21}
+                  color={ChickIntelPalette.gray2}
+                />
+              </Pressable>
+            </View>
+
+            <ChickTextInput
+              value={batchSearchQuery}
+              onChangeText={setBatchSearchQuery}
+              placeholder="Search batch or breed"
+              autoCapitalize="none"
+              style={styles.batchPickerSearch}
+            />
+
+            <ScrollView
+              style={styles.batchPickerList}
+              contentContainerStyle={styles.batchPickerListContent}
+              showsVerticalScrollIndicator
+              nestedScrollEnabled
+              keyboardShouldPersistTaps="handled"
+            >
+              <Pressable
+                onPress={() => {
+                  setBatchPickerSelection([ALL_BATCHES_VALUE]);
+                }}
+                style={[
+                  styles.batchPickerOption,
+                  batchPickerSelection.includes(ALL_BATCHES_VALUE)
+                    ? styles.batchPickerOptionActive
+                    : null,
+                ]}
+              >
+                <View style={styles.batchPickerOptionIcon}>
+                  <MaterialCommunityIcons
+                    name="select-group"
+                    size={18}
+                    color={ChickIntelPalette.green1}
+                  />
+                </View>
+                <View style={styles.batchPickerOptionCopy}>
+                  <Text style={styles.batchPickerOptionTitle}>All batches</Text>
+                  <Text style={styles.batchPickerOptionMeta}>
+                    This task applies across the farm.
+                  </Text>
+                </View>
+                {batchPickerSelection.includes(ALL_BATCHES_VALUE) ? (
+                  <MaterialCommunityIcons
+                    name="check-circle"
+                    size={19}
+                    color={ChickIntelPalette.green1}
+                  />
+                ) : null}
+              </Pressable>
+
+              {filteredBatchOptions.map((batch) => {
+                const selected = batchPickerSelection.includes(batch.batchNo);
+                return (
+                  <Pressable
+                    key={batch.batchNo}
+                    onPress={() => {
+                      const nextSelection = selected
+                        ? batchPickerSelection.filter(
+                            (batchNo) => batchNo !== batch.batchNo,
+                          )
+                        : [
+                            ...batchPickerSelection.filter(
+                              (batchNo) => batchNo !== ALL_BATCHES_VALUE,
+                            ),
+                            batch.batchNo,
+                          ];
+                      setBatchPickerSelection(
+                        nextSelection.length > 0
+                          ? nextSelection
+                          : [ALL_BATCHES_VALUE],
+                      );
+                    }}
+                    style={[
+                      styles.batchPickerOption,
+                      selected ? styles.batchPickerOptionActive : null,
+                    ]}
+                  >
+                    <View style={styles.batchPickerOptionIcon}>
+                      <MaterialCommunityIcons
+                        name="bird"
+                        size={18}
+                        color={ChickIntelPalette.green1}
+                      />
+                    </View>
+                    <View style={styles.batchPickerOptionCopy}>
+                      <Text style={styles.batchPickerOptionTitle}>
+                        {batch.label}
+                      </Text>
+                      <Text style={styles.batchPickerOptionMeta}>
+                        Task assignment batch
+                      </Text>
+                    </View>
+                    {selected ? (
+                      <MaterialCommunityIcons
+                        name="check-circle"
+                        size={19}
+                        color={ChickIntelPalette.green1}
+                      />
+                    ) : null}
+                  </Pressable>
+                );
+              })}
+
+              {filteredBatchOptions.length === 0 ? (
+                <View style={styles.batchPickerEmpty}>
+                  <MaterialCommunityIcons
+                    name="magnify-close"
+                    size={24}
+                    color={ChickIntelPalette.gray2}
+                  />
+                  <Text style={styles.batchPickerEmptyText}>
+                    No matching batches found.
+                  </Text>
+                </View>
+              ) : null}
+            </ScrollView>
+            <TouchableOpacity
+              style={styles.batchPickerApplyButton}
+              onPress={() => {
+                const selectedBatchNumbers = batchPickerSelection.filter(
+                  (value) => value !== ALL_BATCHES_VALUE,
+                );
+                if (selectedBatchNumbers.length === 0) {
+                  setNewTaskBatchNos([]);
+                  setNewTaskBatchLabels(["All batches"]);
+                } else {
+                  setNewTaskBatchNos(selectedBatchNumbers);
+                  setNewTaskBatchLabels(
+                    selectedBatchNumbers.map(
+                      (batchNo) =>
+                        batchOptions.find((batch) => batch.batchNo === batchNo)
+                          ?.label ?? `Batch ${batchNo}`,
+                    ),
+                  );
+                }
+                setBatchPickerVisible(false);
+              }}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.batchPickerApplyText}>Apply selection</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -2954,6 +3215,132 @@ const styles = StyleSheet.create({
     paddingHorizontal: moderateScale(16),
     gap: 12,
     paddingTop: verticalScale(4),
+  },
+  batchPickerBackdrop: {
+    flex: 1,
+    justifyContent: "center",
+    paddingHorizontal: moderateScale(16),
+    backgroundColor: "rgba(20, 31, 29, 0.48)",
+  },
+  batchPickerCard: {
+    maxHeight: "78%",
+    borderRadius: 18,
+    padding: moderateScale(14),
+    backgroundColor: "#F8FCFA",
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.18)",
+    gap: 10,
+    shadowColor: "#000",
+    shadowOpacity: 0.16,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 7,
+  },
+  batchPickerHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  batchPickerTitleWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 9,
+    flex: 1,
+  },
+  batchPickerIconBadge: {
+    width: scale(36),
+    height: verticalScale(36),
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 11,
+    backgroundColor: "rgba(49, 118, 103, 0.12)",
+  },
+  batchPickerTitle: {
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(17),
+    fontWeight: "800",
+    color: ChickIntelPalette.gray1,
+  },
+  batchPickerSubtitle: {
+    marginTop: 1,
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(11),
+    color: ChickIntelPalette.gray2,
+  },
+  batchPickerSearch: {
+    minHeight: verticalScale(42),
+    borderRadius: 10,
+    backgroundColor: "#FFFFFF",
+  },
+  batchPickerList: {
+    flexGrow: 0,
+  },
+  batchPickerListContent: {
+    gap: 6,
+    paddingBottom: 2,
+  },
+  batchPickerOption: {
+    minHeight: verticalScale(54),
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 9,
+    paddingHorizontal: moderateScale(9),
+    paddingVertical: verticalScale(8),
+    borderRadius: 11,
+    borderWidth: 1,
+    borderColor: "transparent",
+    backgroundColor: "rgba(255, 255, 255, 0.7)",
+  },
+  batchPickerOptionActive: {
+    borderColor: "rgba(49, 118, 103, 0.2)",
+    backgroundColor: "rgba(202, 227, 221, 0.62)",
+  },
+  batchPickerOptionIcon: {
+    width: scale(30),
+    height: verticalScale(30),
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 9,
+    backgroundColor: "rgba(49, 118, 103, 0.1)",
+  },
+  batchPickerOptionCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  batchPickerOptionTitle: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(13),
+    fontWeight: "800",
+    color: ChickIntelPalette.gray1,
+  },
+  batchPickerOptionMeta: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(10),
+    color: ChickIntelPalette.gray2,
+  },
+  batchPickerEmpty: {
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: verticalScale(22),
+  },
+  batchPickerEmptyText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12),
+    color: ChickIntelPalette.gray2,
+  },
+  batchPickerApplyButton: {
+    minHeight: verticalScale(42),
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 10,
+    backgroundColor: ChickIntelPalette.green1,
+  },
+  batchPickerApplyText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(13),
+    fontWeight: "800",
+    color: "#FFFFFF",
   },
   modalFormSection: {
     gap: 10,

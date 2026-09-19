@@ -795,12 +795,23 @@ export async function fetchEggFertilityReportSnapshot(input: {
   farmId: string;
   overview: ReportOverview;
   scope?: { colorName?: string; originBatchNo?: string };
+  startDate?: Date;
+  endDate?: Date;
 }) {
   const now = new Date();
-  const reportStart = getProductionWindowStart(
-    input.overview,
-    now,
+  const customStart = input.startDate ? startOfDay(input.startDate) : null;
+  const customEnd = input.endDate
+    ? new Date(
+        Math.min(
+          new Date(input.endDate).setHours(23, 59, 59, 999),
+          now.getTime(),
+        ),
+      )
+    : null;
+  const reportStart = (
+    customStart ?? getProductionWindowStart(input.overview, now)
   ).toISOString();
+  const reportEnd = (customEnd ?? now).toISOString();
 
   const { data, error } = await supabase
     .from("egg_batches")
@@ -809,14 +820,17 @@ export async function fetchEggFertilityReportSnapshot(input: {
     )
     .eq("farm_id", input.farmId)
     .gte("created_at", reportStart)
-    .lte("created_at", now.toISOString());
+    .lte("created_at", reportEnd);
 
   if (error) throw error;
 
   const rows = ((data ?? []) as EggBatchReportRow[]).filter(
     (row) =>
-      isWithinWindow(row.created_at, new Date(reportStart), now) &&
-      rowMatchesEggScope(row, input.scope),
+      isWithinWindow(
+        row.created_at,
+        new Date(reportStart),
+        new Date(reportEnd),
+      ) && rowMatchesEggScope(row, input.scope),
   );
 
   return buildEggFertilitySnapshot(rows, input.overview);

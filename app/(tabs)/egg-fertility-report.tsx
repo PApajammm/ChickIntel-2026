@@ -1,5 +1,6 @@
 import BackgroundGradient from "@/assets_imported/background-gradient.svg";
 import { BlurCard } from "@/components/ui/blur-card";
+import { ChickDatePickerModal } from "@/components/ui/chick-date-picker-modal";
 import { ChickFont } from "@/constants/chick-fonts";
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
 import { ReportsPageTheme } from "@/constants/reports-theme";
@@ -34,7 +35,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Circle, G } from "react-native-svg";
 
-type PeriodOption = "7 Days" | "30 Days" | "12 Months";
+type PeriodOption = "7 Days" | "Last 30 Days" | "12 Months" | "Custom Date";
+type DatePickerTarget = "start" | "end" | null;
 type ScopeOption = {
   key: string;
   label: string;
@@ -43,7 +45,12 @@ type ScopeOption = {
   originBatchNo?: string;
 };
 
-const PERIOD_OPTIONS: PeriodOption[] = ["7 Days", "30 Days", "12 Months"];
+const PERIOD_OPTIONS: PeriodOption[] = [
+  "7 Days",
+  "Last 30 Days",
+  "12 Months",
+  "Custom Date",
+];
 
 const EMPTY_REPORT: EggFertilityReportSnapshot = {
   title: "Egg Fertility Rate Overview",
@@ -71,13 +78,13 @@ function normalizeParam(value: string | string[] | undefined) {
 }
 
 function mapPeriodToOverview(period: PeriodOption): ReportOverview {
-  if (period === "30 Days") return "Monthly";
+  if (period === "Last 30 Days" || period === "Custom Date") return "Monthly";
   if (period === "12 Months") return "Annually";
   return "Weekly";
 }
 
 function mapOverviewToPeriod(overview?: string): PeriodOption {
-  if (overview === "Monthly") return "30 Days";
+  if (overview === "Monthly") return "Last 30 Days";
   if (overview === "Annually") return "12 Months";
   return "7 Days";
 }
@@ -89,6 +96,26 @@ function escapeHtml(value: string) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
+}
+
+function startOfDate(date: Date) {
+  const next = new Date(date);
+  next.setHours(0, 0, 0, 0);
+  return next;
+}
+
+function endOfDate(date: Date) {
+  const next = new Date(date);
+  next.setHours(23, 59, 59, 999);
+  return next;
+}
+
+function formatShortDate(date: Date) {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(date);
 }
 
 function buildPrintableHtml(input: {
@@ -567,6 +594,16 @@ export default function EggFertilityReportScreen() {
   const [period, setPeriod] = useState<PeriodOption>(
     mapOverviewToPeriod(normalizeParam(params.overview)),
   );
+  const [customStartDate, setCustomStartDate] = useState(() => {
+    const date = new Date();
+    date.setDate(date.getDate() - 29);
+    return startOfDate(date);
+  });
+  const [customEndDate, setCustomEndDate] = useState(() =>
+    endOfDate(new Date()),
+  );
+  const [datePickerTarget, setDatePickerTarget] =
+    useState<DatePickerTarget>(null);
   const [scopeOptions, setScopeOptions] = useState<ScopeOption[]>([
     {
       key: "overall",
@@ -693,6 +730,30 @@ export default function EggFertilityReportScreen() {
   const scopeLabel = selectedScope.label;
   const scopeHex = selectedScope.colorHex || ChickIntelPalette.green1;
 
+  function openCustomDatePicker(target: DatePickerTarget) {
+    setDatePickerTarget(target);
+  }
+
+  function handlePeriodSelect(nextPeriod: PeriodOption) {
+    setPeriod(nextPeriod);
+    if (nextPeriod === "Custom Date") {
+      openCustomDatePicker("start");
+    }
+  }
+
+  function handleCustomDateConfirm(date: Date) {
+    if (datePickerTarget === "start") {
+      setCustomStartDate(startOfDate(date));
+      setDatePickerTarget("end");
+      return;
+    }
+
+    if (datePickerTarget === "end") {
+      setCustomEndDate(endOfDate(date));
+      setDatePickerTarget(null);
+    }
+  }
+
   useEffect(() => {
     if (!activeFarm?.id) {
       setReport(EMPTY_REPORT);
@@ -710,6 +771,8 @@ export default function EggFertilityReportScreen() {
         const nextReport = await fetchEggFertilityReportSnapshot({
           farmId,
           overview: mapPeriodToOverview(period),
+          startDate: period === "Custom Date" ? customStartDate : undefined,
+          endDate: period === "Custom Date" ? customEndDate : undefined,
           scope:
             selectedScope.key === "overall"
               ? undefined
@@ -743,7 +806,7 @@ export default function EggFertilityReportScreen() {
     return () => {
       cancelled = true;
     };
-  }, [activeFarm?.id, period, selectedScope]);
+  }, [activeFarm?.id, customEndDate, customStartDate, period, selectedScope]);
 
   async function handlePrint() {
     const html = buildPrintableHtml({
@@ -860,7 +923,7 @@ export default function EggFertilityReportScreen() {
               {PERIOD_OPTIONS.map((entry) => (
                 <TouchableOpacity
                   key={entry}
-                  onPress={() => setPeriod(entry)}
+                  onPress={() => handlePeriodSelect(entry)}
                   style={[
                     styles.periodItem,
                     period === entry ? styles.periodItemActive : null,
@@ -879,6 +942,28 @@ export default function EggFertilityReportScreen() {
               ))}
             </View>
           </View>
+
+          {period === "Custom Date" ? (
+            <Pressable
+              style={styles.customDateSummary}
+              onPress={() => openCustomDatePicker("start")}
+            >
+              <MaterialCommunityIcons
+                name="calendar-range"
+                size={17}
+                color={ChickIntelPalette.green1}
+              />
+              <Text style={styles.customDateSummaryText} numberOfLines={1}>
+                {formatShortDate(customStartDate)} -{" "}
+                {formatShortDate(customEndDate)}
+              </Text>
+              <MaterialCommunityIcons
+                name="pencil-outline"
+                size={16}
+                color={ChickIntelPalette.gray2}
+              />
+            </Pressable>
+          ) : null}
         </View>
 
         <ScrollView
@@ -1125,6 +1210,18 @@ export default function EggFertilityReportScreen() {
             </Pressable>
           </Pressable>
         </Modal>
+
+        <ChickDatePickerModal
+          visible={datePickerTarget !== null}
+          value={datePickerTarget === "end" ? customEndDate : customStartDate}
+          minDate={datePickerTarget === "end" ? customStartDate : undefined}
+          maxDate={new Date()}
+          title={
+            datePickerTarget === "end" ? "SELECT END DATE" : "SELECT START DATE"
+          }
+          onConfirm={handleCustomDateConfirm}
+          onCancel={() => setDatePickerTarget(null)}
+        />
       </SafeAreaView>
     </View>
   );
@@ -1287,9 +1384,11 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 3,
     gap: 3,
+    flex: 1,
+    justifyContent: "space-between",
   },
   periodItem: {
-    paddingHorizontal: moderateScale(12),
+    paddingHorizontal: moderateScale(8),
     paddingVertical: verticalScale(6),
     borderRadius: 8,
   },
@@ -1305,6 +1404,24 @@ const styles = StyleSheet.create({
   periodTextActive: {
     color: "#FFFFFF",
     fontWeight: "700",
+  },
+  customDateSummary: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderRadius: 12,
+    backgroundColor: "rgba(255, 255, 255, 0.85)",
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.16)",
+    paddingHorizontal: moderateScale(12),
+    paddingVertical: verticalScale(8),
+  },
+  customDateSummaryText: {
+    flex: 1,
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12),
+    fontWeight: "700",
+    color: ChickIntelPalette.gray1,
   },
   statusRow: {
     flexDirection: "row",
