@@ -13,7 +13,10 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect, useRef, useState } from "react";
 import {
     Alert,
+    Modal,
     Platform,
+    Pressable,
+    ScrollView,
     StyleSheet,
     Text,
     TouchableOpacity,
@@ -35,6 +38,10 @@ import { ViewfinderOverlay } from "@/components/scanner/viewfinder-overlay";
 import { ChickFont } from "@/constants/chick-fonts";
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
 import { DEFAULT_IMAGE_BASED_DETECTION } from "@/constants/health-scan-behaviors";
+import {
+    SUPPORTED_BREEDS,
+    SUPPORTED_DISEASES,
+} from "@/constants/supported-scan-categories";
 import { useAuth } from "@/providers/auth-provider";
 import {
     assessHealthCapture,
@@ -93,6 +100,7 @@ export default function ScannerScreen() {
   const [torchEnabled, setTorchEnabled] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(0);
   const [cameraReady, setCameraReady] = useState(false);
+  const [supportedInfoVisible, setSupportedInfoVisible] = useState(false);
 
   const monitoringId =
     typeof params.monitoringId === "string" ? params.monitoringId : "";
@@ -334,6 +342,19 @@ export default function ScannerScreen() {
               color={torchEnabled ? "#FFF" : ChickIntelPalette.gray1}
             />
           </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setSupportedInfoVisible(true)}
+            style={styles.infoButton}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel={`View supported ${mode === "health" ? "diseases" : "breeds"}`}
+          >
+            <MaterialCommunityIcons
+              name="information-outline"
+              size={22}
+              color={ChickIntelPalette.gray1}
+            />
+          </TouchableOpacity>
         </View>
 
         <View
@@ -341,40 +362,6 @@ export default function ScannerScreen() {
           style={[styles.viewfinderRegion, isCompactScreen && { gap: 6 }]}
         >
           <ViewfinderOverlay size={viewfinderSize} />
-          <View
-            style={[
-              styles.captureTipCard,
-              isCompactScreen && styles.captureTipCardCompact,
-              isNarrowScreen && styles.captureTipCardNarrow,
-            ]}
-          >
-            <View style={styles.supportedCardHeadingRow}>
-              <MaterialCommunityIcons
-                name={mode === "health" ? "heart-pulse" : "feather"}
-                size={15}
-                color={ChickIntelPalette.green1}
-              />
-              <Text style={styles.supportedCardHeading}>
-                {mode === "health" ? "SUPPORTED DETECTION" : "SUPPORTED BREEDS"}
-              </Text>
-            </View>
-            <Text
-              style={[
-                styles.supportedCardCategories,
-                isNarrowScreen && styles.supportedCardCategoriesNarrow,
-              ]}
-              numberOfLines={isNarrowScreen ? 2 : 1}
-            >
-              {mode === "health"
-                ? "Healthy • Fowlpox • Infectious Coryza"
-                : "Silkie • Rhode Island Red"}
-            </Text>
-            <Text style={styles.supportedCardNote}>
-              {mode === "health"
-                ? "Only supported categories are detected."
-                : "Only supported breeds are detected."}
-            </Text>
-          </View>
         </View>
 
         <View
@@ -424,6 +411,57 @@ export default function ScannerScreen() {
           <ScannerShutter onPress={handleCapture} disabled={!cameraReady} />
         </View>
       </View>
+
+      <Modal
+        visible={supportedInfoVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSupportedInfoVisible(false)}
+      >
+        <Pressable
+          style={styles.infoBackdrop}
+          onPress={() => setSupportedInfoVisible(false)}
+        >
+          <Pressable
+            style={styles.infoCard}
+            onPress={(event) => event.stopPropagation()}
+          >
+            <View style={styles.infoHeader}>
+              <Text style={styles.infoTitle}>
+                {mode === "health" ? "Supported diseases" : "Supported breeds"}
+              </Text>
+              <TouchableOpacity
+                onPress={() => setSupportedInfoVisible(false)}
+                accessibilityLabel="Close supported list"
+              >
+                <MaterialCommunityIcons
+                  name="close"
+                  size={22}
+                  color={ChickIntelPalette.gray1}
+                />
+              </TouchableOpacity>
+            </View>
+            <ScrollView
+              style={styles.infoList}
+              contentContainerStyle={styles.infoListContent}
+              showsVerticalScrollIndicator
+              nestedScrollEnabled
+            >
+              {(mode === "health" ? SUPPORTED_DISEASES : SUPPORTED_BREEDS).map(
+                (item) => (
+                  <View key={item} style={styles.infoListItem}>
+                    <View style={styles.infoListBullet} />
+                    <Text style={styles.infoListText}>{item}</Text>
+                  </View>
+                ),
+              )}
+            </ScrollView>
+            <Text style={styles.infoNote}>
+              Only these supported categories are detected.
+            </Text>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -431,7 +469,7 @@ export default function ScannerScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: ChickIntelPalette.green1,
+    backgroundColor: "#000000",
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
@@ -483,7 +521,7 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(12),
     lineHeight: 18,
-    color: ChickIntelPalette.gray2,
+    color: ChickIntelPalette.textMuted,
     opacity: 0.92,
     maxWidth: rscale(260),
   },
@@ -505,6 +543,72 @@ const styles = StyleSheet.create({
   },
   flashToggleActive: {
     backgroundColor: ChickIntelPalette.green1,
+  },
+  infoButton: {
+    width: rscale(42),
+    height: verticalScale(42),
+    borderRadius: 14,
+    backgroundColor: "rgba(255, 255, 255, 0.85)",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.25)",
+  },
+  infoBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.55)",
+    justifyContent: "center",
+    padding: moderateScale(20),
+  },
+  infoCard: {
+    backgroundColor: ChickIntelPalette.light1,
+    borderRadius: 16,
+    padding: moderateScale(18),
+    gap: 12,
+    maxHeight: "72%",
+  },
+  infoHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  infoTitle: {
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(18),
+    fontWeight: "800",
+    color: ChickIntelPalette.gray1,
+  },
+  infoList: {
+    flexGrow: 0,
+    maxHeight: verticalScale(300),
+  },
+  infoListContent: {
+    gap: 8,
+  },
+  infoListItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  infoListBullet: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: ChickIntelPalette.green1,
+  },
+  infoListText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(15),
+    lineHeight: 22,
+    fontWeight: "700",
+    color: ChickIntelPalette.gray1,
+    flex: 1,
+  },
+  infoNote: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12),
+    lineHeight: 17,
+    color: ChickIntelPalette.textMuted,
   },
   supportedCardHeadingRow: {
     flexDirection: "row",

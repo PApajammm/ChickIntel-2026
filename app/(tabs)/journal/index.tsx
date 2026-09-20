@@ -482,7 +482,7 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(14),
     lineHeight: 20,
     fontWeight: "500",
-    color: ChickIntelPalette.gray2,
+    color: ChickIntelPalette.textMuted,
     textAlign: "center",
     marginBottom: 16,
   },

@@ -26,7 +26,7 @@ export const ChickForm = {
       fontWeight: "700",
       letterSpacing: 0.65,
       textTransform: "uppercase",
-      color: ChickIntelPalette.gray2,
+      color: ChickIntelPalette.textMuted,
     },
   }).base,
   inputBase: StyleSheet.create({

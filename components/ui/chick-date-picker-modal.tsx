@@ -726,7 +726,7 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(13),
     fontWeight: "700",
-    color: ChickIntelPalette.gray2,
+    color: ChickIntelPalette.textMuted,
     letterSpacing: 0.6,
   },
   okText: {

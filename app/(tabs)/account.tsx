@@ -341,7 +341,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(11),
-    color: ChickIntelPalette.gray2,
+    color: ChickIntelPalette.textMuted,
   },
   content: {
     paddingHorizontal: moderateScale(16),

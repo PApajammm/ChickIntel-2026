@@ -13,8 +13,11 @@ type EggBatchHistoryRow = {
   line_no: number;
   age_unit: EggBatchItem["ageUnit"];
   hatched_qty: number;
+  transferred_hatched_qty?: number | null;
   damaged_qty: number;
+  disposed_damaged_qty?: number | null;
   unhatched_qty: number;
+  sold_qty?: number | null;
   color_name: string | null;
   color_hex: string | null;
   origin: string | null;
@@ -31,8 +34,11 @@ function mapHistoryRow(row: EggBatchHistoryRow): EggBatchHistoryItem {
     lineNo: row.line_no,
     ageUnit: row.age_unit,
     hatchedQty: row.hatched_qty,
+    transferredHatchedQty: row.transferred_hatched_qty ?? 0,
     damagedQty: row.damaged_qty,
+    disposedDamagedQty: row.disposed_damaged_qty ?? 0,
     unhatchedQty: row.unhatched_qty,
+    soldQty: row.sold_qty ?? 0,
     colorName: row.color_name ?? undefined,
     colorHex: row.color_hex ?? undefined,
     origin: row.origin ?? "Unknown",

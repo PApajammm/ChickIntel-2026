@@ -74,6 +74,18 @@ with check (
     public.is_admin()
 );
 
+drop policy if exists "farm_members_update_admin" on public.farm_members;
+create policy "farm_members_update_admin"
+on public.farm_members
+for update
+to authenticated
+using (
+    public.is_admin()
+)
+with check (
+    public.is_admin()
+);
+
 -- 5. Trigger to automatically sync auth.users last_sign_in_at to public.profiles last_login_at
 create or replace function public.sync_user_last_login()
 returns trigger
@@ -216,7 +228,7 @@ begin
     if target_farm_id is not null then
         -- Add missing farm memberships for all profiles
         insert into public.farm_members (farm_id, user_id, role)
-        select target_farm_id, p.id, 'farmer'
+        select target_farm_id, p.id, 'worker'
         from public.profiles p
         where p.id not in (select user_id from public.farm_members)
         on conflict (farm_id, user_id) do nothing;

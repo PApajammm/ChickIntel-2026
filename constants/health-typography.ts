@@ -3,7 +3,7 @@ import { ChickIntelPalette } from "@/constants/chickintel-palette";
 
 /**
  * Minimal, modern type scale for the Health module (scanner follow-up + journal).
- * Values align with ChickIntelPalette — no extra colors.
+ * Values align with ChickIntelPalette â€” no extra colors.
  */
 export const HealthTypography = {
     /** Large screen titles */
@@ -34,7 +34,7 @@ export const HealthTypography = {
         letterSpacing: -0.12,
         color: ChickIntelPalette.gray1,
     },
-    /** Body — primary reading */
+    /** Body â€” primary reading */
     body: {
         fontFamily: ChickFont.sans,
         fontSize: 15,
@@ -68,7 +68,7 @@ export const HealthTypography = {
         letterSpacing: 0,
         color: "#6F7373",
     },
-    /** Small caps–style labels inside cards */
+    /** Small capsâ€“style labels inside cards */
     cardLabel: {
         fontFamily: ChickFont.sans,
         fontSize: 11,
@@ -89,5 +89,5 @@ export const HealthTypography = {
     },
 } as const;
 
-/** Shared app bar title (Profile, Inventory, Schedule, Reports, Add batch, etc.) — same scale as Health module. */
+/** Shared app bar title (Profile, Inventory, Schedule, Reports, Add batch, etc.) â€” same scale as Health module. */
 export const appScreenTitle = HealthTypography.screenTitle;

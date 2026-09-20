@@ -277,7 +277,7 @@ export const JournalLogCard = memo(function JournalLogCard({
               >
                 <Text style={styles.diseaseTitle} numberOfLines={2}>
                   {behaviorLabels && behaviorLabels.length > 0
-                    ? behaviorLabels.slice(0, 2).join(" • ")
+                    ? behaviorLabels.slice(0, 2).join(" â€¢ ")
                     : additionalObservation?.trim()
                       ? "Chicken behaviour note"
                       : "Behaviour check"}
@@ -411,7 +411,7 @@ export const JournalLogCard = memo(function JournalLogCard({
                 <Text style={styles.modalTitle}>Chicken Notes</Text>
               </View>
               <Text style={styles.modalSubtitle} numberOfLines={1}>
-                {detectedIllness} • {timestamp}
+                {detectedIllness} â€¢ {timestamp}
               </Text>
             </View>
 
@@ -514,7 +514,7 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(11),
     fontWeight: "600",
-    color: ChickIntelPalette.gray2,
+    color: ChickIntelPalette.textMuted,
   },
   statusPill: {
     flexDirection: "row",
@@ -645,7 +645,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(10),
-    color: ChickIntelPalette.gray2,
+    color: ChickIntelPalette.textMuted,
   },
   notePrefix: {
     fontWeight: "700",

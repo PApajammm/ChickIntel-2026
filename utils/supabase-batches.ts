@@ -15,11 +15,15 @@ type BatchRow = {
   killed_count: number;
   color_name: string | null;
   color_hex: string | null;
+  origin_batch_no?: string | null;
+  source_egg_batch_id?: string | null;
 };
 
 function mapBatchRow(row: BatchRow): BatchItem {
   return {
     id: row.batch_no,
+    originBatchNo: row.origin_batch_no ?? undefined,
+    sourceEggBatchId: row.source_egg_batch_id ?? undefined,
     createdAt: row.created_at,
     breed: row.breed_name,
     totalCount: row.total_count ?? row.female_count + row.male_count,
@@ -39,7 +43,7 @@ export async function fetchFarmBatches(farmId: string) {
   const current = await supabase
     .from("batches")
     .select(
-      "id, batch_no, breed_name, total_count, female_count, male_count, unknown_count, age_label, isolated_count, killed_count, color_name, color_hex, created_at",
+      "id, batch_no, breed_name, total_count, female_count, male_count, unknown_count, age_label, isolated_count, killed_count, color_name, color_hex, origin_batch_no, source_egg_batch_id, created_at",
     )
     .eq("farm_id", farmId)
     .order("created_at", { ascending: false });
@@ -118,15 +122,104 @@ export async function createFarmBatch(
       killed_count: input.killedCount,
       color_name: input.colorName,
       color_hex: input.colorHex,
+      origin_batch_no: input.originBatchNo ?? null,
+      source_egg_batch_id: input.sourceEggBatchId ?? null,
     })
     .select(
-      "id, batch_no, breed_name, female_count, male_count, age_label, isolated_count, killed_count, color_name, color_hex, created_at",
+      "id, batch_no, breed_name, female_count, male_count, age_label, isolated_count, killed_count, color_name, color_hex, origin_batch_no, source_egg_batch_id, created_at",
     )
     .single();
 
   if (error) throw error;
 
   return mapBatchRow(data as BatchRow);
+}
+
+export async function createFarmChickBatch(
+  farmId: string,
+  parentBatchNo: string,
+  chickCount: number,
+  sourceEggBatchId: string,
+) {
+  const batches = await fetchFarmBatches(farmId);
+  const parent = batches.find(
+    (batch) =>
+      batch.id.trim().toLowerCase() === parentBatchNo.trim().toLowerCase(),
+  );
+
+  if (!parent) {
+    throw new Error("The parent chicken batch could not be found.");
+  }
+
+  const existingSubBatch = batches.find(
+    (batch) =>
+      batch.originBatchNo?.trim().toLowerCase() ===
+        parent.id.trim().toLowerCase() &&
+      batch.breed.trim().toLowerCase() === parent.breed.trim().toLowerCase() &&
+      batch.sourceEggBatchId?.trim().toLowerCase() ===
+        sourceEggBatchId.trim().toLowerCase() &&
+      /^SBC-/i.test(batch.id),
+  );
+
+  if (existingSubBatch) {
+    const nextTotal = existingSubBatch.totalCount + Math.max(0, chickCount);
+    await updateFarmBatch(farmId, existingSubBatch.id, {
+      breed: existingSubBatch.breed,
+      totalCount: nextTotal,
+      femaleCount: existingSubBatch.femaleCount,
+      maleCount: existingSubBatch.maleCount,
+      unknownCount: existingSubBatch.unknownCount + Math.max(0, chickCount),
+      ageLabel: existingSubBatch.ageLabel,
+      isolatedCount: existingSubBatch.isolatedCount,
+      killedCount: existingSubBatch.killedCount,
+    });
+
+    return {
+      ...existingSubBatch,
+      totalCount: nextTotal,
+      unknownCount: existingSubBatch.unknownCount + Math.max(0, chickCount),
+    };
+  }
+
+  const prefix = "SBC-";
+  const nextNumber =
+    batches
+      .filter(
+        (batch) =>
+          batch.originBatchNo?.trim().toLowerCase() ===
+            parent.id.trim().toLowerCase() &&
+          batch.breed.trim().toLowerCase() ===
+            parent.breed.trim().toLowerCase(),
+      )
+      .map((batch) => Number.parseInt(batch.id.replace(/^SBC-/i, ""), 10))
+      .filter((value) => Number.isFinite(value))
+      .reduce((highest, value) => Math.max(highest, value), 0) + 1;
+
+  return createFarmBatch(farmId, {
+    id: `${prefix}${String(nextNumber).padStart(3, "0")}`,
+    originBatchNo: parent.id,
+    breed: parent.breed,
+    totalCount: Math.max(0, chickCount),
+    femaleCount: 0,
+    maleCount: 0,
+    unknownCount: Math.max(0, chickCount),
+    ageLabel: "0 days old",
+    isolatedCount: 0,
+    killedCount: 0,
+    colorName: parent.colorName,
+    colorHex: parent.colorHex,
+    sourceEggBatchId,
+  });
+}
+
+export async function promoteFarmChickBatch(farmId: string, batchNo: string) {
+  const { error } = await supabase
+    .from("batches")
+    .update({ origin_batch_no: null })
+    .eq("farm_id", farmId)
+    .eq("batch_no", batchNo);
+
+  if (error) throw error;
 }
 
 export async function updateFarmBatch(

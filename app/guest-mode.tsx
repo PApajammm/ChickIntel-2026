@@ -1,6 +1,7 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useCameraPermissions } from "expo-camera";
+import { Alert, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import ChickenLogo from "@/assets_imported/splash-chicken.svg";
@@ -13,8 +14,28 @@ import { moderateScale, responsiveFontSize, scale, verticalScale } from "@/utils
 export default function GuestModeScreen() {
   const insets = useSafeAreaInsets();
   const { enterGuestMode, exitGuestMode } = useAuth();
+  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
 
-  function openScanner(initialMode: "health" | "breed") {
+  async function openScanner(initialMode: "health" | "breed") {
+    if (Platform.OS !== "web" && !cameraPermission?.granted) {
+      try {
+        const nextPermission = await requestCameraPermission();
+        if (!nextPermission.granted) {
+          Alert.alert(
+            "Camera access needed",
+            "Camera access is needed to scan.",
+          );
+          return;
+        }
+      } catch {
+        Alert.alert(
+          "Camera error",
+          "Unable to request camera access right now.",
+        );
+        return;
+      }
+    }
+
     enterGuestMode();
     router.replace({
       pathname: "/(tabs)/scanner",
@@ -84,7 +105,7 @@ const styles = StyleSheet.create({
   subtitle: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(13),
-    color: ChickIntelPalette.gray2,
+    color: ChickIntelPalette.textMuted,
     textAlign: "center",
   },
   buttonStack: {

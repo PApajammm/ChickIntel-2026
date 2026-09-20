@@ -14,7 +14,7 @@ type HealthFlowFooterButtonProps = {
 };
 
 /**
- * Primary CTA styled after the Save Egg Batch button that reads “Next” on the input step and “Save” on the outcome step.
+ * Primary CTA styled after the Save Egg Batch button that reads â€œNextâ€ on the input step and â€œSaveâ€ on the outcome step.
  */
 export function HealthFlowFooterButton({
     variant,

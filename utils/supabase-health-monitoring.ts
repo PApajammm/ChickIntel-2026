@@ -28,7 +28,7 @@ export type HealthMonitoringTask = {
   description?: string;
   taskType?: string;
   dueAt?: string;
-  status: "Pending" | "Completed";
+  status: "Pending" | "In Progress" | "Completed" | "Skipped" | "Overdue";
   completed: boolean;
   completedAt?: string;
   completedBy?: string;
@@ -47,6 +47,7 @@ export type HealthMonitoringTaskOccurrence = {
   taskId: string;
   dueAt: string;
   completed: boolean;
+  status: "Pending" | "Completed" | "Overdue";
   completedAt?: string;
   completedBy?: string;
   treatmentNote?: string;
@@ -82,7 +83,7 @@ type HealthMonitoringTaskRow = {
   description?: string | null;
   task_type?: string | null;
   due_at?: string | null;
-  status?: "Pending" | "Completed" | null;
+  status?: HealthMonitoringTask["status"] | null;
   completed: boolean;
   completed_at?: string | null;
   completed_by?: string | null;
@@ -187,6 +188,17 @@ function addCalendarDays(date: Date, days: number) {
   return next;
 }
 
+function isPastDueDate(dueAt: string) {
+  const dueDate = new Date(dueAt);
+  if (Number.isNaN(dueDate.getTime())) return false;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  dueDate.setHours(0, 0, 0, 0);
+
+  return dueDate.getTime() < today.getTime();
+}
+
 function getTreatmentReminderConfig(title: string, now: Date) {
   const normalized = title.toLowerCase();
   const durationMatch = normalized.match(/for\s+(\d+)\s+days?/i);
@@ -195,7 +207,7 @@ function getTreatmentReminderConfig(title: string, now: Date) {
     ? Number(durationMatch[1])
     : weekDurationMatch
       ? Number(weekDurationMatch[1]) * 7
-      : 0;
+      : 7;
   const isWeekly = /\bweekly\b|once\s+a\s+week|every\s+week/i.test(normalized);
   const isDaily =
     durationDays > 0 ||
@@ -222,6 +234,22 @@ function getTreatmentReminderConfig(title: string, now: Date) {
           ).padStart(2, "0")}`,
         ],
   };
+}
+
+function buildMonitoringProtocolSteps(
+  treatmentSteps: (string | TreatmentPlanStep)[],
+): TreatmentPlanStep[] {
+  return treatmentSteps
+    .map((rawStep) =>
+      typeof rawStep === "string"
+        ? { title: rawStep, description: undefined }
+        : rawStep,
+    )
+    .map((step) => ({
+      title: step.title.trim(),
+      description: step.description?.trim() || undefined,
+    }))
+    .filter((step) => step.title);
 }
 
 function localOverrideKey(farmId: string, id: string) {
@@ -581,14 +609,12 @@ export async function createHealthMonitoringRecord(
     );
   }
 
-  if (treatmentSteps.length > 0) {
+  const protocolSteps = buildMonitoringProtocolSteps(treatmentSteps);
+
+  if (protocolSteps.length > 0) {
     const now = new Date();
 
-    for (const [index, rawStep] of treatmentSteps.entries()) {
-      const step =
-        typeof rawStep === "string"
-          ? { title: rawStep, description: undefined }
-          : rawStep;
+    for (const [index, step] of protocolSteps.entries()) {
       const title = step.title.trim();
       if (!title) continue;
 
@@ -695,11 +721,14 @@ function mapMonitoringTaskRow(
 function mapMonitoringTaskOccurrenceRow(
   row: HealthMonitoringTaskOccurrenceRow,
 ): HealthMonitoringTaskOccurrence {
+  const isOverdue = !row.completed && isPastDueDate(row.due_at);
+
   return {
     id: row.id,
     taskId: row.health_monitoring_task_id,
     dueAt: row.due_at,
     completed: Boolean(row.completed),
+    status: row.completed ? "Completed" : isOverdue ? "Overdue" : "Pending",
     completedAt: row.completed_at ?? undefined,
     completedBy: row.completed_by ?? undefined,
     treatmentNote: row.treatment_note ?? undefined,

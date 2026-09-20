@@ -330,6 +330,6 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(10),
     fontWeight: "600",
-    color: ChickIntelPalette.gray2,
+    color: ChickIntelPalette.textMuted,
   },
 });

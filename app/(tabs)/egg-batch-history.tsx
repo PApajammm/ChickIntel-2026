@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
     textAlign: "right",
     fontFamily: ChickFont.sans,
     fontSize: 10,
-    color: ChickIntelPalette.gray2,
+    color: ChickIntelPalette.textMuted,
   },
   breed: {
     marginTop: 10,
@@ -210,7 +210,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
     fontFamily: ChickFont.sans,
     fontSize: 11,
-    color: ChickIntelPalette.gray2,
+    color: ChickIntelPalette.textMuted,
   },
   metrics: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 12 },
   metric: {
@@ -227,6 +227,6 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
     fontFamily: ChickFont.sans,
     fontSize: 14,
-    color: ChickIntelPalette.gray2,
+    color: ChickIntelPalette.textMuted,
   },
 });

@@ -387,7 +387,7 @@ const styles = StyleSheet.create({
   noBehaviorsText: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(13),
-    color: ChickIntelPalette.gray2,
+    color: ChickIntelPalette.textMuted,
     fontStyle: "italic",
   },
   behaviorSection: {
@@ -468,7 +468,7 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(11),
     fontWeight: "700",
-    color: ChickIntelPalette.gray2,
+    color: ChickIntelPalette.textMuted,
   },
   historyEntryStatus: {
     fontFamily: ChickFont.sans,

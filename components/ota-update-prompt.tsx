@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     fontWeight: "500",
-    color: ChickIntelPalette.gray2,
+    color: ChickIntelPalette.textMuted,
     textAlign: "center",
     marginBottom: 18,
   },
@@ -218,6 +218,6 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: 14,
     fontWeight: "600",
-    color: ChickIntelPalette.gray2,
+    color: ChickIntelPalette.textMuted,
   },
 });

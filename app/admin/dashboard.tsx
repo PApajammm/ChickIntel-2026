@@ -1566,7 +1566,7 @@ export default function AdminDashboardScreen() {
                           { color: colors.textMuted },
                         ]}
                       >
-                        No need to type @gmail.com — it is added automatically!
+                        No need to type @gmail.com â€” it is added automatically!
                         {farmerForm.email.trim() ? (
                           <Text
                             style={{ fontWeight: "700", color: colors.primary }}

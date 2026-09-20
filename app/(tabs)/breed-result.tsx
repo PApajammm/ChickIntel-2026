@@ -515,7 +515,7 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(12),
     fontWeight: "600",
-    color: ChickIntelPalette.gray2,
+    color: ChickIntelPalette.textMuted,
     textAlign: "center",
   },
   resultsWrapper: {
@@ -544,7 +544,7 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(14),
     lineHeight: 18,
     fontWeight: "700",
-    color: ChickIntelPalette.gray2,
+    color: ChickIntelPalette.textMuted,
   },
   breedName: {
     fontFamily: ChickFont.display,
@@ -586,7 +586,7 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(12),
     fontWeight: "500",
-    color: ChickIntelPalette.gray2,
+    color: ChickIntelPalette.textMuted,
   },
   divider: {
     height: verticalScale(1),
@@ -620,7 +620,7 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(12),
     lineHeight: 18,
-    color: ChickIntelPalette.gray2,
+    color: ChickIntelPalette.textMuted,
   },
   doneBtn: {
     flexDirection: "row",

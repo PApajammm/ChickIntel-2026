@@ -40,7 +40,9 @@ import { useBehaviors } from "@/hooks/use-behaviors";
 import { useAuth } from "@/providers/auth-provider";
 import type { BatchItem } from "@/utils/batch-store";
 import {
+  getHealthClassifierDisplayName,
   inferDiseaseFromImage,
+  normalizeHealthClassifierLabel,
   type HealthImageInferenceResult,
 } from "@/utils/health-image-inference";
 import { logError, logStep } from "@/utils/logger";
@@ -77,23 +79,11 @@ function parseBehaviorIds(raw: string | string[] | undefined): string[] {
 }
 
 function humanizeClassifierLabel(label: string) {
-  if (!label.trim()) return "";
-
-  return label
-    .split(/[-_]+/)
-    .map((part) =>
-      part.length > 0
-        ? `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`
-        : part,
-    )
-    .join(" ");
+  return getHealthClassifierDisplayName(label);
 }
 
 function normalizeClassifierLabel(label: string) {
-  return label
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
+  return normalizeHealthClassifierLabel(label);
 }
 
 function isNonChickenClassifierLabel(label: string) {
@@ -143,7 +133,7 @@ function hasStrongHealthPrediction(
 }
 
 function formatBatchOptionLabel(batch: BatchItem) {
-  return `${batch.id} · ${batch.breed}`;
+  return `${batch.id} Â· ${batch.breed}`;
 }
 
 export default function ScannedHealthResultScreen() {
@@ -1323,7 +1313,7 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(12),
     lineHeight: 18,
-    color: ChickIntelPalette.gray2,
+    color: ChickIntelPalette.textMuted,
     textAlign: "center",
     paddingVertical: verticalScale(12),
   },

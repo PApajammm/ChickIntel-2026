@@ -59,6 +59,7 @@ const AGE_UNIT_OPTIONS = ["Weeks old"] as const;
 
 type EggColorCard = {
   id: string;
+  breed: string;
   colorName: string;
   colorHex: string;
   originBatchNo: string;
@@ -249,6 +250,20 @@ export default function ProfilesScreen() {
     setEditVisible(true);
   }
 
+  function openEggBatches(item: BatchItem) {
+    router.push({
+      pathname: "/(tabs)/eggbatchitem/[color]" as any,
+      params: {
+        color: item.colorName,
+        colorHex: item.colorHex,
+        batchNo: item.id,
+        originBatchNo: item.id,
+        detailMode: "parent",
+        breed: item.breed,
+      },
+    });
+  }
+
   function closeEdit() {
     setEditVisible(false);
     setSelectedBatch(null);
@@ -398,6 +413,7 @@ export default function ProfilesScreen() {
       string,
       {
         batchNo: string;
+        breed: string;
         createdAt?: string;
         colorName: string;
         colorHex: string;
@@ -408,21 +424,24 @@ export default function ProfilesScreen() {
       }
     >();
 
-    chickenData.forEach((batch) => {
-      const key = batch.id.trim().toLowerCase();
-      if (!batchMap.has(key)) {
-        batchMap.set(key, {
-          batchNo: batch.id,
-          createdAt: batch.createdAt,
-          colorName: batch.colorName || "Default",
-          colorHex: batch.colorHex || ChickIntelPalette.gray2,
-          count: 0,
-          hatchedQty: 0,
-          damagedQty: 0,
-          unhatchedQty: 0,
-        });
-      }
-    });
+    chickenData
+      .filter((batch) => !batch.originBatchNo?.trim())
+      .forEach((batch) => {
+        const key = batch.id.trim().toLowerCase();
+        if (!batchMap.has(key)) {
+          batchMap.set(key, {
+            batchNo: batch.id,
+            breed: batch.breed,
+            createdAt: batch.createdAt,
+            colorName: batch.colorName || "Default",
+            colorHex: batch.colorHex || ChickIntelPalette.gray2,
+            count: 0,
+            hatchedQty: 0,
+            damagedQty: 0,
+            unhatchedQty: 0,
+          });
+        }
+      });
 
     savedEggBatches.forEach((egg) => {
       const parentBatchNo = (egg.origin || egg.batchNo || "").trim();
@@ -430,6 +449,7 @@ export default function ProfilesScreen() {
 
       const existing = batchMap.get(key) ?? {
         batchNo: parentBatchNo || "0001",
+        breed: "",
         createdAt: egg.createdAt,
         colorName: egg.colorName || egg.origin || "Unspecified",
         colorHex: egg.colorHex || ChickIntelPalette.gray2,
@@ -463,6 +483,7 @@ export default function ProfilesScreen() {
 
       return {
         id: `egg-${item.batchNo}`,
+        breed: item.breed,
         colorName: item.colorName,
         colorHex: item.colorHex,
         originBatchNo: formattedBatchNo,
@@ -477,6 +498,59 @@ export default function ProfilesScreen() {
       };
     });
   }, [chickenData, savedEggBatches]);
+
+  const chickenEggSummaries = useMemo(() => {
+    const summaries: Record<
+      string,
+      {
+        batchCount: number;
+        totalEggs: number;
+        hatched: number;
+        unhatched: number;
+        damaged: number;
+      }
+    > = {};
+
+    savedEggBatches.forEach((egg) => {
+      const key = (egg.origin || "").trim().toLowerCase();
+      if (!key) return;
+      const summary = summaries[key] ?? {
+        batchCount: 0,
+        totalEggs: 0,
+        hatched: 0,
+        unhatched: 0,
+        damaged: 0,
+      };
+      summary.batchCount += 1;
+      summary.totalEggs += egg.eggQty ?? 0;
+      summary.hatched += egg.hatchedQty ?? 0;
+      summary.unhatched += egg.unhatchedQty ?? 0;
+      summary.damaged += egg.damagedQty ?? 0;
+      summaries[key] = summary;
+    });
+
+    return summaries;
+  }, [savedEggBatches]);
+
+  const chickenSubBatchSummaries = useMemo(() => {
+    return chickenData.reduce<
+      Record<string, { batchCount: number; chicks: number }>
+    >((summaries, batch) => {
+      const origin = batch.originBatchNo?.trim().toLowerCase();
+      if (!origin) return summaries;
+
+      const summary = summaries[origin] ?? { batchCount: 0, chicks: 0 };
+      summary.batchCount += 1;
+      summary.chicks += batch.totalCount ?? 0;
+      summaries[origin] = summary;
+      return summaries;
+    }, {});
+  }, [chickenData]);
+
+  const parentChickenBatches = useMemo(
+    () => chickenData.filter((batch) => !batch.originBatchNo?.trim()),
+    [chickenData],
+  );
 
   const fabBottom = TAB_BAR_OFFSET - 2 - FAB_OFFSET_FROM_TAB_TOP;
 
@@ -631,14 +705,22 @@ export default function ProfilesScreen() {
                 No chicken batches found for this farm yet.
               </Text>
             ) : null}
-            {chickenData.map((item) => (
+            {parentChickenBatches.map((item) => (
               <BlurCard
                 key={item.id}
                 style={styles.card}
                 borderRadius={16}
                 intensity={20}
               >
-                <View style={styles.cardMainContainer}>
+                <Pressable
+                  onPress={() => openEggBatches(item)}
+                  style={({ pressed }) => [
+                    styles.cardMainContainer,
+                    { opacity: pressed ? 0.94 : 1 },
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Open egg batches for chicken batch ${item.id}`}
+                >
                   {/* Card Header: Batch Pill + Color Badge & Actions */}
                   <View style={styles.cardHeaderRow}>
                     <View style={styles.headerLeftStack}>
@@ -787,6 +869,46 @@ export default function ProfilesScreen() {
                         {item.killedCount}
                       </Text>
                     </View>
+
+                    <View style={styles.metricChipWide}>
+                      <View style={styles.metricChipHeader}>
+                        <MaterialCommunityIcons
+                          name="egg-outline"
+                          size={12}
+                          color="#8E9494"
+                        />
+                        <Text style={styles.metricChipLabel}>
+                          Egg Batches / Eggs
+                        </Text>
+                      </View>
+                      <Text style={styles.metricChipValue}>
+                        {chickenEggSummaries[item.id.trim().toLowerCase()]
+                          ?.batchCount ?? 0}
+                        {" / "}
+                        {chickenEggSummaries[item.id.trim().toLowerCase()]
+                          ?.totalEggs ?? 0}
+                      </Text>
+                    </View>
+
+                    <View style={styles.metricChipWide}>
+                      <View style={styles.metricChipHeader}>
+                        <MaterialCommunityIcons
+                          name="bird"
+                          size={12}
+                          color="#8E9494"
+                        />
+                        <Text style={styles.metricChipLabel}>
+                          Chick Batches / Chicks
+                        </Text>
+                      </View>
+                      <Text style={styles.metricChipValue}>
+                        {chickenSubBatchSummaries[item.id.trim().toLowerCase()]
+                          ?.batchCount ?? 0}
+                        {" / "}
+                        {chickenSubBatchSummaries[item.id.trim().toLowerCase()]
+                          ?.chicks ?? 0}
+                      </Text>
+                    </View>
                   </View>
 
                   {item.notes?.length ? (
@@ -804,7 +926,7 @@ export default function ProfilesScreen() {
                       ))}
                     </View>
                   ) : null}
-                </View>
+                </Pressable>
               </BlurCard>
             ))}
           </View>
@@ -829,6 +951,8 @@ export default function ProfilesScreen() {
                         colorHex: item.colorHex,
                         batchNo: item.rawBatchNo,
                         originBatchNo: item.originBatchNo,
+                        detailMode: "egg",
+                        breed: item.breed,
                       },
                     })
                   }
@@ -953,7 +1077,7 @@ export default function ProfilesScreen() {
                   </View>
                   <Text style={styles.modalSubtitle} numberOfLines={1}>
                     {selectedBatch
-                      ? `${formatProfileBatchId("C", selectedBatch.id)} • `
+                      ? `${formatProfileBatchId("C", selectedBatch.id)} â€¢ `
                       : ""}
                     {selectedBatch?.breed || "General"}
                   </Text>
@@ -1145,7 +1269,7 @@ export default function ProfilesScreen() {
                     <Text style={styles.modalTitle}>Edit Egg Batch</Text>
                   </View>
                   <Text style={styles.modalSubtitle} numberOfLines={1}>
-                    {formatProfileBatchId("E", eggForm.batchNo)} •{" "}
+                    {formatProfileBatchId("E", eggForm.batchNo)} â€¢{" "}
                     {eggForm.origin || "Egg Batch"}
                   </Text>
                 </View>
@@ -1399,7 +1523,7 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(14),
     lineHeight: 20,
-    color: ChickIntelPalette.gray2,
+    color: "#40524B",
     textAlign: "center",
     paddingVertical: verticalScale(12),
   },
@@ -1465,7 +1589,7 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(11),
     lineHeight: 16,
-    color: "rgba(51, 51, 51, 0.58)",
+    color: "#52615D",
     paddingBottom: 0,
   },
   headerRightActions: {
@@ -1568,7 +1692,7 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(9),
     fontWeight: "700",
-    color: "#8E9494",
+    color: "#52615D",
     textTransform: "uppercase",
     letterSpacing: 0.2,
   },
@@ -1608,7 +1732,7 @@ const styles = StyleSheet.create({
   noteSummaryMeta: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(10),
-    color: "#667171",
+    color: "#52615D",
   },
   editActionBtn: {
     flexDirection: "row",
@@ -1793,7 +1917,7 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(11),
     lineHeight: 15,
-    color: ChickIntelPalette.gray2,
+    color: "#52615D",
   },
   modalActions: {
     flexDirection: "row",

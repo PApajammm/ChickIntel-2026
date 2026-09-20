@@ -68,19 +68,23 @@ export const CameraViewport = forwardRef<
                     <Text style={styles.placeholderHint}>
                         Preparing camera permission...
                     </Text>
-                ) : null}
-                {canRequest ? (
-                    <Pressable
-                        onPress={() => requestPermission()}
-                        style={({ pressed }) => [
-                            styles.permissionBtn,
-                            { opacity: pressed ? 0.88 : 1 },
-                        ]}
-                    >
-                        <Text style={styles.permissionBtnText}>
-                            Allow camera access
+                ) : canRequest ? (
+                    <View style={styles.permissionBox}>
+                        <Text style={styles.permissionMessage}>
+                            Camera access is needed to scan
                         </Text>
-                    </Pressable>
+                        <Pressable
+                            onPress={() => requestPermission()}
+                            style={({ pressed }) => [
+                                styles.permissionBtn,
+                                { opacity: pressed ? 0.88 : 1 },
+                            ]}
+                        >
+                            <Text style={styles.permissionBtnText}>
+                                Allow camera access
+                            </Text>
+                        </Pressable>
+                    </View>
                 ) : (
                     <Text style={styles.placeholderHint}>
                         {mountError
@@ -147,7 +151,7 @@ const styles = StyleSheet.create({
     },
     placeholder: {
         flex: 1,
-        backgroundColor: "#FFFFFF",
+        backgroundColor: "#111816",
         alignItems: "center",
         justifyContent: "center",
         padding: moderateScale(24),
@@ -156,14 +160,30 @@ const styles = StyleSheet.create({
         fontFamily: ChickFont.sans,
         fontSize: responsiveFontSize(14),
         fontWeight: "500",
-        color: ChickIntelPalette.gray2,
+        color: "rgba(255, 255, 255, 0.75)",
         textAlign: "center",
+    },
+    permissionBox: {
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 16,
+        paddingHorizontal: moderateScale(20),
+    },
+    permissionMessage: {
+        fontFamily: ChickFont.sans,
+        fontSize: responsiveFontSize(16),
+        fontWeight: "600",
+        color: "#FFFFFF",
+        textAlign: "center",
+        lineHeight: 22,
     },
     permissionBtn: {
         paddingHorizontal: moderateScale(20),
         paddingVertical: verticalScale(12),
         borderRadius: 999,
         backgroundColor: ChickIntelPalette.green1,
+        borderWidth: 1,
+        borderColor: "rgba(255, 255, 255, 0.2)",
     },
     permissionBtnText: {
         fontFamily: ChickFont.sans,

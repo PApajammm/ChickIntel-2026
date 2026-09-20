@@ -47,6 +47,11 @@ import {
     type HealthMonitoringTaskOccurrence,
 } from "@/utils/supabase-health-monitoring";
 
+type TreatmentOccurrenceEntry = {
+  task: HealthMonitoringTask;
+  occurrence: HealthMonitoringTaskOccurrence;
+};
+
 function formatScanDate(savedAt?: string) {
   if (!savedAt) return "Unknown date";
   const d = new Date(savedAt);
@@ -58,7 +63,7 @@ function formatScanDate(savedAt?: string) {
   const minutes = String(d.getMinutes()).padStart(2, "0");
   const suffix = hours >= 12 ? "PM" : "AM";
   const displayHours = hours % 12 || 12;
-  return `${m}/${day}/${y} • ${displayHours}:${minutes} ${suffix}`;
+  return `${m}/${day}/${y} â€¢ ${displayHours}:${minutes} ${suffix}`;
 }
 
 function getMonitoringDays(startedAt: string, completedAt?: string) {
@@ -66,6 +71,38 @@ function getMonitoringDays(startedAt: string, completedAt?: string) {
   const end = new Date(completedAt ?? Date.now()).getTime();
   if (!Number.isFinite(start) || !Number.isFinite(end)) return 0;
   return Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60 * 24)));
+}
+
+function getDateKey(dateValue: string) {
+  const date = new Date(dateValue);
+  if (Number.isNaN(date.getTime())) return "unknown";
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function getTreatmentDayNumber(startedAt: string, dueAt: string) {
+  const start = new Date(startedAt);
+  const due = new Date(dueAt);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(due.getTime())) return 1;
+  start.setHours(0, 0, 0, 0);
+  due.setHours(0, 0, 0, 0);
+  return Math.max(
+    1,
+    Math.floor((due.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1,
+  );
+}
+
+function formatTreatmentDayDate(dateKey: string) {
+  if (dateKey === "unknown") return "Unknown date";
+  const date = new Date(`${dateKey}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return "Unknown date";
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 export default function HealthMonitoringDetailScreen() {
@@ -95,7 +132,7 @@ export default function HealthMonitoringDetailScreen() {
   } | null>(null);
   const [isProtocolExpanded, setIsProtocolExpanded] = useState(true);
   const [protocolTaskFilter, setProtocolTaskFilter] = useState<
-    "All" | "Pending" | "Completed"
+    "All" | "Pending" | "Overdue" | "Completed"
   >("All");
   const [diseaseDetails, setDiseaseDetails] = useState<DiseaseDetails | null>(
     null,
@@ -226,7 +263,12 @@ export default function HealthMonitoringDetailScreen() {
               ...entry,
               occurrences: entry.occurrences.map((item) =>
                 item.id === occurrence.id
-                  ? { ...item, completed: true, completedAt }
+                  ? {
+                      ...item,
+                      completed: true,
+                      completedAt,
+                      status: "Completed",
+                    }
                   : item,
               ),
             }
@@ -321,16 +363,40 @@ export default function HealthMonitoringDetailScreen() {
   const completedOccurrenceCount = treatmentOccurrences.filter(
     ({ occurrence }) => occurrence.completed,
   ).length;
-  const pendingTreatmentOccurrences = treatmentOccurrences.filter(
-    ({ occurrence }) =>
-      !occurrence.completed &&
-      (protocolTaskFilter === "All" || protocolTaskFilter === "Pending"),
-  );
-  const completedTreatmentOccurrences = treatmentOccurrences.filter(
-    ({ occurrence }) =>
-      occurrence.completed &&
-      (protocolTaskFilter === "All" || protocolTaskFilter === "Completed"),
-  );
+  const filteredTreatmentOccurrences = treatmentOccurrences
+    .filter(
+      ({ occurrence }) =>
+        protocolTaskFilter === "All" || occurrence.status === protocolTaskFilter,
+    )
+    .sort(
+      (left, right) =>
+        new Date(left.occurrence.dueAt).getTime() -
+          new Date(right.occurrence.dueAt).getTime() ||
+        left.task.sortOrder - right.task.sortOrder,
+    );
+  const treatmentDayGroups = filteredTreatmentOccurrences.reduce<
+    {
+      dateKey: string;
+      dayNumber: number;
+      items: TreatmentOccurrenceEntry[];
+    }[]
+  >((groups, item) => {
+    const dateKey = getDateKey(item.occurrence.dueAt);
+    const existingGroup = groups.find((group) => group.dateKey === dateKey);
+    if (existingGroup) {
+      existingGroup.items.push(item);
+      return groups;
+    }
+
+    return [
+      ...groups,
+      {
+        dateKey,
+        dayNumber: getTreatmentDayNumber(record.createdAt, item.occurrence.dueAt),
+        items: [item],
+      },
+    ];
+  }, []);
 
   const renderTreatmentOccurrence = ({
     task,
@@ -338,80 +404,102 @@ export default function HealthMonitoringDetailScreen() {
   }: {
     task: HealthMonitoringTask;
     occurrence: HealthMonitoringTaskOccurrence;
-  }) => (
-    <View key={occurrence.id} style={styles.protocolTaskCard}>
-      <View style={styles.protocolTaskRow}>
-        <Pressable
-          style={styles.protocolTaskToggle}
-          onPress={() => void toggleTreatmentOccurrence(task, occurrence)}
-          disabled={occurrence.completed}
-          accessibilityRole="checkbox"
-          accessibilityState={{
-            checked: occurrence.completed,
-            disabled: occurrence.completed,
-          }}
-        >
-          <MaterialCommunityIcons
-            name={
-              occurrence.completed
-                ? "checkbox-marked"
-                : "checkbox-blank-outline"
-            }
-            size={22}
-            color={
-              occurrence.completed
-                ? ChickIntelPalette.green1
-                : ChickIntelPalette.gray2
-            }
-          />
-          <View style={styles.protocolTaskCopy}>
-            <Text
-              style={[
-                styles.protocolTaskText,
-                occurrence.completed && styles.protocolTaskTextCompleted,
-              ]}
-            >
-              {task.title}
-            </Text>
-            {task.description ? (
-              <Text style={styles.protocolTaskDescription}>
-                {task.description}
+  }) => {
+    const isOverdue = occurrence.status === "Overdue";
+
+    return (
+      <View
+        key={occurrence.id}
+        style={[
+          styles.protocolTaskCard,
+          isOverdue ? styles.protocolTaskCardOverdue : null,
+        ]}
+      >
+        <View style={styles.protocolTaskRow}>
+          <Pressable
+            style={styles.protocolTaskToggle}
+            onPress={() => void toggleTreatmentOccurrence(task, occurrence)}
+            disabled={occurrence.completed}
+            accessibilityRole="checkbox"
+            accessibilityState={{
+              checked: occurrence.completed,
+              disabled: occurrence.completed,
+            }}
+          >
+            <MaterialCommunityIcons
+              name={
+                occurrence.completed
+                  ? "checkbox-marked"
+                  : "checkbox-blank-outline"
+              }
+              size={22}
+              color={
+                occurrence.completed
+                  ? ChickIntelPalette.green1
+                  : isOverdue
+                    ? "#B45309"
+                    : ChickIntelPalette.gray2
+              }
+            />
+            <View style={styles.protocolTaskCopy}>
+              <Text
+                style={[
+                  styles.protocolTaskText,
+                  occurrence.completed && styles.protocolTaskTextCompleted,
+                ]}
+              >
+                {task.title}
               </Text>
-            ) : null}
-            {occurrence.dueAt ? (
-              <Text style={styles.protocolTaskMeta}>
-                Due: {formatScanDate(occurrence.dueAt)}
-              </Text>
-            ) : null}
-            {occurrence.completedAt ? (
-              <Text style={styles.protocolTaskMeta}>
-                Completed: {formatScanDate(occurrence.completedAt)}
-              </Text>
-            ) : null}
-            {occurrence.completedBy ? (
-              <Text style={styles.protocolTaskMeta}>Completed by: Farmer</Text>
-            ) : null}
-          </View>
-        </Pressable>
-        <TouchableOpacity
-          style={styles.protocolNoteIconButton}
-          onPress={() => openNoteEditor(task, occurrence)}
-          accessibilityRole="button"
-          accessibilityLabel={`Add note for ${task.title}`}
-        >
-          <MaterialCommunityIcons
-            name="pencil-outline"
-            size={17}
-            color={ChickIntelPalette.green1}
-          />
-        </TouchableOpacity>
+              {task.description ? (
+                <Text style={styles.protocolTaskDescription}>
+                  {task.description}
+                </Text>
+              ) : null}
+              {occurrence.dueAt ? (
+                <Text
+                  style={[
+                    styles.protocolTaskMeta,
+                    isOverdue ? styles.protocolTaskMetaOverdue : null,
+                  ]}
+                >
+                  {isOverdue ? "Overdue" : "Due"}:{" "}
+                  {formatScanDate(occurrence.dueAt)}
+                </Text>
+              ) : null}
+              {occurrence.completedAt ? (
+                <Text style={styles.protocolTaskMeta}>
+                  Completed: {formatScanDate(occurrence.completedAt)}
+                </Text>
+              ) : null}
+              {occurrence.completedBy ? (
+                <Text style={styles.protocolTaskMeta}>
+                  Completed by: Farmer
+                </Text>
+              ) : null}
+            </View>
+          </Pressable>
+          <TouchableOpacity
+            style={styles.protocolNoteIconButton}
+            onPress={() => openNoteEditor(task, occurrence)}
+            accessibilityRole="button"
+            accessibilityLabel={`Add note for ${task.title}`}
+          >
+            <MaterialCommunityIcons
+              name="pencil-outline"
+              size={17}
+              color={ChickIntelPalette.green1}
+            />
+          </TouchableOpacity>
+        </View>
+        <Text style={styles.protocolTaskMeta}>
+          {formatScanDate(occurrence.dueAt)}
+          {occurrence.treatmentNote
+            ? ` | Note: ${occurrence.treatmentNote}`
+            : ""}
+        </Text>
       </View>
-      <Text style={styles.protocolTaskMeta}>
-        {formatScanDate(occurrence.dueAt)}
-        {occurrence.treatmentNote ? ` • Note: ${occurrence.treatmentNote}` : ""}
-      </Text>
-    </View>
-  );
+    );
+  };
 
   const dateAdded = record.createdAt
     ? new Date(record.createdAt).toLocaleDateString("en-US", {
@@ -465,7 +553,7 @@ export default function HealthMonitoringDetailScreen() {
         <View style={styles.metaRow}>
           <View style={styles.metaItem}>
             <Text style={styles.metaLabel}>Batch No.</Text>
-            <Text style={styles.metaValue}>{record.batchNo ?? "—"}</Text>
+            <Text style={styles.metaValue}>{record.batchNo ?? "â€”"}</Text>
           </View>
           <View style={styles.metaItem}>
             <Text style={styles.metaLabel}>Date Added</Text>
@@ -555,7 +643,7 @@ export default function HealthMonitoringDetailScreen() {
               {isProtocolExpanded ? (
                 <>
                   <View style={styles.protocolFilterRow}>
-                    {(["All", "Pending", "Completed"] as const).map(
+                    {(["All", "Pending", "Overdue", "Completed"] as const).map(
                       (filter) => (
                         <Pressable
                           key={filter}
@@ -581,22 +669,25 @@ export default function HealthMonitoringDetailScreen() {
                       ),
                     )}
                   </View>
-                  {pendingTreatmentOccurrences.length > 0 ? (
-                    <>
-                      <Text style={styles.protocolGroupTitle}>Pending</Text>
-                      {pendingTreatmentOccurrences.map(
-                        renderTreatmentOccurrence,
-                      )}
-                    </>
-                  ) : null}
-                  {completedTreatmentOccurrences.length > 0 ? (
-                    <>
-                      <Text style={styles.protocolGroupTitle}>Completed</Text>
-                      {completedTreatmentOccurrences.map(
-                        renderTreatmentOccurrence,
-                      )}
-                    </>
-                  ) : null}
+                  {treatmentDayGroups.length > 0 ? (
+                    treatmentDayGroups.map((group) => (
+                      <View key={group.dateKey} style={styles.protocolDayGroup}>
+                        <View style={styles.protocolDayHeader}>
+                          <Text style={styles.protocolGroupTitle}>
+                            Day {group.dayNumber}
+                          </Text>
+                          <Text style={styles.protocolDayDate}>
+                            {formatTreatmentDayDate(group.dateKey)}
+                          </Text>
+                        </View>
+                        {group.items.map(renderTreatmentOccurrence)}
+                      </View>
+                    ))
+                  ) : (
+                    <Text style={styles.protocolEmptyText}>
+                      No tasks match this filter.
+                    </Text>
+                  )}
                 </>
               ) : null}
             </View>
@@ -971,7 +1062,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(12),
-    color: ChickIntelPalette.gray2,
+    color: ChickIntelPalette.textMuted,
   },
   protocolTaskRow: {
     flexDirection: "row",
@@ -991,6 +1082,28 @@ const styles = StyleSheet.create({
     borderTopColor: "rgba(49, 118, 103, 0.12)",
     paddingTop: 8,
   },
+  protocolTaskCardOverdue: {
+    borderTopColor: "rgba(180, 83, 9, 0.28)",
+    backgroundColor: "rgba(245, 158, 11, 0.08)",
+    borderRadius: 9,
+    paddingHorizontal: 8,
+  },
+  protocolDayGroup: {
+    gap: 4,
+  },
+  protocolDayHeader: {
+    marginTop: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  protocolDayDate: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(11),
+    fontWeight: "700",
+    color: ChickIntelPalette.textMuted,
+  },
   protocolTaskCopy: {
     flex: 1,
     gap: 2,
@@ -1003,19 +1116,23 @@ const styles = StyleSheet.create({
     color: ChickIntelPalette.gray1,
   },
   protocolTaskTextCompleted: {
-    color: ChickIntelPalette.gray2,
+    color: ChickIntelPalette.textMuted,
     textDecorationLine: "line-through",
   },
   protocolTaskDescription: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(11),
     lineHeight: 16,
-    color: ChickIntelPalette.gray2,
+    color: ChickIntelPalette.textMuted,
   },
   protocolTaskMeta: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(10),
-    color: ChickIntelPalette.gray2,
+    color: ChickIntelPalette.textMuted,
+  },
+  protocolTaskMetaOverdue: {
+    color: "#B45309",
+    fontWeight: "800",
   },
   protocolGroupTitle: {
     marginTop: 6,
@@ -1024,6 +1141,13 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: ChickIntelPalette.gray1,
     textTransform: "uppercase",
+  },
+  protocolEmptyText: {
+    marginTop: 10,
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12),
+    color: ChickIntelPalette.textMuted,
+    textAlign: "center",
   },
   protocolNoteInput: {
     minHeight: 38,
@@ -1165,7 +1289,7 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(11),
     fontWeight: "700",
-    color: ChickIntelPalette.gray2,
+    color: ChickIntelPalette.textMuted,
   },
   confirmModalBackdrop: {
     flex: 1,
@@ -1209,7 +1333,7 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(13),
     lineHeight: 19,
-    color: ChickIntelPalette.gray2,
+    color: ChickIntelPalette.textMuted,
   },
   confirmDetailsBox: {
     marginTop: 2,
@@ -1230,7 +1354,7 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(11),
     fontWeight: "700",
-    color: ChickIntelPalette.gray2,
+    color: ChickIntelPalette.textMuted,
     textTransform: "uppercase",
   },
   confirmDetailValue: {

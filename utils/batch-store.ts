@@ -1,5 +1,7 @@
 export type BatchItem = {
   id: string;
+  originBatchNo?: string;
+  sourceEggBatchId?: string;
   createdAt?: string;
   breed: string;
   totalCount: number;
@@ -75,8 +77,11 @@ export type EggBatchItem = {
   /** Age unit: matches chicken batch age pattern. */
   ageUnit: "Days old" | "Weeks old";
   hatchedQty: number;
+  transferredHatchedQty: number;
   damagedQty: number;
+  disposedDamagedQty: number;
   unhatchedQty: number;
+  soldQty: number;
   colorName?: string;
   colorHex?: string;
   origin: string;

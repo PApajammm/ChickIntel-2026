@@ -13,7 +13,7 @@ type AttributeListProps = {
 };
 
 /**
- * Two-column key–value rows for breed metadata (labels left, values right).
+ * Two-column keyâ€“value rows for breed metadata (labels left, values right).
  */
 export function AttributeList({ rows }: AttributeListProps) {
     return (

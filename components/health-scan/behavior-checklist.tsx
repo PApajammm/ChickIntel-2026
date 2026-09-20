@@ -10,9 +10,14 @@ import {
 } from "react-native";
 
 import { ChickFont } from "@/constants/chick-fonts";
-import { moderateScale, responsiveFontSize, scale, verticalScale } from "@/utils/responsive";
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
 import type { HealthBehaviorItem } from "@/constants/health-scan-behaviors";
+import {
+    moderateScale,
+    responsiveFontSize,
+    scale,
+    verticalScale,
+} from "@/utils/responsive";
 import type { BehaviorCategory } from "@/utils/supabase-behaviors";
 
 type BehaviorChecklistProps = {
@@ -272,7 +277,7 @@ const styles = StyleSheet.create({
   boxOff: {
     backgroundColor: "rgba(202, 227, 221, 0.08)",
     borderWidth: 2,
-    borderColor: ChickIntelPalette.gray2,
+    borderColor: ChickIntelPalette.textMuted,
   },
   label: {
     fontFamily: ChickFont.sans,

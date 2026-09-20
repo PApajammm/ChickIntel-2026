@@ -3,30 +3,19 @@ import {
     formatScheduleDateKey,
     scheduleTaskMatchesDate,
 } from "@/utils/supabase-schedule";
-import Constants, { ExecutionEnvironment } from "expo-constants";
 import * as Notifications from "expo-notifications";
 
-const isExpoGo =
-  Constants.executionEnvironment === ExecutionEnvironment.StoreClient ||
-  (Constants as Record<string, unknown>).appOwnership === "expo";
+const NotificationsModule: typeof Notifications = Notifications;
 
-let NotificationsModule: typeof Notifications | null = Notifications;
-
-if (isExpoGo) {
-  NotificationsModule = null;
-}
-
-if (NotificationsModule) {
-  NotificationsModule.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowAlert: true,
-      shouldPlaySound: true,
-      shouldSetBadge: true,
-      shouldShowBanner: true,
-      shouldShowList: true,
-    }),
-  });
-}
+NotificationsModule.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
 
 const CHANNEL_ID = "schedule-task-alarms";
 const LOOKAHEAD_DAYS = 90;
@@ -162,10 +151,10 @@ export async function scheduleTasksNotifications(
 
     const now = new Date();
     const notifications = tasks.flatMap((task) => {
-      const occurrences: Array<{
+      const occurrences: {
         date: Date;
         task: SupabaseScheduleTask;
-      }> = [];
+      }[] = [];
 
       for (let offset = 0; offset < LOOKAHEAD_DAYS; offset += 1) {
         const date = new Date(now);

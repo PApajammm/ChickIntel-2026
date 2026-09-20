@@ -184,7 +184,7 @@ function renderProductionSection(
 
     <!-- Insight Box -->
     <div class="insight-box">
-      <div class="insight-title">💡 Operational Takeaway & Analysis</div>
+      <div class="insight-title">ðŸ’¡ Operational Takeaway & Analysis</div>
       <div class="insight-text">${escapeHtml(snapshot.analyticsText)}</div>
     </div>`;
 }
@@ -320,7 +320,7 @@ function renderSupplySection(
 
     <!-- Insight Box -->
     <div class="insight-box">
-      <div class="insight-title">💡 Operational Takeaway & Inventory Analysis</div>
+      <div class="insight-title">ðŸ’¡ Operational Takeaway & Inventory Analysis</div>
       <div class="insight-text">${escapeHtml(supply.analyticsText)}</div>
     </div>`;
 }
@@ -355,7 +355,7 @@ function buildPrintableHtml({
       categoryName: "Egg Production",
       contentHtml: renderProductionSection(
         "Egg Production Report",
-        "🥚",
+        "ðŸ¥š",
         eggReport.production,
       ),
     });
@@ -363,7 +363,7 @@ function buildPrintableHtml({
       categoryName: "Chicken Production",
       contentHtml: renderProductionSection(
         "Chicken Flock & Batch Report",
-        "🐓",
+        "ðŸ“",
         chickenReport.production,
       ),
     });
@@ -371,7 +371,7 @@ function buildPrintableHtml({
       categoryName: "Vitamins & Meds",
       contentHtml: renderSupplySection(
         "Vitamins & Medication Activity",
-        "💊",
+        "ðŸ’Š",
         vitaminsReport.supply,
       ),
     });
@@ -379,7 +379,7 @@ function buildPrintableHtml({
       categoryName: "Feeds Consumption",
       contentHtml: renderSupplySection(
         "Feeds Consumption & Inventory",
-        "🌾",
+        "ðŸŒ¾",
         feedsReport.supply,
       ),
     });
@@ -388,7 +388,7 @@ function buildPrintableHtml({
       categoryName: "Egg Production",
       contentHtml: renderProductionSection(
         "Egg Production Report",
-        "🥚",
+        "ðŸ¥š",
         eggReport.production,
       ),
     });
@@ -397,7 +397,7 @@ function buildPrintableHtml({
       categoryName: "Chicken Production",
       contentHtml: renderProductionSection(
         "Chicken Flock & Batch Report",
-        "🐓",
+        "ðŸ“",
         chickenReport.production,
       ),
     });
@@ -406,7 +406,7 @@ function buildPrintableHtml({
       categoryName: "Vitamins & Meds",
       contentHtml: renderSupplySection(
         "Vitamins & Medication Activity",
-        "💊",
+        "ðŸ’Š",
         vitaminsReport.supply,
       ),
     });
@@ -415,7 +415,7 @@ function buildPrintableHtml({
       categoryName: "Feeds Consumption",
       contentHtml: renderSupplySection(
         "Feeds Consumption & Inventory",
-        "🌾",
+        "ðŸŒ¾",
         feedsReport.supply,
       ),
     });
@@ -434,7 +434,7 @@ function buildPrintableHtml({
                   <p class="brand-sub">Executive Farm Intelligence Report</p>
               </div>
               <div class="page-badge">
-                Page ${idx + 1} of ${totalPages} • ${escapeHtml(page.categoryName)}
+                Page ${idx + 1} of ${totalPages} â€¢ ${escapeHtml(page.categoryName)}
               </div>
           </div>
 
@@ -1370,7 +1370,7 @@ export default function ReportsScreen() {
               <View style={styles.headerTitleWrap}>
                 <Text style={styles.screenTitle} numberOfLines={1}>Farm Reports</Text>
                 <Text style={styles.screenSubtitle} numberOfLines={1}>
-                  {activeFarm?.name || "No active farm"} • {overview} Snapshot
+                  {activeFarm?.name || "No active farm"} â€¢ {overview} Snapshot
                 </Text>
               </View>
               <TouchableOpacity
@@ -1671,7 +1671,7 @@ const styles = StyleSheet.create({
   screenSubtitle: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(12),
-    color: ChickIntelPalette.gray2,
+    color: ChickIntelPalette.textMuted,
     marginTop: 2,
     textAlign: "center",
   },
@@ -1796,7 +1796,7 @@ const styles = StyleSheet.create({
   kpiLabel: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(10),
-    color: ChickIntelPalette.gray2,
+    color: ChickIntelPalette.textMuted,
     textTransform: "uppercase",
     letterSpacing: 0.4,
   },
@@ -1896,7 +1896,7 @@ const styles = StyleSheet.create({
   donutCenterLabel: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(11),
-    color: ChickIntelPalette.gray2,
+    color: ChickIntelPalette.textMuted,
   },
 
   // Breakdown List
@@ -1979,7 +1979,7 @@ const styles = StyleSheet.create({
   yAxisText: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(10),
-    color: ChickIntelPalette.gray2,
+    color: ChickIntelPalette.textMuted,
     width: scale(22),
   },
   gridLine: {
@@ -2036,7 +2036,7 @@ const styles = StyleSheet.create({
   emptyChartText: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(12),
-    color: ChickIntelPalette.gray2,
+    color: ChickIntelPalette.textMuted,
     textAlign: "center",
   },
 

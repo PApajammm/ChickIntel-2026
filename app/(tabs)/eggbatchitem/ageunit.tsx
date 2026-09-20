@@ -326,8 +326,11 @@ export default function EggBatchAgeUnitScreen() {
       lineNo: parseCount(lineNo),
       ageUnit,
       hatchedQty: 0,
+      transferredHatchedQty: 0,
       damagedQty: 0,
+      disposedDamagedQty: 0,
       unhatchedQty: parseCount(eggQty),
+      soldQty: 0,
       colorName: targetColorName,
       colorHex: selectedBatchColor.colorHex,
       origin: targetParentBatchNo,
@@ -916,7 +919,7 @@ const styles = StyleSheet.create({
   },
   inputDisabled: {
     backgroundColor: "rgba(255,255,255,0.64)",
-    color: ChickIntelPalette.gray2,
+    color: ChickIntelPalette.textMuted,
   },
   previewSegmentedContainer: {
     flexDirection: "row",
@@ -1028,7 +1031,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(11),
-    color: ChickIntelPalette.gray2,
+    color: ChickIntelPalette.textMuted,
   },
   menuHint: {
     marginTop: 4,
@@ -1077,7 +1080,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(13),
-    color: ChickIntelPalette.gray2,
+    color: ChickIntelPalette.textMuted,
   },
   menuItem: {
     minHeight: verticalScale(48),

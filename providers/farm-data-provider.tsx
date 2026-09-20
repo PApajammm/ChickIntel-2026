@@ -40,6 +40,7 @@ type FarmDataContextType = {
   scheduleTasks: SupabaseScheduleTask[];
   scheduleCompletions: SupabaseScheduleTaskCompletion[];
   loading: boolean;
+  error: string | null;
   refreshFarmData: () => Promise<void>;
   restockItem: (
     itemId: string,
@@ -73,6 +74,7 @@ export function FarmDataProvider({ children }: { children: React.ReactNode }) {
     SupabaseScheduleTaskCompletion[]
   >([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState<Date>(new Date());
 
   // Periodically tick `now` so time-based schedule status & stock alerts recalculate
@@ -88,11 +90,13 @@ export function FarmDataProvider({ children }: { children: React.ReactNode }) {
       setRawItems([]);
       setScheduleTasks([]);
       setScheduleCompletions([]);
+      setError(null);
       setLoading(false);
       return;
     }
 
     setLoading(true);
+    setError(null);
     try {
       const [items, tasks, completions] = await Promise.all([
         fetchInventoryItems(activeFarm.id),
@@ -109,6 +113,9 @@ export function FarmDataProvider({ children }: { children: React.ReactNode }) {
         tasksCount: tasks.length,
       });
     } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Unable to load farm data.";
+      setError(message);
       logError("Failed to refresh farm data", error, {
         farmId: activeFarm?.id,
       });
@@ -363,6 +370,7 @@ export function FarmDataProvider({ children }: { children: React.ReactNode }) {
       scheduleTasks,
       scheduleCompletions,
       loading,
+      error,
       refreshFarmData,
       restockItem,
       completeTask,
@@ -377,6 +385,7 @@ export function FarmDataProvider({ children }: { children: React.ReactNode }) {
       scheduleTasks,
       scheduleCompletions,
       loading,
+      error,
       refreshFarmData,
       restockItem,
       completeTask,

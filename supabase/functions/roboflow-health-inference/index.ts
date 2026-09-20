@@ -7,8 +7,8 @@ const corsHeaders = {
     "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const CHICKINTEL_DISEASE_CLASSIFIER_3_MODEL_ID =
-    "donut-ep62e/chickintel-disease-classifier-seug1-3-vit-base-patch16-224-in21k-t1";
+const CHICKINTEL_DISEASE_CLASSIFIER_4_MODEL_ID =
+    "donut-ep62e/chickintel-disease-classifier-seug1-4-vit-base-patch16-224-in21k-t1";
 
 type HealthPrediction = {
     className: string;
@@ -138,7 +138,7 @@ Deno.serve(async (request) => {
         const roboflowModelId =
             Deno.env.get("ROBOFLOW_HEALTH_MODEL_ID") ??
             Deno.env.get("ROBOFLOW_MODEL_ID") ??
-            CHICKINTEL_DISEASE_CLASSIFIER_3_MODEL_ID;
+            CHICKINTEL_DISEASE_CLASSIFIER_4_MODEL_ID;
         const roboflowBaseUrl =
             Deno.env.get("ROBOFLOW_BASE_URL") ?? "https://serverless.roboflow.com";
 

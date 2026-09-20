@@ -37,6 +37,7 @@ import { ScannerShutter } from "@/components/scanner/scanner-shutter";
 import { ViewfinderOverlay } from "@/components/scanner/viewfinder-overlay";
 import { ChickFont } from "@/constants/chick-fonts";
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
+import { SUPPORTED_BREEDS } from "@/constants/supported-scan-categories";
 import { useAuth } from "@/providers/auth-provider";
 import {
     inferBreedFromImage,
@@ -55,6 +56,7 @@ import {
     resolveSexDetails,
 } from "@/utils/sexing-image-inference";
 import { createFarmBatch, fetchFarmBatches } from "@/utils/supabase-batches";
+import { updateFarmEggBatch } from "@/utils/supabase-egg-batches";
 import { fetchBreedOptions } from "@/utils/supabase-lookups";
 
 const MAX_SCAN_ZOOM = 0.7;
@@ -95,8 +97,25 @@ export default function AddBatchScreen() {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const { activeFarm } = useAuth();
-  const { mode: modeParam } = useLocalSearchParams<{ mode?: string }>();
+  const {
+    mode: modeParam,
+    originBatchNo: originBatchNoParam,
+    hatchedQty: hatchedQtyParam,
+    color: colorParam,
+    sourceEggBatchId: sourceEggBatchIdParam,
+    sourceEggQty: sourceEggQtyParam,
+    sourceEggTransferredQty: sourceEggTransferredQtyParam,
+  } = useLocalSearchParams<{
+    mode?: string;
+    originBatchNo?: string;
+    hatchedQty?: string;
+    color?: string;
+    sourceEggBatchId?: string;
+    sourceEggQty?: string;
+    sourceEggTransferredQty?: string;
+  }>();
   const initialMode: BatchMode = modeParam === "egg" ? "egg" : "chicken";
+  const isChickBatch = Boolean(originBatchNoParam);
   const isNarrowPhone = width < 360;
   const colorModalWidth = Math.min(width - moderateScale(36), scale(420));
   const colorGridCardWidth = Math.floor(
@@ -108,6 +127,7 @@ export default function AddBatchScreen() {
   const sexCameraRef = useRef<CameraViewportRef>(null);
   const [breedModalOpen, setBreedModalOpen] = useState(false);
   const [breedScannerOpen, setBreedScannerOpen] = useState(false);
+  const [breedInfoVisible, setBreedInfoVisible] = useState(false);
   const [sexScannerOpen, setSexScannerOpen] = useState(false);
   const [torchEnabled, setTorchEnabled] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(0);
@@ -166,15 +186,18 @@ export default function AddBatchScreen() {
   }, [ageUnit, durationCount, totalCount]);
 
   const resetForm = useCallback(() => {
+    const chickColor = COLOR_OPTIONS.find(
+      (option) => option.name.toLowerCase() === colorParam?.toLowerCase(),
+    );
     setBatchNo("");
-    setSelectedColor(COLOR_OPTIONS[0]);
-    setDurationCount("");
+    setSelectedColor(chickColor ?? COLOR_OPTIONS[0]);
+    setDurationCount(isChickBatch ? "0" : "");
     setAgeUnit(AGE_UNIT_OPTIONS[0]);
-    setTotalCount("");
+    setTotalCount(isChickBatch ? hatchedQtyParam || "0" : "");
     setBreed("");
     setMaleCount("");
     setFemaleCount("");
-    setUnknownCount("0");
+    setUnknownCount(isChickBatch ? hatchedQtyParam || "0" : "0");
     setBreedModalOpen(false);
     setBreedScannerOpen(false);
     setSexScannerOpen(false);
@@ -185,7 +208,7 @@ export default function AddBatchScreen() {
     setIsScanningBreed(false);
     setIsScanningSex(false);
     setCapturedPhotoUri(null);
-  }, []);
+  }, [colorParam, hatchedQtyParam, isChickBatch]);
 
   useFocusEffect(
     useCallback(() => {
@@ -890,7 +913,10 @@ export default function AddBatchScreen() {
                 const ageInDays =
                   (Number.isFinite(enteredAge) ? enteredAge : 0) * 7;
 
-                if (ageInDays < MIN_CHICKEN_BATCH_AGE_WEEKS * 7) {
+                if (
+                  !isChickBatch &&
+                  ageInDays < MIN_CHICKEN_BATCH_AGE_WEEKS * 7
+                ) {
                   Alert.alert(
                     "Chicken is too young",
                     `Chicken batches must be at least ${MIN_CHICKEN_BATCH_AGE_WEEKS} weeks old.`,
@@ -923,15 +949,32 @@ export default function AddBatchScreen() {
                   femaleCount: parsedFemale,
                   maleCount: parsedMale,
                   unknownCount: parsedUnknown,
-                  ageLabel: `${durationCount || "0"} ${ageUnit.toLowerCase()}`,
+                  ageLabel: isChickBatch
+                    ? "0 days old"
+                    : `${durationCount || "0"} ${ageUnit.toLowerCase()}`,
                   isolatedCount: 0,
                   killedCount: 0,
                   colorName: selectedColor.name,
                   colorHex: selectedColor.hex,
+                  originBatchNo: originBatchNoParam,
                 };
 
                 createFarmBatch(activeFarm.id, newBatch)
-                  .then(() => {
+                  .then(async () => {
+                    if (sourceEggBatchIdParam && sourceEggQtyParam) {
+                      const transferredQty = parseCount(sourceEggQtyParam);
+                      // The source egg ledger is updated by the parent flow after the chick batch exists.
+                      await updateFarmEggBatch(
+                        activeFarm.id,
+                        sourceEggBatchIdParam,
+                        {
+                          transferredHatchedQty: parseCount(
+                            sourceEggTransferredQtyParam ||
+                              String(transferredQty),
+                          ),
+                        },
+                      );
+                    }
                     logStep("Add batch saved to Supabase", {
                       farmId: activeFarm.id,
                       batchNo: newBatch.id,
@@ -1064,7 +1107,7 @@ export default function AddBatchScreen() {
                       </Text>
                     </View>
                     <Text style={styles.breedSupportedCategories}>
-                      Cock • Hen
+                      Male / Female
                     </Text>
                     <Text style={styles.breedSupportedNote}>
                       Keep the full chicken visible and centered.
@@ -1289,24 +1332,18 @@ export default function AddBatchScreen() {
                   ]}
                 >
                   <ViewfinderOverlay size={viewfinderSize} />
-                  <View style={styles.breedSupportedCard}>
-                    <View style={styles.breedSupportedHeadingRow}>
-                      <MaterialCommunityIcons
-                        name="feather"
-                        size={15}
-                        color={ChickIntelPalette.green1}
-                      />
-                      <Text style={styles.breedSupportedHeading}>
-                        SUPPORTED BREEDS
-                      </Text>
-                    </View>
-                    <Text style={styles.breedSupportedCategories}>
-                      Silkie • Rhode Island Red
-                    </Text>
-                    <Text style={styles.breedSupportedNote}>
-                      Only supported breeds are detected.
-                    </Text>
-                  </View>
+                  <Pressable
+                    onPress={() => setBreedInfoVisible(true)}
+                    style={styles.breedInfoButton}
+                    accessibilityRole="button"
+                    accessibilityLabel="View supported breeds"
+                  >
+                    <MaterialCommunityIcons
+                      name="information-outline"
+                      size={22}
+                      color={ChickIntelPalette.gray1}
+                    />
+                  </Pressable>
                 </View>
 
                 <View style={[styles.cameraBottomColumn, { paddingBottom: 0 }]}>
@@ -1344,6 +1381,54 @@ export default function AddBatchScreen() {
             </>
           )}
         </View>
+      </Modal>
+
+      <Modal
+        visible={breedInfoVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setBreedInfoVisible(false)}
+      >
+        <Pressable
+          style={styles.breedInfoBackdrop}
+          onPress={() => setBreedInfoVisible(false)}
+        >
+          <Pressable
+            style={styles.breedInfoCard}
+            onPress={(event) => event.stopPropagation()}
+          >
+            <View style={styles.breedInfoHeader}>
+              <Text style={styles.breedInfoTitle}>Supported breeds</Text>
+              <Pressable
+                onPress={() => setBreedInfoVisible(false)}
+                accessibilityRole="button"
+                accessibilityLabel="Close supported breeds"
+              >
+                <MaterialCommunityIcons
+                  name="close"
+                  size={22}
+                  color={ChickIntelPalette.gray1}
+                />
+              </Pressable>
+            </View>
+            <ScrollView
+              style={styles.breedInfoList}
+              contentContainerStyle={styles.breedInfoListContent}
+              showsVerticalScrollIndicator
+              nestedScrollEnabled
+            >
+              {SUPPORTED_BREEDS.map((breedName) => (
+                <View key={breedName} style={styles.breedInfoListItem}>
+                  <View style={styles.breedInfoListBullet} />
+                  <Text style={styles.breedInfoListText}>{breedName}</Text>
+                </View>
+              ))}
+            </ScrollView>
+            <Text style={styles.breedInfoNote}>
+              Only these supported breeds are detected.
+            </Text>
+          </Pressable>
+        </Pressable>
       </Modal>
 
       <Modal
@@ -1832,7 +1917,7 @@ const styles = StyleSheet.create({
   },
   inputDisabled: {
     backgroundColor: "rgba(255,255,255,0.72)",
-    color: ChickIntelPalette.gray2,
+    color: ChickIntelPalette.textMuted,
   },
   colorPickerRow: {
     minHeight: verticalScale(42),
@@ -2044,7 +2129,7 @@ const styles = StyleSheet.create({
   sexScanButtonSubtitle: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(10),
-    color: ChickIntelPalette.gray2,
+    color: ChickIntelPalette.textMuted,
   },
   saveButton: {
     marginTop: 8,
@@ -2187,7 +2272,7 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(12),
     lineHeight: 17,
     fontWeight: "500",
-    color: ChickIntelPalette.gray2,
+    color: ChickIntelPalette.textMuted,
     maxWidth: scale(260),
   },
   cameraIconButton: {
@@ -2209,6 +2294,72 @@ const styles = StyleSheet.create({
   },
   cameraViewfinderAreaNarrow: {
     gap: 6,
+  },
+  breedInfoButton: {
+    width: scale(44),
+    height: verticalScale(44),
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.92)",
+    borderWidth: 1,
+    borderColor: "rgba(49,118,103,0.24)",
+  },
+  breedInfoBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    justifyContent: "center",
+    padding: moderateScale(20),
+  },
+  breedInfoCard: {
+    backgroundColor: ChickIntelPalette.light1,
+    borderRadius: 16,
+    padding: moderateScale(18),
+    gap: 12,
+    maxHeight: "72%",
+  },
+  breedInfoHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  breedInfoTitle: {
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(18),
+    fontWeight: "800",
+    color: ChickIntelPalette.gray1,
+  },
+  breedInfoList: {
+    flexGrow: 0,
+    maxHeight: verticalScale(300),
+  },
+  breedInfoListContent: {
+    gap: 8,
+  },
+  breedInfoListItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  breedInfoListBullet: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: ChickIntelPalette.green1,
+  },
+  breedInfoListText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(15),
+    lineHeight: 22,
+    fontWeight: "700",
+    color: ChickIntelPalette.gray1,
+    flex: 1,
+  },
+  breedInfoNote: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12),
+    lineHeight: 17,
+    color: ChickIntelPalette.textMuted,
   },
   breedSupportedCard: {
     width: "80%",

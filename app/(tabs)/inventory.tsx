@@ -359,6 +359,7 @@ export default function InventoryScreen() {
   const {
     effectiveItems,
     loading: loadingItems,
+    error: farmDataError,
     restockItem,
     addInventoryItem,
     removeInventoryItem,
@@ -539,6 +540,10 @@ export default function InventoryScreen() {
       void refreshFarmData();
     }, [refreshFarmData]),
   );
+
+  useEffect(() => {
+    setInventoryError(farmDataError);
+  }, [farmDataError]);
 
   useFocusEffect(
     useCallback(() => {
@@ -2194,7 +2199,7 @@ const styles = StyleSheet.create({
   tabEmptySubtitle: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(13),
-    color: ChickIntelPalette.gray2,
+    color: ChickIntelPalette.textMuted,
     textAlign: "center",
   },
   tabEmptyAddBtn: {
@@ -2319,7 +2324,7 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(11),
     fontWeight: "600",
-    color: ChickIntelPalette.gray2,
+    color: ChickIntelPalette.textMuted,
   },
   tableSurface: {
     borderRadius: 14,
@@ -2460,12 +2465,12 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(13),
     lineHeight: 18,
-    color: ChickIntelPalette.gray2,
+    color: ChickIntelPalette.textMuted,
     textAlign: "center",
     paddingVertical: verticalScale(10),
   },
 
-  // Column Widths — fixed anchor widths + flex status to guarantee rock-solid alignment across all rows
+  // Column Widths â€” fixed anchor widths + flex status to guarantee rock-solid alignment across all rows
   colSelection: { width: scale(40), justifyContent: "center" },
   colType: { width: scale(90), justifyContent: "space-between" },
   colName: {
@@ -2862,7 +2867,7 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(11),
     lineHeight: 16,
     fontWeight: "600",
-    color: ChickIntelPalette.gray2,
+    color: ChickIntelPalette.textMuted,
   },
   editStockSnapshot: {
     flexDirection: "row",

@@ -146,7 +146,7 @@ const formatAppDate = (dateOrKey?: Date | string | null) => {
 const formatInventoryOptionLabel = (item: FeedInventoryOption) => {
   const type = item.type.trim().toLowerCase();
   if (type !== "medicine" && type !== "vitamins") return item.name;
-  return `${item.name} • Exp: ${item.expirationDate ? formatAppDate(item.expirationDate) : "No date"}`;
+  return `${item.name} â€¢ Exp: ${item.expirationDate ? formatAppDate(item.expirationDate) : "No date"}`;
 };
 
 const initialTasksByDate: Record<string, ScheduleTask[]> = {};
@@ -273,6 +273,42 @@ const groupTasksByDate = (tasks: SupabaseScheduleTask[]) =>
     accumulator[key] = [...(accumulator[key] ?? []), task];
     return accumulator;
   }, {});
+
+const getUniqueTasks = (tasks: ScheduleTask[]) => {
+  const seenTaskIds = new Set<string>();
+
+  return tasks.filter((task) => {
+    if (seenTaskIds.has(task.id)) return false;
+    seenTaskIds.add(task.id);
+    return true;
+  });
+};
+
+const getTaskBatchNumbers = (task: ScheduleTask) =>
+  task.batchNos?.length ? task.batchNos : task.batchNo ? [task.batchNo] : [];
+
+const taskHasSameBatchAssignment = (
+  existingTask: ScheduleTask,
+  newTask: ScheduleTask,
+) => {
+  const existingBatches = getTaskBatchNumbers(existingTask);
+  const newBatches = getTaskBatchNumbers(newTask);
+
+  if (existingBatches.length === 0 || newBatches.length === 0) {
+    return existingBatches.length === newBatches.length;
+  }
+
+  return newBatches.some((batchNo) => existingBatches.includes(batchNo));
+};
+
+const taskDateRangesOverlap = (
+  left: Pick<ScheduleTask, "startDate" | "endDate">,
+  right: Pick<ScheduleTask, "startDate" | "endDate">,
+) => {
+  const leftEnd = left.endDate ?? left.startDate;
+  const rightEnd = right.endDate ?? right.startDate;
+  return left.startDate <= rightEnd && right.startDate <= leftEnd;
+};
 
 const isExcludedOccurrence = (
   task: ScheduleTask,
@@ -429,7 +465,7 @@ export default function ScheduleScreen() {
         setBatchOptions(
           batches.map((batch) => ({
             batchNo: batch.id,
-            label: `Batch ${batch.id}${batch.breed ? ` • ${batch.breed}` : ""}`,
+            label: `Batch ${batch.id}${batch.breed ? ` â€¢ ${batch.breed}` : ""}`,
           })),
         );
 
@@ -579,6 +615,13 @@ export default function ScheduleScreen() {
     },
     [],
   );
+
+  const closeEvidenceModal = useCallback(() => {
+    if (evidenceBusy) return;
+    setEvidenceModalVisible(false);
+    setPendingCompletion(null);
+    setEvidenceUri(null);
+  }, [evidenceBusy]);
 
   const chooseEvidence = useCallback(async (source: "camera" | "library") => {
     setEvidenceBusy(true);
@@ -854,7 +897,10 @@ export default function ScheduleScreen() {
       batch.label.toLowerCase().includes(query),
     );
   }, [batchOptions, batchSearchQuery]);
-  const allTasks = useMemo(() => Object.values(dayTasks).flat(), [dayTasks]);
+  const allTasks = useMemo(
+    () => getUniqueTasks(Object.values(dayTasks).flat()),
+    [dayTasks],
+  );
   const taskOptionColors = useMemo(
     () =>
       Object.fromEntries(
@@ -871,7 +917,7 @@ export default function ScheduleScreen() {
             !isExcludedOccurrence(task, selectedDate, occurrenceExclusions),
         )
         .sort((left, right) => left.time.localeCompare(right.time)),
-    [allTasks, selectedDate],
+    [allTasks, occurrenceExclusions, selectedDate],
   );
 
   const currentMonthTasks = useMemo(() => {
@@ -1170,6 +1216,35 @@ export default function ScheduleScreen() {
       batchNos: newTaskBatchNos,
     };
 
+    const duplicateTask = allTasks.find((existingTask) => {
+      const sameTitle =
+        existingTask.title.trim().toLowerCase() ===
+        newTask.title.trim().toLowerCase();
+      const sameInventory = hasLinkedInventoryItem
+        ? existingTask.feedInventoryItemId === newTask.feedInventoryItemId ||
+          (existingTask.feedInventoryItemId === null &&
+            newTask.feedInventoryItemId === null &&
+            existingTask.feedInventoryItemName?.trim().toLowerCase() ===
+              newTask.feedInventoryItemName?.trim().toLowerCase())
+        : !existingTask.feedInventoryItemId &&
+          !existingTask.feedInventoryItemName;
+
+      return (
+        sameTitle &&
+        sameInventory &&
+        taskHasSameBatchAssignment(existingTask, newTask) &&
+        taskDateRangesOverlap(existingTask, newTask)
+      );
+    });
+
+    if (duplicateTask) {
+      Alert.alert(
+        "Duplicate task",
+        "This task is already scheduled for the selected batch and date range.",
+      );
+      return;
+    }
+
     void createScheduleTask(activeFarm.id, newTask)
       .then((createdTask) => {
         setDayTasks((prev) => ({
@@ -1198,15 +1273,24 @@ export default function ScheduleScreen() {
       .find((task) => task.id === taskId);
     if (!deletedTask) return;
 
+    const alreadyExcluded = occurrenceExclusions.some(
+      (exclusion) =>
+        exclusion.taskId === taskId &&
+        exclusion.occurrenceDate === occurrenceDate,
+    );
+
+    if (alreadyExcluded) return;
+
+    setOccurrenceExclusions((prev) => [
+      ...prev,
+      { taskId, occurrenceDate },
+    ]);
+
     void recordDeletedScheduleTask(activeFarm.id, deletedTask)
       .then(() =>
         excludeScheduleTaskOccurrence(activeFarm.id!, taskId, occurrenceDate),
       )
       .then(() => {
-        setOccurrenceExclusions((prev) => [
-          ...prev,
-          { taskId, occurrenceDate },
-        ]);
       })
       .then(() => {
         void refreshFarmData();
@@ -1214,6 +1298,15 @@ export default function ScheduleScreen() {
         void cancelTaskNotifications(taskId);
       })
       .catch((error) => {
+        setOccurrenceExclusions((prev) =>
+          prev.filter(
+            (exclusion) =>
+              !(
+                exclusion.taskId === taskId &&
+                exclusion.occurrenceDate === occurrenceDate
+              ),
+          ),
+        );
         logError("Schedule task delete failed", error, {
           farmId: activeFarm.id,
           taskId,
@@ -1575,7 +1668,7 @@ export default function ScheduleScreen() {
                                 <Text style={styles.taskMeta}>
                                   {task.feedInventoryItemName}
                                   {task.feedDailyAmount
-                                    ? ` • ${formatQuantityValue(task.feedDailyAmount)} ${task.feedDailyUnit ?? ""}/day`
+                                    ? ` â€¢ ${formatQuantityValue(task.feedDailyAmount)} ${task.feedDailyUnit ?? ""}/day`
                                     : ""}
                                 </Text>
                               ) : null}
@@ -1621,9 +1714,10 @@ export default function ScheduleScreen() {
                               {formatDisplayTime(task.time)}
                             </Text>
                             <Pressable
-                              onPress={() =>
-                                handleDeleteTask(task.id, selectedKey)
-                              }
+                              onPress={(event) => {
+                                event.stopPropagation();
+                                handleDeleteTask(task.id, selectedKey);
+                              }}
                               hitSlop={10}
                               style={styles.deleteTaskBtn}
                             >
@@ -1828,7 +1922,7 @@ export default function ScheduleScreen() {
                               <Text style={styles.taskMeta}>
                                 {task.feedInventoryItemName}
                                 {task.feedDailyAmount
-                                  ? ` • ${formatQuantityValue(task.feedDailyAmount)} ${task.feedDailyUnit ?? ""}/day`
+                                  ? ` â€¢ ${formatQuantityValue(task.feedDailyAmount)} ${task.feedDailyUnit ?? ""}/day`
                                   : ""}
                               </Text>
                             ) : null}
@@ -1874,9 +1968,10 @@ export default function ScheduleScreen() {
                             {formatDisplayTime(task.time)}
                           </Text>
                           <Pressable
-                            onPress={() =>
-                              handleDeleteTask(task.id, task.startDate)
-                            }
+                            onPress={(event) => {
+                              event.stopPropagation();
+                              handleDeleteTask(task.id, task.startDate);
+                            }}
                             hitSlop={10}
                             style={styles.deleteTaskBtn}
                           >
@@ -2382,21 +2477,34 @@ export default function ScheduleScreen() {
         visible={evidenceModalVisible}
         transparent
         animationType="fade"
-        onRequestClose={() => {
-          if (!evidenceBusy) setEvidenceModalVisible(false);
-        }}
+        onRequestClose={closeEvidenceModal}
       >
         <View style={styles.evidenceOverlay}>
           <View style={styles.evidenceCard}>
-            <View style={styles.modalFormSectionHeader}>
-              <MaterialCommunityIcons
-                name="camera-plus-outline"
-                size={20}
-                color={ChickIntelPalette.green1}
-              />
-              <Text style={styles.modalFormSectionTitle}>
-                Task evidence required
-              </Text>
+            <View style={styles.evidenceHeader}>
+              <View style={styles.modalFormSectionHeader}>
+                <MaterialCommunityIcons
+                  name="camera-plus-outline"
+                  size={20}
+                  color={ChickIntelPalette.green1}
+                />
+                <Text style={styles.modalFormSectionTitle}>
+                  Task evidence required
+                </Text>
+              </View>
+              <Pressable
+                onPress={closeEvidenceModal}
+                hitSlop={10}
+                disabled={evidenceBusy}
+                accessibilityRole="button"
+                accessibilityLabel="Close task evidence"
+              >
+                <MaterialCommunityIcons
+                  name="close"
+                  size={22}
+                  color={ChickIntelPalette.gray2}
+                />
+              </Pressable>
             </View>
             <Text style={styles.evidenceText}>
               Attach a photo before marking this task as completed.
@@ -2437,7 +2545,7 @@ export default function ScheduleScreen() {
             <View style={styles.modalActionRow}>
               <TouchableOpacity
                 style={styles.modalCancelButton}
-                onPress={() => setEvidenceModalVisible(false)}
+                onPress={closeEvidenceModal}
                 disabled={evidenceBusy}
               >
                 <Text style={styles.modalCancelButtonText}>Cancel</Text>
@@ -2467,15 +2575,29 @@ export default function ScheduleScreen() {
       >
         <View style={styles.evidenceOverlay}>
           <View style={styles.evidenceCard}>
-            <View style={styles.modalFormSectionHeader}>
-              <MaterialCommunityIcons
-                name="clipboard-check-outline"
-                size={20}
-                color={ChickIntelPalette.green1}
-              />
-              <Text style={styles.modalFormSectionTitle}>
-                Completed task details
-              </Text>
+            <View style={styles.evidenceHeader}>
+              <View style={styles.modalFormSectionHeader}>
+                <MaterialCommunityIcons
+                  name="clipboard-check-outline"
+                  size={20}
+                  color={ChickIntelPalette.green1}
+                />
+                <Text style={styles.modalFormSectionTitle}>
+                  Completed task details
+                </Text>
+              </View>
+              <Pressable
+                onPress={() => setCompletionDetails(null)}
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel="Close completed task details"
+              >
+                <MaterialCommunityIcons
+                  name="close"
+                  size={22}
+                  color={ChickIntelPalette.gray2}
+                />
+              </Pressable>
             </View>
             {completionDetails ? (
               <>
@@ -2792,7 +2914,7 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(13),
     lineHeight: 19,
-    color: ChickIntelPalette.gray2,
+    color: ChickIntelPalette.textMuted,
     textAlign: "center",
   },
   errorRetryButton: {
@@ -2929,7 +3051,7 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(12),
     fontWeight: "600",
-    color: ChickIntelPalette.gray2,
+    color: ChickIntelPalette.textMuted,
   },
   calendarModeTabTextActive: {
     color: "#FFFFFF",
@@ -3265,7 +3387,7 @@ const styles = StyleSheet.create({
     marginTop: 1,
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(11),
-    color: ChickIntelPalette.gray2,
+    color: ChickIntelPalette.textMuted,
   },
   batchPickerSearch: {
     minHeight: verticalScale(42),
@@ -3316,7 +3438,7 @@ const styles = StyleSheet.create({
   batchPickerOptionMeta: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(10),
-    color: ChickIntelPalette.gray2,
+    color: ChickIntelPalette.textMuted,
   },
   batchPickerEmpty: {
     alignItems: "center",
@@ -3327,7 +3449,7 @@ const styles = StyleSheet.create({
   batchPickerEmptyText: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(12),
-    color: ChickIntelPalette.gray2,
+    color: ChickIntelPalette.textMuted,
   },
   batchPickerApplyButton: {
     minHeight: verticalScale(42),
@@ -3376,7 +3498,7 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(11),
     lineHeight: 16,
     fontWeight: "600",
-    color: ChickIntelPalette.gray2,
+    color: ChickIntelPalette.textMuted,
   },
   compactSelectRow: {
     minHeight: verticalScale(46),
@@ -3473,11 +3595,16 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     gap: 12,
   },
+  evidenceHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
   evidenceText: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(13),
     lineHeight: 19,
-    color: ChickIntelPalette.gray2,
+    color: ChickIntelPalette.textMuted,
   },
   evidencePreview: {
     width: "100%",
@@ -3519,7 +3646,7 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(12),
     lineHeight: 18,
-    color: ChickIntelPalette.gray2,
+    color: ChickIntelPalette.textMuted,
   },
   customRepeatContainer: {
     gap: 8,

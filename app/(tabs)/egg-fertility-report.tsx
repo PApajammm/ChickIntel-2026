@@ -473,7 +473,7 @@ function buildPrintableHtml(input: {
           </div>
 
           <div class="insight-box">
-            <div class="insight-title">💡 Operational Takeaway & Fertility Analysis</div>
+            <div class="insight-title">ðŸ’¡ Operational Takeaway & Fertility Analysis</div>
             <div class="insight-text">${escapeHtml(input.report.analyticsText)}</div>
           </div>
 
@@ -657,7 +657,7 @@ export default function EggFertilityReportScreen() {
             originBatchNo
               ? `Batch C${originBatchNo.replace(/\D/g, "").padStart(3, "0")}`
               : "Unknown chicken batch",
-          ].join(" • ");
+          ].join(" â€¢ ");
           if (!colorName && !originBatchNo) return;
 
           const key = `${colorName}|${originBatchNo}`.toLowerCase();
@@ -1276,7 +1276,7 @@ const styles = StyleSheet.create({
   headerSubtitle: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(12),
-    color: ChickIntelPalette.gray2,
+    color: ChickIntelPalette.textMuted,
     textAlign: "center",
   },
   backButton: {
@@ -1330,7 +1330,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 0.5,
     textTransform: "uppercase",
-    color: ChickIntelPalette.gray2,
+    color: ChickIntelPalette.textMuted,
   },
   scopeDropdownValueRow: {
     flexDirection: "row",
@@ -1465,7 +1465,7 @@ const styles = StyleSheet.create({
   kpiLabel: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(10),
-    color: ChickIntelPalette.gray2,
+    color: ChickIntelPalette.textMuted,
     textTransform: "uppercase",
     letterSpacing: 0.4,
   },
@@ -1553,7 +1553,7 @@ const styles = StyleSheet.create({
   donutCenterLabel: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(11),
-    color: ChickIntelPalette.gray2,
+    color: ChickIntelPalette.textMuted,
   },
   breakdownList: {
     width: "100%",

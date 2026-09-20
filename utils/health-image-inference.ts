@@ -13,6 +13,35 @@ export type HealthImageInferenceResult = {
     predictions: HealthImagePrediction[];
 };
 
+const HEALTH_CLASSIFIER_DISPLAY_NAMES: Record<string, string> = {
+    bumblefoot: "Bumblefoot",
+    crd: "Chronic Respiratory Disease",
+};
+
+export function normalizeHealthClassifierLabel(label: string) {
+    return label
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim();
+}
+
+export function getHealthClassifierDisplayName(label: string) {
+    const normalized = normalizeHealthClassifierLabel(label);
+    if (!normalized) return "";
+
+    return (
+        HEALTH_CLASSIFIER_DISPLAY_NAMES[normalized] ??
+        normalized
+            .split(" ")
+            .map((part) =>
+                part.length > 0
+                    ? `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`
+                    : part,
+            )
+            .join(" ")
+    );
+}
+
 async function photoUriToBase64(photoUri: string) {
     try {
         const imageBase64 = await FileSystem.readAsStringAsync(photoUri, {

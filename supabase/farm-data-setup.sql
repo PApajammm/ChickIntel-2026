@@ -12,6 +12,8 @@ create table if not exists public.batches (
     killed_count integer not null default 0 check (killed_count >= 0),
     color_name text,
     color_hex text,
+    origin_batch_no text,
+    source_egg_batch_id uuid,
     created_at timestamptz not null default timezone('utc', now()),
     updated_at timestamptz not null default timezone('utc', now()),
     unique (farm_id, batch_no)
@@ -19,6 +21,8 @@ create table if not exists public.batches (
 
 alter table public.batches add column if not exists total_count integer not null default 0;
 alter table public.batches add column if not exists unknown_count integer not null default 0;
+alter table public.batches add column if not exists origin_batch_no text;
+alter table public.batches add column if not exists source_egg_batch_id uuid;
 update public.batches
 set total_count = female_count + male_count
 where total_count = 0;
@@ -31,14 +35,22 @@ create table if not exists public.egg_batches (
     line_no integer not null default 0 check (line_no >= 0),
     age_unit text not null check (age_unit in ('Days old', 'Weeks old')),
     hatched_qty integer not null default 0 check (hatched_qty >= 0),
+    transferred_hatched_qty integer not null default 0 check (transferred_hatched_qty >= 0),
     damaged_qty integer not null default 0 check (damaged_qty >= 0),
+    disposed_damaged_qty integer not null default 0 check (disposed_damaged_qty >= 0),
     unhatched_qty integer not null default 0 check (unhatched_qty >= 0),
+    sold_qty integer not null default 0 check (sold_qty >= 0),
     color_name text,
     color_hex text,
     origin text,
     created_at timestamptz not null default timezone('utc', now()),
     updated_at timestamptz not null default timezone('utc', now())
 );
+
+alter table public.egg_batches
+    add column if not exists transferred_hatched_qty integer not null default 0,
+    add column if not exists disposed_damaged_qty integer not null default 0,
+    add column if not exists sold_qty integer not null default 0;
 
 create table if not exists public.inventory_items (
     id uuid primary key default gen_random_uuid(),

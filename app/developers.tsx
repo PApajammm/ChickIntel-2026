@@ -908,7 +908,7 @@ export default function DevelopersScreen() {
                   Developed for BPSU BSCS SD4A Thesis Project 2026
                 </Text>
                 <Text style={styles.footerSubText}>
-                  ChickIntel · Smart Poultry Management & Diagnostics
+                  ChickIntel Â· Smart Poultry Management & Diagnostics
                 </Text>
               </View>
             </ScrollView>

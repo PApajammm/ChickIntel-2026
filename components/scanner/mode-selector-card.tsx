@@ -90,7 +90,7 @@ function TabToggle({
 }
 
 /**
- * Floating card for choosing the scanner’s AI mode before capture.
+ * Floating card for choosing the scannerâ€™s AI mode before capture.
  */
 export function ModeSelectorCard({
     mode,
@@ -151,14 +151,14 @@ const styles = StyleSheet.create({
         fontFamily: ChickFont.sans,
         fontSize: responsiveFontSize(13),
         fontWeight: "700",
-        color: ChickIntelPalette.gray2,
+        color: ChickIntelPalette.textMuted,
     },
     toggleHint: {
         fontFamily: ChickFont.sans,
         fontSize: responsiveFontSize(9),
         lineHeight: 11,
         fontWeight: "600",
-        color: ChickIntelPalette.gray2,
+        color: ChickIntelPalette.textMuted,
         opacity: 0.7,
     },
 });

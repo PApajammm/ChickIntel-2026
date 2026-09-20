@@ -65,10 +65,10 @@ begin
     where id in (select id from transfer_farms);
 
     insert into public.farm_members (farm_id, user_id, role)
-    select id, target_user_id, 'farmer'
+    select id, target_user_id, 'worker'
     from transfer_farms
     on conflict (farm_id, user_id) do update
-    set role = 'farmer';
+    set role = 'worker';
 
     delete from public.farm_members
     where user_id = any(source_user_ids)

@@ -8,8 +8,11 @@ type EggBatchRow = {
   line_no: number;
   age_unit: EggBatchItem["ageUnit"];
   hatched_qty: number;
+  transferred_hatched_qty?: number | null;
   damaged_qty: number;
+  disposed_damaged_qty?: number | null;
   unhatched_qty: number;
+  sold_qty?: number | null;
   color_name: string | null;
   color_hex: string | null;
   origin: string | null;
@@ -32,8 +35,11 @@ function mapEggBatchRow(row: EggBatchRow): EggBatchItem {
     lineNo: row.line_no,
     ageUnit: row.age_unit,
     hatchedQty: row.hatched_qty,
+    transferredHatchedQty: row.transferred_hatched_qty ?? 0,
     damagedQty: row.damaged_qty,
+    disposedDamagedQty: row.disposed_damaged_qty ?? 0,
     unhatchedQty: row.unhatched_qty,
+    soldQty: row.sold_qty ?? 0,
     colorName: row.color_name ?? undefined,
     colorHex: row.color_hex ?? undefined,
     origin: row.origin ?? row.color_name ?? "Unknown",
@@ -45,7 +51,7 @@ export async function fetchFarmEggBatches(farmId: string) {
   const { data, error } = await supabase
     .from("egg_batches")
     .select(
-      "id, batch_no, egg_qty, line_no, age_unit, hatched_qty, damaged_qty, unhatched_qty, color_name, color_hex, origin, created_at",
+      "id, batch_no, egg_qty, line_no, age_unit, hatched_qty, transferred_hatched_qty, damaged_qty, disposed_damaged_qty, unhatched_qty, sold_qty, color_name, color_hex, origin, created_at",
     )
     .eq("farm_id", farmId)
     .order("created_at", { ascending: false });
@@ -145,14 +151,17 @@ export async function createFarmEggBatch(
       line_no: input.lineNo,
       age_unit: input.ageUnit,
       hatched_qty: input.hatchedQty,
+      transferred_hatched_qty: input.transferredHatchedQty ?? 0,
       damaged_qty: input.damagedQty,
+      disposed_damaged_qty: input.disposedDamagedQty ?? 0,
       unhatched_qty: input.unhatchedQty,
+      sold_qty: input.soldQty ?? 0,
       color_name: input.colorName ?? null,
       color_hex: input.colorHex ?? null,
       origin: input.origin,
     })
     .select(
-      "id, batch_no, egg_qty, line_no, age_unit, hatched_qty, damaged_qty, unhatched_qty, color_name, color_hex, origin, created_at",
+      "id, batch_no, egg_qty, line_no, age_unit, hatched_qty, transferred_hatched_qty, damaged_qty, disposed_damaged_qty, unhatched_qty, sold_qty, color_name, color_hex, origin, created_at",
     )
     .single();
 
@@ -173,10 +182,17 @@ export async function updateFarmEggBatch(
   if (input.lineNo !== undefined) payload.line_no = input.lineNo;
   if (input.ageUnit !== undefined) payload.age_unit = input.ageUnit;
   if (input.hatchedQty !== undefined) payload.hatched_qty = input.hatchedQty;
+  if (input.transferredHatchedQty !== undefined) {
+    payload.transferred_hatched_qty = input.transferredHatchedQty;
+  }
   if (input.damagedQty !== undefined) payload.damaged_qty = input.damagedQty;
+  if (input.disposedDamagedQty !== undefined) {
+    payload.disposed_damaged_qty = input.disposedDamagedQty;
+  }
   if (input.unhatchedQty !== undefined) {
     payload.unhatched_qty = input.unhatchedQty;
   }
+  if (input.soldQty !== undefined) payload.sold_qty = input.soldQty;
   if (input.colorName !== undefined) payload.color_name = input.colorName;
   if (input.colorHex !== undefined) payload.color_hex = input.colorHex;
   if (input.origin !== undefined) payload.origin = input.origin;

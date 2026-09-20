@@ -83,6 +83,20 @@ export async function createFarmer(
   name: string,
   pgword: string,
 ): Promise<string> {
+  const normalizedEmail = email.trim().toLowerCase();
+  const displayName = name.trim();
+
+  const { data: existingProfile, error: existingProfileError } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("email", normalizedEmail)
+    .maybeSingle();
+
+  if (existingProfileError) throw existingProfileError;
+  if (existingProfile) {
+    throw new Error("A farmer account already uses this email address.");
+  }
+
   const tempClient = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
       persistSession: false,
@@ -92,7 +106,7 @@ export async function createFarmer(
   });
 
   const { data, error } = await tempClient.auth.signUp({
-    email: email.trim().toLowerCase(),
+    email: normalizedEmail,
     password: pgword,
     options: {
       data: {
@@ -109,6 +123,10 @@ export async function createFarmer(
     throw new Error("Failed to create farmer account.");
   }
 
+  if (data.user.identities && data.user.identities.length === 0) {
+    throw new Error("A farmer account already uses this email address.");
+  }
+
   const newUserId = data.user.id;
 
   // 1. Fetch active farm ID
@@ -122,13 +140,16 @@ export async function createFarmer(
   const farmId = farmData?.[0]?.id;
 
   // 2. Ensure public.profiles record exists with display_name, is_active, and default_farm_id
-  const { error: profileError } = await supabase.from("profiles").upsert({
-    id: newUserId,
-    email: data.user.email,
-    display_name: name,
-    is_active: true,
-    default_farm_id: farmId ?? null,
-  });
+  const { error: profileError } = await supabase.from("profiles").upsert(
+    {
+      id: newUserId,
+      email: data.user.email ?? normalizedEmail,
+      display_name: displayName,
+      is_active: true,
+      default_farm_id: farmId ?? null,
+    },
+    { onConflict: "id" },
+  );
 
   if (profileError) throw profileError;
 
@@ -140,9 +161,9 @@ export async function createFarmer(
         {
           farm_id: farmId,
           user_id: newUserId,
-          role: "farmer",
+          role: "worker",
         },
-        { onConflict: "farm_id,user_id" },
+        { onConflict: "farm_id,user_id", ignoreDuplicates: true },
       );
 
     if (membershipError) throw membershipError;
