@@ -198,7 +198,7 @@ export default function ScannedHealthInputScreen() {
             <Text style={styles.pageSubtitle}>
               {isMonitoringRescan
                 ? `Confirm behaviors for ${chtTag || "this chicken"}. The same monitoring record will be updated.`
-                : "Track the chickenâ€™s behavior and add notes before saving the journal entry."}
+                : "Track the chicken's behavior and add notes before saving the journal entry."}
             </Text>
           </View>
 

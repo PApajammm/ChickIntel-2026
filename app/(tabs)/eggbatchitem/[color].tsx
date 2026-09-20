@@ -527,7 +527,7 @@ export default function EggBatchColorScreen() {
           <View style={styles.headerTitleWrap}>
             <Text style={styles.pageTitle} numberOfLines={1}>
               {isEggOnlyDetail
-                ? `Egg Batches â€¢ ${breedName} Batch ${targetBatchNo}`
+                ? `Egg Batches | ${breedName} Batch ${targetBatchNo}`
                 : `${breedName} Batch ${targetBatchNo}`}
             </Text>
             <Text style={styles.subtitle} numberOfLines={1}>
@@ -536,7 +536,7 @@ export default function EggBatchColorScreen() {
               ) : (
                 <Text style={styles.subtitleMuted}>Selected color</Text>
               )}{" "}
-              â€¢ {summaryMetrics.batchCount} batches â€¢ Fertility at collection{" "}
+              | {summaryMetrics.batchCount} batches | Fertility at collection{" "}
               {summaryMetrics.fertility}
             </Text>
           </View>
@@ -611,7 +611,7 @@ export default function EggBatchColorScreen() {
           </Text>
           {activeSection === "eggs" ? (
             <Text style={styles.actionGuide}>
-              Bird: transfer hatched eggs â€¢ Cart: mark unhatched eggs sold â€¢
+              Bird: transfer hatched eggs | Cart: mark unhatched eggs sold |
               Bin: dispose damaged eggs. Fertility at collection stays fixed.
             </Text>
           ) : null}
@@ -649,7 +649,7 @@ export default function EggBatchColorScreen() {
                       </Text>
                     </View>
                     <Text style={styles.selectionHint}>
-                      {getCurrentBatchAgeLabel(batch)} â€¢ Hatched from chicken
+                      {getCurrentBatchAgeLabel(batch)} | Hatched from chicken
                       batch {batch.originBatchNo}
                     </Text>
                     <Pressable

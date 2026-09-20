@@ -146,7 +146,7 @@ const formatAppDate = (dateOrKey?: Date | string | null) => {
 const formatInventoryOptionLabel = (item: FeedInventoryOption) => {
   const type = item.type.trim().toLowerCase();
   if (type !== "medicine" && type !== "vitamins") return item.name;
-  return `${item.name} â€¢ Exp: ${item.expirationDate ? formatAppDate(item.expirationDate) : "No date"}`;
+  return `${item.name} | Exp: ${item.expirationDate ? formatAppDate(item.expirationDate) : "No date"}`;
 };
 
 const initialTasksByDate: Record<string, ScheduleTask[]> = {};
@@ -465,7 +465,7 @@ export default function ScheduleScreen() {
         setBatchOptions(
           batches.map((batch) => ({
             batchNo: batch.id,
-            label: `Batch ${batch.id}${batch.breed ? ` â€¢ ${batch.breed}` : ""}`,
+            label: `Batch ${batch.id}${batch.breed ? ` | ${batch.breed}` : ""}`,
           })),
         );
 
@@ -1281,17 +1281,13 @@ export default function ScheduleScreen() {
 
     if (alreadyExcluded) return;
 
-    setOccurrenceExclusions((prev) => [
-      ...prev,
-      { taskId, occurrenceDate },
-    ]);
+    setOccurrenceExclusions((prev) => [...prev, { taskId, occurrenceDate }]);
 
     void recordDeletedScheduleTask(activeFarm.id, deletedTask)
       .then(() =>
         excludeScheduleTaskOccurrence(activeFarm.id!, taskId, occurrenceDate),
       )
-      .then(() => {
-      })
+      .then(() => {})
       .then(() => {
         void refreshFarmData();
         void loadTaskMetadata();
@@ -1668,7 +1664,7 @@ export default function ScheduleScreen() {
                                 <Text style={styles.taskMeta}>
                                   {task.feedInventoryItemName}
                                   {task.feedDailyAmount
-                                    ? ` â€¢ ${formatQuantityValue(task.feedDailyAmount)} ${task.feedDailyUnit ?? ""}/day`
+                                    ? ` | ${formatQuantityValue(task.feedDailyAmount)} ${task.feedDailyUnit ?? ""}/day`
                                     : ""}
                                 </Text>
                               ) : null}
@@ -1922,7 +1918,7 @@ export default function ScheduleScreen() {
                               <Text style={styles.taskMeta}>
                                 {task.feedInventoryItemName}
                                 {task.feedDailyAmount
-                                  ? ` â€¢ ${formatQuantityValue(task.feedDailyAmount)} ${task.feedDailyUnit ?? ""}/day`
+                                  ? ` | ${formatQuantityValue(task.feedDailyAmount)} ${task.feedDailyUnit ?? ""}/day`
                                   : ""}
                               </Text>
                             ) : null}

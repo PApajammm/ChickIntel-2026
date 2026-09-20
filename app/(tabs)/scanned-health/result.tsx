@@ -1,26 +1,26 @@
 import {
-  moderateScale,
-  responsiveFontSize,
-  scale,
-  verticalScale,
+    moderateScale,
+    responsiveFontSize,
+    scale,
+    verticalScale,
 } from "@/utils/responsive";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -29,8 +29,8 @@ import { HealthFlowFooterButton } from "@/components/health-scan/health-flow-foo
 import { HealthInputSummaryCard } from "@/components/health-scan/health-input-summary-card";
 import { HealthResultCard } from "@/components/health-scan/health-result-card";
 import {
-  ChickSelectRow,
-  ChickSelectionModal,
+    ChickSelectRow,
+    ChickSelectionModal,
 } from "@/components/ui/chick-form";
 import { ChickFont } from "@/constants/chick-fonts";
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
@@ -40,25 +40,25 @@ import { useBehaviors } from "@/hooks/use-behaviors";
 import { useAuth } from "@/providers/auth-provider";
 import type { BatchItem } from "@/utils/batch-store";
 import {
-  getHealthClassifierDisplayName,
-  inferDiseaseFromImage,
-  normalizeHealthClassifierLabel,
-  type HealthImageInferenceResult,
+    getHealthClassifierDisplayName,
+    inferDiseaseFromImage,
+    normalizeHealthClassifierLabel,
+    type HealthImageInferenceResult,
 } from "@/utils/health-image-inference";
 import { logError, logStep } from "@/utils/logger";
 import { fetchFarmBatches } from "@/utils/supabase-batches";
 import { mapBehaviorIdsToLabels } from "@/utils/supabase-behaviors";
 import {
-  detectDiseaseFromClassifierLabel,
-  type MatchedDisease,
+    detectDiseaseFromClassifierLabel,
+    type MatchedDisease,
 } from "@/utils/supabase-diseases";
 import { createHealthJournalEntry } from "@/utils/supabase-health-journal";
 import {
-  appendHealthLogToMonitoring,
-  createHealthMonitoringRecord,
-  doesChtTagExist,
-  formatChtTag,
-  getNextChtNumber,
+    appendHealthLogToMonitoring,
+    createHealthMonitoringRecord,
+    doesChtTagExist,
+    formatChtTag,
+    getNextChtNumber,
 } from "@/utils/supabase-health-monitoring";
 
 const MONITORABLE_DISEASES = ["Infectious Coryza", "Fowlpox"];
@@ -133,7 +133,7 @@ function hasStrongHealthPrediction(
 }
 
 function formatBatchOptionLabel(batch: BatchItem) {
-  return `${batch.id} Â· ${batch.breed}`;
+  return `${batch.id} - ${batch.breed}`;
 }
 
 export default function ScannedHealthResultScreen() {

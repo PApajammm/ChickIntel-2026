@@ -170,7 +170,7 @@ export default function HomeScreen() {
   const { width } = useWindowDimensions();
   const { scale: rs, moderateScale: rms } = useResponsiveMetrics();
 
-  /** Quick-action SVG size: ~1.8Ã— previous 34px icon size, scaled */
+  /** Quick-action SVG size: approximately 1.8x the previous 34px icon size, scaled */
   const QUICK_ACTION_ICON_SIZE = Math.round(rms(45) * 1.8);
 
   const featureCardWidth = Math.min(width * 0.65, rs(252));
@@ -670,7 +670,7 @@ export default function HomeScreen() {
     if (period.includes("7")) return "this week";
     if (period.includes("30")) return "this month";
     if (period.includes("12")) return "this year";
-    // fallback â€” try to infer days
+    // fallback - try to infer days
     if (period.includes("day")) return "this period";
     return period;
   }
@@ -1181,8 +1181,7 @@ export default function HomeScreen() {
                       </View>
 
                       <Text style={styles.featureTraitsLine} numberOfLines={1}>
-                        ðŸ›¡ï¸{" "}
-                        {item.hardiness || item.traits.slice(0, 2).join(" â€¢ ")}
+                        {item.hardiness || item.traits.slice(0, 2).join(" | ")}
                       </Text>
 
                       <View style={styles.triviaBox}>
@@ -1251,7 +1250,7 @@ export default function HomeScreen() {
                   {selectedBreedForModal?.breedName}
                 </Text>
                 <Text style={styles.breedModalSubtitle}>
-                  {selectedBreedForModal?.purpose} â€¢{" "}
+                  {selectedBreedForModal?.purpose} |{" "}
                   {selectedBreedForModal?.hardiness}
                 </Text>
               </View>
@@ -1538,7 +1537,7 @@ const styles = StyleSheet.create({
     color: ChickIntelPalette.green1,
     marginTop: 3,
   },
-  /** Real-time date â€” neutral Gray 2 from ChickIntel palette */
+  /** Real-time date - neutral Gray 2 from ChickIntel palette */
   headerDateLive: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(13),

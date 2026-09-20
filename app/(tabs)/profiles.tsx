@@ -1077,7 +1077,7 @@ export default function ProfilesScreen() {
                   </View>
                   <Text style={styles.modalSubtitle} numberOfLines={1}>
                     {selectedBatch
-                      ? `${formatProfileBatchId("C", selectedBatch.id)} â€¢ `
+                      ? `${formatProfileBatchId("C", selectedBatch.id)} | `
                       : ""}
                     {selectedBatch?.breed || "General"}
                   </Text>
@@ -1269,7 +1269,7 @@ export default function ProfilesScreen() {
                     <Text style={styles.modalTitle}>Edit Egg Batch</Text>
                   </View>
                   <Text style={styles.modalSubtitle} numberOfLines={1}>
-                    {formatProfileBatchId("E", eggForm.batchNo)} â€¢{" "}
+                    {formatProfileBatchId("E", eggForm.batchNo)} |{" "}
                     {eggForm.origin || "Egg Batch"}
                   </Text>
                 </View>

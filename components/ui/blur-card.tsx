@@ -9,7 +9,7 @@ type BlurCardProps = PropsWithChildren<{
   style?: StyleProp<ViewStyle>;
   /**
    * iOS/Android only. Web falls back to a translucent surface.
-   * Typical range: 12â€“32 for subtle blur.
+   * Typical range: 12-32 for subtle blur.
    */
   intensity?: number;
   borderRadius?: number;

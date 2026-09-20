@@ -2470,7 +2470,7 @@ const styles = StyleSheet.create({
     paddingVertical: verticalScale(10),
   },
 
-  // Column Widths â€” fixed anchor widths + flex status to guarantee rock-solid alignment across all rows
+  // Column widths - fixed anchor widths plus flex status keep all rows aligned.
   colSelection: { width: scale(40), justifyContent: "center" },
   colType: { width: scale(90), justifyContent: "space-between" },
   colName: {

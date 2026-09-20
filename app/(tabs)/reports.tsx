@@ -155,7 +155,7 @@ function renderProductionSection(
       <div class="kpi-box">
         <div class="kpi-title">REPORT STATUS</div>
         <div class="kpi-value" style="color: #317667;">Verified</div>
-        <div class="kpi-sub">ChickInteL Analytics</div>
+        <div class="kpi-sub">ChickIntel Analytics</div>
       </div>
     </div>
 
@@ -184,7 +184,7 @@ function renderProductionSection(
 
     <!-- Insight Box -->
     <div class="insight-box">
-      <div class="insight-title">ðŸ’¡ Operational Takeaway & Analysis</div>
+      <div class="insight-title">Operational Takeaway & Analysis</div>
       <div class="insight-text">${escapeHtml(snapshot.analyticsText)}</div>
     </div>`;
 }
@@ -293,7 +293,7 @@ function renderSupplySection(
       <div class="kpi-box">
         <div class="kpi-title">INVENTORY TRACKING</div>
         <div class="kpi-value" style="color: #317667;">Active</div>
-        <div class="kpi-sub">ChickInteL Inventory System</div>
+        <div class="kpi-sub">ChickIntel Inventory System</div>
       </div>
     </div>
 
@@ -320,7 +320,7 @@ function renderSupplySection(
 
     <!-- Insight Box -->
     <div class="insight-box">
-      <div class="insight-title">ðŸ’¡ Operational Takeaway & Inventory Analysis</div>
+      <div class="insight-title">Operational Takeaway & Inventory Analysis</div>
       <div class="insight-text">${escapeHtml(supply.analyticsText)}</div>
     </div>`;
 }
@@ -355,7 +355,7 @@ function buildPrintableHtml({
       categoryName: "Egg Production",
       contentHtml: renderProductionSection(
         "Egg Production Report",
-        "ðŸ¥š",
+        "EGG",
         eggReport.production,
       ),
     });
@@ -363,7 +363,7 @@ function buildPrintableHtml({
       categoryName: "Chicken Production",
       contentHtml: renderProductionSection(
         "Chicken Flock & Batch Report",
-        "ðŸ“",
+        "BIRD",
         chickenReport.production,
       ),
     });
@@ -371,7 +371,7 @@ function buildPrintableHtml({
       categoryName: "Vitamins & Meds",
       contentHtml: renderSupplySection(
         "Vitamins & Medication Activity",
-        "ðŸ’Š",
+        "CARE",
         vitaminsReport.supply,
       ),
     });
@@ -379,7 +379,7 @@ function buildPrintableHtml({
       categoryName: "Feeds Consumption",
       contentHtml: renderSupplySection(
         "Feeds Consumption & Inventory",
-        "ðŸŒ¾",
+        "FEED",
         feedsReport.supply,
       ),
     });
@@ -388,7 +388,7 @@ function buildPrintableHtml({
       categoryName: "Egg Production",
       contentHtml: renderProductionSection(
         "Egg Production Report",
-        "ðŸ¥š",
+        "EGG",
         eggReport.production,
       ),
     });
@@ -397,7 +397,7 @@ function buildPrintableHtml({
       categoryName: "Chicken Production",
       contentHtml: renderProductionSection(
         "Chicken Flock & Batch Report",
-        "ðŸ“",
+        "BIRD",
         chickenReport.production,
       ),
     });
@@ -406,7 +406,7 @@ function buildPrintableHtml({
       categoryName: "Vitamins & Meds",
       contentHtml: renderSupplySection(
         "Vitamins & Medication Activity",
-        "ðŸ’Š",
+        "CARE",
         vitaminsReport.supply,
       ),
     });
@@ -415,7 +415,7 @@ function buildPrintableHtml({
       categoryName: "Feeds Consumption",
       contentHtml: renderSupplySection(
         "Feeds Consumption & Inventory",
-        "ðŸŒ¾",
+        "FEED",
         feedsReport.supply,
       ),
     });
@@ -430,11 +430,11 @@ function buildPrintableHtml({
           <!-- Top Page Header -->
           <div class="page-top-header">
               <div class="brand-group">
-                  <h1 class="brand-title">ChickInteL</h1>
+                  <h1 class="brand-title">ChickIntel</h1>
                   <p class="brand-sub">Executive Farm Intelligence Report</p>
               </div>
               <div class="page-badge">
-                Page ${idx + 1} of ${totalPages} â€¢ ${escapeHtml(page.categoryName)}
+                Page ${idx + 1} of ${totalPages} | ${escapeHtml(page.categoryName)}
               </div>
           </div>
 
@@ -452,7 +452,7 @@ function buildPrintableHtml({
 
           <!-- Footer -->
           <div class="page-footer">
-            <span>Official ChickInteL Farm Document</span>
+            <span>Official ChickIntel Farm Document</span>
             <span>Generated on ${escapeHtml(generatedDate)} ${escapeHtml(generatedTime)}</span>
             <span>Page ${idx + 1} of ${totalPages}</span>
           </div>
@@ -464,7 +464,7 @@ function buildPrintableHtml({
     <html>
         <head>
             <meta charset="utf-8" />
-            <title>ChickInteL Farm Report - ${escapeHtml(overview)}</title>
+            <title>ChickIntel Farm Report - ${escapeHtml(overview)}</title>
             <style>
                 @page {
                     size: A4 portrait;
@@ -1353,9 +1353,7 @@ export default function ReportsScreen() {
               <TouchableOpacity
                 style={styles.printButton}
                 onPress={() =>
-                  router.canGoBack()
-                    ? router.back()
-                    : router.replace("/(tabs)")
+                  router.canGoBack() ? router.back() : router.replace("/(tabs)")
                 }
                 activeOpacity={0.8}
                 accessibilityRole="button"
@@ -1368,9 +1366,11 @@ export default function ReportsScreen() {
                 />
               </TouchableOpacity>
               <View style={styles.headerTitleWrap}>
-                <Text style={styles.screenTitle} numberOfLines={1}>Farm Reports</Text>
+                <Text style={styles.screenTitle} numberOfLines={1}>
+                  Farm Reports
+                </Text>
                 <Text style={styles.screenSubtitle} numberOfLines={1}>
-                  {activeFarm?.name || "No active farm"} â€¢ {overview} Snapshot
+                  {activeFarm?.name || "No active farm"} | {overview} Snapshot
                 </Text>
               </View>
               <TouchableOpacity

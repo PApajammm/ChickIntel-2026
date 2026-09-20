@@ -411,7 +411,7 @@ function buildPrintableHtml(input: {
         <div class="sheet">
           <div class="page-top-header">
             <div class="brand-group">
-                <h1 class="brand-title">ChickInteL</h1>
+                <h1 class="brand-title">ChickIntel</h1>
                 <p class="brand-sub">Egg Fertility Intelligence Report</p>
             </div>
             <div class="page-badge">
@@ -429,7 +429,7 @@ function buildPrintableHtml(input: {
 
           <div class="category-header">
             <h2 class="category-title">Fertility Rate Performance</h2>
-            <div class="category-tag">ChickInteL Analytics</div>
+            <div class="category-tag">ChickIntel Analytics</div>
           </div>
 
           <div class="kpi-banner">
@@ -473,14 +473,14 @@ function buildPrintableHtml(input: {
           </div>
 
           <div class="insight-box">
-            <div class="insight-title">ðŸ’¡ Operational Takeaway & Fertility Analysis</div>
+            <div class="insight-title">Operational Takeaway & Fertility Analysis</div>
             <div class="insight-text">${escapeHtml(input.report.analyticsText)}</div>
           </div>
 
           <div class="page-footer">
-            <span>Official ChickInteL Egg Fertility Document</span>
+            <span>Official ChickIntel Egg Fertility Document</span>
             <span>Generated on ${escapeHtml(input.generatedDate)} ${escapeHtml(input.generatedTime)}</span>
-            <span>ChickInteL System</span>
+            <span>ChickIntel System</span>
           </div>
         </div>
       </body>
@@ -657,7 +657,7 @@ export default function EggFertilityReportScreen() {
             originBatchNo
               ? `Batch C${originBatchNo.replace(/\D/g, "").padStart(3, "0")}`
               : "Unknown chicken batch",
-          ].join(" â€¢ ");
+          ].join(" | ");
           if (!colorName && !originBatchNo) return;
 
           const key = `${colorName}|${originBatchNo}`.toLowerCase();
@@ -816,7 +816,7 @@ export default function EggFertilityReportScreen() {
       generatedDate,
       generatedTime,
       period,
-      farmName: activeFarm?.name || "ChickInteL Farm",
+      farmName: activeFarm?.name || "ChickIntel Farm",
     });
 
     await Print.printAsync({

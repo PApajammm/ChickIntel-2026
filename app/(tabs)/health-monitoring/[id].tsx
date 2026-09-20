@@ -63,7 +63,7 @@ function formatScanDate(savedAt?: string) {
   const minutes = String(d.getMinutes()).padStart(2, "0");
   const suffix = hours >= 12 ? "PM" : "AM";
   const displayHours = hours % 12 || 12;
-  return `${m}/${day}/${y} â€¢ ${displayHours}:${minutes} ${suffix}`;
+  return `${m}/${day}/${y} | ${displayHours}:${minutes} ${suffix}`;
 }
 
 function getMonitoringDays(startedAt: string, completedAt?: string) {
@@ -366,7 +366,8 @@ export default function HealthMonitoringDetailScreen() {
   const filteredTreatmentOccurrences = treatmentOccurrences
     .filter(
       ({ occurrence }) =>
-        protocolTaskFilter === "All" || occurrence.status === protocolTaskFilter,
+        protocolTaskFilter === "All" ||
+        occurrence.status === protocolTaskFilter,
     )
     .sort(
       (left, right) =>
@@ -392,7 +393,10 @@ export default function HealthMonitoringDetailScreen() {
       ...groups,
       {
         dateKey,
-        dayNumber: getTreatmentDayNumber(record.createdAt, item.occurrence.dueAt),
+        dayNumber: getTreatmentDayNumber(
+          record.createdAt,
+          item.occurrence.dueAt,
+        ),
         items: [item],
       },
     ];
@@ -553,7 +557,7 @@ export default function HealthMonitoringDetailScreen() {
         <View style={styles.metaRow}>
           <View style={styles.metaItem}>
             <Text style={styles.metaLabel}>Batch No.</Text>
-            <Text style={styles.metaValue}>{record.batchNo ?? "â€”"}</Text>
+            <Text style={styles.metaValue}>{record.batchNo ?? "-"}</Text>
           </View>
           <View style={styles.metaItem}>
             <Text style={styles.metaLabel}>Date Added</Text>

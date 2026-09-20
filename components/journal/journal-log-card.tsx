@@ -277,7 +277,7 @@ export const JournalLogCard = memo(function JournalLogCard({
               >
                 <Text style={styles.diseaseTitle} numberOfLines={2}>
                   {behaviorLabels && behaviorLabels.length > 0
-                    ? behaviorLabels.slice(0, 2).join(" â€¢ ")
+                    ? behaviorLabels.slice(0, 2).join(" | ")
                     : additionalObservation?.trim()
                       ? "Chicken behaviour note"
                       : "Behaviour check"}
@@ -411,7 +411,7 @@ export const JournalLogCard = memo(function JournalLogCard({
                 <Text style={styles.modalTitle}>Chicken Notes</Text>
               </View>
               <Text style={styles.modalSubtitle} numberOfLines={1}>
-                {detectedIllness} â€¢ {timestamp}
+                {detectedIllness} | {timestamp}
               </Text>
             </View>
 
