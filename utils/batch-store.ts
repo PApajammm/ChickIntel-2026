@@ -3,6 +3,7 @@ export type BatchItem = {
   originBatchNo?: string;
   sourceEggBatchId?: string;
   createdAt?: string;
+  updatedAt?: string;
   breed: string;
   totalCount: number;
   femaleCount: number;
@@ -67,6 +68,23 @@ export function getCurrentBatchAgeLabel(
   return `${formattedWeeks} ${currentAgeWeeks === 1 ? "Week" : "Weeks"} old`;
 }
 
+export function formatBatchDateStamp(createdAt?: string, updatedAt?: string) {
+  const targetDate = updatedAt || createdAt;
+  if (!targetDate) return "Date unavailable";
+
+  const date = new Date(targetDate);
+  if (Number.isNaN(date.getTime())) return "Date unavailable";
+
+  const isUpdated = Boolean(updatedAt && updatedAt !== createdAt);
+  const formattedDate = date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+
+  return isUpdated ? `Updated ${formattedDate}` : `Added ${formattedDate}`;
+}
+
 /** Egg inventory batch (separate from live-chicken batches). */
 export type EggBatchItem = {
   id: string;
@@ -86,6 +104,7 @@ export type EggBatchItem = {
   colorHex?: string;
   origin: string;
   createdAt: string;
+  updatedAt?: string;
 };
 
 const initialBatches: BatchItem[] = [

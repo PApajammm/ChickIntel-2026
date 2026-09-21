@@ -37,6 +37,7 @@ import { useAuth } from "@/providers/auth-provider";
 import {
     type BatchItem,
     type EggBatchItem,
+    formatBatchDateStamp,
     formatEggFertilityPercent,
     getCurrentBatchAgeLabel,
 } from "@/utils/batch-store";
@@ -67,6 +68,7 @@ type EggColorCard = {
   batches: number;
   fertilityRate: string;
   createdAt?: string;
+  updatedAt?: string;
 };
 
 type ChickenEditFormState = {
@@ -351,6 +353,7 @@ export default function ProfilesScreen() {
         selectedEgg.hatchedQty ?? 0,
         selectedEgg.damagedQty ?? 0,
       ),
+      updatedAt: new Date().toISOString(),
     };
     if (!activeFarm?.id) {
       Alert.alert("Farm missing", "No active farm was found.");
@@ -415,6 +418,7 @@ export default function ProfilesScreen() {
         batchNo: string;
         breed: string;
         createdAt?: string;
+        updatedAt?: string;
         colorName: string;
         colorHex: string;
         count: number;
@@ -433,6 +437,7 @@ export default function ProfilesScreen() {
             batchNo: batch.id,
             breed: batch.breed,
             createdAt: batch.createdAt,
+            updatedAt: batch.updatedAt,
             colorName: batch.colorName || "Default",
             colorHex: batch.colorHex || ChickIntelPalette.gray2,
             count: 0,
@@ -451,6 +456,7 @@ export default function ProfilesScreen() {
         batchNo: parentBatchNo || "0001",
         breed: "",
         createdAt: egg.createdAt,
+        updatedAt: egg.updatedAt,
         colorName: egg.colorName || egg.origin || "Unspecified",
         colorHex: egg.colorHex || ChickIntelPalette.gray2,
         count: 0,
@@ -459,10 +465,10 @@ export default function ProfilesScreen() {
         unhatchedQty: 0,
       };
 
-      if (
-        egg.createdAt &&
-        (!existing.createdAt || egg.createdAt < existing.createdAt)
-      ) {
+      const eggLatest = egg.updatedAt || egg.createdAt;
+      const existingLatest = existing.updatedAt || existing.createdAt;
+      if (eggLatest && (!existingLatest || eggLatest > existingLatest)) {
+        existing.updatedAt = egg.updatedAt;
         existing.createdAt = egg.createdAt;
       }
 
@@ -495,6 +501,7 @@ export default function ProfilesScreen() {
           unhatchedQty: item.unhatchedQty,
         }),
         createdAt: item.createdAt,
+        updatedAt: item.updatedAt,
       };
     });
   }, [chickenData, savedEggBatches]);
@@ -740,7 +747,7 @@ export default function ProfilesScreen() {
                         <Text style={styles.breedTitle}>{item.breed}</Text>
                       ) : null}
                       <Text style={styles.createdDateText}>
-                        {formatCreatedDate(item.createdAt)}
+                        {formatBatchDateStamp(item.createdAt, item.updatedAt)}
                       </Text>
                     </View>
 
@@ -976,7 +983,7 @@ export default function ProfilesScreen() {
                         </Text>
                       </View>
                       <Text style={styles.createdDateText}>
-                        {formatCreatedDate(item.createdAt)}
+                        {formatBatchDateStamp(item.createdAt, item.updatedAt)}
                       </Text>
                     </View>
 

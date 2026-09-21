@@ -17,6 +17,7 @@ type EggBatchRow = {
   color_hex: string | null;
   origin: string | null;
   created_at: string;
+  updated_at?: string | null;
 };
 
 function normalizeEggBatchColorName(value: string | null | undefined) {
@@ -44,6 +45,7 @@ function mapEggBatchRow(row: EggBatchRow): EggBatchItem {
     colorHex: row.color_hex ?? undefined,
     origin: row.origin ?? row.color_name ?? "Unknown",
     createdAt: row.created_at,
+    updatedAt: row.updated_at ?? undefined,
   };
 }
 
@@ -51,7 +53,7 @@ export async function fetchFarmEggBatches(farmId: string) {
   const { data, error } = await supabase
     .from("egg_batches")
     .select(
-      "id, batch_no, egg_qty, line_no, age_unit, hatched_qty, transferred_hatched_qty, damaged_qty, disposed_damaged_qty, unhatched_qty, sold_qty, color_name, color_hex, origin, created_at",
+      "id, batch_no, egg_qty, line_no, age_unit, hatched_qty, transferred_hatched_qty, damaged_qty, disposed_damaged_qty, unhatched_qty, sold_qty, color_name, color_hex, origin, created_at, updated_at",
     )
     .eq("farm_id", farmId)
     .order("created_at", { ascending: false });
@@ -175,7 +177,9 @@ export async function updateFarmEggBatch(
   eggBatchId: string,
   input: Partial<EggBatchItem>,
 ) {
-  const payload: Record<string, unknown> = {};
+  const payload: Record<string, unknown> = {
+    updated_at: new Date().toISOString(),
+  };
 
   if (input.batchNo !== undefined) payload.batch_no = input.batchNo;
   if (input.eggQty !== undefined) payload.egg_qty = input.eggQty;

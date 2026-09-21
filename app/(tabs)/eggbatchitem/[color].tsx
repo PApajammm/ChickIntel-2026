@@ -31,6 +31,7 @@ import { ChickFont } from "@/constants/chick-fonts";
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
 import { useAuth } from "@/providers/auth-provider";
 import {
+    formatBatchDateStamp,
     formatEggFertilityPercent,
     getCurrentBatchAgeLabel,
     type BatchItem,
@@ -48,6 +49,7 @@ import {
     fetchFarmEggBatches,
     updateFarmEggBatch,
 } from "@/utils/supabase-egg-batches";
+import { recordEggDisposition } from "@/utils/supabase-egg-dispositions";
 
 const TAB_BAR_OFFSET = 55;
 const FAB_OFFSET_FROM_TAB_TOP = 50;
@@ -306,6 +308,7 @@ export default function EggBatchColorScreen() {
         {
           text: "Confirm",
           onPress: async () => {
+            const nowIso = new Date().toISOString();
             const nextValues = {
               transferredHatchedQty:
                 actionEgg.transferredHatchedQty +
@@ -315,6 +318,7 @@ export default function EggBatchColorScreen() {
               disposedDamagedQty:
                 actionEgg.disposedDamagedQty +
                 (actionType === "dispose" ? quantity : 0),
+              updatedAt: nowIso,
             };
             try {
               if (actionType === "transfer") {
@@ -339,11 +343,22 @@ export default function EggBatchColorScreen() {
                 await updateFarmEggBatch(activeFarm.id, actionEgg.id, {
                   transferredHatchedQty:
                     actionEgg.transferredHatchedQty + quantity,
+                  updatedAt: nowIso,
+                });
+                await recordEggDisposition(activeFarm.id, {
+                  eggBatchId: actionEgg.id,
+                  originBatchNo: targetBatchNo || actionEgg.origin,
+                  colorName: actionEgg.colorName,
+                  colorHex: actionEgg.colorHex,
+                  actionType: "transfer",
+                  quantity,
+                  targetChickBatchId: updatedChickBatch.id,
                 });
                 const updatedEgg = {
                   ...actionEgg,
                   transferredHatchedQty:
                     actionEgg.transferredHatchedQty + quantity,
+                  updatedAt: nowIso,
                 };
                 setSavedEggBatches((prev) =>
                   prev.map((egg) =>
@@ -358,6 +373,14 @@ export default function EggBatchColorScreen() {
                   actionEgg.id,
                   nextValues,
                 );
+                await recordEggDisposition(activeFarm.id, {
+                  eggBatchId: actionEgg.id,
+                  originBatchNo: targetBatchNo || actionEgg.origin,
+                  colorName: actionEgg.colorName,
+                  colorHex: actionEgg.colorHex,
+                  actionType,
+                  quantity,
+                });
                 const updatedEgg = { ...actionEgg, ...nextValues };
                 setSavedEggBatches((prev) =>
                   prev.map((egg) =>
@@ -458,11 +481,13 @@ export default function EggBatchColorScreen() {
       return;
     }
 
+    const nowIso = new Date().toISOString();
     const updatedEgg = {
       ...selectedEgg,
       hatchedQty: hatched,
       damagedQty: damaged,
       unhatchedQty: Math.max(0, eggTotal - hatched - damaged),
+      updatedAt: nowIso,
     };
 
     if (!activeFarm?.id) {
@@ -541,7 +566,22 @@ export default function EggBatchColorScreen() {
             </Text>
           </View>
           <View style={styles.headerActions}>
-            <View style={styles.headerRightPlaceholder} />
+            <Pressable
+              onPress={() =>
+                router.push({
+                  pathname: "/(tabs)/egg-batch-history" as any,
+                  params: {
+                    originBatchNo: targetBatchNo,
+                    color: colorName,
+                  },
+                })
+              }
+              style={styles.headerHistoryButton}
+              accessibilityRole="button"
+              accessibilityLabel="Open egg disposition history"
+            >
+              <MaterialCommunityIcons name="history" size={21} color="#FFF" />
+            </Pressable>
           </View>
         </View>
 
@@ -642,6 +682,9 @@ export default function EggBatchColorScreen() {
                         </View>
                         <Text style={styles.originName}>
                           {batch.breed || "Chick batch"}
+                        </Text>
+                        <Text style={styles.createdDateText}>
+                          {formatBatchDateStamp(batch.createdAt, batch.updatedAt)}
                         </Text>
                       </View>
                       <Text style={styles.originName}>
@@ -750,6 +793,9 @@ export default function EggBatchColorScreen() {
                               {egg.colorName ?? egg.origin ?? "Default"}
                             </Text>
                           </View>
+                          <Text style={styles.createdDateText}>
+                            {formatBatchDateStamp(egg.createdAt, egg.updatedAt)}
+                          </Text>
                         </View>
 
                         <View style={styles.cardActionRow}>
@@ -1380,6 +1426,22 @@ const styles = StyleSheet.create({
   headerRightPlaceholder: {
     width: scale(42),
   },
+  headerHistoryButton: {
+    width: scale(42),
+    height: verticalScale(42),
+    borderRadius: 14,
+    backgroundColor: ChickIntelPalette.green1,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.25)",
+    shadowColor: "#317667",
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
+    shadowOffset: { width: scale(0), height: verticalScale(4) },
+    elevation: 4,
+    flexShrink: 0,
+  },
   pageTitle: {
     fontFamily: ChickFont.display,
     fontSize: responsiveFontSize(18),
@@ -1549,6 +1611,12 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(11),
     color: "#263832",
     fontWeight: "600",
+  },
+  createdDateText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(11),
+    lineHeight: 15,
+    color: "#52615D",
   },
   cardActionRow: {
     flexDirection: "row",
