@@ -197,11 +197,10 @@ export async function createInventoryItem(
       input.currentRemainingQty !== undefined
         ? Math.max(0, input.currentRemainingQty)
         : currentQty + currentRestockCreditQty;
-    const nextAvailableQty = currentAvailableQty + safeInputQty;
+    const totalBaseline = Math.max(currentTotalQty, currentAvailableQty);
     const updatePayload: Record<string, unknown> = {
       qty: currentQty,
-      total_qty:
-        nextAvailableQty > currentTotalQty ? nextAvailableQty : currentTotalQty,
+      total_qty: totalBaseline + safeInputQty,
       restock_credit_qty: currentRestockCreditQty + safeInputQty,
       unit: input.unit,
       price: input.price ?? null,

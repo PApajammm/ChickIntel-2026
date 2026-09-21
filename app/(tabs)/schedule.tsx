@@ -1314,6 +1314,21 @@ export default function ScheduleScreen() {
       });
   };
 
+  const confirmDeleteTask = (task: ScheduleTask, occurrenceDate: string) => {
+    Alert.alert(
+      "Delete scheduled task?",
+      `Remove "${task.title}" from the schedule for this day?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => handleDeleteTask(task.id, occurrenceDate),
+        },
+      ],
+    );
+  };
+
   return (
     <View style={styles.screen}>
       <BackgroundGradient
@@ -1712,7 +1727,7 @@ export default function ScheduleScreen() {
                             <Pressable
                               onPress={(event) => {
                                 event.stopPropagation();
-                                handleDeleteTask(task.id, selectedKey);
+                                confirmDeleteTask(task, selectedKey);
                               }}
                               hitSlop={10}
                               style={styles.deleteTaskBtn}
@@ -1966,7 +1981,7 @@ export default function ScheduleScreen() {
                           <Pressable
                             onPress={(event) => {
                               event.stopPropagation();
-                              handleDeleteTask(task.id, task.startDate);
+                              confirmDeleteTask(task, task.startDate);
                             }}
                             hitSlop={10}
                             style={styles.deleteTaskBtn}

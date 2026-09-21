@@ -213,13 +213,24 @@ export async function createFarmChickBatch(
 }
 
 export async function promoteFarmChickBatch(farmId: string, batchNo: string) {
+  const batches = await fetchFarmBatches(farmId);
+  const mainBatchNumbers = batches
+    .filter((batch) => !/^SBC-/i.test(batch.id.trim()))
+    .map((batch) => Number.parseInt(batch.id.replace(/[^0-9]/g, ""), 10))
+    .filter((value) => Number.isFinite(value));
+  const nextBatchNumber =
+    (mainBatchNumbers.length ? Math.max(...mainBatchNumbers) : 0) + 1;
+  const nextBatchNo = String(nextBatchNumber).padStart(4, "0");
+
   const { error } = await supabase
     .from("batches")
-    .update({ origin_batch_no: null })
+    .update({ batch_no: nextBatchNo, origin_batch_no: null })
     .eq("farm_id", farmId)
     .eq("batch_no", batchNo);
 
   if (error) throw error;
+
+  return nextBatchNo;
 }
 
 export async function updateFarmBatch(

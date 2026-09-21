@@ -267,11 +267,12 @@ export function computeEffectiveInventoryItems(
       ? Math.max(item.restockCreditQty, 0)
       : 0;
     const currentQty = storedQty + restockCreditQty;
+    const configuredTotalQty = Number.isFinite(item.totalQty)
+      ? Math.max(item.totalQty, 0)
+      : 0;
     const baseQty = Number.isFinite(item.baseQty)
       ? item.baseQty
-      : Number.isFinite(item.totalQty)
-        ? item.totalQty
-        : storedQty;
+      : configuredTotalQty || storedQty;
     const storedBaseQty = Number.isFinite(baseQty)
       ? Number(baseQty)
       : storedQty;
@@ -301,6 +302,7 @@ export function computeEffectiveInventoryItems(
 
       return {
         ...item,
+        totalQty: storedBaseQty,
         statusPercent: derivedStatusPercent,
         baseQty: safeBaseQty,
         remainingQty: currentQty,
@@ -343,6 +345,8 @@ export function computeEffectiveInventoryItems(
 
     return {
       ...item,
+      // Task completions affect only the available stock, never the total.
+      totalQty: storedBaseQty,
       qty: remainingQty,
       statusPercent: derivedStatusPercent,
       baseQty: safeBaseQty,

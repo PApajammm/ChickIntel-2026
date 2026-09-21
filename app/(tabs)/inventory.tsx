@@ -1068,14 +1068,31 @@ export default function InventoryScreen() {
                           style={styles.actionBtn}
                           onPress={async () => {
                             if (!activeFarm?.id) return;
-                            try {
-                              await removeInventoryItem(item.id);
-                            } catch (error) {
-                              logError("Inventory delete failed", error, {
-                                farmId: activeFarm.id,
-                                itemId: item.id,
-                              });
-                            }
+                            Alert.alert(
+                              "Delete inventory item?",
+                              `Remove ${item.name} from inventory? This action cannot be undone.`,
+                              [
+                                { text: "Cancel", style: "cancel" },
+                                {
+                                  text: "Delete",
+                                  style: "destructive",
+                                  onPress: async () => {
+                                    try {
+                                      await removeInventoryItem(item.id);
+                                    } catch (error) {
+                                      logError(
+                                        "Inventory delete failed",
+                                        error,
+                                        {
+                                          farmId: activeFarm.id,
+                                          itemId: item.id,
+                                        },
+                                      );
+                                    }
+                                  },
+                                },
+                              ],
+                            );
                           }}
                           accessibilityLabel="Discard expired supply"
                         >

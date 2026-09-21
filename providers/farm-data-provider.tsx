@@ -210,9 +210,8 @@ export function FarmDataProvider({ children }: { children: React.ReactNode }) {
         ? Math.max(0, targetItem.totalQty)
         : targetEffectiveItem.baseQty;
       const currentRemainingQty = targetEffectiveItem.remainingQty;
-      const newRemainingQty = currentRemainingQty + safeRestockQty;
-      const newTotalQty =
-        newRemainingQty > currentTotalQty ? newRemainingQty : currentTotalQty;
+      const totalBaseline = Math.max(currentTotalQty, currentRemainingQty);
+      const newTotalQty = totalBaseline + safeRestockQty;
       const newRestockCreditQty =
         Math.max(0, targetItem.restockCreditQty) + safeRestockQty;
 
