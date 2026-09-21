@@ -1,8 +1,8 @@
 import {
-    moderateScale,
-    responsiveFontSize,
-    scale,
-    verticalScale,
+  moderateScale,
+  responsiveFontSize,
+  scale,
+  verticalScale,
 } from "@/utils/responsive";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
@@ -10,20 +10,20 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  Alert,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
 import {
-    SafeAreaView,
-    useSafeAreaInsets,
+  SafeAreaView,
+  useSafeAreaInsets,
 } from "react-native-safe-area-context";
 
 import BackgroundGradient from "@/assets_imported/background-gradient.svg";
@@ -35,23 +35,23 @@ import { getFarmColors } from "@/constants/farm-theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuth } from "@/providers/auth-provider";
 import {
-    type BatchItem,
-    type EggBatchItem,
-    formatBatchDateStamp,
-    formatEggFertilityPercent,
-    getCurrentBatchAgeLabel,
+  type BatchItem,
+  type EggBatchItem,
+  formatBatchDateStamp,
+  formatEggFertilityPercent,
+  getCurrentBatchAgeLabel,
 } from "@/utils/batch-store";
 import { MIN_CHICKEN_BATCH_AGE_WEEKS } from "@/utils/chicken-batch-rules";
 import { logError, logStep } from "@/utils/logger";
 import {
-    deleteFarmBatch,
-    fetchFarmBatches,
-    updateFarmBatch,
+  deleteFarmBatch,
+  fetchFarmBatches,
+  updateFarmBatch,
 } from "@/utils/supabase-batches";
 import { recordDeletedChickenBatch } from "@/utils/supabase-chicken-batch-history";
 import {
-    fetchFarmEggBatches,
-    updateFarmEggBatch,
+  fetchFarmEggBatches,
+  updateFarmEggBatch,
 } from "@/utils/supabase-egg-batches";
 
 const TAB_BAR_OFFSET = 55;
@@ -712,230 +712,184 @@ export default function ProfilesScreen() {
                 No chicken batches found for this farm yet.
               </Text>
             ) : null}
-            {parentChickenBatches.map((item) => (
-              <BlurCard
-                key={item.id}
-                style={styles.card}
-                borderRadius={16}
-                intensity={20}
-              >
-                <Pressable
-                  onPress={() => openEggBatches(item)}
-                  style={({ pressed }) => [
-                    styles.cardMainContainer,
-                    { opacity: pressed ? 0.94 : 1 },
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Open egg batches for chicken batch ${item.id}`}
+            {parentChickenBatches.map((item) => {
+              const eggSummary = chickenEggSummaries[item.id.trim().toLowerCase()] ?? {
+                batchCount: 0,
+                totalEggs: 0,
+                hatched: 0,
+                unhatched: 0,
+                damaged: 0,
+              };
+              const chickSummary = chickenSubBatchSummaries[item.id.trim().toLowerCase()] ?? {
+                batchCount: 0,
+                chicks: 0,
+              };
+              const totalCount =
+                item.totalCount ??
+                item.femaleCount + item.maleCount + item.unknownCount;
+
+              return (
+                <BlurCard
+                  key={item.id}
+                  style={styles.card}
+                  borderRadius={16}
+                  intensity={20}
                 >
-                  {/* Card Header: Batch Pill + Color Badge & Actions */}
-                  <View style={styles.cardHeaderRow}>
-                    <View style={styles.headerLeftStack}>
-                      <View style={styles.batchPillBadge}>
-                        <MaterialCommunityIcons
-                          name="bird"
-                          size={12}
-                          color="#000000"
-                        />
-
-                        <Text style={styles.batchPillText}>
-                          {formatProfileBatchId("C", item.id)}
-                        </Text>
-                      </View>
-
-                      {item.breed ? (
-                        <Text style={styles.breedTitle}>{item.breed}</Text>
-                      ) : null}
-                      <Text style={styles.createdDateText}>
-                        {formatBatchDateStamp(item.createdAt, item.updatedAt)}
-                      </Text>
-                    </View>
-
-                    <View style={styles.headerRightActions}>
-                      <View style={styles.colorPillBadge}>
-                        <View
-                          style={[
-                            styles.colorDot,
-                            {
-                              backgroundColor:
-                                item.colorHex || ChickIntelPalette.gray2,
-                            },
-                          ]}
-                        />
-                        <Text style={styles.colorPillText}>
-                          {item.colorName || "Default"}
-                        </Text>
-                      </View>
-
-                      <View style={styles.iconCluster}>
-                        <Pressable
-                          onPress={() => openEdit(item)}
-                          hitSlop={8}
-                          style={({ pressed }) => [
-                            styles.actionIconBtn,
-                            { opacity: pressed ? 0.72 : 1 },
-                          ]}
-                          accessibilityRole="button"
-                          accessibilityLabel={`Edit batch ${item.id}`}
-                        >
+                  <Pressable
+                    onPress={() => openEggBatches(item)}
+                    style={({ pressed }) => [
+                      styles.cardMainContainer,
+                      { opacity: pressed ? 0.94 : 1 },
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Open egg batches for chicken batch ${item.id}`}
+                  >
+                    {/* Card Header: Batch Pill + Date, Color Badge & Actions */}
+                    <View style={styles.cardHeaderRow}>
+                      <View style={styles.headerLeftStack}>
+                        <View style={styles.batchPillBadge}>
                           <MaterialCommunityIcons
-                            name="pencil-outline"
-                            size={16}
-                            color="#111111"
+                            name="bird"
+                            size={12}
+                            color="#000000"
                           />
-                        </Pressable>
-
-                        <Pressable
-                          onPress={() => confirmRemove(item.id)}
-                          hitSlop={8}
-                          style={({ pressed }) => [
-                            styles.actionIconBtn,
-                            { opacity: pressed ? 0.7 : 1 },
-                          ]}
-                          accessibilityRole="button"
-                          accessibilityLabel={`Delete batch ${item.id}`}
-                        >
-                          <MaterialCommunityIcons
-                            name="trash-can-outline"
-                            size={16}
-                            color="#923737"
-                          />
-                        </Pressable>
-                      </View>
-                    </View>
-                  </View>
-
-                  {/* Metrics Grid */}
-                  <View style={styles.metricGridThree}>
-                    <View style={styles.metricChip}>
-                      <View style={styles.metricChipHeader}>
-                        <MaterialCommunityIcons
-                          name="gender-female"
-                          size={12}
-                          color="#8E9494"
-                        />
-                        <Text style={styles.metricChipLabel}>Females</Text>
-                      </View>
-                      <Text style={styles.metricChipValue}>
-                        {item.femaleCount}
-                      </Text>
-                    </View>
-
-                    <View style={styles.metricChip}>
-                      <View style={styles.metricChipHeader}>
-                        <MaterialCommunityIcons
-                          name="gender-male"
-                          size={12}
-                          color="#8E9494"
-                        />
-                        <Text style={styles.metricChipLabel}>Males</Text>
-                      </View>
-                      <Text style={styles.metricChipValue}>
-                        {item.maleCount}
-                      </Text>
-                    </View>
-
-                    <View style={styles.metricChip}>
-                      <View style={styles.metricChipHeader}>
-                        <MaterialCommunityIcons
-                          name="calendar-clock"
-                          size={12}
-                          color="#8E9494"
-                        />
-                        <Text style={styles.metricChipLabel}>Age</Text>
-                      </View>
-                      <Text style={styles.metricChipValue}>
-                        {getCurrentBatchAgeLabel(item)}
-                      </Text>
-                    </View>
-
-                    <View style={styles.metricChip}>
-                      <View style={styles.metricChipHeader}>
-                        <MaterialCommunityIcons
-                          name="shield-alert-outline"
-                          size={12}
-                          color="#8E9494"
-                        />
-                        <Text style={styles.metricChipLabel}>Isolation</Text>
-                      </View>
-                      <Text style={styles.metricChipValue}>
-                        {item.isolatedCount}
-                      </Text>
-                    </View>
-
-                    <View style={styles.metricChip}>
-                      <View style={styles.metricChipHeader}>
-                        <MaterialCommunityIcons
-                          name="heart-broken-outline"
-                          size={12}
-                          color="#8E9494"
-                        />
-                        <Text style={styles.metricChipLabel}>Loss</Text>
-                      </View>
-                      <Text style={styles.metricChipValue}>
-                        {item.killedCount}
-                      </Text>
-                    </View>
-
-                    <View style={styles.metricChipWide}>
-                      <View style={styles.metricChipHeader}>
-                        <MaterialCommunityIcons
-                          name="egg-outline"
-                          size={12}
-                          color="#8E9494"
-                        />
-                        <Text style={styles.metricChipLabel}>
-                          Egg Batches / Eggs
-                        </Text>
-                      </View>
-                      <Text style={styles.metricChipValue}>
-                        {chickenEggSummaries[item.id.trim().toLowerCase()]
-                          ?.batchCount ?? 0}
-                        {" / "}
-                        {chickenEggSummaries[item.id.trim().toLowerCase()]
-                          ?.totalEggs ?? 0}
-                      </Text>
-                    </View>
-
-                    <View style={styles.metricChipWide}>
-                      <View style={styles.metricChipHeader}>
-                        <MaterialCommunityIcons
-                          name="bird"
-                          size={12}
-                          color="#8E9494"
-                        />
-                        <Text style={styles.metricChipLabel}>
-                          Chick Batches / Chicks
-                        </Text>
-                      </View>
-                      <Text style={styles.metricChipValue}>
-                        {chickenSubBatchSummaries[item.id.trim().toLowerCase()]
-                          ?.batchCount ?? 0}
-                        {" / "}
-                        {chickenSubBatchSummaries[item.id.trim().toLowerCase()]
-                          ?.chicks ?? 0}
-                      </Text>
-                    </View>
-                  </View>
-
-                  {item.notes?.length ? (
-                    <View style={styles.noteSummaryList}>
-                      {item.notes.map((note) => (
-                        <View key={note.id} style={styles.noteSummaryCard}>
-                          <Text style={styles.noteSummaryLabel}>Note:</Text>
-                          <Text style={styles.noteSummaryText}>
-                            {note.text}
-                          </Text>
-                          <Text style={styles.noteSummaryMeta}>
-                            {new Date(note.createdAt).toLocaleString()}
+                          <Text style={styles.batchPillText}>
+                            {formatProfileBatchId("C", item.id)}
                           </Text>
                         </View>
-                      ))}
+                      </View>
+
+                      <View style={styles.headerRightActions}>
+                        <View style={styles.colorPillBadge}>
+                          <View
+                            style={[
+                              styles.colorDot,
+                              {
+                                backgroundColor:
+                                  item.colorHex || ChickIntelPalette.gray2,
+                              },
+                            ]}
+                          />
+                          <Text style={styles.colorPillText}>
+                            {item.colorName || "Default"}
+                          </Text>
+                        </View>
+
+                        <View style={styles.iconCluster}>
+                          <Pressable
+                            onPress={() => openEdit(item)}
+                            hitSlop={8}
+                            style={({ pressed }) => [
+                              styles.actionIconBtn,
+                              { opacity: pressed ? 0.72 : 1 },
+                            ]}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Edit batch ${item.id}`}
+                          >
+                            <MaterialCommunityIcons
+                              name="pencil-outline"
+                              size={15}
+                              color="#111111"
+                            />
+                          </Pressable>
+
+                          <Pressable
+                            onPress={() => confirmRemove(item.id)}
+                            hitSlop={8}
+                            style={({ pressed }) => [
+                              styles.actionIconBtn,
+                              { opacity: pressed ? 0.7 : 1 },
+                            ]}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Delete batch ${item.id}`}
+                          >
+                            <MaterialCommunityIcons
+                              name="trash-can-outline"
+                              size={15}
+                              color="#923737"
+                            />
+                          </Pressable>
+                        </View>
+                      </View>
                     </View>
-                  ) : null}
-                </Pressable>
-              </BlurCard>
-            ))}
+
+                    {item.breed ? (
+                      <Text style={styles.breedTitle}>{item.breed}</Text>
+                    ) : null}
+
+                    <Text style={styles.createdDateText}>
+                      {formatBatchDateStamp(item.createdAt, item.updatedAt)}
+                    </Text>
+
+                    {/* Row 1: Flock Composition & Age */}
+                    <View style={styles.metricsRow}>
+                      <View style={styles.metricChip}>
+                        <Text style={styles.metricChipLabel}>Total</Text>
+                        <Text style={styles.metricChipValue}>{totalCount}</Text>
+                      </View>
+                      <View style={styles.metricChip}>
+                        <Text style={styles.metricChipLabel}>Females</Text>
+                        <Text style={styles.metricChipValue}>
+                          {item.femaleCount}
+                        </Text>
+                      </View>
+                      <View style={styles.metricChip}>
+                        <Text style={styles.metricChipLabel}>Males</Text>
+                        <Text style={styles.metricChipValue}>{item.maleCount}</Text>
+                      </View>
+                      <View style={styles.metricChip}>
+                        <Text style={styles.metricChipLabel}>Age</Text>
+                        <Text style={styles.metricChipValue}>
+                          {getCurrentBatchAgeLabel(item)}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Row 2: Health & Production */}
+                    <View style={styles.metricsRow}>
+                      <View style={styles.metricChip}>
+                        <Text style={styles.metricChipLabel}>Isolation</Text>
+                        <Text style={styles.metricChipValue}>
+                          {item.isolatedCount}
+                        </Text>
+                      </View>
+                      <View style={styles.metricChip}>
+                        <Text style={styles.metricChipLabel}>Loss</Text>
+                        <Text style={styles.metricChipValue}>
+                          {item.killedCount}
+                        </Text>
+                      </View>
+                      <View style={styles.metricChip}>
+                        <Text style={styles.metricChipLabel}>Egg Batches</Text>
+                        <Text style={styles.metricChipValue}>
+                          {eggSummary.batchCount} ({eggSummary.totalEggs})
+                        </Text>
+                      </View>
+                      <View style={styles.metricChip}>
+                        <Text style={styles.metricChipLabel}>Chicks</Text>
+                        <Text style={styles.metricChipValue}>
+                          {chickSummary.chicks}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {item.notes?.length ? (
+                      <View style={styles.noteSummaryList}>
+                        {item.notes.map((note) => (
+                          <View key={note.id} style={styles.noteSummaryCard}>
+                            <Text style={styles.noteSummaryLabel}>Note:</Text>
+                            <Text style={styles.noteSummaryText}>{note.text}</Text>
+                            <Text style={styles.noteSummaryMeta}>
+                              {new Date(note.createdAt).toLocaleString()}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                    ) : null}
+                  </Pressable>
+                </BlurCard>
+              );
+            })}
           </View>
         ) : (
           <View style={styles.list}>
@@ -975,57 +929,45 @@ export default function ProfilesScreen() {
                       <View style={styles.batchPillBadge}>
                         <MaterialCommunityIcons
                           name="bird"
-                          size={13}
+                          size={12}
                           color="#111111"
                         />
                         <Text style={styles.batchPillText}>
                           {formatProfileBatchId("C", item.originBatchNo)}
                         </Text>
                       </View>
-                      <Text style={styles.createdDateText}>
-                        {formatBatchDateStamp(item.createdAt, item.updatedAt)}
-                      </Text>
                     </View>
 
-                    <View style={styles.colorPillBadge}>
-                      <View
-                        style={[
-                          styles.colorDot,
-                          {
-                            backgroundColor: item.colorHex,
-                          },
-                        ]}
-                      />
-                      <Text style={styles.colorPillText}>{item.colorName}</Text>
+                    <View style={styles.headerRightActions}>
+                      <View style={styles.colorPillBadge}>
+                        <View
+                          style={[
+                            styles.colorDot,
+                            {
+                              backgroundColor: item.colorHex,
+                            },
+                          ]}
+                        />
+                        <Text style={styles.colorPillText}>{item.colorName}</Text>
+                      </View>
                     </View>
                   </View>
 
-                  <View style={styles.metricGridTwo}>
-                    <View style={styles.metricChipWide}>
-                      <View style={styles.metricChipHeader}>
-                        <MaterialCommunityIcons
-                          name="layers-outline"
-                          size={12}
-                          color="#8E9494"
-                        />
-                        <Text style={styles.metricChipLabel}>
-                          Total Batches
-                        </Text>
-                      </View>
+                  <Text style={styles.breedTitle}>
+                    {item.breed || `${item.colorName} Flock`}
+                  </Text>
+
+                  <Text style={styles.createdDateText}>
+                    {formatBatchDateStamp(item.createdAt, item.updatedAt)}
+                  </Text>
+
+                  <View style={styles.metricsRow}>
+                    <View style={styles.metricChip}>
+                      <Text style={styles.metricChipLabel}>Total Batches</Text>
                       <Text style={styles.metricChipValue}>{item.batches}</Text>
                     </View>
-
-                    <View style={styles.metricChipWide}>
-                      <View style={styles.metricChipHeader}>
-                        <MaterialCommunityIcons
-                          name="star-outline"
-                          size={12}
-                          color="#8E9494"
-                        />
-                        <Text style={styles.metricChipLabel}>
-                          Fertility Rate
-                        </Text>
-                      </View>
+                    <View style={styles.metricChip}>
+                      <Text style={styles.metricChipLabel}>Fertility Rate</Text>
                       <Text style={styles.metricChipValue}>
                         {item.fertilityRate}
                       </Text>
@@ -1597,7 +1539,8 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(11),
     lineHeight: 16,
     color: "#52615D",
-    paddingBottom: 0,
+    paddingBottom: 10,
+    marginTop: verticalScale(-5),
   },
   headerRightActions: {
     flexDirection: "row",
@@ -1658,58 +1601,34 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
   },
-  metricGridThree: {
+  metricsRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
     gap: 6,
-  },
-  metricGridTwo: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
+    marginTop: 2,
   },
   metricChip: {
-    flexGrow: 1,
-    minWidth: scale(90),
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.14)",
-    backgroundColor: "rgba(244, 248, 247, 0.65)",
-    paddingHorizontal: moderateScale(8),
+    flex: 1,
+    backgroundColor: "rgba(49, 118, 103, 0.08)",
+    borderRadius: 8,
     paddingVertical: verticalScale(6),
-    gap: 2,
-  },
-  metricChipWide: {
-    flexGrow: 1,
-    minWidth: scale(130),
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.14)",
-    backgroundColor: "rgba(244, 248, 247, 0.65)",
-    paddingHorizontal: moderateScale(10),
-    paddingVertical: verticalScale(8),
-    gap: 4,
-  },
-  metricChipHeader: {
-    flexDirection: "row",
+    paddingHorizontal: moderateScale(4),
     alignItems: "center",
-    gap: 4,
+    justifyContent: "center",
   },
   metricChipLabel: {
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(9),
-    fontWeight: "700",
+    fontSize: responsiveFontSize(9.5),
+    fontWeight: "600",
     color: "#52615D",
-    textTransform: "uppercase",
-    letterSpacing: 0.2,
+    textAlign: "center",
   },
   metricChipValue: {
     fontFamily: ChickFont.display,
-    fontSize: responsiveFontSize(14),
+    fontSize: responsiveFontSize(12.5),
     fontWeight: "800",
     color: ChickIntelPalette.gray1,
-    textAlign: "right",
-    paddingRight: moderateScale(10),
+    marginTop: 2,
+    textAlign: "center",
   },
   noteSummaryList: {
     marginTop: 6,
