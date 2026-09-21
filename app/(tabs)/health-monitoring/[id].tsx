@@ -105,6 +105,19 @@ function formatTreatmentDayDate(dateKey: string) {
   });
 }
 
+function isBlockedByEarlierDay(
+  occurrence: HealthMonitoringTaskOccurrence,
+  occurrences: HealthMonitoringTaskOccurrence[],
+) {
+  const occurrenceDateKey = getDateKey(occurrence.dueAt);
+  if (occurrenceDateKey === "unknown") return false;
+
+  return occurrences.some(
+    (item) =>
+      getDateKey(item.dueAt) < occurrenceDateKey && !item.completed,
+  );
+}
+
 export default function HealthMonitoringDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -244,10 +257,19 @@ export default function HealthMonitoringDetailScreen() {
       task: HealthMonitoringTask,
       occurrence: HealthMonitoringTaskOccurrence,
     ) => {
-      if (!activeFarm?.id || occurrence.completed) return;
+      const allOccurrences = treatmentTasks.flatMap(
+        (entry) => entry.occurrences,
+      );
+      if (
+        !activeFarm?.id ||
+        occurrence.completed ||
+        isBlockedByEarlierDay(occurrence, allOccurrences)
+      ) {
+        return;
+      }
       setPendingTreatmentCompletion({ task, occurrence });
     },
-    [activeFarm?.id],
+    [activeFarm?.id, treatmentTasks],
   );
 
   const confirmTreatmentCompletion = useCallback(async () => {
@@ -410,6 +432,10 @@ export default function HealthMonitoringDetailScreen() {
     occurrence: HealthMonitoringTaskOccurrence;
   }) => {
     const isOverdue = occurrence.status === "Overdue";
+    const isBlocked = isBlockedByEarlierDay(
+      occurrence,
+      treatmentOccurrences.map((entry) => entry.occurrence),
+    );
 
     return (
       <View
@@ -423,23 +449,27 @@ export default function HealthMonitoringDetailScreen() {
           <Pressable
             style={styles.protocolTaskToggle}
             onPress={() => void toggleTreatmentOccurrence(task, occurrence)}
-            disabled={occurrence.completed}
+            disabled={occurrence.completed || isBlocked}
             accessibilityRole="checkbox"
             accessibilityState={{
               checked: occurrence.completed,
-              disabled: occurrence.completed,
+              disabled: occurrence.completed || isBlocked,
             }}
           >
             <MaterialCommunityIcons
               name={
                 occurrence.completed
                   ? "checkbox-marked"
+                  : isBlocked
+                    ? "lock-outline"
                   : "checkbox-blank-outline"
               }
               size={22}
               color={
                 occurrence.completed
                   ? ChickIntelPalette.green1
+                  : isBlocked
+                    ? ChickIntelPalette.textMuted
                   : isOverdue
                     ? "#B45309"
                     : ChickIntelPalette.gray2
@@ -478,6 +508,11 @@ export default function HealthMonitoringDetailScreen() {
               {occurrence.completedBy ? (
                 <Text style={styles.protocolTaskMeta}>
                   Completed by: Farmer
+                </Text>
+              ) : null}
+              {isBlocked ? (
+                <Text style={styles.protocolTaskMetaBlocked}>
+                  Complete the previous day&apos;s tasks first
                 </Text>
               ) : null}
             </View>
@@ -1137,6 +1172,10 @@ const styles = StyleSheet.create({
   protocolTaskMetaOverdue: {
     color: "#B45309",
     fontWeight: "800",
+  },
+  protocolTaskMetaBlocked: {
+    color: ChickIntelPalette.textMuted,
+    fontWeight: "700",
   },
   protocolGroupTitle: {
     marginTop: 6,

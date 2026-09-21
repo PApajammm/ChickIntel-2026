@@ -61,7 +61,12 @@ import {
     getNextChtNumber,
 } from "@/utils/supabase-health-monitoring";
 
-const MONITORABLE_DISEASES = ["Infectious Coryza", "Fowlpox"];
+const MONITORABLE_DISEASES = [
+  "Infectious Coryza",
+  "Fowlpox",
+  "Bumblefoot",
+  "Chronic Respiratory Disease",
+];
 const NON_CHICKEN_RESULT = "Non-chicken detected";
 const NON_CHICKEN_DESCRIPTION =
   "The captured image does not appear to contain a chicken. Retake the photo with the chicken clearly inside the frame.";
