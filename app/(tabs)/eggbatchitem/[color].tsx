@@ -42,6 +42,7 @@ import {
     createFarmChickBatch,
     fetchFarmBatches,
     promoteFarmChickBatch,
+    updateFarmBatch,
 } from "@/utils/supabase-batches";
 import { recordDeletedEggBatch } from "@/utils/supabase-egg-batch-history";
 import {
@@ -62,6 +63,12 @@ function normalizeColor(value: string | string[] | undefined) {
 function formatEggBatchId(value: string | number) {
   const digits = String(value).replace(/[^0-9]/g, "");
   return `BATCH E${(digits || "1").padStart(3, "0")}`;
+}
+
+function formatOriginBatchId(value?: string | number) {
+  if (!value) return "BATCH C001";
+  const digits = String(value).replace(/[^0-9]/g, "");
+  return `BATCH C${(digits || "1").padStart(3, "0")}`;
 }
 
 function matchesOriginBatch(
@@ -164,6 +171,11 @@ export default function EggBatchColorScreen() {
   const [actionEgg, setActionEgg] = useState<EggBatchItem | null>(null);
   const [actionType, setActionType] = useState<EggAction>("transfer");
   const [actionQty, setActionQty] = useState("");
+  const [selectedChick, setSelectedChick] = useState<BatchItem | null>(null);
+  const [chickAgeModalVisible, setChickAgeModalVisible] = useState(false);
+  const [chickAgeCount, setChickAgeCount] = useState("0");
+  const [chickAgeUnit, setChickAgeUnit] = useState<"Days old" | "Weeks old">("Weeks old");
+  const [savingChickAge, setSavingChickAge] = useState(false);
 
   const totalRecordedEggs = selectedEgg?.eggQty ?? 0;
   const hatchedCount = parseCount(editForm.hatchedQty);
@@ -283,6 +295,71 @@ export default function EggBatchColorScreen() {
         },
       ],
     );
+  };
+
+  const openEditChickAge = (batch: BatchItem) => {
+    setSelectedChick(batch);
+    const rawLabel = (batch.ageLabel || "").trim();
+    const isDays = /days?/i.test(rawLabel);
+    const numMatch = rawLabel.match(/([\d.]+)/);
+    const numVal = numMatch ? numMatch[1] : "0";
+    setChickAgeCount(numVal);
+    setChickAgeUnit(isDays ? "Days old" : "Weeks old");
+    setChickAgeModalVisible(true);
+  };
+
+  const saveChickAge = async () => {
+    if (!selectedChick || !activeFarm?.id) {
+      setChickAgeModalVisible(false);
+      return;
+    }
+
+    const val = Number.parseFloat(chickAgeCount);
+    if (Number.isNaN(val) || val < 0) {
+      Alert.alert("Invalid age", "Please enter a valid age.");
+      return;
+    }
+
+    const unitString = chickAgeUnit === "Days old" ? "days old" : "weeks old";
+    const newAgeLabel = `${chickAgeCount} ${unitString}`;
+    const nowIso = new Date().toISOString();
+
+    setSavingChickAge(true);
+    try {
+      await updateFarmBatch(activeFarm.id, selectedChick.id, {
+        breed: selectedChick.breed,
+        totalCount: selectedChick.totalCount,
+        femaleCount: selectedChick.femaleCount,
+        maleCount: selectedChick.maleCount,
+        unknownCount: selectedChick.unknownCount,
+        ageLabel: newAgeLabel,
+        isolatedCount: selectedChick.isolatedCount,
+        killedCount: selectedChick.killedCount,
+      });
+
+      setSavedChickBatches((prev) =>
+        prev.map((item) =>
+          item.id === selectedChick.id
+            ? {
+                ...item,
+                ageLabel: newAgeLabel,
+                createdAt: nowIso,
+                updatedAt: nowIso,
+              }
+            : item,
+        ),
+      );
+      setChickAgeModalVisible(false);
+      setSelectedChick(null);
+    } catch (error) {
+      logError("Update chick age failed", error, {
+        farmId: activeFarm.id,
+        batchNo: selectedChick.id,
+      });
+      Alert.alert("Update failed", "Unable to update chick batch age right now.");
+    } finally {
+      setSavingChickAge(false);
+    }
   };
 
   const confirmEggAction = () => {
@@ -664,42 +741,73 @@ export default function EggBatchColorScreen() {
                 <BlurCard
                   key={batch.id}
                   style={styles.card}
-                  borderRadius={10}
+                  borderRadius={14}
                   intensity={20}
                 >
                   <View style={styles.cardMainContainer}>
                     <View style={styles.cardTopRow}>
-                      <View style={styles.headerLeftStack}>
-                        <View style={styles.batchPillBadge}>
-                          <MaterialCommunityIcons
-                            name="bird"
-                            size={12}
-                            color="#111111"
-                          />
-                          <Text style={styles.batchPillText}>
-                            {formatChickBatchId(batch)}
-                          </Text>
-                        </View>
-                        <Text style={styles.originName}>
-                          {batch.breed || "Chick batch"}
-                        </Text>
-                        <Text style={styles.createdDateText}>
-                          {formatBatchDateStamp(batch.createdAt, batch.updatedAt)}
+                      <View style={styles.batchPillBadge}>
+                        <MaterialCommunityIcons
+                          name="bird"
+                          size={12}
+                          color="#111111"
+                        />
+                        <Text style={styles.batchPillText}>
+                          {formatChickBatchId(batch)}
                         </Text>
                       </View>
-                      <Text style={styles.originName}>
-                        {batch.totalCount} chicks
-                      </Text>
                     </View>
-                    <Text style={styles.selectionHint}>
-                      {getCurrentBatchAgeLabel(batch)} | Hatched from chicken
-                      batch {batch.originBatchNo}
+
+                    <Text style={styles.breedTitle}>
+                      {batch.breed || "Chick batch"}
                     </Text>
+
+                    <Text style={styles.createdDateText}>
+                      {formatBatchDateStamp(batch.createdAt, batch.updatedAt)}
+                    </Text>
+
+                    <View style={styles.metricsRow}>
+                      <View style={styles.metricChip}>
+                        <Text style={styles.metricChipLabel}>Chicks</Text>
+                        <Text style={styles.metricChipValue}>
+                          {batch.totalCount}
+                        </Text>
+                      </View>
+                      <Pressable
+                        onPress={() => openEditChickAge(batch)}
+                        style={({ pressed }) => [
+                          styles.metricChip,
+                          styles.metricChipEditable,
+                          { opacity: pressed ? 0.75 : 1 },
+                        ]}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Edit age for ${formatChickBatchId(batch)}`}
+                      >
+                        <View style={styles.metricChipLabelRow}>
+                          <Text style={styles.metricChipLabel}>Age</Text>
+                          <MaterialCommunityIcons
+                            name="pencil-outline"
+                            size={10}
+                            color="#52615D"
+                          />
+                        </View>
+                        <Text style={styles.metricChipValue}>
+                          {getCurrentBatchAgeLabel(batch)}
+                        </Text>
+                      </Pressable>
+                      <View style={styles.metricChip}>
+                        <Text style={styles.metricChipLabel}>Origin</Text>
+                        <Text style={styles.metricChipValue}>
+                          Batch {batch.originBatchNo || targetBatchNo || "-"}
+                        </Text>
+                      </View>
+                    </View>
+
                     <Pressable
                       onPress={() => promoteChickBatch(batch)}
                       style={({ pressed }) => [
                         styles.promoteChickBtn,
-                        { opacity: pressed ? 0.78 : 1 },
+                        { opacity: pressed ? 0.78 : 1, marginTop: 4 },
                       ]}
                       accessibilityRole="button"
                       accessibilityLabel={`Transfer ${batch.id} to Chicken Batches`}
@@ -762,39 +870,20 @@ export default function EggBatchColorScreen() {
                   <BlurCard
                     key={egg.id}
                     style={styles.card}
-                    borderRadius={10}
+                    borderRadius={14}
                     intensity={20}
                   >
                     <View style={styles.cardMainContainer}>
                       {/* Card Header */}
                       <View style={styles.cardTopRow}>
-                        <View style={styles.headerLeftStack}>
-                          <View style={styles.batchPillBadge}>
-                            <MaterialCommunityIcons
-                              name="egg-outline"
-                              size={12}
-                              color="#111111"
-                            />
-                            <Text style={styles.batchPillText}>
-                              {formatEggBatchId(egg.batchNo)}
-                            </Text>
-                          </View>
-
-                          <View style={styles.originValueRow}>
-                            <View
-                              style={[
-                                styles.colorTag,
-                                {
-                                  backgroundColor: egg.colorHex || displayHex,
-                                },
-                              ]}
-                            />
-                            <Text style={styles.originName}>
-                              {egg.colorName ?? egg.origin ?? "Default"}
-                            </Text>
-                          </View>
-                          <Text style={styles.createdDateText}>
-                            {formatBatchDateStamp(egg.createdAt, egg.updatedAt)}
+                        <View style={styles.batchPillBadge}>
+                          <MaterialCommunityIcons
+                            name="egg-outline"
+                            size={12}
+                            color="#111111"
+                          />
+                          <Text style={styles.batchPillText}>
+                            {formatEggBatchId(egg.batchNo)}
                           </Text>
                         </View>
 
@@ -811,7 +900,7 @@ export default function EggBatchColorScreen() {
                           >
                             <MaterialCommunityIcons
                               name="bird"
-                              size={16}
+                              size={15}
                               color={ChickIntelPalette.green1}
                             />
                           </Pressable>
@@ -827,7 +916,7 @@ export default function EggBatchColorScreen() {
                           >
                             <MaterialCommunityIcons
                               name="cart-outline"
-                              size={16}
+                              size={15}
                               color="#2D8C74"
                             />
                           </Pressable>
@@ -843,7 +932,7 @@ export default function EggBatchColorScreen() {
                           >
                             <MaterialCommunityIcons
                               name="delete-sweep-outline"
-                              size={16}
+                              size={15}
                               color="#923737"
                             />
                           </Pressable>
@@ -859,7 +948,7 @@ export default function EggBatchColorScreen() {
                           >
                             <MaterialCommunityIcons
                               name="pencil-outline"
-                              size={16}
+                              size={15}
                               color="#111111"
                             />
                           </Pressable>
@@ -876,95 +965,85 @@ export default function EggBatchColorScreen() {
                           >
                             <MaterialCommunityIcons
                               name="trash-can-outline"
-                              size={16}
+                              size={15}
                               color="#923737"
                             />
                           </Pressable>
                         </View>
                       </View>
 
-                      {/* Metrics Grid */}
-                      <View style={styles.metricGridThree}>
+                      <View style={styles.originPillBadge}>
+                        <View
+                          style={[
+                            styles.colorDot,
+                            {
+                              backgroundColor: egg.colorHex || displayHex,
+                            },
+                          ]}
+                        />
+                        <Text style={styles.originPillText}>
+                          {formatOriginBatchId(egg.origin || targetBatchNo)}
+                        </Text>
+                      </View>
+
+                      <Text style={styles.createdDateText}>
+                        {formatBatchDateStamp(egg.createdAt, egg.updatedAt)}
+                      </Text>
+
+                      {/* Row 1: Egg Inventory */}
+                      <View style={styles.metricsRow}>
                         <View style={styles.metricChip}>
-                          <View style={styles.metricChipHeader}>
-                            <MaterialCommunityIcons
-                              name="egg"
-                              size={12}
-                              color="#8E9494"
-                            />
-                            <Text style={styles.metricChipLabel}>
-                              Recorded Eggs
-                            </Text>
-                          </View>
+                          <Text style={styles.metricChipLabel}>Recorded</Text>
                           <Text style={styles.metricChipValue}>
                             {egg.eggQty ?? 0}
                           </Text>
                         </View>
-
                         <View style={styles.metricChip}>
-                          <View style={styles.metricChipHeader}>
-                            <MaterialCommunityIcons
-                              name="check-circle-outline"
-                              size={12}
-                              color="#8E9494"
-                            />
-                            <Text style={styles.metricChipLabel}>
-                              Ready to Hatch
-                            </Text>
-                          </View>
+                          <Text style={styles.metricChipLabel}>Hatched</Text>
+                          <Text style={styles.metricChipValue}>
+                            {egg.hatchedQty ?? 0}
+                          </Text>
+                        </View>
+                        <View style={styles.metricChip}>
+                          <Text style={styles.metricChipLabel}>Damaged</Text>
+                          <Text style={styles.metricChipValue}>
+                            {egg.damagedQty ?? 0}
+                          </Text>
+                        </View>
+                        <View style={styles.metricChip}>
+                          <Text style={styles.metricChipLabel}>Unhatched</Text>
+                          <Text style={styles.metricChipValue}>
+                            {unhatchedCount}
+                          </Text>
+                        </View>
+                      </View>
+
+                      {/* Row 2: Availability & Rates */}
+                      <View style={styles.metricsRow}>
+                        <View style={styles.metricChip}>
+                          <Text style={styles.metricChipLabel}>Ready to Hatch</Text>
                           <Text style={styles.metricChipValue}>
                             {remainingHatched}
                           </Text>
                         </View>
-
                         <View style={styles.metricChip}>
-                          <View style={styles.metricChipHeader}>
-                            <MaterialCommunityIcons
-                              name="timer-sand"
-                              size={12}
-                              color="#8E9494"
-                            />
-                            <Text style={styles.metricChipLabel}>
-                              Ready to Sell
-                            </Text>
-                          </View>
+                          <Text style={styles.metricChipLabel}>Ready to Sell</Text>
                           <Text style={styles.metricChipValue}>
                             {remainingUnhatched}
                           </Text>
                         </View>
-
                         <View style={styles.metricChip}>
-                          <View style={styles.metricChipHeader}>
-                            <MaterialCommunityIcons
-                              name="egg-off-outline"
-                              size={12}
-                              color="#8E9494"
-                            />
-                            <Text style={styles.metricChipLabel}>
-                              Damaged to Dispose
-                            </Text>
-                          </View>
+                          <Text style={styles.metricChipLabel}>To Dispose</Text>
                           <Text style={styles.metricChipValue}>
                             {remainingDamaged}
                           </Text>
                         </View>
-
                         <View style={styles.metricChip}>
-                          <View style={styles.metricChipHeader}>
-                            <MaterialCommunityIcons
-                              name="star-outline"
-                              size={12}
-                              color="#8E9494"
-                            />
-                            <Text style={styles.metricChipLabel}>
-                              Fertility at Collection
-                            </Text>
-                          </View>
-                          <Text style={styles.metricChipValue}>
-                            {fertility}
-                          </Text>
+                          <Text style={styles.metricChipLabel}>Fertility</Text>
+                          <Text style={styles.metricChipValue}>{fertility}</Text>
                         </View>
                       </View>
+
                       <View style={styles.dispositionRow}>
                         <Text style={styles.dispositionText}>
                           Chicks transferred: {egg.transferredHatchedQty}/
@@ -1009,6 +1088,112 @@ export default function EggBatchColorScreen() {
         bottom={TAB_BAR_OFFSET - 2 - FAB_OFFSET_FROM_TAB_TOP}
         accessibilityLabel="Add egg batch"
       />
+
+      <Modal
+        visible={chickAgeModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          setChickAgeModalVisible(false);
+          setSelectedChick(null);
+        }}
+      >
+        <KeyboardAvoidingView
+          style={styles.modalKeyboardArea}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          keyboardVerticalOffset={insets.top}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.actionModalCard}>
+              <Text style={styles.modalTitle}>Edit Chick Batch Age</Text>
+              <Text style={styles.subtitle}>
+                {selectedChick
+                  ? `${formatChickBatchId(selectedChick)} | ${selectedChick.breed || "Chick batch"}`
+                  : "Chick batch"}
+              </Text>
+
+              <Text style={styles.insideLabel}>Age Value</Text>
+              <TextInput
+                value={chickAgeCount}
+                onChangeText={(value) =>
+                  setChickAgeCount(value.replace(/[^0-9.]/g, ""))
+                }
+                keyboardType="decimal-pad"
+                style={[styles.modalInputInside, styles.actionQuantityInput]}
+                placeholder="Age value"
+                placeholderTextColor={ChickIntelPalette.gray2}
+              />
+
+              <Text style={[styles.insideLabel, { marginTop: 6 }]}>Age Unit</Text>
+              <View style={styles.chickAgeUnitRow}>
+                <Pressable
+                  onPress={() => setChickAgeUnit("Weeks old")}
+                  style={[
+                    styles.chickAgeUnitBtn,
+                    chickAgeUnit === "Weeks old" && styles.chickAgeUnitBtnActive,
+                  ]}
+                  accessibilityRole="button"
+                >
+                  <Text
+                    style={[
+                      styles.chickAgeUnitBtnText,
+                      chickAgeUnit === "Weeks old" &&
+                        styles.chickAgeUnitBtnTextActive,
+                    ]}
+                  >
+                    Weeks old
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => setChickAgeUnit("Days old")}
+                  style={[
+                    styles.chickAgeUnitBtn,
+                    chickAgeUnit === "Days old" && styles.chickAgeUnitBtnActive,
+                  ]}
+                  accessibilityRole="button"
+                >
+                  <Text
+                    style={[
+                      styles.chickAgeUnitBtnText,
+                      chickAgeUnit === "Days old" &&
+                        styles.chickAgeUnitBtnTextActive,
+                    ]}
+                  >
+                    Days old
+                  </Text>
+                </Pressable>
+              </View>
+
+              <Text style={styles.actionModalHint}>
+                Chicks can be transferred to Chicken Batches at 5 weeks (35 days).
+              </Text>
+
+              <View style={styles.modalActions}>
+                <Pressable
+                  onPress={() => {
+                    setChickAgeModalVisible(false);
+                    setSelectedChick(null);
+                  }}
+                  style={styles.cancelBtn}
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.cancelText}>Cancel</Text>
+                </Pressable>
+                <Pressable
+                  onPress={saveChickAge}
+                  style={[styles.saveBtn, savingChickAge && { opacity: 0.6 }]}
+                  disabled={savingChickAge}
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.saveText}>
+                    {savingChickAge ? "Saving..." : "Save Age"}
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
 
       <Modal
         visible={actionEgg !== null}
@@ -1562,11 +1747,11 @@ const styles = StyleSheet.create({
   },
   cardMainContainer: {
     paddingLeft: 2,
-    gap: 12,
+    gap: 2,
   },
   cardTopRow: {
     flexDirection: "row",
-    alignItems: "flex-start",
+    alignItems: "center",
     justifyContent: "space-between",
     gap: 8,
   },
@@ -1584,6 +1769,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(49, 118, 103, 0.12)",
     paddingHorizontal: moderateScale(8),
     paddingVertical: verticalScale(3),
+    minHeight: verticalScale(28),
     borderRadius: 8,
     borderWidth: 1,
     borderColor: "rgba(49, 118, 103, 0.22)",
@@ -1596,12 +1782,47 @@ const styles = StyleSheet.create({
     color: ChickIntelPalette.green1,
     letterSpacing: -0.2,
   },
+  breedTitle: {
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(16),
+    lineHeight: 22,
+    fontWeight: "800",
+    letterSpacing: -0.3,
+    color: ChickIntelPalette.gray1,
+    marginTop: 4,
+  },
+  originPillBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "rgba(244, 248, 247, 0.9)",
+    paddingHorizontal: moderateScale(8),
+    paddingVertical: verticalScale(3),
+    minHeight: verticalScale(26),
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.18)",
+    alignSelf: "flex-start",
+    marginTop: verticalScale(2),
+  },
+  originPillText: {
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(11.5),
+    fontWeight: "700",
+    color: ChickIntelPalette.gray1,
+    letterSpacing: -0.2,
+  },
   originValueRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
   },
   colorTag: {
+    width: scale(8),
+    height: verticalScale(8),
+    borderRadius: 4,
+  },
+  colorDot: {
     width: scale(8),
     height: verticalScale(8),
     borderRadius: 4,
@@ -1615,8 +1836,10 @@ const styles = StyleSheet.create({
   createdDateText: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(11),
-    lineHeight: 15,
+    lineHeight: 16,
     color: "#52615D",
+    paddingBottom: 10,
+    marginTop: verticalScale(-2),
   },
   cardActionRow: {
     flexDirection: "row",
@@ -1624,8 +1847,8 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   createChickBtn: {
-    width: scale(30),
-    height: verticalScale(30),
+    width: scale(28),
+    height: verticalScale(28),
     borderRadius: 8,
     backgroundColor: "rgba(49, 118, 103, 0.12)",
     borderWidth: 1,
@@ -1634,8 +1857,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   actionIconBtn: {
-    width: scale(30),
-    height: verticalScale(30),
+    width: scale(28),
+    height: verticalScale(28),
     borderRadius: 8,
     backgroundColor: "rgba(244, 248, 247, 0.9)",
     borderWidth: 1,
@@ -1643,58 +1866,91 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  metricGridThree: {
+  metricsRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
     gap: 6,
+    marginTop: 2,
+  },
+  metricChip: {
+    flex: 1,
+    backgroundColor: "rgba(49, 118, 103, 0.08)",
+    borderRadius: 8,
+    paddingVertical: verticalScale(6),
+    paddingHorizontal: moderateScale(4),
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  metricChipEditable: {
+    backgroundColor: "rgba(49, 118, 103, 0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.28)",
+  },
+  metricChipLabelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 3,
+  },
+  metricChipLabel: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(9.5),
+    fontWeight: "600",
+    color: "#52615D",
+    textAlign: "center",
+  },
+  metricChipValue: {
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(12.5),
+    fontWeight: "800",
+    color: ChickIntelPalette.gray1,
+    marginTop: 2,
+    textAlign: "center",
+  },
+  chickAgeUnitRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 4,
+  },
+  chickAgeUnitBtn: {
+    flex: 1,
+    paddingVertical: verticalScale(9),
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.2)",
+    backgroundColor: "rgba(49, 118, 103, 0.06)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  chickAgeUnitBtnActive: {
+    backgroundColor: ChickIntelPalette.green1,
+    borderColor: ChickIntelPalette.green1,
+  },
+  chickAgeUnitBtnText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(11.5),
+    fontWeight: "700",
+    color: "#40524B",
+  },
+  chickAgeUnitBtnTextActive: {
+    color: "#FFFFFF",
   },
   dispositionRow: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 6,
+    marginTop: 6,
   },
   dispositionText: {
     flexGrow: 1,
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(10),
-    fontWeight: "700",
-    color: ChickIntelPalette.textMuted,
-    backgroundColor: "rgba(49, 118, 103, 0.07)",
-    borderRadius: 7,
-    paddingHorizontal: 7,
-    paddingVertical: 5,
-  },
-  metricChip: {
-    flexGrow: 1,
-    minWidth: scale(90),
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.14)",
-    backgroundColor: "rgba(244, 248, 247, 0.65)",
-    paddingHorizontal: moderateScale(8),
-    paddingVertical: verticalScale(6),
-    gap: 2,
-  },
-  metricChipHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  metricChipLabel: {
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(9),
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#52615D",
-    textTransform: "uppercase",
-    letterSpacing: 0.2,
-  },
-  metricChipValue: {
-    fontFamily: ChickFont.display,
-    fontSize: responsiveFontSize(14),
-    fontWeight: "800",
-    color: ChickIntelPalette.gray1,
-    textAlign: "right",
-    paddingRight: moderateScale(10),
+    backgroundColor: "rgba(49, 118, 103, 0.06)",
+    borderRadius: 6,
+    paddingHorizontal: moderateScale(6),
+    paddingVertical: verticalScale(4),
+    textAlign: "center",
   },
   emptyCard: {
     borderRadius: 14,

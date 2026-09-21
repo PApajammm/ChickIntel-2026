@@ -56,16 +56,22 @@ export function getCurrentBatchAgeLabel(
   batch: Pick<BatchItem, "ageLabel" | "createdAt">,
   now = new Date(),
 ) {
-  if (!batch.createdAt) return batch.ageLabel;
+  if (!batch.createdAt) {
+    const rawWeeks = parseInitialAgeDays(batch.ageLabel) / 7;
+    const roundedWeeks = Math.round(rawWeeks * 2) / 2;
+    const formatted =
+      roundedWeeks % 1 === 0 ? String(roundedWeeks) : roundedWeeks.toFixed(1);
+    return `${formatted} ${roundedWeeks === 1 ? "Week" : "Weeks"} old`;
+  }
 
   const currentAgeDays =
     parseInitialAgeDays(batch.ageLabel) +
     elapsedCalendarDays(batch.createdAt, now);
-  const currentAgeWeeks = currentAgeDays / 7;
-  const formattedWeeks = Number.isInteger(currentAgeWeeks)
-    ? String(currentAgeWeeks)
-    : currentAgeWeeks.toFixed(1);
-  return `${formattedWeeks} ${currentAgeWeeks === 1 ? "Week" : "Weeks"} old`;
+  const rawAgeWeeks = currentAgeDays / 7;
+  const roundedWeeks = Math.round(rawAgeWeeks * 2) / 2;
+  const formattedWeeks =
+    roundedWeeks % 1 === 0 ? String(roundedWeeks) : roundedWeeks.toFixed(1);
+  return `${formattedWeeks} ${roundedWeeks === 1 ? "Week" : "Weeks"} old`;
 }
 
 export function formatBatchDateStamp(createdAt?: string, updatedAt?: string) {
