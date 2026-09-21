@@ -201,7 +201,7 @@ export const JournalLogCard = memo(function JournalLogCard({
           >
             {/* Journal entry header */}
             <View style={styles.headerRow}>
-              <View style={styles.journalHeading}>
+              <View style={styles.headerTopRow}>
                 <View style={styles.journalKickerRow}>
                   <MaterialCommunityIcons
                     name="book-open-page-variant-outline"
@@ -213,13 +213,8 @@ export const JournalLogCard = memo(function JournalLogCard({
                     <Text style={styles.entryTag}>{chtTag}</Text>
                   ) : null}
                 </View>
-                <Text style={styles.dateLine} numberOfLines={1}>
-                  {timestamp}
-                </Text>
-              </View>
 
-              <View style={styles.leftTagWrap}>
-                {/* Health status */}
+                {/* Health status leveled on the opposite side of FIELD NOTE */}
                 <View
                   style={[
                     styles.statusPill,
@@ -242,6 +237,10 @@ export const JournalLogCard = memo(function JournalLogCard({
                   </Text>
                 </View>
               </View>
+
+              <Text style={styles.dateLine} numberOfLines={1}>
+                {timestamp}
+              </Text>
             </View>
 
             {/* Journal subject and observation */}
@@ -280,8 +279,8 @@ export const JournalLogCard = memo(function JournalLogCard({
 
                 <Text style={styles.contextLabel} numberOfLines={1}>
                   {detectedIllness
-                    ? `Health note: ${detectedIllness}`
-                    : "Health note: Not recorded"}
+                    ? `Diagnosis: ${detectedIllness}`
+                    : "Diagnosis: Not recorded"}
                 </Text>
 
                 {behaviorLabels && behaviorLabels.length > 0 ? (
@@ -482,14 +481,17 @@ const styles = StyleSheet.create({
     paddingLeft: moderateScale(2),
   },
   headerRow: {
+    paddingBottom: verticalScale(10),
+    marginBottom: verticalScale(12),
+    gap: 3,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(49, 118, 103, 0.16)",
+  },
+  headerTopRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingBottom: verticalScale(10),
-    marginBottom: verticalScale(12),
     gap: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(49, 118, 103, 0.16)",
   },
   journalHeading: {
     flex: 1,
@@ -499,6 +501,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
+    flexShrink: 1,
   },
   journalKicker: {
     fontFamily: ChickFont.display,
@@ -522,7 +525,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    flex: 1,
   },
   chtPillBadge: {
     flexDirection: "row",
@@ -549,9 +551,10 @@ const styles = StyleSheet.create({
   },
   dateLine: {
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(12),
+    fontSize: responsiveFontSize(11.5),
     fontWeight: "700",
     color: ChickIntelPalette.gray1,
+    marginTop: verticalScale(1),
   },
   statusPill: {
     flexDirection: "row",
@@ -561,6 +564,7 @@ const styles = StyleSheet.create({
     paddingVertical: verticalScale(3),
     borderRadius: 8,
     borderWidth: 1,
+    flexShrink: 0,
   },
   statusDot: {
     width: scale(6),

@@ -489,6 +489,35 @@ export default function HomeScreen() {
               ) {
                 counts["Rhode Island Red"] =
                   (counts["Rhode Island Red"] || 0) + total;
+              } else if (bName.includes("leghorn")) {
+                counts["Leghorn"] = (counts["Leghorn"] || 0) + total;
+              } else if (
+                bName.includes("plymouth") ||
+                bName.includes("barred")
+              ) {
+                counts["Plymouth Rock"] =
+                  (counts["Plymouth Rock"] || 0) + total;
+              } else if (bName.includes("australorp")) {
+                counts["Australorp"] = (counts["Australorp"] || 0) + total;
+              } else if (
+                bName.includes("turken") ||
+                bName.includes("naked neck")
+              ) {
+                counts["Turken"] = (counts["Turken"] || 0) + total;
+              } else if (bName.includes("bielefelder")) {
+                counts["Bielefelder"] = (counts["Bielefelder"] || 0) + total;
+              } else if (bName.includes("orpington")) {
+                counts["Black Orpington"] =
+                  (counts["Black Orpington"] || 0) + total;
+              } else if (bName.includes("sussex")) {
+                counts["Sussex"] = (counts["Sussex"] || 0) + total;
+              } else if (bName.includes("new hampshire")) {
+                counts["New Hampshire"] =
+                  (counts["New Hampshire"] || 0) + total;
+              } else if (bName.includes("fayoumi")) {
+                counts["Fayoumi"] = (counts["Fayoumi"] || 0) + total;
+              } else if (bName.includes("buckeye")) {
+                counts["Buckeye"] = (counts["Buckeye"] || 0) + total;
               } else if (batch.breed) {
                 counts[batch.breed] = (counts[batch.breed] || 0) + total;
               }
