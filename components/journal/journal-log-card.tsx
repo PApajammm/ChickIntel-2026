@@ -16,7 +16,6 @@ import {
 } from "react-native";
 
 import { BlurCard } from "@/components/ui/blur-card";
-import { ChipList } from "@/components/ui/chip-list";
 import { ChickFont } from "@/constants/chick-fonts";
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
 import {
@@ -200,56 +199,52 @@ export const JournalLogCard = memo(function JournalLogCard({
             accessibilityRole="button"
             accessibilityHint="Open full scan result"
           >
-            {/* Header Row: CHT Tag + Status Pill */}
+            {/* Journal entry header */}
             <View style={styles.headerRow}>
-              <View style={styles.leftTagWrap}>
-                {chtTag ? (
-                  <View style={styles.chtPillBadge}>
-                    <MaterialCommunityIcons
-                      name="tag-outline"
-                      size={12}
-                      color={ChickIntelPalette.green1}
-                    />
-                    <Text style={styles.chtBadgeText}>{chtTag}</Text>
-                  </View>
-                ) : null}
-                <View style={styles.timeWrap}>
+              <View style={styles.journalHeading}>
+                <View style={styles.journalKickerRow}>
                   <MaterialCommunityIcons
-                    name="clock-outline"
-                    size={12}
-                    color={ChickIntelPalette.gray2}
+                    name="book-open-page-variant-outline"
+                    size={13}
+                    color={ChickIntelPalette.green1}
                   />
-                  <Text style={styles.dateLine} numberOfLines={1}>
-                    {timestamp}
+                  <Text style={styles.journalKicker}>FIELD NOTE</Text>
+                  {chtTag ? (
+                    <Text style={styles.entryTag}>{chtTag}</Text>
+                  ) : null}
+                </View>
+                <Text style={styles.dateLine} numberOfLines={1}>
+                  {timestamp}
+                </Text>
+              </View>
+
+              <View style={styles.leftTagWrap}>
+                {/* Health status */}
+                <View
+                  style={[
+                    styles.statusPill,
+                    {
+                      backgroundColor: theme.badgeBg,
+                      borderColor: theme.badgeBorder,
+                    },
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.statusDot,
+                      { backgroundColor: theme.accentColor },
+                    ]}
+                  />
+                  <Text
+                    style={[styles.statusPillText, { color: theme.badgeText }]}
+                  >
+                    {theme.label}
                   </Text>
                 </View>
               </View>
-
-              {/* Health Status Pill */}
-              <View
-                style={[
-                  styles.statusPill,
-                  {
-                    backgroundColor: theme.badgeBg,
-                    borderColor: theme.badgeBorder,
-                  },
-                ]}
-              >
-                <View
-                  style={[
-                    styles.statusDot,
-                    { backgroundColor: theme.accentColor },
-                  ]}
-                />
-                <Text
-                  style={[styles.statusPillText, { color: theme.badgeText }]}
-                >
-                  {theme.label}
-                </Text>
-              </View>
             </View>
 
-            {/* Main Content Layout */}
+            {/* Journal subject and observation */}
             <View style={styles.cardContentRow}>
               <View style={styles.thumbWrapper}>
                 {photoUri ? (
@@ -275,36 +270,48 @@ export const JournalLogCard = memo(function JournalLogCard({
                   !hideCheckbox && styles.cardTextContentSelecting,
                 ]}
               >
-                <Text style={styles.diseaseTitle} numberOfLines={2}>
+                <Text style={styles.entryTitle} numberOfLines={2}>
                   {behaviorLabels && behaviorLabels.length > 0
-                    ? behaviorLabels.slice(0, 2).join(" | ")
+                    ? "Observed behaviours"
                     : additionalObservation?.trim()
-                      ? "Chicken behaviour note"
-                      : "Behaviour check"}
+                      ? "Chicken observation"
+                      : "Behaviour entry"}
                 </Text>
 
                 <Text style={styles.contextLabel} numberOfLines={1}>
                   {detectedIllness
-                    ? `Health context: ${detectedIllness}`
-                    : "Health context: Not recorded"}
+                    ? `Health note: ${detectedIllness}`
+                    : "Health note: Not recorded"}
                 </Text>
 
                 {behaviorLabels && behaviorLabels.length > 0 ? (
-                  <View style={styles.chipSection}>
-                    <ChipList labels={behaviorLabels} compact />
-                  </View>
-                ) : null}
-
-                {additionalObservation ? (
-                  <View style={styles.observationBox}>
-                    <Text style={styles.observationText} numberOfLines={2}>
-                      {'"'}
-                      {additionalObservation}
-                      {'"'}
-                    </Text>
+                  <View style={styles.behaviorPreview}>
+                    {behaviorLabels.slice(0, 2).map((label) => (
+                      <View key={label} style={styles.behaviorChip}>
+                        <Text style={styles.behaviorChipText} numberOfLines={1}>
+                          {label}
+                        </Text>
+                      </View>
+                    ))}
+                    {behaviorLabels.length > 2 ? (
+                      <View style={styles.behaviorMoreChip}>
+                        <Text style={styles.behaviorMoreText}>
+                          +{behaviorLabels.length - 2} more
+                        </Text>
+                      </View>
+                    ) : null}
                   </View>
                 ) : null}
               </View>
+            </View>
+
+            <View style={styles.journalNote}>
+              <Text style={styles.journalNoteLabel}>OBSERVATION</Text>
+              <Text style={styles.observationText} numberOfLines={3}>
+                {additionalObservation?.trim()
+                  ? `"${additionalObservation.trim()}"`
+                  : "No observation written for this entry."}
+              </Text>
             </View>
           </Pressable>
 
@@ -464,7 +471,7 @@ const styles = StyleSheet.create({
     paddingRight: moderateScale(16),
     paddingTop: verticalScale(14),
     paddingBottom: verticalScale(12),
-    backgroundColor: "rgba(255, 255, 255, 0.94)",
+    backgroundColor: "#FFFDF8",
     borderRadius: 10,
     overflow: "hidden",
   },
@@ -478,8 +485,38 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    paddingBottom: verticalScale(10),
     marginBottom: verticalScale(12),
     gap: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(49, 118, 103, 0.16)",
+  },
+  journalHeading: {
+    flex: 1,
+    gap: 3,
+  },
+  journalKickerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  journalKicker: {
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(10),
+    fontWeight: "800",
+    letterSpacing: 1,
+    color: ChickIntelPalette.green1,
+  },
+  entryTag: {
+    marginLeft: 3,
+    paddingHorizontal: moderateScale(6),
+    paddingVertical: verticalScale(2),
+    borderRadius: 5,
+    backgroundColor: "rgba(49, 118, 103, 0.1)",
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(10),
+    fontWeight: "700",
+    color: ChickIntelPalette.green1,
   },
   leftTagWrap: {
     flexDirection: "row",
@@ -512,9 +549,9 @@ const styles = StyleSheet.create({
   },
   dateLine: {
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(11),
-    fontWeight: "600",
-    color: ChickIntelPalette.textMuted,
+    fontSize: responsiveFontSize(12),
+    fontWeight: "700",
+    color: ChickIntelPalette.gray1,
   },
   statusPill: {
     flexDirection: "row",
@@ -571,12 +608,12 @@ const styles = StyleSheet.create({
   cardTextContentSelecting: {
     paddingRight: moderateScale(28),
   },
-  diseaseTitle: {
+  entryTitle: {
     fontFamily: ChickFont.display,
-    fontSize: responsiveFontSize(16),
-    lineHeight: 22,
+    fontSize: responsiveFontSize(17),
+    lineHeight: 23,
     fontWeight: "800",
-    letterSpacing: -0.3,
+    letterSpacing: -0.2,
     color: ChickIntelPalette.gray1,
     marginBottom: verticalScale(4),
   },
@@ -589,8 +626,45 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
     marginBottom: verticalScale(2),
   },
-  chipSection: {
-    marginTop: verticalScale(4),
+  behaviorPreview: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 5,
+    marginTop: verticalScale(6),
+    minWidth: 0,
+  },
+  behaviorChip: {
+    maxWidth: "100%",
+    flexShrink: 1,
+    paddingHorizontal: moderateScale(7),
+    paddingVertical: verticalScale(4),
+    borderRadius: 7,
+    backgroundColor: "rgba(202, 227, 221, 0.58)",
+    borderWidth: 1,
+    borderColor: "rgba(67, 139, 123, 0.2)",
+  },
+  behaviorChipText: {
+    flexShrink: 1,
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(10),
+    lineHeight: 13,
+    fontWeight: "700",
+    color: ChickIntelPalette.green1,
+  },
+  behaviorMoreChip: {
+    flexShrink: 0,
+    paddingHorizontal: moderateScale(7),
+    paddingVertical: verticalScale(4),
+    borderRadius: 7,
+    backgroundColor: "rgba(49, 118, 103, 0.1)",
+  },
+  behaviorMoreText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(10),
+    lineHeight: 13,
+    fontWeight: "800",
+    color: ChickIntelPalette.textMuted,
   },
   observationBox: {
     marginTop: verticalScale(6),
@@ -599,12 +673,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: moderateScale(8),
     paddingVertical: verticalScale(4),
   },
+  journalNote: {
+    marginTop: verticalScale(12),
+    paddingTop: verticalScale(9),
+    paddingHorizontal: moderateScale(10),
+    paddingBottom: verticalScale(10),
+    backgroundColor: "rgba(255, 248, 229, 0.72)",
+  },
+  journalNoteLabel: {
+    marginBottom: verticalScale(4),
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(10),
+    fontWeight: "800",
+    letterSpacing: 0.8,
+    color: "#9A6B2F",
+  },
   observationText: {
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(11),
-    lineHeight: 16,
-    fontWeight: "500",
-    color: "#4A5252",
+    fontSize: responsiveFontSize(12),
+    lineHeight: 18,
+    fontWeight: "600",
+    color: "#554A3A",
     fontStyle: "italic",
   },
   noteActionBar: {

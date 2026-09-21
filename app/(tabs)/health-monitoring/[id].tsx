@@ -10,6 +10,7 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+    KeyboardAvoidingView,
     Modal,
     Platform,
     Pressable,
@@ -113,8 +114,7 @@ function isBlockedByEarlierDay(
   if (occurrenceDateKey === "unknown") return false;
 
   return occurrences.some(
-    (item) =>
-      getDateKey(item.dueAt) < occurrenceDateKey && !item.completed,
+    (item) => getDateKey(item.dueAt) < occurrenceDateKey && !item.completed,
   );
 }
 
@@ -462,7 +462,7 @@ export default function HealthMonitoringDetailScreen() {
                   ? "checkbox-marked"
                   : isBlocked
                     ? "lock-outline"
-                  : "checkbox-blank-outline"
+                    : "checkbox-blank-outline"
               }
               size={22}
               color={
@@ -470,9 +470,9 @@ export default function HealthMonitoringDetailScreen() {
                   ? ChickIntelPalette.green1
                   : isBlocked
                     ? ChickIntelPalette.textMuted
-                  : isOverdue
-                    ? "#B45309"
-                    : ChickIntelPalette.gray2
+                    : isOverdue
+                      ? "#B45309"
+                      : ChickIntelPalette.gray2
               }
             />
             <View style={styles.protocolTaskCopy}>
@@ -530,12 +530,21 @@ export default function HealthMonitoringDetailScreen() {
             />
           </TouchableOpacity>
         </View>
-        <Text style={styles.protocolTaskMeta}>
-          {formatScanDate(occurrence.dueAt)}
-          {occurrence.treatmentNote
-            ? ` | Note: ${occurrence.treatmentNote}`
-            : ""}
-        </Text>
+        {occurrence.treatmentNote?.trim() ? (
+          <View style={styles.protocolNotePreview}>
+            <MaterialCommunityIcons
+              name="note-text-outline"
+              size={16}
+              color={ChickIntelPalette.green1}
+            />
+            <View style={styles.protocolNoteCopy}>
+              <Text style={styles.protocolNoteLabel}>Treatment note</Text>
+              <Text style={styles.protocolNoteText}>
+                {occurrence.treatmentNote.trim()}
+              </Text>
+            </View>
+          </View>
+        ) : null}
       </View>
     );
   };
@@ -864,70 +873,75 @@ export default function HealthMonitoringDetailScreen() {
         animationType="fade"
         onRequestClose={() => setNoteModalContext(null)}
       >
-        <View style={styles.noteModalBackdrop}>
-          <View style={styles.noteModalCard}>
-            <View style={styles.noteModalHeader}>
-              <View style={styles.noteModalTitleWrap}>
-                <MaterialCommunityIcons
-                  name="note-edit-outline"
-                  size={20}
-                  color={ChickIntelPalette.green1}
-                />
-                <Text style={styles.noteModalTitle}>Treatment Note</Text>
+        <KeyboardAvoidingView
+          style={styles.noteKeyboardAvoiding}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
+          <View style={styles.noteModalBackdrop}>
+            <View style={styles.noteModalCard}>
+              <View style={styles.noteModalHeader}>
+                <View style={styles.noteModalTitleWrap}>
+                  <MaterialCommunityIcons
+                    name="note-edit-outline"
+                    size={20}
+                    color={ChickIntelPalette.green1}
+                  />
+                  <Text style={styles.noteModalTitle}>Treatment Note</Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => setNoteModalContext(null)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Close treatment note editor"
+                >
+                  <MaterialCommunityIcons
+                    name="close"
+                    size={21}
+                    color={ChickIntelPalette.gray2}
+                  />
+                </TouchableOpacity>
               </View>
+              <Text style={styles.noteModalTaskTitle}>
+                {noteModalContext?.task.title}
+              </Text>
+              <TextInput
+                autoFocus
+                value={
+                  noteModalContext
+                    ? (treatmentNotes[noteModalContext.occurrence.id] ??
+                      noteModalContext.occurrence.treatmentNote ??
+                      "")
+                    : ""
+                }
+                onChangeText={(value) => {
+                  if (!noteModalContext) return;
+                  setTreatmentNotes((previous) => ({
+                    ...previous,
+                    [noteModalContext.occurrence.id]: value,
+                  }));
+                }}
+                placeholder="What happened during this treatment?"
+                placeholderTextColor={ChickIntelPalette.gray2}
+                style={styles.noteModalInput}
+                multiline
+                textAlignVertical="top"
+              />
               <TouchableOpacity
-                onPress={() => setNoteModalContext(null)}
+                style={styles.noteModalSaveButton}
+                onPress={() => {
+                  if (noteModalContext) {
+                    void saveTreatmentNote(
+                      noteModalContext.task,
+                      noteModalContext.occurrence,
+                    );
+                  }
+                }}
                 accessibilityRole="button"
-                accessibilityLabel="Close treatment note editor"
               >
-                <MaterialCommunityIcons
-                  name="close"
-                  size={21}
-                  color={ChickIntelPalette.gray2}
-                />
+                <Text style={styles.noteModalSaveText}>Save Note</Text>
               </TouchableOpacity>
             </View>
-            <Text style={styles.noteModalTaskTitle}>
-              {noteModalContext?.task.title}
-            </Text>
-            <TextInput
-              autoFocus
-              value={
-                noteModalContext
-                  ? (treatmentNotes[noteModalContext.occurrence.id] ??
-                    noteModalContext.occurrence.treatmentNote ??
-                    "")
-                  : ""
-              }
-              onChangeText={(value) => {
-                if (!noteModalContext) return;
-                setTreatmentNotes((previous) => ({
-                  ...previous,
-                  [noteModalContext.occurrence.id]: value,
-                }));
-              }}
-              placeholder="What happened during this treatment?"
-              placeholderTextColor={ChickIntelPalette.gray2}
-              style={styles.noteModalInput}
-              multiline
-              textAlignVertical="top"
-            />
-            <TouchableOpacity
-              style={styles.noteModalSaveButton}
-              onPress={() => {
-                if (noteModalContext) {
-                  void saveTreatmentNote(
-                    noteModalContext.task,
-                    noteModalContext.occurrence,
-                  );
-                }
-              }}
-              accessibilityRole="button"
-            >
-              <Text style={styles.noteModalSaveText}>Save Note</Text>
-            </TouchableOpacity>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
@@ -1177,6 +1191,37 @@ const styles = StyleSheet.create({
     color: ChickIntelPalette.textMuted,
     fontWeight: "700",
   },
+  protocolNotePreview: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    marginTop: 6,
+    marginLeft: 30,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 9,
+    backgroundColor: "rgba(49, 118, 103, 0.09)",
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.18)",
+  },
+  protocolNoteCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  protocolNoteLabel: {
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(10),
+    fontWeight: "800",
+    color: ChickIntelPalette.green1,
+    textTransform: "uppercase",
+    letterSpacing: 0.35,
+  },
+  protocolNoteText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12),
+    lineHeight: 17,
+    color: ChickIntelPalette.gray1,
+  },
   protocolGroupTitle: {
     marginTop: 6,
     fontFamily: ChickFont.display,
@@ -1239,10 +1284,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: moderateScale(18),
     backgroundColor: "rgba(20, 31, 29, 0.42)",
   },
+  noteKeyboardAvoiding: {
+    flex: 1,
+  },
   noteModalCard: {
     borderRadius: 14,
     padding: moderateScale(16),
     backgroundColor: "#FFFFFF",
+    maxHeight: "88%",
     gap: 10,
   },
   noteModalHeader: {
