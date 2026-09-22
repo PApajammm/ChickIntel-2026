@@ -393,6 +393,30 @@ export default function ScannerScreen() {
           ]}
         >
           <ViewfinderOverlay size={viewfinderSize} />
+          {mode === "sex" ? (
+            <View
+              style={[
+                styles.captureTipCard,
+                isCompactScreen && styles.captureTipCardCompact,
+                isNarrowScreen && styles.captureTipCardNarrow,
+              ]}
+            >
+              <View style={styles.supportedCardHeadingRow}>
+                <MaterialCommunityIcons
+                  name="gender-male-female"
+                  size={15}
+                  color={ChickIntelPalette.green1}
+                />
+                <Text style={styles.supportedCardHeading}>
+                  SUPPORTED SEX CATEGORIES
+                </Text>
+              </View>
+              <Text style={styles.supportedCardCategories}>Male / Female</Text>
+              <Text style={styles.supportedCardNote}>
+                Camera Sexing detects chickens 9 weeks old and above.
+              </Text>
+            </View>
+          ) : null}
         </View>
 
         <View
@@ -459,7 +483,11 @@ export default function ScannerScreen() {
           >
             <View style={styles.infoHeader}>
               <Text style={styles.infoTitle}>
-                {mode === "health" ? "Supported diseases" : "Supported breeds"}
+                {mode === "health"
+                  ? "Supported diseases"
+                  : mode === "breed"
+                    ? "Supported breeds"
+                    : "Supported sex categories"}
               </Text>
               <TouchableOpacity
                 onPress={() => setSupportedInfoVisible(false)}
@@ -478,17 +506,22 @@ export default function ScannerScreen() {
               showsVerticalScrollIndicator
               nestedScrollEnabled
             >
-              {(mode === "health" ? SUPPORTED_DISEASES : SUPPORTED_BREEDS).map(
-                (item) => (
-                  <View key={item} style={styles.infoListItem}>
-                    <View style={styles.infoListBullet} />
-                    <Text style={styles.infoListText}>{item}</Text>
-                  </View>
-                ),
-              )}
+              {(mode === "health"
+                ? SUPPORTED_DISEASES
+                : mode === "breed"
+                  ? SUPPORTED_BREEDS
+                  : (["Male", "Female"] as const)
+              ).map((item) => (
+                <View key={item} style={styles.infoListItem}>
+                  <View style={styles.infoListBullet} />
+                  <Text style={styles.infoListText}>{item}</Text>
+                </View>
+              ))}
             </ScrollView>
             <Text style={styles.infoNote}>
-              Only these supported categories are detected.
+              {mode === "sex"
+                ? "Camera Sexing detects chickens 9 weeks old and above."
+                : "Only these supported categories are detected."}
             </Text>
           </Pressable>
         </Pressable>
