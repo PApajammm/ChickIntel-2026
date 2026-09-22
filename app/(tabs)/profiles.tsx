@@ -1,4 +1,4 @@
-import {
+﻿import {
   moderateScale,
   responsiveFontSize,
   scale,
@@ -45,29 +45,31 @@ import {
 import { MIN_CHICKEN_BATCH_AGE_WEEKS } from "@/utils/chicken-batch-rules";
 import { logError, logStep } from "@/utils/logger";
 import {
-  createFarmChickBatch,
   deleteFarmBatch,
   fetchFarmBatches,
   updateFarmBatch,
 } from "@/utils/supabase-batches";
 import { recordDeletedChickenBatch } from "@/utils/supabase-chicken-batch-history";
-import { recordDeletedEggBatch } from "@/utils/supabase-egg-batch-history";
 import {
-  deleteFarmEggBatch,
   fetchFarmEggBatches,
   updateFarmEggBatch,
 } from "@/utils/supabase-egg-batches";
-import { recordEggDisposition } from "@/utils/supabase-egg-dispositions";
 
 const TAB_BAR_OFFSET = 55;
 const FAB_OFFSET_FROM_TAB_TOP = 50;
 const AGE_UNIT_OPTIONS = ["Weeks old"] as const;
 
-type EggAction = "transfer" | "sell" | "dispose";
-
-type EggEditState = {
-  hatchedQty: string;
-  damagedQty: string;
+type EggColorCard = {
+  id: string;
+  breed: string;
+  colorName: string;
+  colorHex: string;
+  originBatchNo: string;
+  rawBatchNo: string;
+  batches: number;
+  fertilityRate: string;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 type ChickenEditFormState = {
@@ -100,17 +102,6 @@ function getDerivedUnhatchedQty(
   damagedQty: number,
 ) {
   return clampNonNegative(eggQty - hatchedQty - damagedQty);
-}
-
-function formatEggBatchId(value: string | number) {
-  const digits = String(value).replace(/[^0-9]/g, "");
-  return `BATCH E${(digits || "1").padStart(4, "0")}`;
-}
-
-function formatOriginBatchId(value?: string | number) {
-  if (!value) return "BATCH C0001";
-  const digits = String(value).replace(/[^0-9]/g, "");
-  return `BATCH C${(digits || "1").padStart(4, "0")}`;
 }
 
 function formatProfileBatchId(prefix: "C" | "E", value: string | number) {
@@ -176,25 +167,14 @@ export default function ProfilesScreen() {
   const [isDeletingBatch, setIsDeletingBatch] = useState(false);
 
   const [selectedEgg, setSelectedEgg] = useState<EggBatchItem | null>(null);
-  const [eggToDelete, setEggToDelete] = useState<EggBatchItem | null>(null);
-  const [isDeletingEgg, setIsDeletingEgg] = useState(false);
   const [eggEditVisible, setEggEditVisible] = useState(false);
-  const [eggEditForm, setEggEditForm] = useState<EggEditState>({
-    hatchedQty: "0",
-    damagedQty: "0",
+  const [eggForm, setEggForm] = useState({
+    batchNo: "",
+    eggQty: "",
+    lineNo: "",
+    ageUnit: "",
+    origin: "",
   });
-  const [discrepancyModalVisible, setDiscrepancyModalVisible] = useState(false);
-  const [actionEgg, setActionEgg] = useState<EggBatchItem | null>(null);
-  const [actionType, setActionType] = useState<EggAction>("transfer");
-  const [actionQty, setActionQty] = useState("");
-
-  const totalRecordedEggs = selectedEgg?.eggQty ?? 0;
-  const hatchedCount = parseCount(eggEditForm.hatchedQty);
-  const damagedCount = parseCount(eggEditForm.damagedQty);
-  const totalUpdatedEggs = hatchedCount + damagedCount;
-  const hasDiscrepancy = totalUpdatedEggs > totalRecordedEggs;
-  const discrepancyQty = Math.max(0, totalUpdatedEggs - totalRecordedEggs);
-  const derivedUnhatched = Math.max(0, totalRecordedEggs - totalUpdatedEggs);
 
   const loadChickenBatches = useCallback(async () => {
     if (!activeFarm?.id) {
@@ -355,229 +335,49 @@ export default function ProfilesScreen() {
     closeEdit();
   }
 
-  const getAvailableActionQty = (egg: EggBatchItem, type: EggAction) => {
-    if (type === "transfer") {
-      return Math.max(0, egg.hatchedQty - egg.transferredHatchedQty);
-    }
-    if (type === "sell") return Math.max(0, egg.unhatchedQty - egg.soldQty);
-    return Math.max(0, egg.damagedQty - egg.disposedDamagedQty);
-  };
-
-  const openEggAction = (egg: EggBatchItem, type: EggAction) => {
-    const available = getAvailableActionQty(egg, type);
-    if (available <= 0) {
-      Alert.alert(
-        "Nothing available",
-        `There are no remaining ${type === "transfer" ? "hatched eggs" : type === "sell" ? "unhatched eggs" : "damaged eggs"} for this action.`,
-      );
-      return;
-    }
-    setActionEgg(egg);
-    setActionType(type);
-    setActionQty(String(available));
-  };
-
-  const confirmEggAction = () => {
-    if (!actionEgg || !activeFarm?.id) return;
-    const quantity = parseCount(actionQty);
-    const available = getAvailableActionQty(actionEgg, actionType);
-    if (quantity <= 0 || quantity > available) {
-      Alert.alert("Invalid quantity", `Enter a value from 1 to ${available}.`);
-      return;
-    }
-
-    const actionLabel =
-      actionType === "transfer"
-        ? "transfer to chicks"
-        : actionType === "sell"
-          ? "mark as sold"
-          : "dispose";
-    Alert.alert(
-      "Confirm egg action",
-      `Are you sure you want to ${actionLabel} ${quantity} egg${quantity === 1 ? "" : "s"}?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Confirm",
-          onPress: async () => {
-            const nowIso = new Date().toISOString();
-            const nextValues = {
-              transferredHatchedQty:
-                actionEgg.transferredHatchedQty +
-                (actionType === "transfer" ? quantity : 0),
-              soldQty:
-                actionEgg.soldQty + (actionType === "sell" ? quantity : 0),
-              disposedDamagedQty:
-                actionEgg.disposedDamagedQty +
-                (actionType === "dispose" ? quantity : 0),
-              updatedAt: nowIso,
-            };
-            try {
-              if (actionType === "transfer") {
-                const updatedChickBatch = await createFarmChickBatch(
-                  activeFarm.id,
-                  actionEgg.origin || actionEgg.batchNo,
-                  quantity,
-                  actionEgg.id,
-                );
-                setChickenData((prev) => {
-                  const exists = prev.some(
-                    (b) => b.id === updatedChickBatch.id,
-                  );
-                  return exists
-                    ? prev.map((b) =>
-                        b.id === updatedChickBatch.id
-                          ? updatedChickBatch
-                          : b,
-                      )
-                    : [updatedChickBatch, ...prev];
-                });
-                await updateFarmEggBatch(activeFarm.id, actionEgg.id, {
-                  transferredHatchedQty:
-                    actionEgg.transferredHatchedQty + quantity,
-                  updatedAt: nowIso,
-                });
-                await recordEggDisposition(activeFarm.id, {
-                  eggBatchId: actionEgg.id,
-                  originBatchNo: actionEgg.origin || actionEgg.batchNo,
-                  colorName: actionEgg.colorName,
-                  colorHex: actionEgg.colorHex,
-                  actionType: "transfer",
-                  quantity,
-                  targetChickBatchId: updatedChickBatch.id,
-                });
-                const updatedEgg = {
-                  ...actionEgg,
-                  transferredHatchedQty:
-                    actionEgg.transferredHatchedQty + quantity,
-                  updatedAt: nowIso,
-                };
-                setSavedEggBatches((prev) =>
-                  prev.map((egg) =>
-                    egg.id === updatedEgg.id ? updatedEgg : egg,
-                  ),
-                );
-                setActionEgg(null);
-              } else {
-                await updateFarmEggBatch(
-                  activeFarm.id,
-                  actionEgg.id,
-                  nextValues,
-                );
-                await recordEggDisposition(activeFarm.id, {
-                  eggBatchId: actionEgg.id,
-                  originBatchNo: actionEgg.origin || actionEgg.batchNo,
-                  colorName: actionEgg.colorName,
-                  colorHex: actionEgg.colorHex,
-                  actionType,
-                  quantity,
-                });
-                const updatedEgg = { ...actionEgg, ...nextValues };
-                setSavedEggBatches((prev) =>
-                  prev.map((egg) =>
-                    egg.id === updatedEgg.id ? updatedEgg : egg,
-                  ),
-                );
-                setActionEgg(null);
-              }
-            } catch (error) {
-              logError("Profiles egg disposition update failed", error, {
-                farmId: activeFarm.id,
-                eggBatchId: actionEgg.id,
-                actionType,
-              });
-              Alert.alert("Action failed", "Unable to update this egg batch.");
-            }
-          },
-        },
-      ],
-    );
-  };
-
-  const openEggEdit = (egg: EggBatchItem) => {
-    setSelectedEgg(egg);
-    setEggEditForm({
-      hatchedQty: String(egg.hatchedQty ?? 0),
-      damagedQty: String(egg.damagedQty ?? 0),
-    });
-    setEggEditVisible(true);
-  };
-
-  const closeEggEdit = () => {
+  function closeEggEdit() {
     setEggEditVisible(false);
     setSelectedEgg(null);
-  };
+  }
 
-  const saveEggEdit = async () => {
-    if (!selectedEgg) {
-      closeEggEdit();
-      return;
-    }
-
-    const hatched = parseCount(eggEditForm.hatchedQty);
-    const damaged = parseCount(eggEditForm.damagedQty);
-    const eggTotal = selectedEgg.eggQty ?? 0;
-
-    if (hatched + damaged > eggTotal) {
-      setDiscrepancyModalVisible(true);
-      return;
-    }
-
-    const nowIso = new Date().toISOString();
-    const updatedEgg: EggBatchItem = {
+  async function saveEggEdit() {
+    if (!selectedEgg) return closeEggEdit();
+    const updated: EggBatchItem = {
       ...selectedEgg,
-      hatchedQty: hatched,
-      damagedQty: damaged,
-      unhatchedQty: Math.max(0, eggTotal - hatched - damaged),
-      updatedAt: nowIso,
+      batchNo: eggForm.batchNo,
+      eggQty: parseCount(eggForm.eggQty),
+      lineNo: parseCount(eggForm.lineNo),
+      ageUnit:
+        (eggForm.ageUnit as EggBatchItem["ageUnit"]) || selectedEgg.ageUnit,
+      origin: eggForm.origin,
+      colorName: selectedEgg.colorName ?? eggForm.origin,
+      colorHex: selectedEgg.colorHex,
+      unhatchedQty: getDerivedUnhatchedQty(
+        parseCount(eggForm.eggQty),
+        selectedEgg.hatchedQty ?? 0,
+        selectedEgg.damagedQty ?? 0,
+      ),
+      updatedAt: new Date().toISOString(),
     };
-
     if (!activeFarm?.id) {
-      closeEggEdit();
+      Alert.alert("Farm missing", "No active farm was found.");
       return;
     }
-
     try {
-      await updateFarmEggBatch(activeFarm.id, selectedEgg.id, updatedEgg);
+      await updateFarmEggBatch(activeFarm.id, selectedEgg.id, updated);
       setSavedEggBatches((prev) =>
-        prev.map((egg) => (egg.id === selectedEgg.id ? updatedEgg : egg)),
+        prev.map((egg) => (egg.id === selectedEgg.id ? updated : egg)),
       );
     } catch (error) {
+      Alert.alert("Update failed", "Unable to save egg batch changes.");
       logError("Profiles egg batch update failed", error, {
         farmId: activeFarm.id,
         eggBatchId: selectedEgg.id,
       });
-      Alert.alert("Update failed", "Unable to update this egg batch right now.");
       return;
     }
     closeEggEdit();
-  };
-
-  const confirmDeleteEgg = (egg: EggBatchItem) => {
-    setEggToDelete(egg);
-  };
-
-  const handleDeleteEggConfirm = async () => {
-    if (!eggToDelete || !activeFarm?.id) return;
-
-    setIsDeletingEgg(true);
-    try {
-      await recordDeletedEggBatch(activeFarm.id, eggToDelete);
-      await deleteFarmEggBatch(activeFarm.id, eggToDelete.id);
-      setSavedEggBatches((prev) =>
-        prev.filter((item) => item.id !== eggToDelete.id),
-      );
-      setEggToDelete(null);
-    } catch (error) {
-      logError("Profiles egg batch delete failed", error, {
-        farmId: activeFarm.id,
-        eggBatchId: eggToDelete.id,
-      });
-      Alert.alert("Delete failed", "Unable to delete this egg batch right now.");
-    } finally {
-      setIsDeletingEgg(false);
-    }
-  };
+  }
 
   function confirmRemove(item: BatchItem) {
     setBatchToDelete(item);
@@ -1094,227 +894,86 @@ export default function ProfilesScreen() {
             {eggError ? (
               <Text style={styles.emptyStateText}>{eggError}</Text>
             ) : null}
-            {!eggError && savedEggBatches.length === 0 ? (
-              <Text style={styles.emptyStateText}>
-                No egg batches found for this farm yet.
-              </Text>
-            ) : null}
-            {savedEggBatches.map((egg) => {
-              const unhatchedCount = getDerivedUnhatchedQty(
-                egg.eggQty ?? 0,
-                egg.hatchedQty ?? 0,
-                egg.damagedQty ?? 0,
-              );
-              const fertility = formatEggFertilityPercent({
-                hatchedQty: egg.hatchedQty,
-                damagedQty: egg.damagedQty,
-                unhatchedQty: unhatchedCount,
-              });
-              const remainingHatched = Math.max(
-                0,
-                (egg.hatchedQty ?? 0) - (egg.transferredHatchedQty ?? 0),
-              );
-              const remainingUnhatched = Math.max(
-                0,
-                unhatchedCount - (egg.soldQty ?? 0),
-              );
-              const remainingDamaged = Math.max(
-                0,
-                (egg.damagedQty ?? 0) - (egg.disposedDamagedQty ?? 0),
-              );
-
-              return (
-                <BlurCard
-                  key={egg.id}
-                  style={styles.card}
-                  borderRadius={16}
-                  intensity={20}
+            {eggColorCards.map((item) => (
+              <BlurCard
+                key={item.id}
+                style={styles.card}
+                borderRadius={16}
+                intensity={20}
+              >
+                <Pressable
+                  onPress={() =>
+                    router.push({
+                      pathname: "/(tabs)/eggbatchitem/[color]" as any,
+                      params: {
+                        color: item.colorName,
+                        colorHex: item.colorHex,
+                        batchNo: item.rawBatchNo,
+                        originBatchNo: item.originBatchNo,
+                        detailMode: "egg",
+                        breed: item.breed,
+                      },
+                    })
+                  }
+                  style={({ pressed }) => [
+                    styles.cardMainContainer,
+                    { opacity: pressed ? 0.92 : 1 },
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Open ${item.colorName} egg batches`}
                 >
-                  <View style={styles.cardMainContainer}>
-                    <View style={styles.cardTopRow}>
+                  <View style={styles.cardHeaderRow}>
+                    <View style={styles.headerLeftStack}>
                       <View style={styles.batchPillBadge}>
                         <MaterialCommunityIcons
-                          name="egg-outline"
+                          name="bird"
                           size={12}
                           color="#111111"
                         />
                         <Text style={styles.batchPillText}>
-                          {formatEggBatchId(egg.batchNo)}
-                        </Text>
-                      </View>
-
-                      <View style={styles.cardActionRow}>
-                        <Pressable
-                          onPress={() => openEggAction(egg, "transfer")}
-                          hitSlop={8}
-                          style={({ pressed }) => [
-                            styles.createChickBtn,
-                            { opacity: pressed ? 0.72 : 1 },
-                          ]}
-                          accessibilityRole="button"
-                          accessibilityLabel={`Transfer hatched eggs from batch ${egg.batchNo}`}
-                        >
-                          <MaterialCommunityIcons
-                            name="bird"
-                            size={15}
-                            color={ChickIntelPalette.green1}
-                          />
-                        </Pressable>
-                        <Pressable
-                          onPress={() => openEggAction(egg, "sell")}
-                          hitSlop={8}
-                          style={({ pressed }) => [
-                            styles.actionIconBtn,
-                            { opacity: pressed ? 0.72 : 1 },
-                          ]}
-                          accessibilityRole="button"
-                          accessibilityLabel={`Sell unhatched eggs from batch ${egg.batchNo}`}
-                        >
-                          <MaterialCommunityIcons
-                            name="cart-outline"
-                            size={15}
-                            color="#2D8C74"
-                          />
-                        </Pressable>
-                        <Pressable
-                          onPress={() => openEggAction(egg, "dispose")}
-                          hitSlop={8}
-                          style={({ pressed }) => [
-                            styles.actionIconBtn,
-                            { opacity: pressed ? 0.72 : 1 },
-                          ]}
-                          accessibilityRole="button"
-                          accessibilityLabel={`Dispose damaged eggs from batch ${egg.batchNo}`}
-                        >
-                          <MaterialCommunityIcons
-                            name="delete-sweep-outline"
-                            size={15}
-                            color="#923737"
-                          />
-                        </Pressable>
-                        <Pressable
-                          onPress={() => openEggEdit(egg)}
-                          hitSlop={8}
-                          style={({ pressed }) => [
-                            styles.actionIconBtn,
-                            { opacity: pressed ? 0.72 : 1 },
-                          ]}
-                          accessibilityRole="button"
-                          accessibilityLabel={`Edit batch ${egg.batchNo}`}
-                        >
-                          <MaterialCommunityIcons
-                            name="pencil-outline"
-                            size={15}
-                            color="#111111"
-                          />
-                        </Pressable>
-                        <Pressable
-                          onPress={() => confirmDeleteEgg(egg)}
-                          hitSlop={8}
-                          style={({ pressed }) => [
-                            styles.actionIconBtn,
-                            { opacity: pressed ? 0.72 : 1 },
-                          ]}
-                          accessibilityRole="button"
-                          accessibilityLabel={`Delete batch ${egg.batchNo}`}
-                        >
-                          <MaterialCommunityIcons
-                            name="trash-can-outline"
-                            size={15}
-                            color="#923737"
-                          />
-                        </Pressable>
-                      </View>
-                    </View>
-
-                    <View style={styles.originPillBadge}>
-                      <View
-                        style={[
-                          styles.colorDot,
-                          {
-                            backgroundColor: egg.colorHex || "#317667",
-                          },
-                        ]}
-                      />
-                      <Text style={styles.originPillText}>
-                        {formatOriginBatchId(egg.origin)}
-                      </Text>
-                    </View>
-
-                    <Text style={styles.createdDateText}>
-                      {formatBatchDateStamp(egg.createdAt, egg.updatedAt)}
-                    </Text>
-
-                    {/* Row 1: Egg Inventory */}
-                    <View style={styles.metricsRow}>
-                      <View style={styles.metricChip}>
-                        <Text style={styles.metricChipLabel}>Recorded</Text>
-                        <Text style={styles.metricChipValue}>
-                          {egg.eggQty ?? 0}
-                        </Text>
-                      </View>
-                      <View style={styles.metricChip}>
-                        <Text style={styles.metricChipLabel}>Hatched</Text>
-                        <Text style={styles.metricChipValue}>
-                          {egg.hatchedQty ?? 0}
-                        </Text>
-                      </View>
-                      <View style={styles.metricChip}>
-                        <Text style={styles.metricChipLabel}>Damaged</Text>
-                        <Text style={styles.metricChipValue}>
-                          {egg.damagedQty ?? 0}
-                        </Text>
-                      </View>
-                      <View style={styles.metricChip}>
-                        <Text style={styles.metricChipLabel}>Unhatched</Text>
-                        <Text style={styles.metricChipValue}>
-                          {unhatchedCount}
+                          {formatProfileBatchId("C", item.originBatchNo)}
                         </Text>
                       </View>
                     </View>
 
-                    {/* Row 2: Availability & Rates */}
-                    <View style={styles.metricsRow}>
-                      <View style={styles.metricChip}>
-                        <Text style={styles.metricChipLabel}>Ready to Hatch</Text>
-                        <Text style={styles.metricChipValue}>
-                          {remainingHatched}
-                        </Text>
-                      </View>
-                      <View style={styles.metricChip}>
-                        <Text style={styles.metricChipLabel}>Ready to Sell</Text>
-                        <Text style={styles.metricChipValue}>
-                          {remainingUnhatched}
-                        </Text>
-                      </View>
-                      <View style={styles.metricChip}>
-                        <Text style={styles.metricChipLabel}>To Dispose</Text>
-                        <Text style={styles.metricChipValue}>
-                          {remainingDamaged}
-                        </Text>
-                      </View>
-                      <View style={styles.metricChip}>
-                        <Text style={styles.metricChipLabel}>Fertility</Text>
-                        <Text style={styles.metricChipValue}>{fertility}</Text>
+                    <View style={styles.headerRightActions}>
+                      <View style={styles.colorPillBadge}>
+                        <View
+                          style={[
+                            styles.colorDot,
+                            {
+                              backgroundColor: item.colorHex,
+                            },
+                          ]}
+                        />
+                        <Text style={styles.colorPillText}>{item.colorName}</Text>
                       </View>
                     </View>
+                  </View>
 
-                    <View style={styles.dispositionRow}>
-                      <Text style={styles.dispositionText}>
-                        Chicks transferred: {egg.transferredHatchedQty ?? 0}/
-                        {egg.hatchedQty ?? 0}
-                      </Text>
-                      <Text style={styles.dispositionText}>
-                        Sold: {egg.soldQty ?? 0}/{egg.unhatchedQty ?? unhatchedCount}
-                      </Text>
-                      <Text style={styles.dispositionText}>
-                        Disposed: {egg.disposedDamagedQty ?? 0}/{egg.damagedQty ?? 0}
+                  <Text style={styles.breedTitle}>
+                    {item.breed || `${item.colorName} Flock`}
+                  </Text>
+
+                  <Text style={styles.createdDateText}>
+                    {formatBatchDateStamp(item.createdAt, item.updatedAt)}
+                  </Text>
+
+                  <View style={styles.metricsRow}>
+                    <View style={styles.metricChip}>
+                      <Text style={styles.metricChipLabel}>Total Batches</Text>
+                      <Text style={styles.metricChipValue}>{item.batches}</Text>
+                    </View>
+                    <View style={styles.metricChip}>
+                      <Text style={styles.metricChipLabel}>Fertility Rate</Text>
+                      <Text style={styles.metricChipValue}>
+                        {item.fertilityRate}
                       </Text>
                     </View>
                   </View>
-                </BlurCard>
-              );
-            })}
+                </Pressable>
+              </BlurCard>
+            ))}
           </View>
         )}
       </ScrollView>
@@ -1338,7 +997,6 @@ export default function ProfilesScreen() {
         accessibilityLabel="Create new batch"
       />
 
-      {/* Edit Chicken Batch Modal */}
       <Modal visible={editVisible} animationType="fade" transparent>
         <KeyboardAvoidingView
           style={styles.modalKeyboardArea}
@@ -1532,67 +1190,7 @@ export default function ProfilesScreen() {
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* Egg Action Modal (Transfer / Sell / Dispose) */}
-      <Modal
-        visible={actionEgg !== null}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setActionEgg(null)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.actionModalCard}>
-            <Text style={styles.modalTitle}>
-              {actionType === "transfer"
-                ? "Transfer hatched eggs"
-                : actionType === "sell"
-                  ? "Sell unhatched eggs"
-                  : "Dispose damaged eggs"}
-            </Text>
-            <Text style={styles.subtitle}>
-              Available:{" "}
-              {actionEgg ? getAvailableActionQty(actionEgg, actionType) : 0}
-            </Text>
-            <Text style={styles.insideLabel}>Quantity</Text>
-            <TextInput
-              value={actionQty}
-              onChangeText={(value) =>
-                setActionQty(value.replace(/[^0-9]/g, ""))
-              }
-              keyboardType="number-pad"
-              style={[styles.modalInputInside, styles.actionQuantityInput]}
-              autoFocus
-              placeholder="Quantity"
-              placeholderTextColor={ChickIntelPalette.gray2}
-            />
-            <Text style={styles.actionModalHint}>
-              {actionType === "transfer"
-                ? "This quantity will be recorded in the Chicks batch after confirmation."
-                : actionType === "sell"
-                  ? "Only remaining unhatched eggs can be sold."
-                  : "Only remaining damaged eggs can be disposed. This cannot be undone."}
-            </Text>
-            <View style={styles.modalActions}>
-              <Pressable
-                onPress={() => setActionEgg(null)}
-                style={styles.cancelBtn}
-                accessibilityRole="button"
-              >
-                <Text style={styles.cancelText}>Cancel</Text>
-              </Pressable>
-              <Pressable
-                onPress={confirmEggAction}
-                style={styles.saveBtn}
-                accessibilityRole="button"
-              >
-                <Text style={styles.saveText}>Continue</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Edit Egg Batch Modal */}
-      <Modal visible={eggEditVisible} transparent animationType="fade">
+      <Modal visible={eggEditVisible} animationType="fade" transparent>
         <KeyboardAvoidingView
           style={styles.modalKeyboardArea}
           behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -1606,249 +1204,124 @@ export default function ProfilesScreen() {
               showsVerticalScrollIndicator={false}
             >
               <View style={styles.modalCard}>
-                <Text style={styles.modalTitle}>
-                  Update Collected Eggs Information
-                </Text>
-
-                {/* Batch Quantity Reference Pill */}
-                <View style={styles.batchInfoRefRow}>
-                  <MaterialCommunityIcons
-                    name="egg-outline"
-                    size={15}
-                    color={ChickIntelPalette.green1}
-                  />
-                  <Text style={styles.batchInfoRefText}>
-                    Recorded Egg Batch Quantity:{" "}
-                    <Text style={styles.batchInfoValueEmphasized}>
-                      {totalRecordedEggs} eggs
-                    </Text>
+                <View style={styles.modalHeader}>
+                  <View style={styles.modalHeaderTitleRow}>
+                    <View style={styles.modalHeaderIconBadge}>
+                      <MaterialCommunityIcons
+                        name="pencil-outline"
+                        size={20}
+                        color="#FFFFFF"
+                      />
+                    </View>
+                    <Text style={styles.modalTitle}>Edit Egg Batch</Text>
+                  </View>
+                  <Text style={styles.modalSubtitle} numberOfLines={1}>
+                    {formatProfileBatchId("E", eggForm.batchNo)} |{" "}
+                    {eggForm.origin || "Egg Batch"}
                   </Text>
                 </View>
 
-                {/* Discrepancy Warning Banner */}
-                {hasDiscrepancy && (
-                  <View style={styles.discrepancyBanner}>
-                    <View style={styles.discrepancyBannerHeader}>
-                      <MaterialCommunityIcons
-                        name="alert-octagon"
-                        size={16}
-                        color="#DC2626"
+                <View style={styles.modalBody}>
+                  <Text style={styles.modalLabel}>Batch No.</Text>
+                  <TextInput
+                    value={eggForm.batchNo}
+                    onChangeText={(t) =>
+                      setEggForm((s) => ({ ...s, batchNo: t }))
+                    }
+                    style={styles.modalInput}
+                    placeholder="Batch number"
+                    placeholderTextColor={ChickIntelPalette.gray2}
+                  />
+
+                  <View style={styles.rowInputs}>
+                    <View style={styles.halfInput}>
+                      <Text style={styles.modalLabel}>Egg Qty</Text>
+                      <TextInput
+                        value={eggForm.eggQty}
+                        onChangeText={(t) =>
+                          setEggForm((s) => ({
+                            ...s,
+                            eggQty: t.replace(/[^0-9]/g, ""),
+                          }))
+                        }
+                        keyboardType="number-pad"
+                        style={styles.modalInput}
                       />
-                      <Text style={styles.discrepancyBannerTitle}>
-                        Numbers Do Not Tally
-                      </Text>
                     </View>
-                    <Text style={styles.discrepancyBannerDesc}>
-                      Hatched ({hatchedCount}) + Damaged ({damagedCount}) ={" "}
-                      <Text style={{ fontWeight: "800" }}>
-                        {totalUpdatedEggs}
-                      </Text>
-                      , which exceeds the recorded {totalRecordedEggs} eggs by{" "}
-                      <Text style={{ fontWeight: "800", color: "#DC2626" }}>
-                        {discrepancyQty} egg{discrepancyQty === 1 ? "" : "s"}
-                      </Text>
-                      . Adjust counts to save.
+                    <View style={styles.halfInput}>
+                      <Text style={styles.modalLabel}>Line No</Text>
+                      <TextInput
+                        value={eggForm.lineNo}
+                        onChangeText={(t) =>
+                          setEggForm((s) => ({
+                            ...s,
+                            lineNo: t.replace(/[^0-9]/g, ""),
+                          }))
+                        }
+                        keyboardType="number-pad"
+                        style={styles.modalInput}
+                      />
+                    </View>
+                  </View>
+
+                  <Text style={styles.modalLabel}>Origin</Text>
+                  <TextInput
+                    value={eggForm.origin}
+                    onChangeText={(t) =>
+                      setEggForm((s) => ({ ...s, origin: t }))
+                    }
+                    style={styles.modalInput}
+                    placeholder="e.g. Farm A"
+                    placeholderTextColor={ChickIntelPalette.gray2}
+                  />
+
+                  <Text style={styles.modalLabel}>Age unit</Text>
+                  <TextInput
+                    value={eggForm.ageUnit}
+                    onChangeText={(t) =>
+                      setEggForm((s) => ({ ...s, ageUnit: t }))
+                    }
+                    style={styles.modalInput}
+                    placeholder="Weeks old"
+                    placeholderTextColor={ChickIntelPalette.gray2}
+                  />
+
+                  <Text style={styles.modalLabel}>Unhatched Qty</Text>
+                  <View style={styles.readonlyMetricRow}>
+                    <Text style={styles.readonlyMetricValue}>
+                      {getDerivedUnhatchedQty(
+                        parseCount(eggForm.eggQty),
+                        selectedEgg?.hatchedQty ?? 0,
+                        selectedEgg?.damagedQty ?? 0,
+                      )}
+                    </Text>
+                    <Text style={styles.readonlyMetricHint}>
+                      Auto-calculated from total eggs minus hatched and damaged.
                     </Text>
                   </View>
-                )}
 
-                <View
-                  style={[
-                    styles.inputBoxInside,
-                    hasDiscrepancy && styles.inputBoxDiscrepancy,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.insideLabel,
-                      hasDiscrepancy && { color: "#DC2626" },
-                    ]}
-                  >
-                    Hatched Qty.
-                  </Text>
-                  <TextInput
-                    value={eggEditForm.hatchedQty}
-                    onChangeText={(value) =>
-                      setEggEditForm((state) => ({
-                        ...state,
-                        hatchedQty: value.replace(/[^0-9]/g, ""),
-                      }))
-                    }
-                    keyboardType="number-pad"
-                    placeholder="0"
-                    placeholderTextColor="#9CA3AF"
-                    style={styles.modalInputInside}
-                  />
-                </View>
-
-                <View
-                  style={[
-                    styles.inputBoxInside,
-                    hasDiscrepancy && styles.inputBoxDiscrepancy,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.insideLabel,
-                      hasDiscrepancy && { color: "#DC2626" },
-                    ]}
-                  >
-                    Damaged Qty.
-                  </Text>
-                  <TextInput
-                    value={eggEditForm.damagedQty}
-                    onChangeText={(value) =>
-                      setEggEditForm((state) => ({
-                        ...state,
-                        damagedQty: value.replace(/[^0-9]/g, ""),
-                      }))
-                    }
-                    keyboardType="number-pad"
-                    placeholder="0"
-                    placeholderTextColor="#9CA3AF"
-                    style={styles.modalInputInside}
-                  />
-                </View>
-
-                <View
-                  style={[
-                    styles.inputBoxInside,
-                    styles.readonlyBoxInside,
-                    hasDiscrepancy && styles.inputBoxDiscrepancy,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.insideLabel,
-                      hasDiscrepancy && { color: "#DC2626" },
-                    ]}
-                  >
-                    Unhatched Qty. {hasDiscrepancy ? "(Mismatch)" : ""}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.readonlyValueInside,
-                      hasDiscrepancy && { color: "#DC2626" },
-                    ]}
-                  >
-                    {hasDiscrepancy
-                      ? `0 (Exceeded by ${discrepancyQty})`
-                      : derivedUnhatched}
-                  </Text>
-                  <Text style={styles.readonlyHint}>
-                    Auto-calculated: Total ({totalRecordedEggs}) - Hatched (
-                    {hatchedCount}) - Damaged ({damagedCount})
-                  </Text>
-                </View>
-
-                <View style={styles.modalActions}>
-                  <Pressable
-                    onPress={closeEggEdit}
-                    style={styles.cancelBtn}
-                    accessibilityRole="button"
-                  >
-                    <Text style={styles.cancelText}>Cancel</Text>
-                  </Pressable>
-                  <Pressable
-                    onPress={saveEggEdit}
-                    style={[styles.saveBtn, hasDiscrepancy && styles.saveBtnDisabled]}
-                    accessibilityRole="button"
-                  >
-                    <Text
-                      style={[
-                        styles.saveText,
-                        hasDiscrepancy && styles.saveTextDisabled,
-                      ]}
+                  <View style={styles.modalActions}>
+                    <Pressable
+                      onPress={closeEggEdit}
+                      style={styles.modalCancel}
+                      accessibilityRole="button"
                     >
-                      Save Changes
-                    </Text>
-                  </Pressable>
+                      <Text style={styles.modalCancelText}>Cancel</Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={saveEggEdit}
+                      style={styles.modalSave}
+                      accessibilityRole="button"
+                    >
+                      <Text style={styles.modalSaveText}>Save Changes</Text>
+                    </Pressable>
+                  </View>
                 </View>
               </View>
             </ScrollView>
           </View>
         </KeyboardAvoidingView>
       </Modal>
-
-      {/* Discrepancy Breakdown Review Modal */}
-      <Modal
-        visible={discrepancyModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setDiscrepancyModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.discrepancyModalCard}>
-            <View style={styles.discrepancyModalIconWrap}>
-              <MaterialCommunityIcons
-                name="alert-octagon"
-                size={30}
-                color="#DC2626"
-              />
-            </View>
-
-            <Text style={styles.discrepancyModalTitle}>
-              Cannot Save: Numbers Exceed Batch
-            </Text>
-
-            <Text style={styles.discrepancyModalDesc}>
-              The sum of Hatched and Damaged eggs cannot exceed the initial
-              recorded batch quantity.
-            </Text>
-
-            <View style={styles.discrepancyBreakdownCard}>
-              <View style={styles.breakdownRow}>
-                <Text style={styles.breakdownLabel}>Recorded Batch Total:</Text>
-                <Text style={styles.breakdownValue}>
-                  {totalRecordedEggs} eggs
-                </Text>
-              </View>
-
-              <View style={styles.breakdownRow}>
-                <Text style={styles.breakdownLabel}>Hatched Entered:</Text>
-                <Text style={styles.breakdownValue}>{hatchedCount} eggs</Text>
-              </View>
-
-              <View style={styles.breakdownRow}>
-                <Text style={styles.breakdownLabel}>Damaged Entered:</Text>
-                <Text style={styles.breakdownValue}>{damagedCount} eggs</Text>
-              </View>
-
-              <View style={[styles.breakdownRow, styles.breakdownRowTotal]}>
-                <Text
-                  style={[
-                    styles.breakdownLabel,
-                    { fontWeight: "800", color: "#DC2626" },
-                  ]}
-                >
-                  Total Sum Entered:
-                </Text>
-                <Text
-                  style={[
-                    styles.breakdownValue,
-                    { fontWeight: "800", color: "#DC2626" },
-                  ]}
-                >
-                  {totalUpdatedEggs} ({discrepancyQty} excess)
-                </Text>
-              </View>
-            </View>
-
-            <Pressable
-              style={styles.discrepancyModalBtn}
-              onPress={() => setDiscrepancyModalVisible(false)}
-              accessibilityRole="button"
-              accessibilityLabel="Review and correct egg numbers"
-            >
-              <Text style={styles.discrepancyModalBtnText}>
-                Review & Correct
-              </Text>
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Age Unit Menu Modal */}
       <Modal
         visible={ageUnitMenuVisible}
         transparent
@@ -1891,37 +1364,19 @@ export default function ProfilesScreen() {
         </Pressable>
       </Modal>
 
-      {/* Delete Chicken Batch Confirmation Modal */}
       <DeleteConfirmationModal
         visible={Boolean(batchToDelete)}
         title="Delete Chicken Batch?"
         subtitle="This action cannot be undone."
         itemBadge="CHICKEN BATCH"
         itemTitle={batchToDelete?.breed ? batchToDelete.breed : (batchToDelete?.id ? `Batch #${batchToDelete.id}` : undefined)}
-        itemSubtitle={batchToDelete ? `${batchToDelete.totalCount} birds • ${formatBatchDateStamp(batchToDelete.createdAt, batchToDelete.updatedAt)}` : undefined}
+        itemSubtitle={batchToDelete ? `${batchToDelete.totalCount} birds ΓÇó ${formatBatchDateStamp(batchToDelete.createdAt, batchToDelete.updatedAt)}` : undefined}
         message="Are you sure you want to delete this chicken batch? This batch will be moved to deleted history."
         confirmLabel="Delete"
         isDeleting={isDeletingBatch}
         onConfirm={handleDeleteBatchConfirm}
         onCancel={() => {
           if (!isDeletingBatch) setBatchToDelete(null);
-        }}
-      />
-
-      {/* Delete Egg Batch Confirmation Modal */}
-      <DeleteConfirmationModal
-        visible={Boolean(eggToDelete)}
-        title="Delete Egg Batch?"
-        subtitle="This action cannot be undone."
-        itemBadge="EGG BATCH"
-        itemTitle={eggToDelete ? `Batch ${eggToDelete.batchNo}` : undefined}
-        itemSubtitle={eggToDelete ? `${eggToDelete.eggQty} eggs • ${formatBatchDateStamp(eggToDelete.createdAt, eggToDelete.updatedAt)}` : undefined}
-        message="Are you sure you want to delete this egg batch? This batch will be moved to deleted egg history."
-        confirmLabel="Delete"
-        isDeleting={isDeletingEgg}
-        onConfirm={handleDeleteEggConfirm}
-        onCancel={() => {
-          if (!isDeletingEgg) setEggToDelete(null);
         }}
       />
     </SafeAreaView>
@@ -2061,12 +1516,6 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     gap: 8,
   },
-  cardTopRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 8,
-  },
   headerLeftStack: {
     flex: 1,
     gap: 2,
@@ -2091,27 +1540,6 @@ const styles = StyleSheet.create({
     color: ChickIntelPalette.green1,
     letterSpacing: -0.2,
   },
-  originPillBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: "rgba(244, 248, 247, 0.9)",
-    paddingHorizontal: moderateScale(8),
-    paddingVertical: verticalScale(3),
-    minHeight: verticalScale(26),
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.18)",
-    alignSelf: "flex-start",
-    marginTop: verticalScale(2),
-  },
-  originPillText: {
-    fontFamily: ChickFont.display,
-    fontSize: responsiveFontSize(11.5),
-    fontWeight: "700",
-    color: ChickIntelPalette.gray1,
-    letterSpacing: -0.2,
-  },
   breedTitle: {
     fontFamily: ChickFont.display,
     fontSize: responsiveFontSize(16),
@@ -2125,28 +1553,13 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(11),
     lineHeight: 16,
     color: "#52615D",
-    paddingBottom: 4,
-    marginTop: verticalScale(-2),
+    paddingBottom: 10,
+    marginTop: verticalScale(-5),
   },
   headerRightActions: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-  },
-  cardActionRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  createChickBtn: {
-    width: scale(28),
-    height: verticalScale(28),
-    borderRadius: 8,
-    backgroundColor: "rgba(49, 118, 103, 0.12)",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.2)",
-    alignItems: "center",
-    justifyContent: "center",
   },
   colorPillBadge: {
     flexDirection: "row",
@@ -2231,24 +1644,6 @@ const styles = StyleSheet.create({
     marginTop: 2,
     textAlign: "center",
   },
-  dispositionRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 6,
-    marginTop: 4,
-  },
-  dispositionText: {
-    flexGrow: 1,
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(10),
-    fontWeight: "600",
-    color: "#52615D",
-    backgroundColor: "rgba(49, 118, 103, 0.06)",
-    borderRadius: 6,
-    paddingHorizontal: moderateScale(6),
-    paddingVertical: verticalScale(4),
-    textAlign: "center",
-  },
   noteSummaryList: {
     marginTop: 6,
     gap: 6,
@@ -2321,40 +1716,11 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     shadowOffset: { width: scale(0), height: verticalScale(6) },
     elevation: 8,
-    padding: moderateScale(18),
-    gap: 12,
-  },
-  actionModalCard: {
-    width: "100%",
-    maxWidth: scale(450),
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: moderateScale(18),
-    gap: 12,
-    shadowColor: "#000",
-    shadowOpacity: 0.14,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
-  },
-  actionModalHint: {
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(11),
-    lineHeight: 16,
-    color: ChickIntelPalette.textMuted,
-  },
-  subtitle: {
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(11),
-    fontWeight: "600",
-    color: ChickIntelPalette.green1,
   },
   modalHeader: {
     backgroundColor: ChickIntelPalette.green1,
     paddingHorizontal: moderateScale(18),
     paddingVertical: verticalScale(14),
-    marginHorizontal: moderateScale(-18),
-    marginTop: verticalScale(-18),
   },
   modalHeaderTitleRow: {
     flexDirection: "row",
@@ -2373,7 +1739,7 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.display,
     fontSize: responsiveFontSize(17),
     fontWeight: "800",
-    color: ChickIntelPalette.gray1,
+    color: "#FFFFFF",
   },
   modalSubtitle: {
     fontFamily: ChickFont.sans,
@@ -2382,6 +1748,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   modalBody: {
+    padding: moderateScale(18),
     gap: 12,
   },
   modalLabel: {
@@ -2471,165 +1838,32 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 6,
   },
-  batchInfoRefRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 7,
-    backgroundColor: "rgba(49, 118, 103, 0.09)",
-    paddingHorizontal: moderateScale(11),
-    paddingVertical: verticalScale(7),
-    borderRadius: 8,
+  readonlyMetricRow: {
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.2)",
-  },
-  batchInfoRefText: {
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(12),
-    color: "#334155",
-    fontWeight: "600",
-  },
-  batchInfoValueEmphasized: {
-    fontFamily: ChickFont.display,
-    fontSize: responsiveFontSize(13.5),
-    fontWeight: "900",
-    color: ChickIntelPalette.green1,
-    letterSpacing: -0.2,
-  },
-  discrepancyBanner: {
-    backgroundColor: "rgba(220, 38, 38, 0.08)",
-    borderWidth: 1,
-    borderColor: "rgba(220, 38, 38, 0.3)",
+    borderColor: "rgba(49, 118, 103, 0.18)",
     borderRadius: 10,
     paddingHorizontal: moderateScale(12),
-    paddingVertical: verticalScale(8),
-    gap: 3,
+    paddingVertical: verticalScale(10),
+    backgroundColor: "rgba(202, 227, 221, 0.25)",
+    gap: 2,
   },
-  discrepancyBannerHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  discrepancyBannerTitle: {
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(12),
+  readonlyMetricValue: {
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(16),
     fontWeight: "800",
-    color: "#DC2626",
-  },
-  discrepancyBannerDesc: {
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(11.5),
-    lineHeight: 16,
-    color: "#7F1D1D",
-  },
-  inputBoxDiscrepancy: {
-    borderColor: "rgba(220, 38, 38, 0.4)",
-    backgroundColor: "rgba(220, 38, 38, 0.03)",
-  },
-  inputBoxInside: {
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.22)",
-    backgroundColor: "#FFFFFF",
-    paddingHorizontal: moderateScale(12),
-    paddingTop: verticalScale(7),
-    paddingBottom: verticalScale(5),
-    gap: 1,
-    width: "100%",
-  },
-  readonlyBoxInside: {
-    backgroundColor: "rgba(156, 213, 201, 0.14)",
-    borderColor: "rgba(49, 118, 103, 0.2)",
-    paddingBottom: verticalScale(7),
-  },
-  insideLabel: {
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(10.5),
     color: ChickIntelPalette.green1,
-    fontWeight: "700",
-    textTransform: "uppercase",
-    letterSpacing: 0.4,
   },
-  modalInputInside: {
-    minHeight: verticalScale(30),
-    paddingHorizontal: 0,
-    paddingVertical: verticalScale(1),
+  readonlyMetricHint: {
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(15),
-    fontWeight: "700",
-    color: ChickIntelPalette.gray1,
-    width: "100%",
-  },
-  actionQuantityInput: {
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.22)",
-    borderRadius: 8,
-    paddingHorizontal: moderateScale(10),
-    minHeight: verticalScale(42),
-  },
-  readonlyValueInside: {
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(15),
-    fontWeight: "700",
-    color: ChickIntelPalette.gray1,
-    paddingVertical: verticalScale(2),
-  },
-  readonlyHint: {
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(10.5),
-    lineHeight: 14,
-    color: ChickIntelPalette.textMuted,
-    marginTop: 1,
+    fontSize: responsiveFontSize(11),
+    lineHeight: 15,
+    color: "#52615D",
   },
   modalActions: {
     flexDirection: "row",
+    justifyContent: "flex-end",
     gap: 10,
-    marginTop: 6,
-  },
-  cancelBtn: {
-    flex: 1,
-    minHeight: verticalScale(42),
-    borderRadius: 10,
-    backgroundColor: "#F0F4F3",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.15)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  cancelText: {
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(13),
-    fontWeight: "700",
-    color: ChickIntelPalette.gray1,
-  },
-  saveBtn: {
-    flex: 1,
-    minHeight: verticalScale(42),
-    borderRadius: 10,
-    backgroundColor: ChickIntelPalette.green1,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.25)",
-    shadowColor: "#317667",
-    shadowOpacity: 0.22,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
-  },
-  saveBtnDisabled: {
-    backgroundColor: "#CBD5E1",
-    borderColor: "rgba(0, 0, 0, 0.08)",
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  saveText: {
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(13),
-    fontWeight: "700",
-    color: "#FFFFFF",
-  },
-  saveTextDisabled: {
-    color: "#64748B",
+    marginTop: 10,
   },
   modalCancel: {
     paddingVertical: verticalScale(10),
@@ -2654,90 +1888,5 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: responsiveFontSize(14),
     fontWeight: "700",
-  },
-  discrepancyModalCard: {
-    borderRadius: 16,
-    backgroundColor: "#FFFFFF",
-    padding: moderateScale(20),
-    alignItems: "center",
-    gap: 10,
-    shadowColor: "#000",
-    shadowOpacity: 0.14,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 6,
-    maxWidth: scale(450),
-    width: "100%",
-  },
-  discrepancyModalIconWrap: {
-    width: scale(52),
-    height: verticalScale(52),
-    borderRadius: 26,
-    backgroundColor: "rgba(220, 38, 38, 0.12)",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 2,
-  },
-  discrepancyModalTitle: {
-    fontFamily: ChickFont.display,
-    fontSize: responsiveFontSize(16),
-    fontWeight: "800",
-    color: "#1E293B",
-    textAlign: "center",
-  },
-  discrepancyModalDesc: {
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(12.5),
-    lineHeight: 17,
-    color: "#64748B",
-    textAlign: "center",
-  },
-  discrepancyBreakdownCard: {
-    width: "100%",
-    backgroundColor: "#F8FAFC",
-    borderRadius: 10,
-    padding: moderateScale(12),
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    gap: 6,
-    marginVertical: verticalScale(4),
-  },
-  breakdownRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  breakdownRowTotal: {
-    borderTopWidth: 1,
-    borderTopColor: "#E2E8F0",
-    paddingTop: verticalScale(6),
-    marginTop: verticalScale(2),
-  },
-  breakdownLabel: {
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(12),
-    color: "#475569",
-    fontWeight: "600",
-  },
-  breakdownValue: {
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(12.5),
-    color: "#1E293B",
-    fontWeight: "700",
-  },
-  discrepancyModalBtn: {
-    width: "100%",
-    backgroundColor: ChickIntelPalette.green1,
-    paddingVertical: verticalScale(11),
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: verticalScale(4),
-  },
-  discrepancyModalBtnText: {
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(13.5),
-    fontWeight: "700",
-    color: "#FFFFFF",
   },
 });
