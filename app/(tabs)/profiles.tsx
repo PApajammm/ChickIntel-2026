@@ -1,8 +1,8 @@
 ﻿import {
-  moderateScale,
-  responsiveFontSize,
-  scale,
-  verticalScale,
+    moderateScale,
+    responsiveFontSize,
+    scale,
+    verticalScale,
 } from "@/utils/responsive";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import Slider from "@react-native-community/slider";
@@ -11,27 +11,27 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Alert,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-  useWindowDimensions,
+    Alert,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
+    useWindowDimensions,
 } from "react-native";
 import {
-  SafeAreaView,
-  useSafeAreaInsets,
+    SafeAreaView,
+    useSafeAreaInsets,
 } from "react-native-safe-area-context";
 
 import BackgroundGradient from "@/assets_imported/background-gradient.svg";
 import {
-  CameraViewport,
-  type CameraViewportRef,
+    CameraViewport,
+    type CameraViewportRef,
 } from "@/components/scanner/camera-viewport";
 import { ScannerShutter } from "@/components/scanner/scanner-shutter";
 import { ViewfinderOverlay } from "@/components/scanner/viewfinder-overlay";
@@ -44,31 +44,31 @@ import { getFarmColors } from "@/constants/farm-theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuth } from "@/providers/auth-provider";
 import {
-  type BatchItem,
-  type EggBatchItem,
-  formatBatchDateStamp,
-  formatEggFertilityPercent,
-  getCurrentBatchAgeLabel,
+    type BatchItem,
+    type EggBatchItem,
+    formatBatchDateStamp,
+    formatEggFertilityPercent,
+    getCurrentBatchAgeLabel,
 } from "@/utils/batch-store";
 import {
-  MIN_CHICKEN_BATCH_AGE_WEEKS,
-  SEXING_START_AGE_WEEKS,
+    MIN_CHICKEN_BATCH_AGE_WEEKS,
+    SEXING_START_AGE_WEEKS,
 } from "@/utils/chicken-batch-rules";
 import { optimizePhotoForInference } from "@/utils/image-crop-helper";
 import { logError, logStep } from "@/utils/logger";
 import {
-  inferSexFromImage,
-  resolveSexDetails,
+    inferSexFromImage,
+    resolveSexDetails,
 } from "@/utils/sexing-image-inference";
 import {
-  deleteFarmBatch,
-  fetchFarmBatches,
-  updateFarmBatch,
+    deleteFarmBatch,
+    fetchFarmBatches,
+    updateFarmBatch,
 } from "@/utils/supabase-batches";
 import { recordDeletedChickenBatch } from "@/utils/supabase-chicken-batch-history";
 import {
-  fetchFarmEggBatches,
-  updateFarmEggBatch,
+    fetchFarmEggBatches,
+    updateFarmEggBatch,
 } from "@/utils/supabase-egg-batches";
 
 const TAB_BAR_OFFSET = 55;
@@ -392,14 +392,15 @@ export default function ProfilesScreen() {
     const totalCount = parseCount(formState.totalCount);
     const femaleCount = parseCount(formState.femaleCount);
     const maleCount = parseCount(formState.maleCount);
-    const unknownCount = parseCount(formState.unknownCount);
-    if (femaleCount + maleCount + unknownCount !== totalCount) {
+    const classifiedCount = femaleCount + maleCount;
+    if (classifiedCount > totalCount) {
       Alert.alert(
         "Check bird counts",
-        "Male + Female + Unknown must equal the total chicken count.",
+        "Male + Female counts cannot be greater than the total chicken count.",
       );
       return;
     }
+    const unknownCount = totalCount - classifiedCount;
 
     const updated: BatchItem = {
       ...selectedBatch,
@@ -1153,35 +1154,14 @@ export default function ProfilesScreen() {
                     placeholderTextColor={ChickIntelPalette.gray2}
                   />
 
-                  <View style={styles.rowInputs}>
-                    <View style={styles.halfInput}>
-                      <Text style={styles.modalLabel}>Total</Text>
-                      <TextInput
-                        value={formState.totalCount}
-                        onChangeText={(t) =>
-                          setFormState((s) => ({
-                            ...s,
-                            totalCount: t.replace(/[^0-9]/g, ""),
-                          }))
-                        }
-                        keyboardType="number-pad"
-                        style={styles.modalInput}
-                      />
-                    </View>
-                    <View style={styles.halfInput}>
-                      <Text style={styles.modalLabel}>Unknown</Text>
-                      <TextInput
-                        value={formState.unknownCount}
-                        onChangeText={(t) =>
-                          setFormState((s) => ({
-                            ...s,
-                            unknownCount: t.replace(/[^0-9]/g, ""),
-                          }))
-                        }
-                        keyboardType="number-pad"
-                        style={styles.modalInput}
-                      />
-                    </View>
+                  <View style={styles.readonlyMetricRow}>
+                    <Text style={styles.modalLabel}>Total chickens</Text>
+                    <Text style={styles.readonlyMetricValue}>
+                      {formState.totalCount || "0"}
+                    </Text>
+                    <Text style={styles.readonlyMetricHint}>
+                      Total count cannot be changed when editing a batch.
+                    </Text>
                   </View>
 
                   <View style={styles.rowInputs}>
