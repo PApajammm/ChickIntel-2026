@@ -165,7 +165,7 @@ export default function AddBatchScreen() {
   const [ageUnit, setAgeUnit] = useState<(typeof AGE_UNIT_OPTIONS)[number]>(
     AGE_UNIT_OPTIONS[0],
   );
-  // Total birds (keeps previous behavior for male/female auto-split)
+  // Total chickens (keeps previous behavior for male/female auto-split)
   const [totalCount, setTotalCount] = useState("");
   const [breed, setBreed] = useState("");
   const [maleCount, setMaleCount] = useState("");
@@ -654,7 +654,7 @@ export default function AddBatchScreen() {
                 color={ChickIntelPalette.green1}
               />
               <Text style={styles.summaryChipText}>
-                {totalCount || "0"} birds
+                {totalCount || "0"} chickens
               </Text>
             </View>
           </View>
@@ -822,7 +822,7 @@ export default function AddBatchScreen() {
                 size={18}
                 color={ChickIntelPalette.green1}
               />
-              <Text style={styles.formSectionTitle}>Bird count</Text>
+              <Text style={styles.formSectionTitle}>Chicken count</Text>
             </View>
 
             <View>
@@ -922,7 +922,7 @@ export default function AddBatchScreen() {
               const parsedUnknown = parseCount(unknownCount);
               if (parsedMale + parsedFemale + parsedUnknown !== parsedTotal) {
                 Alert.alert(
-                  "Check bird counts",
+                  "Check chicken counts",
                   "Male + Female + Unknown must equal the total chicken count.",
                 );
                 return;

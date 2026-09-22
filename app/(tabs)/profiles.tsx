@@ -29,6 +29,7 @@ import {
 } from "react-native-safe-area-context";
 
 import BackgroundGradient from "@/assets_imported/background-gradient.svg";
+import { ChickenIcon } from "@/components/icons/chicken-icon";
 import {
     CameraViewport,
     type CameraViewportRef,
@@ -53,6 +54,7 @@ import {
 import {
     MIN_CHICKEN_BATCH_AGE_WEEKS,
     SEXING_START_AGE_WEEKS,
+    getCurrentBatchAgeDays,
 } from "@/utils/chicken-batch-rules";
 import { optimizePhotoForInference } from "@/utils/image-crop-helper";
 import { logError, logStep } from "@/utils/logger";
@@ -74,6 +76,7 @@ import {
 const TAB_BAR_OFFSET = 55;
 const FAB_OFFSET_FROM_TAB_TOP = 50;
 const AGE_UNIT_OPTIONS = ["Weeks old"] as const;
+const MIN_EGG_BATCH_CREATE_AGE_WEEKS = 8;
 
 type EggColorCard = {
   id: string;
@@ -302,6 +305,26 @@ export default function ProfilesScreen() {
   const sexingEligible =
     parseCount(formState.ageCount) >= SEXING_START_AGE_WEEKS;
 
+  function onEditFemaleCountChange(value: string) {
+    const total = parseCount(formState.totalCount);
+    const female = Math.min(parseCount(value.replace(/[^0-9]/g, "")), total);
+    setFormState((state) => ({
+      ...state,
+      femaleCount: String(female),
+      maleCount: String(total - female),
+    }));
+  }
+
+  function onEditMaleCountChange(value: string) {
+    const total = parseCount(formState.totalCount);
+    const male = Math.min(parseCount(value.replace(/[^0-9]/g, "")), total);
+    setFormState((state) => ({
+      ...state,
+      maleCount: String(male),
+      femaleCount: String(total - male),
+    }));
+  }
+
   function closeSexScanner() {
     setSexScannerOpen(false);
     setSexCameraReady(false);
@@ -387,7 +410,7 @@ export default function ProfilesScreen() {
     const classifiedCount = femaleCount + maleCount;
     if (classifiedCount > totalCount) {
       Alert.alert(
-        "Check bird counts",
+        "Check chicken counts",
         "Male + Female counts cannot be greater than the total chicken count.",
       );
       return;
@@ -650,6 +673,15 @@ export default function ProfilesScreen() {
     [chickenData],
   );
 
+  const canCreateEggBatch = useMemo(
+    () =>
+      parentChickenBatches.some(
+        (batch) =>
+          getCurrentBatchAgeDays(batch) >= MIN_EGG_BATCH_CREATE_AGE_WEEKS * 7,
+      ),
+    [parentChickenBatches],
+  );
+
   const fabBottom = TAB_BAR_OFFSET - 2 - FAB_OFFSET_FROM_TAB_TOP;
 
   return (
@@ -687,9 +719,7 @@ export default function ProfilesScreen() {
             style={[styles.pageTitle, { color: colors.text }]}
             numberOfLines={1}
           >
-            {mode === "chicken"
-              ? "Batch Profile (chicken)"
-              : "Batch Profile (eggs)"}
+            {mode === "chicken" ? "Chicken Batch Profile" : "Egg Batch Profile"}
           </Text>
 
           {mode === "egg" ? (
@@ -843,11 +873,7 @@ export default function ProfilesScreen() {
                     <View style={styles.cardHeaderRow}>
                       <View style={styles.headerLeftStack}>
                         <View style={styles.batchPillBadge}>
-                          <MaterialCommunityIcons
-                            name="bird"
-                            size={12}
-                            color="#000000"
-                          />
+                          <ChickenIcon size={12} color="#000000" />
                           <Text style={styles.batchPillText}>
                             {formatProfileBatchId("C", item.id)}
                           </Text>
@@ -957,7 +983,7 @@ export default function ProfilesScreen() {
                         </Text>
                       </View>
                       <View style={styles.metricChip}>
-                        <Text style={styles.metricChipLabel}>Egg Batches</Text>
+                        <Text style={styles.metricChipLabel}>Egg batches</Text>
                         <Text style={styles.metricChipValue}>
                           {eggSummary.batchCount} ({eggSummary.totalEggs})
                         </Text>
@@ -1026,11 +1052,7 @@ export default function ProfilesScreen() {
                   <View style={styles.cardHeaderRow}>
                     <View style={styles.headerLeftStack}>
                       <View style={styles.batchPillBadge}>
-                        <MaterialCommunityIcons
-                          name="bird"
-                          size={12}
-                          color="#111111"
-                        />
+                        <ChickenIcon size={12} color="#111111" />
                         <Text style={styles.batchPillText}>
                           {formatProfileBatchId("C", item.originBatchNo)}
                         </Text>
@@ -1068,7 +1090,7 @@ export default function ProfilesScreen() {
                       <Text style={styles.metricChipValue}>{item.batches}</Text>
                     </View>
                     <View style={styles.metricChip}>
-                      <Text style={styles.metricChipLabel}>Fertility Rate</Text>
+                      <Text style={styles.metricChipLabel}>Fertility rate</Text>
                       <Text style={styles.metricChipValue}>
                         {item.fertilityRate}
                       </Text>
@@ -1081,25 +1103,27 @@ export default function ProfilesScreen() {
         )}
       </ScrollView>
 
-      <PrimaryFab
-        iconName="plus"
-        variant="green"
-        onPress={() => {
-          if (mode === "egg") {
-            router.push({
-              pathname: "/(tabs)/eggbatchitem/ageunit",
-              params: { mode: "egg" },
-            });
-          } else {
-            router.push({
-              pathname: "/(tabs)/add-batch",
-              params: { mode },
-            });
-          }
-        }}
-        bottom={fabBottom}
-        accessibilityLabel="Create new batch"
-      />
+      {mode === "chicken" || canCreateEggBatch ? (
+        <PrimaryFab
+          iconName="plus"
+          variant="green"
+          onPress={() => {
+            if (mode === "egg") {
+              router.push({
+                pathname: "/(tabs)/eggbatchitem/ageunit",
+                params: { mode: "egg" },
+              });
+            } else {
+              router.push({
+                pathname: "/(tabs)/add-batch",
+                params: { mode },
+              });
+            }
+          }}
+          bottom={fabBottom}
+          accessibilityLabel="Create new batch"
+        />
+      ) : null}
 
       <Modal visible={editVisible} animationType="fade" transparent>
         <KeyboardAvoidingView
@@ -1165,12 +1189,7 @@ export default function ProfilesScreen() {
                       <Text style={styles.modalLabel}>Females</Text>
                       <TextInput
                         value={formState.femaleCount}
-                        onChangeText={(t) =>
-                          setFormState((s) => ({
-                            ...s,
-                            femaleCount: t.replace(/[^0-9]/g, ""),
-                          }))
-                        }
+                        onChangeText={onEditFemaleCountChange}
                         keyboardType="number-pad"
                         editable={sexingEligible}
                         style={[
@@ -1183,12 +1202,7 @@ export default function ProfilesScreen() {
                       <Text style={styles.modalLabel}>Males</Text>
                       <TextInput
                         value={formState.maleCount}
-                        onChangeText={(t) =>
-                          setFormState((s) => ({
-                            ...s,
-                            maleCount: t.replace(/[^0-9]/g, ""),
-                          }))
-                        }
+                        onChangeText={onEditMaleCountChange}
                         keyboardType="number-pad"
                         editable={sexingEligible}
                         style={[
@@ -1254,7 +1268,9 @@ export default function ProfilesScreen() {
                       placeholderTextColor={ChickIntelPalette.gray2}
                     />
                     <Pressable
-                      onPress={() => !sexingEligible && setAgeUnitMenuVisible(true)}
+                      onPress={() =>
+                        !sexingEligible && setAgeUnitMenuVisible(true)
+                      }
                       disabled={sexingEligible}
                       style={[
                         styles.modalSelect,
@@ -1275,9 +1291,7 @@ export default function ProfilesScreen() {
                         name="chevron-down"
                         size={18}
                         color={
-                          sexingEligible
-                            ? "#9CA3AF"
-                            : ChickIntelPalette.gray2
+                          sexingEligible ? "#9CA3AF" : ChickIntelPalette.gray2
                         }
                       />
                     </Pressable>
@@ -1467,7 +1481,7 @@ export default function ProfilesScreen() {
                 </View>
 
                 <View style={styles.eggModalBody}>
-                  <Text style={styles.modalLabel}>Batch No.</Text>
+                  <Text style={styles.modalLabel}>Batch number</Text>
                   <TextInput
                     value={eggForm.batchNo}
                     onChangeText={(t) =>
@@ -1480,7 +1494,7 @@ export default function ProfilesScreen() {
 
                   <View style={styles.rowInputs}>
                     <View style={styles.halfInput}>
-                      <Text style={styles.modalLabel}>Egg Qty</Text>
+                      <Text style={styles.modalLabel}>Egg quantity</Text>
                       <TextInput
                         value={eggForm.eggQty}
                         onChangeText={(t) =>
@@ -1494,7 +1508,7 @@ export default function ProfilesScreen() {
                       />
                     </View>
                     <View style={styles.halfInput}>
-                      <Text style={styles.modalLabel}>Line No</Text>
+                      <Text style={styles.modalLabel}>Line number</Text>
                       <TextInput
                         value={eggForm.lineNo}
                         onChangeText={(t) =>
@@ -1531,7 +1545,7 @@ export default function ProfilesScreen() {
                     placeholderTextColor={ChickIntelPalette.gray2}
                   />
 
-                  <Text style={styles.modalLabel}>Unhatched Qty</Text>
+                  <Text style={styles.modalLabel}>Unhatched quantity</Text>
                   <View style={styles.readonlyMetricRow}>
                     <Text style={styles.readonlyMetricValue}>
                       {getDerivedUnhatchedQty(
@@ -1623,7 +1637,7 @@ export default function ProfilesScreen() {
         }
         itemSubtitle={
           batchToDelete
-            ? `${batchToDelete.totalCount} birds ΓÇó ${formatBatchDateStamp(batchToDelete.createdAt, batchToDelete.updatedAt)}`
+            ? `${batchToDelete.totalCount} chickens - ${formatBatchDateStamp(batchToDelete.createdAt, batchToDelete.updatedAt)}`
             : undefined
         }
         message="Are you sure you want to delete this chicken batch? This batch will be moved to deleted history."

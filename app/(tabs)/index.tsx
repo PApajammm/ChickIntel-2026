@@ -4,28 +4,28 @@ import { useCameraPermissions } from "expo-camera";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ComponentType,
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+    type ComponentType,
 } from "react";
 import {
-  Alert,
-  Animated,
-  Easing,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  useWindowDimensions,
-  View,
-  type NativeScrollEvent,
-  type NativeSyntheticEvent,
+    Alert,
+    Animated,
+    Easing,
+    Modal,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    useWindowDimensions,
+    View,
+    type NativeScrollEvent,
+    type NativeSyntheticEvent,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -47,23 +47,23 @@ import { getFarmColors } from "@/constants/farm-theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuth } from "@/providers/auth-provider";
 import {
-  fetchHomeKpiSnapshot,
-  formatBirdAdditionTrend,
-  formatConsumptionTrend,
-  formatKpiTrend,
-  type HomeKpiPeriod,
+    fetchHomeKpiSnapshot,
+    formatBirdAdditionTrend,
+    formatConsumptionTrend,
+    formatKpiTrend,
+    type HomeKpiPeriod,
 } from "@/utils/home-kpis";
 import { logError, logStep } from "@/utils/logger";
 import {
-  getFeaturedBreedCards,
-  type FeaturedBreedCard,
+    getFeaturedBreedCards,
+    type FeaturedBreedCard,
 } from "@/utils/recent-breed-scans";
 import {
-  moderateScale,
-  responsiveFontSize,
-  scale,
-  useResponsiveMetrics,
-  verticalScale,
+    moderateScale,
+    responsiveFontSize,
+    scale,
+    useResponsiveMetrics,
+    verticalScale,
 } from "@/utils/responsive";
 import { fetchFarmBatches } from "@/utils/supabase-batches";
 
@@ -85,7 +85,7 @@ type QuickActionData = {
 
 const initialKpiCards: KpiCardData[] = [
   {
-    title: "Total Birds",
+    title: "Total Chickens",
     value: "0",
     trend: "+0% this month",
     period: "30 days",
@@ -102,7 +102,7 @@ const initialKpiCards: KpiCardData[] = [
   },
   {
     title: "Feeds Consumed",
-    value: "-0",
+    value: "0 kg",
     trend: "0% this week",
     period: "7 days",
     background: "primarySoft",
@@ -229,7 +229,7 @@ export default function HomeScreen() {
     useState<FeaturedBreedCard | null>(null);
   const [todayLabel, setTodayLabel] = useState(formatTodayLabel);
   const [periodByTitle, setPeriodByTitle] = useState<Record<string, string>>({
-    "Total Birds": "30 days",
+    "Total Chickens": "30 days",
     "Collected Eggs": "7 days",
     "Feeds Consumed": "7 days",
   });
@@ -541,7 +541,7 @@ export default function HomeScreen() {
     }
 
     const snapshot = await fetchHomeKpiSnapshot(activeFarm.id);
-    const birdsPeriod = (periodByTitle["Total Birds"] ??
+    const chickensPeriod = (periodByTitle["Total Chickens"] ??
       "30 days") as HomeKpiPeriod;
     const eggsPeriod = (periodByTitle["Collected Eggs"] ??
       "7 days") as HomeKpiPeriod;
@@ -551,8 +551,8 @@ export default function HomeScreen() {
     return [
       {
         ...initialKpiCards[0],
-        value: String(snapshot.birdAdditionsByPeriod[birdsPeriod].current),
-        period: birdsPeriod,
+        value: String(snapshot.birdAdditionsByPeriod[chickensPeriod].current),
+        period: chickensPeriod,
         valueByPeriod: Object.fromEntries(
           PERIOD_OPTIONS.map((period) => [
             period,
@@ -569,9 +569,9 @@ export default function HomeScreen() {
           ]),
         ) as Record<HomeKpiPeriod, string>,
         trend: `${formatBirdAdditionTrend(
-          snapshot.birdAdditionsByPeriod[birdsPeriod].current,
-          snapshot.birdAdditionsByPeriod[birdsPeriod].previous,
-        )} ${periodLabelFromPeriod(birdsPeriod)}`,
+          snapshot.birdAdditionsByPeriod[chickensPeriod].current,
+          snapshot.birdAdditionsByPeriod[chickensPeriod].previous,
+        )} ${periodLabelFromPeriod(chickensPeriod)}`,
       },
       {
         ...initialKpiCards[1],
@@ -599,12 +599,12 @@ export default function HomeScreen() {
       },
       {
         ...initialKpiCards[2],
-        value: String(snapshot.feedQtyByPeriod[feedPeriod].current),
+        value: `${snapshot.feedQtyByPeriod[feedPeriod].current} kg`,
         period: feedPeriod,
         valueByPeriod: Object.fromEntries(
           PERIOD_OPTIONS.map((period) => [
             period,
-            String(snapshot.feedQtyByPeriod[period].current),
+            `${snapshot.feedQtyByPeriod[period].current} kg`,
           ]),
         ) as Record<HomeKpiPeriod, string>,
         trendByPeriod: Object.fromEntries(
@@ -711,13 +711,13 @@ export default function HomeScreen() {
       const rawValue = k.valueByPeriod?.[period as HomeKpiPeriod] ?? k.value;
       return {
         ...k,
-        value: rawValue.startsWith("-") ? rawValue : `-${rawValue}`,
+        value: rawValue.replace(/^-/, ""),
         period,
         trend: `${trend} ${periodLabelFromPeriod(period)}`,
       };
     }
 
-    if (k.title === "Total Birds") {
+    if (k.title === "Total Chickens") {
       const rawTrend = k.trendByPeriod?.[period as HomeKpiPeriod] ?? "+0%";
       const cleanTrend = rawTrend.replace(/^-/, "+");
       return {
@@ -1309,7 +1309,7 @@ export default function HomeScreen() {
                     {(selectedBreedForModal &&
                       flockCountsByBreed[selectedBreedForModal.breedName]) ||
                       0}{" "}
-                    Birds Recorded in Batches
+                    Chickens Recorded in Batches
                   </Text>
                 </View>
               </View>

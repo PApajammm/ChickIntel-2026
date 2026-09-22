@@ -271,10 +271,8 @@ export const JournalLogCard = memo(function JournalLogCard({
               >
                 <Text style={styles.entryTitle} numberOfLines={2}>
                   {behaviorLabels && behaviorLabels.length > 0
-                    ? "Observed behaviours"
-                    : additionalObservation?.trim()
-                      ? "Chicken observation"
-                      : "Behaviour entry"}
+                    ? "Observed Behaviors"
+                    : "Chicken Observation"}
                 </Text>
 
                 <Text style={styles.contextLabel} numberOfLines={1}>

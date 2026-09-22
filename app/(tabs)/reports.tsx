@@ -1,4 +1,5 @@
 import BackgroundGradient from "@/assets_imported/background-gradient.svg";
+import { ChickenIcon } from "@/components/icons/chicken-icon";
 import { BlurCard } from "@/components/ui/blur-card";
 import { ChickDatePickerModal } from "@/components/ui/chick-date-picker-modal";
 import { ChickFont } from "@/constants/chick-fonts";
@@ -964,6 +965,7 @@ function SegmentedPills<T extends string>({
   selected,
   onSelect,
   icons,
+  customIcons,
   containerStyle,
   itemStyle,
 }: {
@@ -971,6 +973,7 @@ function SegmentedPills<T extends string>({
   selected: T;
   onSelect: (opt: T) => void;
   icons?: Record<string, keyof typeof MaterialCommunityIcons.glyphMap>;
+  customIcons?: Record<string, (props: { color: string; size: number }) => React.ReactNode>;
   containerStyle?: any;
   itemStyle?: any;
 }) {
@@ -979,6 +982,7 @@ function SegmentedPills<T extends string>({
       {options.map((opt) => {
         const active = opt === selected;
         const iconName = icons?.[opt];
+        const CustomIcon = customIcons?.[opt];
         return (
           <TouchableOpacity
             key={opt}
@@ -990,13 +994,18 @@ function SegmentedPills<T extends string>({
               active && styles.segmentedItemActive,
             ]}
           >
-            {iconName && (
+            {CustomIcon ? (
+              <CustomIcon
+                color={active ? "#FFF" : "#4A5452"}
+                size={13}
+              />
+            ) : iconName ? (
               <MaterialCommunityIcons
                 name={iconName}
                 size={13}
                 color={active ? "#FFF" : "#4A5452"}
               />
-            )}
+            ) : null}
             <Text
               style={[
                 styles.segmentedText,
@@ -1537,11 +1546,18 @@ export default function ReportsScreen() {
             <View style={styles.kpiGrid}>
               <View style={styles.kpiCard}>
                 <View style={styles.kpiIconWrap}>
-                  <MaterialCommunityIcons
-                    name={prodType === "Eggs" ? "egg" : "bird"}
-                    size={16}
-                    color={ChickIntelPalette.green1}
-                  />
+                  {prodType === "Eggs" ? (
+                    <MaterialCommunityIcons
+                      name="egg"
+                      size={16}
+                      color={ChickIntelPalette.green1}
+                    />
+                  ) : (
+                    <ChickenIcon
+                      size={16}
+                      color={ChickIntelPalette.green1}
+                    />
+                  )}
                 </View>
                 <Text style={styles.kpiLabel}>Total {prodType}</Text>
                 <Text style={styles.kpiValue}>
@@ -1606,11 +1622,18 @@ export default function ReportsScreen() {
                 <View style={styles.cardHeaderRow}>
                   <View style={styles.cardTitleWrap}>
                     <View style={styles.cardIconBadge}>
-                      <MaterialCommunityIcons
-                        name={prodType === "Eggs" ? "egg-outline" : "bird"}
-                        size={18}
-                        color={ChickIntelPalette.green1}
-                      />
+                      {prodType === "Eggs" ? (
+                        <MaterialCommunityIcons
+                          name="egg-outline"
+                          size={18}
+                          color={ChickIntelPalette.green1}
+                        />
+                      ) : (
+                        <ChickenIcon
+                          size={18}
+                          color={ChickIntelPalette.green1}
+                        />
+                      )}
                     </View>
                     <Text style={styles.cardTitle}>
                       {report.production.title}
@@ -1622,7 +1645,11 @@ export default function ReportsScreen() {
                     onSelect={(val) => setProdType(val)}
                     icons={{
                       Eggs: "egg",
-                      Chickens: "bird",
+                    }}
+                    customIcons={{
+                      Chickens: ({ color, size }) => (
+                        <ChickenIcon color={color} size={size} />
+                      ),
                     }}
                   />
                 </View>

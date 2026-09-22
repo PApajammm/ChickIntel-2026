@@ -77,12 +77,12 @@ const MODE_COPY: Record<
     subtitle:
       "Frame the head, eyes, comb, beak, and feathers clearly for a cleaner symptom scan.",
     captureTip:
-      "Use bright light and keep the bird centered inside the guide before capture.",
+      "Use bright light and keep the chicken centered inside the guide before capture.",
   },
   breed: {
     title: "Scan your chicken",
     subtitle:
-      "Frame the bird inside the guide for a clean breed or health read.",
+      "Frame the chicken inside the guide for a clean breed or health read.",
     captureTip:
       "Keep the full body visible and avoid heavy shadows before capture.",
   },
@@ -138,7 +138,7 @@ export default function ScannerScreen() {
         subtitle:
           "Take a new photo to update this chicken's health record. Previous scans are kept.",
         captureTip:
-          "Use bright light and keep the bird centered inside the guide before capture.",
+          "Use bright light and keep the chicken centered inside the guide before capture.",
       }
     : MODE_COPY[mode];
 

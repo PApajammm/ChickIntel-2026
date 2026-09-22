@@ -647,18 +647,7 @@ export default function EggBatchColorScreen() {
         ]}
       />
       <StatusBar style="dark" />
-      <ScrollView
-        contentContainerStyle={[
-          styles.content,
-          {
-            paddingTop: insets.top + 10,
-            paddingBottom: 15,
-          },
-        ]}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="on-drag"
-      >
+      <View style={[styles.fixedHeader, { paddingTop: insets.top + 10 }]}>
         <View style={styles.headerRow}>
           <TouchableOpacity
             onPress={() =>
@@ -821,99 +810,122 @@ export default function EggBatchColorScreen() {
             </View>
           ) : null}
         </View>
+      </View>
 
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          {
+            paddingTop: 8,
+            paddingBottom: 20,
+          },
+        ]}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+      >
         {activeSection === "chicks" ? (
           <View style={styles.list}>
             {filteredChickBatches.length ? (
-              filteredChickBatches.map((batch) => (
-                <BlurCard
-                  key={batch.id}
-                  style={styles.card}
-                  borderRadius={14}
-                  intensity={20}
-                >
-                  <View style={styles.cardMainContainer}>
-                    <View style={styles.cardTopRow}>
-                      <View style={styles.batchPillBadge}>
-                        <MaterialCommunityIcons
-                          name="bird"
-                          size={12}
-                          color="#111111"
-                        />
-                        <Text style={styles.batchPillText}>
-                          {formatChickBatchId(batch)}
-                        </Text>
+              filteredChickBatches.map((batch) => {
+                const sourceEggBatch = savedEggBatches.find(
+                  (egg) => egg.id === batch.sourceEggBatchId,
+                );
+                const chickOrigin =
+                  sourceEggBatch?.batchNo ||
+                  batch.originBatchNo ||
+                  targetBatchNo;
+
+                return (
+                  <BlurCard
+                    key={batch.id}
+                    style={styles.card}
+                    borderRadius={14}
+                    intensity={20}
+                  >
+                    <View style={styles.cardMainContainer}>
+                      <View style={styles.cardTopRow}>
+                        <View style={styles.batchPillBadge}>
+                          <MaterialCommunityIcons
+                            name="bird"
+                            size={12}
+                            color="#111111"
+                          />
+                          <Text style={styles.batchPillText}>
+                            {formatChickBatchId(batch)}
+                          </Text>
+                        </View>
                       </View>
-                    </View>
 
-                    <Text style={styles.breedTitle}>
-                      {batch.breed || "Chick batch"}
-                    </Text>
+                      <Text style={styles.breedTitle}>
+                        {batch.breed || "Chick batch"}
+                      </Text>
 
-                    <Text style={styles.createdDateText}>
-                      {formatBatchDateStamp(batch.createdAt, batch.updatedAt)}
-                    </Text>
+                      <Text style={styles.createdDateText}>
+                        {formatBatchDateStamp(batch.createdAt, batch.updatedAt)}
+                      </Text>
 
-                    <View style={styles.metricsRow}>
-                      <View style={styles.metricChip}>
-                        <Text style={styles.metricChipLabel}>Chicks</Text>
-                        <Text style={styles.metricChipValue}>
-                          {batch.totalCount}
-                        </Text>
+                      <View style={styles.metricsRow}>
+                        <View style={styles.metricChip}>
+                          <Text style={styles.metricChipLabel}>Chicks</Text>
+                          <Text style={styles.metricChipValue}>
+                            {batch.totalCount}
+                          </Text>
+                        </View>
+                        <Pressable
+                          onPress={() => openEditChickAge(batch)}
+                          style={({ pressed }) => [
+                            styles.metricChip,
+                            styles.metricChipEditable,
+                            { opacity: pressed ? 0.75 : 1 },
+                          ]}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Edit age for ${formatChickBatchId(batch)}`}
+                        >
+                          <View style={styles.metricChipLabelRow}>
+                            <Text style={styles.metricChipLabel}>Age</Text>
+                            <MaterialCommunityIcons
+                              name="pencil-outline"
+                              size={10}
+                              color="#52615D"
+                            />
+                          </View>
+                          <Text style={styles.metricChipValue}>
+                            {getCurrentBatchAgeLabel(batch)}
+                          </Text>
+                        </Pressable>
+                        <View style={styles.metricChip}>
+                          <Text style={styles.metricChipLabel}>Origin</Text>
+                          <Text style={styles.metricChipValue}>
+                            Egg {chickOrigin || "-"}
+                          </Text>
+                        </View>
                       </View>
+
                       <Pressable
-                        onPress={() => openEditChickAge(batch)}
+                        onPress={() => promoteChickBatch(batch)}
                         style={({ pressed }) => [
-                          styles.metricChip,
-                          styles.metricChipEditable,
-                          { opacity: pressed ? 0.75 : 1 },
+                          styles.promoteChickBtn,
+                          { opacity: pressed ? 0.78 : 1, marginTop: 4 },
                         ]}
                         accessibilityRole="button"
-                        accessibilityLabel={`Edit age for ${formatChickBatchId(batch)}`}
+                        accessibilityLabel={`Transfer ${batch.id} to Chicken Batches`}
                       >
-                        <View style={styles.metricChipLabelRow}>
-                          <Text style={styles.metricChipLabel}>Age</Text>
-                          <MaterialCommunityIcons
-                            name="pencil-outline"
-                            size={10}
-                            color="#52615D"
-                          />
-                        </View>
-                        <Text style={styles.metricChipValue}>
-                          {getCurrentBatchAgeLabel(batch)}
+                        <MaterialCommunityIcons
+                          name="arrow-up-circle-outline"
+                          size={16}
+                          color={ChickIntelPalette.green1}
+                        />
+                        <Text style={styles.promoteChickText}>
+                          {getAgeWeeks(batch) >= 5
+                            ? "Transfer to Chicken Batches"
+                            : "Ready at 5 weeks"}
                         </Text>
                       </Pressable>
-                      <View style={styles.metricChip}>
-                        <Text style={styles.metricChipLabel}>Origin</Text>
-                        <Text style={styles.metricChipValue}>
-                          Batch {batch.originBatchNo || targetBatchNo || "-"}
-                        </Text>
-                      </View>
                     </View>
-
-                    <Pressable
-                      onPress={() => promoteChickBatch(batch)}
-                      style={({ pressed }) => [
-                        styles.promoteChickBtn,
-                        { opacity: pressed ? 0.78 : 1, marginTop: 4 },
-                      ]}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Transfer ${batch.id} to Chicken Batches`}
-                    >
-                      <MaterialCommunityIcons
-                        name="arrow-up-circle-outline"
-                        size={16}
-                        color={ChickIntelPalette.green1}
-                      />
-                      <Text style={styles.promoteChickText}>
-                        {getAgeWeeks(batch) >= 5
-                          ? "Transfer to Chicken Batches"
-                          : "Ready at 5 weeks"}
-                      </Text>
-                    </Pressable>
-                  </View>
-                </BlurCard>
-              ))
+                  </BlurCard>
+                );
+              })
             ) : (
               <View style={styles.emptyCard}>
                 <Text style={styles.emptyTitle}>No chick batches yet</Text>
@@ -1411,9 +1423,17 @@ export default function EggBatchColorScreen() {
                 <Text style={styles.modalLabel}>Quantity to {actionType}</Text>
                 <TextInput
                   value={actionQty}
-                  onChangeText={(value) =>
-                    setActionQty(value.replace(/[^0-9]/g, ""))
-                  }
+                  onChangeText={(value) => {
+                    const clean = value.replace(/[^0-9]/g, "");
+                    const available = actionEgg
+                      ? getAvailableActionQty(actionEgg, actionType)
+                      : 0;
+                    setActionQty(
+                      clean
+                        ? String(Math.min(parseCount(clean), available))
+                        : "",
+                    );
+                  }}
                   keyboardType="number-pad"
                   style={styles.modalInput}
                   autoFocus
@@ -1725,6 +1745,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: ChickIntelPalette.light1,
   },
+  fixedHeader: {
+    paddingHorizontal: moderateScale(16),
+    gap: 10,
+    paddingBottom: 4,
+    backgroundColor: "transparent",
+  },
   content: {
     paddingHorizontal: moderateScale(16),
     gap: 12,
@@ -1842,6 +1868,7 @@ const styles = StyleSheet.create({
   },
   selectionHintWrap: {
     paddingHorizontal: moderateScale(2),
+    gap: 8,
   },
   selectionHint: {
     fontFamily: ChickFont.sans,
