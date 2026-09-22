@@ -96,6 +96,12 @@ function startOfDay(date: Date) {
   return next;
 }
 
+function endOfDay(date: Date) {
+  const next = new Date(date);
+  next.setHours(23, 59, 59, 999);
+  return next;
+}
+
 function addDays(date: Date, amount: number) {
   const next = new Date(date);
   next.setDate(next.getDate() + amount);
@@ -397,7 +403,12 @@ function formatBarLabel(date: Date, overview: ReportOverview) {
   return new Intl.DateTimeFormat("en-US", { month: "short" }).format(date);
 }
 
-function buildTimeBuckets(overview: ReportOverview, now: Date) {
+function buildTimeBuckets(
+  overview: ReportOverview,
+  now: Date,
+  customStart?: Date,
+  customEnd?: Date,
+) {
   if (overview === "Annually") {
     return Array.from({ length: 12 }, (_, index) => {
       const date = startOfDay(addMonths(now, -(11 - index)));
@@ -409,9 +420,21 @@ function buildTimeBuckets(overview: ReportOverview, now: Date) {
     });
   }
 
-  const length = overview === "Monthly" ? 30 : 7;
+  const rangeStart = customStart ? startOfDay(customStart) : null;
+  const rangeEnd = customEnd ? startOfDay(customEnd) : null;
+  const length =
+    rangeStart && rangeEnd
+      ? Math.max(
+          1,
+          Math.ceil((rangeEnd.getTime() - rangeStart.getTime()) / 86400000) + 1,
+        )
+      : overview === "Monthly"
+        ? 30
+        : 7;
   return Array.from({ length }, (_, index) => {
-    const date = startOfDay(addDays(now, -(length - 1 - index)));
+    const date = rangeStart
+      ? startOfDay(addDays(rangeStart, index))
+      : startOfDay(addDays(now, -(length - 1 - index)));
     return {
       key: localDateKey(date),
       label: formatBarLabel(date, overview),
@@ -437,6 +460,7 @@ function buildSupplySnapshot(
   supplyType: ReportSupplyType,
   windowStart: Date,
   now: Date,
+  customEnd?: Date,
 ) {
   const isTargetSupply =
     supplyType === "Feeds" ? isFeedInventory : isVitaminOrMedInventory;
@@ -550,7 +574,12 @@ function buildSupplySnapshot(
   });
 
   // Build time buckets for the trend bar chart
-  const buckets = buildTimeBuckets(overview, now);
+  const buckets = buildTimeBuckets(
+    overview,
+    now,
+    customEnd ? windowStart : undefined,
+    customEnd,
+  );
   const bucketIndex = new Map(
     buckets.map((bucket, index) => [bucket.key, index]),
   );
@@ -712,9 +741,17 @@ export async function fetchFarmReportSnapshot(input: {
   overview: ReportOverview;
   productionType: ReportProductionType;
   supplyType: ReportSupplyType;
+  startDate?: Date;
+  endDate?: Date;
 }) {
   const now = new Date();
-  const windowStart = getProductionWindowStart(input.overview, now);
+  const customStart = input.startDate ? startOfDay(input.startDate) : null;
+  const customEnd = input.endDate
+    ? new Date(Math.min(endOfDay(input.endDate).getTime(), now.getTime()))
+    : null;
+  const windowStart =
+    customStart ?? getProductionWindowStart(input.overview, now);
+  const reportEnd = customEnd ?? now;
   const reportStart = windowStart.toISOString();
 
   const [
@@ -732,7 +769,7 @@ export async function fetchFarmReportSnapshot(input: {
       )
       .eq("farm_id", input.farmId)
       .gte("created_at", reportStart)
-      .lte("created_at", now.toISOString()),
+      .lte("created_at", reportEnd.toISOString()),
     supabase
       .from("batches")
       .select(
@@ -740,7 +777,7 @@ export async function fetchFarmReportSnapshot(input: {
       )
       .eq("farm_id", input.farmId)
       .gte("created_at", reportStart)
-      .lte("created_at", now.toISOString()),
+      .lte("created_at", reportEnd.toISOString()),
     supabase
       .from("inventory_items")
       .select(
@@ -766,13 +803,13 @@ export async function fetchFarmReportSnapshot(input: {
     input.productionType === "Eggs"
       ? buildEggProductionSnapshot(
           ((eggRows ?? []) as EggBatchReportRow[]).filter((row) =>
-            isWithinWindow(row.created_at, windowStart, now),
+            isWithinWindow(row.created_at, windowStart, reportEnd),
           ),
           input.overview,
         )
       : buildChickenProductionSnapshot(
           ((batchRows ?? []) as BatchReportRow[]).filter((row) =>
-            isWithinWindow(row.created_at, windowStart, now),
+            isWithinWindow(row.created_at, windowStart, reportEnd),
           ),
           input.overview,
           (deceasedRows ?? []) as { batch_no?: string | null }[],
@@ -785,7 +822,8 @@ export async function fetchFarmReportSnapshot(input: {
     input.overview,
     input.supplyType,
     windowStart,
-    now,
+    reportEnd,
+    customEnd ?? undefined,
   );
 
   return { production, supply } satisfies FarmReportSnapshot;

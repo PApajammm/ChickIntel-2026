@@ -1,5 +1,6 @@
 import BackgroundGradient from "@/assets_imported/background-gradient.svg";
 import { BlurCard } from "@/components/ui/blur-card";
+import { ChickDatePickerModal } from "@/components/ui/chick-date-picker-modal";
 import { ChickFont } from "@/constants/chick-fonts";
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
 import { ReportsCardTheme, ReportsPageTheme } from "@/constants/reports-theme";
@@ -35,9 +36,43 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Circle, G } from "react-native-svg";
 
-const OVERVIEW_OPTIONS: ReportOverview[] = ["Weekly", "Monthly", "Annually"];
+type FarmPeriodOption = "7 Days" | "Last 30 Days" | "12 Months" | "Custom Date";
+type DatePickerTarget = "start" | "end" | null;
+
+const OVERVIEW_OPTIONS: FarmPeriodOption[] = [
+  "7 Days",
+  "Last 30 Days",
+  "12 Months",
+  "Custom Date",
+];
 const TYPE_OPTIONS: ReportProductionType[] = ["Eggs", "Chickens"];
 const SUPPLY_OPTIONS: ReportSupplyType[] = ["Vitamins & Meds", "Feeds"];
+
+function mapPeriodToOverview(period: FarmPeriodOption): ReportOverview {
+  if (period === "Last 30 Days" || period === "Custom Date") return "Monthly";
+  if (period === "12 Months") return "Annually";
+  return "Weekly";
+}
+
+function startOfDate(date: Date) {
+  const next = new Date(date);
+  next.setHours(0, 0, 0, 0);
+  return next;
+}
+
+function endOfDate(date: Date) {
+  const next = new Date(date);
+  next.setHours(23, 59, 59, 999);
+  return next;
+}
+
+function formatShortDate(date: Date) {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(date);
+}
 
 const PRINT_SCOPES = [
   "All Categories (Multi-Page)",
@@ -1167,7 +1202,18 @@ export default function ReportsScreen() {
   const isDark = false;
   const activeFarmId = activeFarm?.id;
 
-  const [overview, setOverview] = useState<ReportOverview>("Weekly");
+  const [period, setPeriod] = useState<FarmPeriodOption>("7 Days");
+  const overview = mapPeriodToOverview(period);
+  const [customStartDate, setCustomStartDate] = useState(() => {
+    const date = new Date();
+    date.setDate(date.getDate() - 29);
+    return startOfDate(date);
+  });
+  const [customEndDate, setCustomEndDate] = useState(() =>
+    endOfDate(new Date()),
+  );
+  const [datePickerTarget, setDatePickerTarget] =
+    useState<DatePickerTarget>(null);
   const [prodType, setProdType] = useState<ReportProductionType>("Eggs");
   const [supplyType, setSupplyType] =
     useState<ReportSupplyType>("Vitamins & Meds");
@@ -1196,6 +1242,26 @@ export default function ReportsScreen() {
     hour12: true,
   }).format(new Date());
 
+  function handlePeriodSelect(nextPeriod: FarmPeriodOption) {
+    setPeriod(nextPeriod);
+    if (nextPeriod === "Custom Date") {
+      setDatePickerTarget("start");
+    }
+  }
+
+  function handleCustomDateConfirm(date: Date) {
+    if (datePickerTarget === "start") {
+      setCustomStartDate(startOfDate(date));
+      setDatePickerTarget("end");
+      return;
+    }
+
+    if (datePickerTarget === "end") {
+      setCustomEndDate(endOfDate(date));
+      setDatePickerTarget(null);
+    }
+  }
+
   async function handlePrintReport() {
     setSaveError(null);
     setSaveMessage(null);
@@ -1216,24 +1282,32 @@ export default function ReportsScreen() {
             overview,
             productionType: "Eggs",
             supplyType: "Vitamins & Meds",
+            startDate: period === "Custom Date" ? customStartDate : undefined,
+            endDate: period === "Custom Date" ? customEndDate : undefined,
           }),
           fetchFarmReportSnapshot({
             farmId,
             overview,
             productionType: "Chickens",
             supplyType: "Vitamins & Meds",
+            startDate: period === "Custom Date" ? customStartDate : undefined,
+            endDate: period === "Custom Date" ? customEndDate : undefined,
           }),
           fetchFarmReportSnapshot({
             farmId,
             overview,
             productionType: "Eggs",
             supplyType: "Vitamins & Meds",
+            startDate: period === "Custom Date" ? customStartDate : undefined,
+            endDate: period === "Custom Date" ? customEndDate : undefined,
           }),
           fetchFarmReportSnapshot({
             farmId,
             overview,
             productionType: "Eggs",
             supplyType: "Feeds",
+            startDate: period === "Custom Date" ? customStartDate : undefined,
+            endDate: period === "Custom Date" ? customEndDate : undefined,
           }),
         ]);
 
@@ -1287,6 +1361,8 @@ export default function ReportsScreen() {
           overview,
           productionType: prodType,
           supplyType,
+          startDate: period === "Custom Date" ? customStartDate : undefined,
+          endDate: period === "Custom Date" ? customEndDate : undefined,
         });
 
         if (!cancelled) {
@@ -1313,7 +1389,15 @@ export default function ReportsScreen() {
     return () => {
       cancelled = true;
     };
-  }, [activeFarmId, overview, prodType, supplyType]);
+  }, [
+    activeFarmId,
+    customEndDate,
+    customStartDate,
+    overview,
+    period,
+    prodType,
+    supplyType,
+  ]);
 
   const glassBorder = isDark
     ? "rgba(255, 255, 255, 0.2)"
@@ -1370,7 +1454,7 @@ export default function ReportsScreen() {
                   Farm Reports
                 </Text>
                 <Text style={styles.screenSubtitle} numberOfLines={1}>
-                  {activeFarm?.name || "No active farm"} | {overview} Snapshot
+                  {activeFarm?.name || "No active farm"} | {period} Snapshot
                 </Text>
               </View>
               <TouchableOpacity
@@ -1393,17 +1477,39 @@ export default function ReportsScreen() {
               <Text style={styles.timeframeLabel}>Timeframe:</Text>
               <SegmentedPills
                 options={OVERVIEW_OPTIONS}
-                selected={overview}
-                onSelect={(val) => setOverview(val)}
+                selected={period}
+                onSelect={handlePeriodSelect}
                 containerStyle={styles.timeframePillsContainer}
                 itemStyle={styles.timeframePillItem}
                 icons={{
-                  Weekly: "calendar-week",
-                  Monthly: "calendar-month",
-                  Annually: "calendar-multiselect",
+                  "7 Days": "calendar-week",
+                  "Last 30 Days": "calendar-month",
+                  "12 Months": "calendar-multiselect",
+                  "Custom Date": "calendar-range",
                 }}
               />
             </View>
+            {period === "Custom Date" ? (
+              <Pressable
+                style={styles.customDateSummary}
+                onPress={() => setDatePickerTarget("start")}
+              >
+                <MaterialCommunityIcons
+                  name="calendar-range"
+                  size={17}
+                  color={ChickIntelPalette.green1}
+                />
+                <Text style={styles.customDateSummaryText} numberOfLines={1}>
+                  {formatShortDate(customStartDate)} -{" "}
+                  {formatShortDate(customEndDate)}
+                </Text>
+                <MaterialCommunityIcons
+                  name="pencil-outline"
+                  size={16}
+                  color={ChickIntelPalette.gray2}
+                />
+              </Pressable>
+            ) : null}
           </View>
 
           <ScrollView
@@ -1447,7 +1553,7 @@ export default function ReportsScreen() {
                 <Text style={styles.kpiValue}>
                   {report.production.total.toLocaleString()}
                 </Text>
-                <Text style={styles.kpiSubtext}>{overview} total recorded</Text>
+                <Text style={styles.kpiSubtext}>{period} total recorded</Text>
               </View>
 
               <View style={styles.kpiCard}>
@@ -1621,6 +1727,17 @@ export default function ReportsScreen() {
           onPrintReport={handlePrintReport}
           printingReport={printingReport}
         />
+        <ChickDatePickerModal
+          visible={datePickerTarget !== null}
+          value={datePickerTarget === "end" ? customEndDate : customStartDate}
+          minDate={datePickerTarget === "end" ? customStartDate : undefined}
+          maxDate={new Date()}
+          title={
+            datePickerTarget === "end" ? "SELECT END DATE" : "SELECT START DATE"
+          }
+          onConfirm={handleCustomDateConfirm}
+          onCancel={() => setDatePickerTarget(null)}
+        />
       </SafeAreaView>
     </View>
   );
@@ -1691,14 +1808,13 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   timeframeBarContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "column",
+    alignItems: "stretch",
     backgroundColor: "rgba(255, 255, 255, 0.85)",
     borderRadius: 14,
     paddingHorizontal: moderateScale(10),
-    paddingVertical: verticalScale(6),
-    gap: moderateScale(6),
+    paddingVertical: verticalScale(8),
+    gap: verticalScale(6),
   },
   timeframeLabel: {
     fontFamily: ChickFont.sans,
@@ -1709,15 +1825,39 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   timeframePillsContainer: {
-    flex: 1,
+    width: "100%",
+    flexDirection: "row",
+    flexWrap: "wrap",
     justifyContent: "space-between",
+    gap: moderateScale(5),
   },
   timeframePillItem: {
-    flex: 1,
+    flexGrow: 1,
+    flexBasis: "48%",
+    minWidth: 0,
+    minHeight: verticalScale(38),
     justifyContent: "center",
-    paddingHorizontal: moderateScale(4),
-    paddingVertical: verticalScale(5),
+    paddingHorizontal: moderateScale(6),
+    paddingVertical: verticalScale(7),
     gap: 3,
+  },
+  customDateSummary: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderRadius: 12,
+    backgroundColor: "rgba(255, 255, 255, 0.85)",
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.16)",
+    paddingHorizontal: moderateScale(12),
+    paddingVertical: verticalScale(8),
+  },
+  customDateSummaryText: {
+    flex: 1,
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12),
+    fontWeight: "700",
+    color: ChickIntelPalette.gray1,
   },
   segmentedContainer: {
     flexDirection: "row",
