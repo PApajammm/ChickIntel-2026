@@ -1,4 +1,4 @@
-﻿import {
+import {
     moderateScale,
     responsiveFontSize,
     scale,
@@ -93,7 +93,6 @@ type ChickenEditFormState = {
   totalCount: string;
   femaleCount: string;
   maleCount: string;
-  unknownCount: string;
   isolatedCount: string;
   killedCount: string;
   ageCount: string;
@@ -182,7 +181,6 @@ export default function ProfilesScreen() {
     totalCount: "",
     femaleCount: "",
     maleCount: "",
-    unknownCount: "",
     isolatedCount: "",
     killedCount: "",
     ageCount: "",
@@ -273,7 +271,6 @@ export default function ProfilesScreen() {
       totalCount: String(item.totalCount ?? item.femaleCount + item.maleCount),
       femaleCount: String(item.femaleCount ?? 0),
       maleCount: String(item.maleCount ?? 0),
-      unknownCount: String(item.unknownCount ?? 0),
       isolatedCount: String(item.isolatedCount ?? 0),
       killedCount: String(item.killedCount ?? 0),
       ageCount: parseAgeLabel(item.ageLabel),
@@ -346,9 +343,7 @@ export default function ProfilesScreen() {
         setFormState((state) => {
           const male = parseCount(state.maleCount);
           const female = parseCount(state.femaleCount);
-          const unknown = parseCount(state.unknownCount);
           const total = parseCount(state.totalCount);
-          const hasUnknown = unknown > 0;
           const nextMale = details.sex === "male" ? male + 1 : male;
           const nextFemale = details.sex === "female" ? female + 1 : female;
 
@@ -356,10 +351,7 @@ export default function ProfilesScreen() {
             ...state,
             maleCount: String(nextMale),
             femaleCount: String(nextFemale),
-            unknownCount: String(hasUnknown ? unknown - 1 : unknown),
-            totalCount: String(
-              hasUnknown ? total : Math.max(total, nextMale + nextFemale),
-            ),
+            totalCount: String(Math.max(total, nextMale + nextFemale)),
           };
         });
       } else {
@@ -1149,7 +1141,11 @@ export default function ProfilesScreen() {
                     onChangeText={(t) =>
                       setFormState((s) => ({ ...s, breed: t }))
                     }
-                    style={styles.modalInput}
+                    editable={!sexingEligible}
+                    style={[
+                      styles.modalInput,
+                      sexingEligible && styles.modalInputDisabled,
+                    ]}
                     placeholder="Breed name"
                     placeholderTextColor={ChickIntelPalette.gray2}
                   />
@@ -1215,7 +1211,11 @@ export default function ProfilesScreen() {
                           }))
                         }
                         keyboardType="number-pad"
-                        style={styles.modalInput}
+                        editable={!sexingEligible}
+                        style={[
+                          styles.modalInput,
+                          sexingEligible && styles.modalInputDisabled,
+                        ]}
                       />
                     </View>
                     <View style={styles.halfInput}>
@@ -1229,7 +1229,11 @@ export default function ProfilesScreen() {
                           }))
                         }
                         keyboardType="number-pad"
-                        style={styles.modalInput}
+                        editable={!sexingEligible}
+                        style={[
+                          styles.modalInput,
+                          sexingEligible && styles.modalInputDisabled,
+                        ]}
                       />
                     </View>
                   </View>
@@ -1250,17 +1254,31 @@ export default function ProfilesScreen() {
                       placeholderTextColor={ChickIntelPalette.gray2}
                     />
                     <Pressable
-                      onPress={() => setAgeUnitMenuVisible(true)}
-                      style={[styles.modalSelect, styles.ageUnitSelect]}
+                      onPress={() => !sexingEligible && setAgeUnitMenuVisible(true)}
+                      disabled={sexingEligible}
+                      style={[
+                        styles.modalSelect,
+                        styles.ageUnitSelect,
+                        sexingEligible && styles.modalInputDisabled,
+                      ]}
                       accessibilityRole="button"
                     >
-                      <Text style={styles.modalSelectText}>
+                      <Text
+                        style={[
+                          styles.modalSelectText,
+                          sexingEligible && { color: "#9CA3AF" },
+                        ]}
+                      >
                         {formState.ageLabel}
                       </Text>
                       <MaterialCommunityIcons
                         name="chevron-down"
                         size={18}
-                        color={ChickIntelPalette.gray2}
+                        color={
+                          sexingEligible
+                            ? "#9CA3AF"
+                            : ChickIntelPalette.gray2
+                        }
                       />
                     </Pressable>
                   </View>
