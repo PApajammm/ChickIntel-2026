@@ -672,336 +672,330 @@ export default function AddBatchScreen() {
           keyboardDismissMode="on-drag"
         >
           <View style={styles.formSection}>
-              <View style={styles.formSectionHeader}>
-                <MaterialCommunityIcons
-                  name="tag-multiple-outline"
-                  size={18}
-                  color={ChickIntelPalette.green1}
-                />
-                <Text style={styles.formSectionTitle}>Batch identity</Text>
-              </View>
-
-              <View style={styles.gridRow}>
-                <View style={styles.halfField}>
-                  <Text style={styles.fieldLabel}>Batch No.</Text>
-                  <TextInput
-                    value={batchNo}
-                    editable={false}
-                    selectTextOnFocus={false}
-                    placeholder="Auto-generated"
-                    style={[styles.input, styles.inputDisabled]}
-                    textAlignVertical="center"
-                    placeholderTextColor="#8F9696"
-                  />
-                </View>
-                <View style={styles.halfField}>
-                  <Text style={styles.fieldLabel}>Batch Color</Text>
-                  <Pressable
-                    onPress={() => setColorModalOpen(true)}
-                    style={styles.colorDropdownButton}
-                    accessibilityRole="button"
-                    accessibilityLabel="Select Batch Color"
-                  >
-                    <View style={styles.colorDropdownLeft}>
-                      <View
-                        style={[
-                          styles.colorDropdownSwatch,
-                          { backgroundColor: selectedColor.hex },
-                        ]}
-                      />
-                      <Text style={styles.colorDropdownText} numberOfLines={1}>
-                        {selectedColor.name}
-                      </Text>
-                    </View>
-                    <MaterialCommunityIcons
-                      name="chevron-down"
-                      size={20}
-                      color={ChickIntelPalette.gray1}
-                    />
-                  </Pressable>
-                  {usedBatchColorNames.length ? (
-                    <Text style={styles.colorHint}>
-                      Colors used by active batches are disabled.
-                    </Text>
-                  ) : null}
-                </View>
-              </View>
+            <View style={styles.formSectionHeader}>
+              <MaterialCommunityIcons
+                name="tag-multiple-outline"
+                size={18}
+                color={ChickIntelPalette.green1}
+              />
+              <Text style={styles.formSectionTitle}>Batch identity</Text>
             </View>
 
-            <View style={styles.formSection}>
-              <View style={styles.formSectionHeader}>
-                <MaterialCommunityIcons
-                  name="calendar-heart"
-                  size={18}
-                  color={ChickIntelPalette.green1}
-                />
-                <Text style={styles.formSectionTitle}>Age and breed</Text>
-              </View>
-
-              <View style={styles.gridRow}>
-                <View style={styles.halfField}>
-                  <Text style={styles.fieldLabel}>No.</Text>
-                  <TextInput
-                    value={durationCount}
-                    onChangeText={(v) =>
-                      setDurationCount(v.replace(/[^0-9]/g, ""))
-                    }
-                    placeholder="2"
-                    keyboardType="number-pad"
-                    style={styles.input}
-                    textAlignVertical="center"
-                    placeholderTextColor="#8F9696"
-                  />
-                  <Text style={styles.ageLimitHint}>Minimum: 2 weeks</Text>
-                </View>
-                <View style={styles.halfField}>
-                  <Text style={styles.fieldLabel}>Age unit</Text>
-                  <View style={styles.select} accessibilityLabel="Age unit">
-                    <Text style={styles.selectText}>{ageUnit}</Text>
-                  </View>
-                </View>
-              </View>
-
-              <View>
-                <Text style={styles.fieldLabel}>Breed</Text>
-                <View style={styles.breedSelectRow}>
-                  <Pressable
-                    onPress={() => setBreedModalOpen(true)}
-                    style={[styles.select, styles.breedSelect]}
-                    accessibilityRole="button"
-                    accessibilityLabel="Choose breed"
-                  >
-                    <MaterialCommunityIcons
-                      name="bird"
-                      size={18}
-                      color={
-                        breed
-                          ? ChickIntelPalette.green1
-                          : ChickIntelPalette.gray2
-                      }
-                    />
-                    <Text
-                      style={[
-                        styles.selectText,
-                        !breed && styles.selectTextPlaceholder,
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {breed || "Select breed"}
-                    </Text>
-                    <MaterialCommunityIcons
-                      name="chevron-down"
-                      size={20}
-                      color={ChickIntelPalette.gray2}
-                    />
-                  </Pressable>
-                  <Pressable
-                    onPress={() => {
-                      setBreedCameraReady(false);
-                      setBreedScannerOpen(true);
-                    }}
-                    style={({ pressed }) => [
-                      styles.breedCameraButton,
-                      { opacity: pressed ? 0.82 : 1 },
-                    ]}
-                    accessibilityRole="button"
-                    accessibilityLabel="Scan breed using camera"
-                  >
-                    <MaterialCommunityIcons
-                      name="camera-outline"
-                      size={22}
-                      color="#FFFFFF"
-                    />
-                  </Pressable>
-                </View>
-              </View>
-            </View>
-
-            <View style={styles.formSection}>
-              <View style={styles.formSectionHeader}>
-                <MaterialCommunityIcons
-                  name="account-group-outline"
-                  size={18}
-                  color={ChickIntelPalette.green1}
-                />
-                <Text style={styles.formSectionTitle}>Bird count</Text>
-              </View>
-
-              <View>
-                <Text style={styles.fieldLabel}>Total</Text>
+            <View style={styles.gridRow}>
+              <View style={styles.halfField}>
+                <Text style={styles.fieldLabel}>Batch No.</Text>
                 <TextInput
-                  value={totalCount}
-                  onChangeText={onChangeTotalCount}
-                  placeholder="100"
+                  value={batchNo}
+                  editable={false}
+                  selectTextOnFocus={false}
+                  placeholder="Auto-generated"
+                  style={[styles.input, styles.inputDisabled]}
+                  textAlignVertical="center"
+                  placeholderTextColor="#8F9696"
+                />
+              </View>
+              <View style={styles.halfField}>
+                <Text style={styles.fieldLabel}>Batch Color</Text>
+                <Pressable
+                  onPress={() => setColorModalOpen(true)}
+                  style={styles.colorDropdownButton}
+                  accessibilityRole="button"
+                  accessibilityLabel="Select Batch Color"
+                >
+                  <View style={styles.colorDropdownLeft}>
+                    <View
+                      style={[
+                        styles.colorDropdownSwatch,
+                        { backgroundColor: selectedColor.hex },
+                      ]}
+                    />
+                    <Text style={styles.colorDropdownText} numberOfLines={1}>
+                      {selectedColor.name}
+                    </Text>
+                  </View>
+                  <MaterialCommunityIcons
+                    name="chevron-down"
+                    size={20}
+                    color={ChickIntelPalette.gray1}
+                  />
+                </Pressable>
+                {usedBatchColorNames.length ? (
+                  <Text style={styles.colorHint}>
+                    Colors used by active batches are disabled.
+                  </Text>
+                ) : null}
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.formSection}>
+            <View style={styles.formSectionHeader}>
+              <MaterialCommunityIcons
+                name="calendar-heart"
+                size={18}
+                color={ChickIntelPalette.green1}
+              />
+              <Text style={styles.formSectionTitle}>Age and breed</Text>
+            </View>
+
+            <View style={styles.gridRow}>
+              <View style={styles.halfField}>
+                <Text style={styles.fieldLabel}>No.</Text>
+                <TextInput
+                  value={durationCount}
+                  onChangeText={(v) =>
+                    setDurationCount(v.replace(/[^0-9]/g, ""))
+                  }
+                  placeholder="2"
                   keyboardType="number-pad"
                   style={styles.input}
                   textAlignVertical="center"
                   placeholderTextColor="#8F9696"
                 />
+                <Text style={styles.ageLimitHint}>Minimum: 2 weeks</Text>
               </View>
+              <View style={styles.halfField}>
+                <Text style={styles.fieldLabel}>Age unit</Text>
+                <View style={styles.select} accessibilityLabel="Age unit">
+                  <Text style={styles.selectText}>{ageUnit}</Text>
+                </View>
+              </View>
+            </View>
 
-              <View style={styles.resultRow}>
-                {parseCount(durationCount) *
-                  (ageUnit === "Weeks old" ? 7 : 1) >=
-                SEXING_START_AGE_WEEKS * 7 ? (
-                  <>
-                    <View style={styles.resultField}>
-                      <Text style={styles.resultLabel}>Male</Text>
-                      <TextInput
-                        value={maleCount}
-                        onChangeText={onChangeMaleCount}
-                        keyboardType="number-pad"
-                        style={styles.resultInput}
-                        textAlignVertical="center"
-                        placeholder="0"
-                        placeholderTextColor="#8F9696"
-                      />
-                    </View>
-                    <View style={styles.resultField}>
-                      <Text style={styles.resultLabel}>Female</Text>
-                      <TextInput
-                        value={femaleCount}
-                        onChangeText={onChangeFemaleCount}
-                        keyboardType="number-pad"
-                        style={styles.resultInput}
-                        textAlignVertical="center"
-                        placeholder="0"
-                        placeholderTextColor="#8F9696"
-                      />
-                    </View>
-                  </>
-                ) : null}
-              </View>
-              {parseCount(durationCount) * 7 >= SEXING_START_AGE_WEEKS * 7 ? (
+            <View>
+              <Text style={styles.fieldLabel}>Breed</Text>
+              <View style={styles.breedSelectRow}>
                 <Pressable
-                  onPress={() => setSexScannerOpen(true)}
+                  onPress={() => setBreedModalOpen(true)}
+                  style={[styles.select, styles.breedSelect]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Choose breed"
+                >
+                  <MaterialCommunityIcons
+                    name="bird"
+                    size={18}
+                    color={
+                      breed ? ChickIntelPalette.green1 : ChickIntelPalette.gray2
+                    }
+                  />
+                  <Text
+                    style={[
+                      styles.selectText,
+                      !breed && styles.selectTextPlaceholder,
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {breed || "Select breed"}
+                  </Text>
+                  <MaterialCommunityIcons
+                    name="chevron-down"
+                    size={20}
+                    color={ChickIntelPalette.gray2}
+                  />
+                </Pressable>
+                <Pressable
+                  onPress={() => {
+                    setBreedCameraReady(false);
+                    setBreedScannerOpen(true);
+                  }}
                   style={({ pressed }) => [
-                    styles.sexScanButton,
+                    styles.breedCameraButton,
                     { opacity: pressed ? 0.82 : 1 },
                   ]}
                   accessibilityRole="button"
-                  accessibilityLabel="Open sex camera"
+                  accessibilityLabel="Scan breed using camera"
                 >
                   <MaterialCommunityIcons
                     name="camera-outline"
-                    size={20}
-                    color={ChickIntelPalette.green1}
+                    size={22}
+                    color="#FFFFFF"
                   />
-                  <View style={styles.sexScanButtonTextWrap}>
-                    <Text style={styles.sexScanButtonTitle}>Camera Sexing</Text>
-                    <Text style={styles.sexScanButtonSubtitle}>
-                      Capture a chicken to classify its sex
-                    </Text>
-                  </View>
                 </Pressable>
-              ) : null}
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.formSection}>
+            <View style={styles.formSectionHeader}>
+              <MaterialCommunityIcons
+                name="account-group-outline"
+                size={18}
+                color={ChickIntelPalette.green1}
+              />
+              <Text style={styles.formSectionTitle}>Bird count</Text>
             </View>
 
-            <Pressable
-              onPress={() => {
-                if (!breed.trim()) {
-                  Alert.alert(
-                    "Breed required",
-                    "Select a breed before saving.",
-                  );
-                  return;
-                }
+            <View>
+              <Text style={styles.fieldLabel}>Total</Text>
+              <TextInput
+                value={totalCount}
+                onChangeText={onChangeTotalCount}
+                placeholder="100"
+                keyboardType="number-pad"
+                style={styles.input}
+                textAlignVertical="center"
+                placeholderTextColor="#8F9696"
+              />
+            </View>
 
-                const enteredAge = Number.parseInt(durationCount || "0", 10);
-                const ageInDays =
-                  (Number.isFinite(enteredAge) ? enteredAge : 0) * 7;
+            <View style={styles.resultRow}>
+              {parseCount(durationCount) * (ageUnit === "Weeks old" ? 7 : 1) >=
+              SEXING_START_AGE_WEEKS * 7 ? (
+                <>
+                  <View style={styles.resultField}>
+                    <Text style={styles.resultLabel}>Male</Text>
+                    <TextInput
+                      value={maleCount}
+                      onChangeText={onChangeMaleCount}
+                      keyboardType="number-pad"
+                      style={styles.resultInput}
+                      textAlignVertical="center"
+                      placeholder="0"
+                      placeholderTextColor="#8F9696"
+                    />
+                  </View>
+                  <View style={styles.resultField}>
+                    <Text style={styles.resultLabel}>Female</Text>
+                    <TextInput
+                      value={femaleCount}
+                      onChangeText={onChangeFemaleCount}
+                      keyboardType="number-pad"
+                      style={styles.resultInput}
+                      textAlignVertical="center"
+                      placeholder="0"
+                      placeholderTextColor="#8F9696"
+                    />
+                  </View>
+                </>
+              ) : null}
+            </View>
+            {parseCount(durationCount) * 7 >= SEXING_START_AGE_WEEKS * 7 ? (
+              <Pressable
+                onPress={() => setSexScannerOpen(true)}
+                style={({ pressed }) => [
+                  styles.sexScanButton,
+                  { opacity: pressed ? 0.82 : 1 },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel="Open sex camera"
+              >
+                <MaterialCommunityIcons
+                  name="camera-outline"
+                  size={20}
+                  color={ChickIntelPalette.green1}
+                />
+                <View style={styles.sexScanButtonTextWrap}>
+                  <Text style={styles.sexScanButtonTitle}>Camera Sexing</Text>
+                  <Text style={styles.sexScanButtonSubtitle}>
+                    Capture a chicken to classify its sex
+                  </Text>
+                </View>
+              </Pressable>
+            ) : null}
+          </View>
 
-                if (
-                  !isChickBatch &&
-                  ageInDays < MIN_CHICKEN_BATCH_AGE_WEEKS * 7
-                ) {
-                  Alert.alert(
-                    "Chicken is too young",
-                    `Chicken batches must be at least ${MIN_CHICKEN_BATCH_AGE_WEEKS} weeks old.`,
-                  );
-                  return;
-                }
+          <Pressable
+            onPress={() => {
+              if (!breed.trim()) {
+                Alert.alert("Breed required", "Select a breed before saving.");
+                return;
+              }
 
-                const parsedTotal = parseCount(totalCount);
-                const parsedMale = parseCount(maleCount);
-                const parsedFemale = parseCount(femaleCount);
-                const parsedUnknown = parseCount(unknownCount);
-                if (parsedMale + parsedFemale + parsedUnknown !== parsedTotal) {
-                  Alert.alert(
-                    "Check bird counts",
-                    "Male + Female + Unknown must equal the total chicken count.",
-                  );
-                  return;
-                }
+              const enteredAge = Number.parseInt(durationCount || "0", 10);
+              const ageInDays =
+                (Number.isFinite(enteredAge) ? enteredAge : 0) * 7;
 
-                if (!activeFarm?.id) {
-                  Alert.alert("Farm missing", "No active farm was found.");
-                  return;
-                }
+              if (
+                !isChickBatch &&
+                ageInDays < MIN_CHICKEN_BATCH_AGE_WEEKS * 7
+              ) {
+                Alert.alert(
+                  "Chicken is too young",
+                  `Chicken batches must be at least ${MIN_CHICKEN_BATCH_AGE_WEEKS} weeks old.`,
+                );
+                return;
+              }
 
-                const generatedBatchNo = batchNo.trim() || getNextBatchNo([]);
-                const newBatch = {
-                  id: generatedBatchNo,
-                  breed: breed || "Unknown",
-                  totalCount: parsedTotal,
-                  femaleCount: parsedFemale,
-                  maleCount: parsedMale,
-                  unknownCount: parsedUnknown,
-                  ageLabel: isChickBatch
-                    ? "0 days old"
-                    : `${durationCount || "0"} ${ageUnit.toLowerCase()}`,
-                  isolatedCount: 0,
-                  killedCount: 0,
-                  colorName: selectedColor.name,
-                  colorHex: selectedColor.hex,
-                  originBatchNo: originBatchNoParam,
-                };
+              const parsedTotal = parseCount(totalCount);
+              const parsedMale = parseCount(maleCount);
+              const parsedFemale = parseCount(femaleCount);
+              const parsedUnknown = parseCount(unknownCount);
+              if (parsedMale + parsedFemale + parsedUnknown !== parsedTotal) {
+                Alert.alert(
+                  "Check bird counts",
+                  "Male + Female + Unknown must equal the total chicken count.",
+                );
+                return;
+              }
 
-                createFarmBatch(activeFarm.id, newBatch)
-                  .then(async () => {
-                    if (sourceEggBatchIdParam && sourceEggQtyParam) {
-                      const transferredQty = parseCount(sourceEggQtyParam);
-                      // The source egg ledger is updated by the parent flow after the chick batch exists.
-                      await updateFarmEggBatch(
-                        activeFarm.id,
-                        sourceEggBatchIdParam,
-                        {
-                          transferredHatchedQty: parseCount(
-                            sourceEggTransferredQtyParam ||
-                              String(transferredQty),
-                          ),
-                        },
-                      );
-                    }
-                    logStep("Add batch saved to Supabase", {
-                      farmId: activeFarm.id,
-                      batchNo: newBatch.id,
-                    });
-                    router.push({
-                      pathname: "/(tabs)/profiles" as any,
-                      params: { mode },
-                    });
-                  })
-                  .catch((error) => {
-                    Alert.alert(
-                      "Save failed",
-                      "Unable to save the batch right now.",
+              if (!activeFarm?.id) {
+                Alert.alert("Farm missing", "No active farm was found.");
+                return;
+              }
+
+              const generatedBatchNo = batchNo.trim() || getNextBatchNo([]);
+              const newBatch = {
+                id: generatedBatchNo,
+                breed: breed || "Unknown",
+                totalCount: parsedTotal,
+                femaleCount: parsedFemale,
+                maleCount: parsedMale,
+                unknownCount: parsedUnknown,
+                ageLabel: isChickBatch
+                  ? "0 days old"
+                  : `${durationCount || "0"} ${ageUnit.toLowerCase()}`,
+                isolatedCount: 0,
+                killedCount: 0,
+                colorName: selectedColor.name,
+                colorHex: selectedColor.hex,
+                originBatchNo: originBatchNoParam,
+              };
+
+              createFarmBatch(activeFarm.id, newBatch)
+                .then(async () => {
+                  if (sourceEggBatchIdParam && sourceEggQtyParam) {
+                    const transferredQty = parseCount(sourceEggQtyParam);
+                    // The source egg ledger is updated by the parent flow after the chick batch exists.
+                    await updateFarmEggBatch(
+                      activeFarm.id,
+                      sourceEggBatchIdParam,
+                      {
+                        transferredHatchedQty: parseCount(
+                          sourceEggTransferredQtyParam ||
+                            String(transferredQty),
+                        ),
+                      },
                     );
-                    logError("Add batch save failed", error, {
-                      farmId: activeFarm.id,
-                      batchNo: newBatch.id,
-                    });
+                  }
+                  logStep("Add batch saved to Supabase", {
+                    farmId: activeFarm.id,
+                    batchNo: newBatch.id,
                   });
-              }}
-              style={({ pressed }) => [
-                styles.saveButton,
-                { opacity: pressed ? 0.9 : 1 },
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel="Save batch record"
-            >
-              <Text style={styles.saveText}>Save Record</Text>
-            </Pressable>
+                  router.push({
+                    pathname: "/(tabs)/profiles" as any,
+                    params: { mode },
+                  });
+                })
+                .catch((error) => {
+                  Alert.alert(
+                    "Save failed",
+                    "Unable to save the batch right now.",
+                  );
+                  logError("Add batch save failed", error, {
+                    farmId: activeFarm.id,
+                    batchNo: newBatch.id,
+                  });
+                });
+            }}
+            style={({ pressed }) => [
+              styles.saveButton,
+              { opacity: pressed ? 0.9 : 1 },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Save batch record"
+          >
+            <Text style={styles.saveText}>Save Record</Text>
+          </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>
 
@@ -2283,8 +2277,8 @@ const styles = StyleSheet.create({
   cameraViewfinderArea: {
     flex: 1,
     alignItems: "center",
-    justifyContent: "flex-end",
-    paddingBottom: verticalScale(8),
+    justifyContent: "center",
+    paddingBottom: 0,
     gap: 14,
   },
   cameraViewfinderAreaNarrow: {
