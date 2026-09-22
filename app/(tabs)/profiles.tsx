@@ -1,4 +1,4 @@
-﻿import {
+import {
   moderateScale,
   responsiveFontSize,
   scale,
@@ -980,6 +980,7 @@ export default function ProfilesScreen() {
 
       <PrimaryFab
         iconName="plus"
+        variant="green"
         onPress={() => {
           if (mode === "egg") {
             router.push({

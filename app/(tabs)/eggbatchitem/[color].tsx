@@ -1180,6 +1180,7 @@ export default function EggBatchColorScreen() {
 
       <PrimaryFab
         iconName="plus"
+        variant="green"
         onPress={() =>
           router.push({
             pathname: "/(tabs)/eggbatchitem/ageunit" as any,
