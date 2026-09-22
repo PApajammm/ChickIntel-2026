@@ -57,23 +57,30 @@ export async function cropPhotoToViewfinder({
       (ImageManipulator as any).SaveFormat?.JPEG ??
       "jpeg";
 
-    const result = await manipulateFn(
-      photoUri,
-      [
-        {
-          crop: {
-            originX,
-            originY,
-            width: cropWidth,
-            height: cropHeight,
-          },
-        },
-      ],
+    const maxDimension = 1024;
+    const actions: any[] = [
       {
-        compress: 0.9,
-        format,
+        crop: {
+          originX,
+          originY,
+          width: cropWidth,
+          height: cropHeight,
+        },
       },
-    );
+    ];
+
+    if (Math.max(cropWidth, cropHeight) > maxDimension) {
+      if (cropWidth >= cropHeight) {
+        actions.push({ resize: { width: maxDimension } });
+      } else {
+        actions.push({ resize: { height: maxDimension } });
+      }
+    }
+
+    const result = await manipulateFn(photoUri, actions, {
+      compress: 0.9,
+      format,
+    });
 
     return {
       uri: result.uri,
@@ -81,7 +88,10 @@ export async function cropPhotoToViewfinder({
       height: result.height,
     };
   } catch (error) {
-    console.warn("[image-crop-helper] Cropping skipped, returning original photo:", error);
+    console.warn(
+      "[image-crop-helper] Cropping skipped, returning original photo:",
+      error,
+    );
     return { uri: photoUri, width: photoWidth, height: photoHeight };
   }
 }
@@ -146,7 +156,10 @@ export async function optimizePhotoForInference({
       height: result.height,
     };
   } catch (error) {
-    console.warn("[image-crop-helper] Optimization skipped, returning original photo:", error);
+    console.warn(
+      "[image-crop-helper] Optimization skipped, returning original photo:",
+      error,
+    );
     return { uri: photoUri, width: photoWidth, height: photoHeight };
   }
 }

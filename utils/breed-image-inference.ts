@@ -188,26 +188,10 @@ export function mapBreedPredictionToAttributes(
       },
     },
     {
-      contains: "turken",
-      attributes: {
-        breedName: "Turken (Naked Neck)",
-        temperament: "Active",
-        type: "Dual-purpose",
-      },
-    },
-    {
       contains: "new hampshire",
       attributes: {
         breedName: "New Hampshire Red",
         temperament: "Hardy",
-        type: "Dual-purpose",
-      },
-    },
-    {
-      contains: "plymouth rock",
-      attributes: {
-        breedName: "Plymouth Rock",
-        temperament: "Docile",
         type: "Dual-purpose",
       },
     },

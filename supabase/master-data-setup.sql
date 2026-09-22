@@ -99,12 +99,15 @@ insert into public.breeds (name, category, temperament, purpose)
 values
     ('Rhode Island Red', 'Chicken', 'Hardy', 'Dual-purpose'),
     ('White Leghorn', 'Chicken', 'Active', 'Egg production'),
-    ('Plymouth Rock', 'Chicken', 'Docile', 'Dual-purpose'),
     ('Australorp', 'Chicken', 'Calm', 'Egg production'),
     ('Sussex', 'Chicken', 'Friendly', 'Dual-purpose'),
     ('Silkie', 'Chicken', 'Gentle', 'Ornamental'),
     ('Barred Rock', 'Chicken', 'Docile', 'Dual-purpose')
 on conflict (name) do nothing;
+
+update public.breeds
+set is_active = false
+where lower(trim(name)) in ('plymouth rock', 'turken');
 
 insert into public.feed_types (name, description)
 values

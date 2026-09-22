@@ -68,7 +68,6 @@ const DEFAULT_BREED_OPTIONS = [
   "White Leghorn",
   "Australorp",
   "Silkie",
-  "Plymouth Rock",
 ] as const;
 
 const COLOR_OPTIONS = [

@@ -13,9 +13,7 @@ export const SUPPORTED_BREEDS = [
   "Fayoumi",
   "Leghorn",
   "New Hampshire",
-  "Plymouth Rock",
   "Rhode Island Red",
   "Silkie",
   "Sussex",
-  "Turken",
 ] as const;
