@@ -42,6 +42,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { BlurCard } from "@/components/ui/blur-card";
+import { DeleteConfirmationModal } from "@/components/ui/delete-confirmation-modal";
 import { ChickFont } from "@/constants/chick-fonts";
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
 import { getFarmColors } from "@/constants/farm-theme";
@@ -55,9 +56,19 @@ export default function AdminDashboardScreen() {
   const colorScheme = useColorScheme();
   const colors = getFarmColors(colorScheme);
 
-  // Tab State
   const [activeTab, setActiveTab] = useState<TabKey>("farmers");
-
+  const [loading, setLoading] = useState(false);
+  const [adminConfirm, setAdminConfirm] = useState<{
+    title: string;
+    subtitle?: string;
+    badge?: string;
+    itemTitle?: string;
+    message: string;
+    confirmLabel: string;
+    confirmColor?: string;
+    iconName?: any;
+    onConfirm: () => Promise<void>;
+  } | null>(null);
   // Dynamic Data State connected to Supabase
   const [farmers, setFarmers] = useState<FarmerData[]>([]);
   const [breeds, setBreeds] = useState<BreedData[]>([]);
@@ -66,7 +77,6 @@ export default function AdminDashboardScreen() {
   const [logsError, setLogsError] = useState<string | null>(null);
   const [logActionFilter, setLogActionFilter] =
     useState<ActivityLogFilter>("all");
-  const [loading, setLoading] = useState(false);
 
   const loadFarmers = async () => {
     setLoading(true);
@@ -329,34 +339,29 @@ export default function AdminDashboardScreen() {
 
   const handleToggleFarmerActive = (id: string, currentStatus: boolean) => {
     const actionText = currentStatus ? "deactivate" : "reactivate";
-    Alert.alert(
-      "Confirm Action",
-      `Are you sure you want to ${actionText} this farmer account?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Yes, Proceed",
-          onPress: async () => {
-            setLoading(true);
-            try {
-              await toggleFarmerStatus(id, currentStatus);
-              Alert.alert(
-                "Success",
-                `Farmer account ${actionText}d successfully.`,
-              );
-              await loadFarmers();
-            } catch (err: any) {
-              Alert.alert(
-                "Error",
-                err.message || `Failed to ${actionText} farmer.`,
-              );
-            } finally {
-              setLoading(false);
-            }
-          },
-        },
-      ],
-    );
+    const farmer = farmers.find((f) => f.id === id);
+    setAdminConfirm({
+      title: `${currentStatus ? "Deactivate" : "Reactivate"} Farmer?`,
+      subtitle: currentStatus ? "Farmer will not be able to log in while deactivated." : "Farmer will regain access to their farm.",
+      badge: "FARMER ACCOUNT",
+      itemTitle: farmer?.name,
+      message: `Are you sure you want to ${actionText} this farmer account?`,
+      confirmLabel: currentStatus ? "Deactivate" : "Reactivate",
+      confirmColor: currentStatus ? "#DC2626" : ChickIntelPalette.green1,
+      iconName: currentStatus ? "account-off-outline" : "account-check-outline",
+      onConfirm: async () => {
+        setLoading(true);
+        try {
+          await toggleFarmerStatus(id, currentStatus);
+          Alert.alert("Success", `Farmer account ${actionText}d successfully.`);
+          await loadFarmers();
+        } catch (err: any) {
+          Alert.alert("Error", err.message || `Failed to ${actionText} farmer.`);
+        } finally {
+          setLoading(false);
+        }
+      },
+    });
   };
 
   // Breed Handlers
@@ -411,31 +416,29 @@ export default function AdminDashboardScreen() {
 
   const handleToggleBreedActive = (id: string, currentStatus: boolean) => {
     const actionText = currentStatus ? "deactivate" : "reactivate";
-    Alert.alert(
-      "Confirm Action",
-      `Are you sure you want to ${actionText} this breed?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Yes, Proceed",
-          onPress: async () => {
-            setLoading(true);
-            try {
-              await toggleBreedStatus(id, currentStatus);
-              Alert.alert("Success", `Breed ${actionText}d successfully.`);
-              await loadBreeds();
-            } catch (err: any) {
-              Alert.alert(
-                "Error",
-                err.message || `Failed to ${actionText} breed.`,
-              );
-            } finally {
-              setLoading(false);
-            }
-          },
-        },
-      ],
-    );
+    const breed = breeds.find((b) => b.id === id);
+    setAdminConfirm({
+      title: `${currentStatus ? "Deactivate" : "Reactivate"} Breed?`,
+      subtitle: "Update breed availability in the catalog.",
+      badge: "BREED",
+      itemTitle: breed?.name,
+      message: `Are you sure you want to ${actionText} this breed?`,
+      confirmLabel: currentStatus ? "Deactivate" : "Reactivate",
+      confirmColor: currentStatus ? "#DC2626" : ChickIntelPalette.green1,
+      iconName: currentStatus ? "bird" : "check-circle-outline",
+      onConfirm: async () => {
+        setLoading(true);
+        try {
+          await toggleBreedStatus(id, currentStatus);
+          Alert.alert("Success", `Breed ${actionText}d successfully.`);
+          await loadBreeds();
+        } catch (err: any) {
+          Alert.alert("Error", err.message || `Failed to ${actionText} breed.`);
+        } finally {
+          setLoading(false);
+        }
+      },
+    });
   };
 
   // Item Handlers
@@ -490,31 +493,29 @@ export default function AdminDashboardScreen() {
 
   const handleToggleItemActive = (id: string, currentStatus: boolean) => {
     const actionText = currentStatus ? "deactivate" : "reactivate";
-    Alert.alert(
-      "Confirm Action",
-      `Are you sure you want to ${actionText} this item type?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Yes, Proceed",
-          onPress: async () => {
-            setLoading(true);
-            try {
-              await toggleItemTypeStatus(id, currentStatus);
-              Alert.alert("Success", `Item type ${actionText}d successfully.`);
-              await loadItemTypes();
-            } catch (err: any) {
-              Alert.alert(
-                "Error",
-                err.message || `Failed to ${actionText} item type.`,
-              );
-            } finally {
-              setLoading(false);
-            }
-          },
-        },
-      ],
-    );
+    const item = itemTypes.find((it) => it.id === id);
+    setAdminConfirm({
+      title: `${currentStatus ? "Deactivate" : "Reactivate"} Item Type?`,
+      subtitle: "Update inventory category availability.",
+      badge: "ITEM TYPE",
+      itemTitle: item?.name,
+      message: `Are you sure you want to ${actionText} this item type?`,
+      confirmLabel: currentStatus ? "Deactivate" : "Reactivate",
+      confirmColor: currentStatus ? "#DC2626" : ChickIntelPalette.green1,
+      iconName: currentStatus ? "tag-off-outline" : "tag-check-outline",
+      onConfirm: async () => {
+        setLoading(true);
+        try {
+          await toggleItemTypeStatus(id, currentStatus);
+          Alert.alert("Success", `Item type ${actionText}d successfully.`);
+          await loadItemTypes();
+        } catch (err: any) {
+          Alert.alert("Error", err.message || `Failed to ${actionText} item type.`);
+        } finally {
+          setLoading(false);
+        }
+      },
+    });
   };
 
   // Quick stats calculations
@@ -2212,6 +2213,28 @@ export default function AdminDashboardScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      <DeleteConfirmationModal
+        visible={Boolean(adminConfirm)}
+        title={adminConfirm?.title || "Confirm Action"}
+        subtitle={adminConfirm?.subtitle || "Please confirm this action."}
+        itemBadge={adminConfirm?.badge}
+        itemTitle={adminConfirm?.itemTitle}
+        message={adminConfirm?.message}
+        confirmLabel={adminConfirm?.confirmLabel || "Confirm"}
+        confirmColor={adminConfirm?.confirmColor}
+        iconName={adminConfirm?.iconName || "alert-circle-outline"}
+        isDeleting={loading}
+        onConfirm={async () => {
+          if (!adminConfirm) return;
+          const fn = adminConfirm.onConfirm;
+          setAdminConfirm(null);
+          await fn();
+        }}
+        onCancel={() => {
+          if (!loading) setAdminConfirm(null);
+        }}
+      />
     </View>
   );
 }

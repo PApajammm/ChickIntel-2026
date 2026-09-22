@@ -28,6 +28,7 @@ import {
 
 import BackgroundGradient from "@/assets_imported/background-gradient.svg";
 import { BlurCard } from "@/components/ui/blur-card";
+import { DeleteConfirmationModal } from "@/components/ui/delete-confirmation-modal";
 import { PrimaryFab } from "@/components/ui/primary-fab";
 import { ChickFont } from "@/constants/chick-fonts";
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
@@ -161,6 +162,9 @@ export default function ProfilesScreen() {
     ageCount: "",
     ageLabel: AGE_UNIT_OPTIONS[0],
   });
+
+  const [batchToDelete, setBatchToDelete] = useState<BatchItem | null>(null);
+  const [isDeletingBatch, setIsDeletingBatch] = useState(false);
 
   const [selectedEgg, setSelectedEgg] = useState<EggBatchItem | null>(null);
   const [eggEditVisible, setEggEditVisible] = useState(false);
@@ -375,40 +379,34 @@ export default function ProfilesScreen() {
     closeEggEdit();
   }
 
-  function confirmRemove(id: string) {
-    Alert.alert("Delete batch", "Are you sure you want to delete this batch?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          if (!activeFarm?.id) {
-            Alert.alert("Farm missing", "No active farm was found.");
-            return;
-          }
-          try {
-            const deletedBatch = chickenData.find((item) => item.id === id);
-            if (!deletedBatch) return;
-            await recordDeletedChickenBatch(activeFarm.id, deletedBatch);
-            await deleteFarmBatch(activeFarm.id, id);
-            setChickenData((prev) => prev.filter((item) => item.id !== id));
-            logStep("Profiles chicken batch deleted", {
-              farmId: activeFarm.id,
-              batchNo: id,
-            });
-          } catch (error) {
-            Alert.alert(
-              "Delete failed",
-              "Unable to delete this batch right now.",
-            );
-            logError("Profiles chicken batch delete failed", error, {
-              farmId: activeFarm.id,
-              batchNo: id,
-            });
-          }
-        },
-      },
-    ]);
+  function confirmRemove(item: BatchItem) {
+    setBatchToDelete(item);
+  }
+
+  async function handleDeleteBatchConfirm() {
+    if (!batchToDelete || !activeFarm?.id) return;
+    setIsDeletingBatch(true);
+    try {
+      await recordDeletedChickenBatch(activeFarm.id, batchToDelete);
+      await deleteFarmBatch(activeFarm.id, batchToDelete.id);
+      setChickenData((prev) => prev.filter((item) => item.id !== batchToDelete.id));
+      logStep("Profiles chicken batch deleted", {
+        farmId: activeFarm.id,
+        batchNo: batchToDelete.id,
+      });
+      setBatchToDelete(null);
+    } catch (error) {
+      Alert.alert(
+        "Delete failed",
+        "Unable to delete this batch right now.",
+      );
+      logError("Profiles chicken batch delete failed", error, {
+        farmId: activeFarm.id,
+        batchNo: batchToDelete.id,
+      });
+    } finally {
+      setIsDeletingBatch(false);
+    }
   }
 
   const eggColorCards = useMemo<EggColorCard[]>(() => {
@@ -794,7 +792,7 @@ export default function ProfilesScreen() {
                           </Pressable>
 
                           <Pressable
-                            onPress={() => confirmRemove(item.id)}
+                            onPress={() => confirmRemove(item)}
                             hitSlop={8}
                             style={({ pressed }) => [
                               styles.actionIconBtn,
@@ -1365,6 +1363,22 @@ export default function ProfilesScreen() {
           </View>
         </Pressable>
       </Modal>
+
+      <DeleteConfirmationModal
+        visible={Boolean(batchToDelete)}
+        title="Delete Chicken Batch?"
+        subtitle="This action cannot be undone."
+        itemBadge="CHICKEN BATCH"
+        itemTitle={batchToDelete?.breed ? batchToDelete.breed : (batchToDelete?.id ? `Batch #${batchToDelete.id}` : undefined)}
+        itemSubtitle={batchToDelete ? `${batchToDelete.totalCount} birds • ${formatBatchDateStamp(batchToDelete.createdAt, batchToDelete.updatedAt)}` : undefined}
+        message="Are you sure you want to delete this chicken batch? This batch will be moved to deleted history."
+        confirmLabel="Delete"
+        isDeleting={isDeletingBatch}
+        onConfirm={handleDeleteBatchConfirm}
+        onCancel={() => {
+          if (!isDeletingBatch) setBatchToDelete(null);
+        }}
+      />
     </SafeAreaView>
   );
 }

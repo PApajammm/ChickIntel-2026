@@ -28,6 +28,7 @@ import BackgroundGradient from "@/assets_imported/background-gradient.svg";
 
 import { JournalHeader } from "@/components/journal/journal-header";
 import { JournalLogCard } from "@/components/journal/journal-log-card";
+import { DeleteConfirmationModal } from "@/components/ui/delete-confirmation-modal";
 import { PrimaryFab } from "@/components/ui/primary-fab";
 import { ChickFont } from "@/constants/chick-fonts";
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
@@ -336,50 +337,20 @@ export default function JournalIndexScreen() {
         />
       )}
 
-      <Modal
+      <DeleteConfirmationModal
         visible={archiveModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setArchiveModalVisible(false)}
-      >
-        <Pressable
-          style={styles.deleteBackdrop}
-          onPress={() => setArchiveModalVisible(false)}
-        >
-          <Pressable
-            style={styles.deleteCard}
-            onPress={(e) => e.stopPropagation()}
-          >
-            <Text style={styles.deleteTitle}>Archive logs?</Text>
-            <Text style={styles.deleteMessage}>
-              Move {selected.size} saved health log(s) to Archives? You can
-              restore them from the Archives page later.
-            </Text>
-            <View style={styles.deleteRow}>
-              <Pressable
-                onPress={() => setArchiveModalVisible(false)}
-                style={({ pressed }) => [
-                  styles.deleteBtn,
-                  styles.deleteBtnSecondary,
-                  { opacity: pressed ? 0.85 : 1 },
-                ]}
-              >
-                <Text style={styles.deleteBtnSecondaryText}>Cancel</Text>
-              </Pressable>
-              <Pressable
-                onPress={confirmBulkArchive}
-                style={({ pressed }) => [
-                  styles.deleteBtn,
-                  styles.deleteBtnPrimary,
-                  { opacity: pressed ? 0.92 : 1 },
-                ]}
-              >
-                <Text style={styles.deleteBtnPrimaryText}>Archive</Text>
-              </Pressable>
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
+        title="Archive Health Logs?"
+        subtitle="You can restore them from the Archives page."
+        itemBadge="HEALTH LOGS"
+        itemTitle={`${selected.size} Selected Health Log(s)`}
+        message={`Move ${selected.size} saved health log(s) to Archives? You can restore them from the Archives page later.`}
+        confirmLabel="Archive"
+        confirmColor={ChickIntelPalette.green1}
+        iconName="archive-arrow-down-outline"
+        isDeleting={false}
+        onConfirm={confirmBulkArchive}
+        onCancel={() => setArchiveModalVisible(false)}
+      />
     </View>
   );
 }

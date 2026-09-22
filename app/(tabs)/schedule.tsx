@@ -2,6 +2,7 @@ import {
     ChickDatePickerModal,
     ChickTimePickerModal,
 } from "@/components/ui/chick-date-picker-modal";
+import { DeleteConfirmationModal } from "@/components/ui/delete-confirmation-modal";
 import {
     moderateScale,
     responsiveFontSize,
@@ -571,6 +572,11 @@ export default function ScheduleScreen() {
   const [occurrenceExclusions, setOccurrenceExclusions] = useState<
     ScheduleOccurrenceExclusion[]
   >([]);
+  const [taskToDelete, setTaskToDelete] = useState<{
+    task: ScheduleTask;
+    occurrenceDate: string;
+  } | null>(null);
+  const [isDeletingTask, setIsDeletingTask] = useState(false);
 
   const loadScheduleTasks = useCallback(async () => {
     if (!configured || !activeFarm?.id) {
@@ -1266,7 +1272,7 @@ export default function ScheduleScreen() {
       });
   };
 
-  const handleDeleteTask = (taskId: string, occurrenceDate: string) => {
+  const handleDeleteTask = async (taskId: string, occurrenceDate: string) => {
     if (!activeFarm?.id) return;
     const deletedTask = Object.values(dayTasks)
       .flat()
@@ -1283,50 +1289,46 @@ export default function ScheduleScreen() {
 
     setOccurrenceExclusions((prev) => [...prev, { taskId, occurrenceDate }]);
 
-    void recordDeletedScheduleTask(activeFarm.id, deletedTask)
-      .then(() =>
-        excludeScheduleTaskOccurrence(activeFarm.id!, taskId, occurrenceDate),
-      )
-      .then(() => {})
-      .then(() => {
-        void refreshFarmData();
-        void loadTaskMetadata();
-        void cancelTaskNotifications(taskId);
-      })
-      .catch((error) => {
-        setOccurrenceExclusions((prev) =>
-          prev.filter(
-            (exclusion) =>
-              !(
-                exclusion.taskId === taskId &&
-                exclusion.occurrenceDate === occurrenceDate
-              ),
-          ),
-        );
-        logError("Schedule task delete failed", error, {
-          farmId: activeFarm.id,
-          taskId,
-        });
-        Alert.alert(
-          "Unable to delete task",
-          "The schedule task could not be deleted. Please try again.",
-        );
+    try {
+      await recordDeletedScheduleTask(activeFarm.id, deletedTask);
+      await excludeScheduleTaskOccurrence(activeFarm.id, taskId, occurrenceDate);
+      void refreshFarmData();
+      void loadTaskMetadata();
+      void cancelTaskNotifications(taskId);
+    } catch (error) {
+      setOccurrenceExclusions((prev) =>
+        prev.filter(
+          (exclusion) =>
+            !(
+              exclusion.taskId === taskId &&
+              exclusion.occurrenceDate === occurrenceDate
+            ),
+        ),
+      );
+      logError("Schedule task delete failed", error, {
+        farmId: activeFarm.id,
+        taskId,
       });
+      Alert.alert(
+        "Unable to delete task",
+        "The schedule task could not be deleted. Please try again.",
+      );
+    }
   };
 
   const confirmDeleteTask = (task: ScheduleTask, occurrenceDate: string) => {
-    Alert.alert(
-      "Delete scheduled task?",
-      `Remove "${task.title}" from the schedule for this day?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: () => handleDeleteTask(task.id, occurrenceDate),
-        },
-      ],
-    );
+    setTaskToDelete({ task, occurrenceDate });
+  };
+
+  const handleDeleteTaskConfirm = async () => {
+    if (!taskToDelete) return;
+    setIsDeletingTask(true);
+    try {
+      await handleDeleteTask(taskToDelete.task.id, taskToDelete.occurrenceDate);
+      setTaskToDelete(null);
+    } finally {
+      setIsDeletingTask(false);
+    }
   };
 
   return (
@@ -2875,6 +2877,22 @@ export default function ScheduleScreen() {
           }
         />
       </Modal>
+
+      <DeleteConfirmationModal
+        visible={Boolean(taskToDelete)}
+        title="Delete Scheduled Task?"
+        subtitle="This action cannot be undone."
+        itemBadge="SCHEDULED TASK"
+        itemTitle={taskToDelete?.task.title}
+        itemSubtitle={taskToDelete ? `${taskToDelete.task.category} • ${formatDisplayTime(taskToDelete.task.time)}` : undefined}
+        message="Are you sure you want to remove this task from the schedule for this day?"
+        confirmLabel="Delete"
+        isDeleting={isDeletingTask}
+        onConfirm={handleDeleteTaskConfirm}
+        onCancel={() => {
+          if (!isDeletingTask) setTaskToDelete(null);
+        }}
+      />
     </View>
   );
 }

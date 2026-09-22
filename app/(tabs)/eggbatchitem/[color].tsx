@@ -26,6 +26,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import BackgroundGradient from "@/assets_imported/background-gradient.svg";
 import { BlurCard } from "@/components/ui/blur-card";
+import { DeleteConfirmationModal } from "@/components/ui/delete-confirmation-modal";
 import { PrimaryFab } from "@/components/ui/primary-fab";
 import { ChickFont } from "@/constants/chick-fonts";
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
@@ -162,6 +163,8 @@ export default function EggBatchColorScreen() {
   const [activeSection, setActiveSection] = useState<"eggs" | "chicks">("eggs");
   const [loading, setLoading] = useState(false);
   const [selectedEgg, setSelectedEgg] = useState<EggBatchItem | null>(null);
+  const [eggToDelete, setEggToDelete] = useState<EggBatchItem | null>(null);
+  const [isDeletingEgg, setIsDeletingEgg] = useState(false);
   const [editVisible, setEditVisible] = useState(false);
   const [editForm, setEditForm] = useState<EggEditState>({
     hatchedQty: "0",
@@ -514,33 +517,32 @@ export default function EggBatchColorScreen() {
   };
 
   const confirmDeleteEgg = (egg: EggBatchItem) => {
-    Alert.alert("Delete egg batch", `Delete batch ${egg.batchNo}?`, [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          if (!activeFarm?.id) return;
+    setEggToDelete(egg);
+  };
 
-          try {
-            await recordDeletedEggBatch(activeFarm.id, egg);
-            await deleteFarmEggBatch(activeFarm.id, egg.id);
-            setSavedEggBatches((prev) =>
-              prev.filter((item) => item.id !== egg.id),
-            );
-          } catch (error) {
-            logError("Egg batch color screen delete failed", error, {
-              farmId: activeFarm.id,
-              eggBatchId: egg.id,
-            });
-            Alert.alert(
-              "Delete failed",
-              "Unable to delete this egg batch right now.",
-            );
-          }
-        },
-      },
-    ]);
+  const handleDeleteEggConfirm = async () => {
+    if (!eggToDelete || !activeFarm?.id) return;
+
+    setIsDeletingEgg(true);
+    try {
+      await recordDeletedEggBatch(activeFarm.id, eggToDelete);
+      await deleteFarmEggBatch(activeFarm.id, eggToDelete.id);
+      setSavedEggBatches((prev) =>
+        prev.filter((item) => item.id !== eggToDelete.id),
+      );
+      setEggToDelete(null);
+    } catch (error) {
+      logError("Egg batch color screen delete failed", error, {
+        farmId: activeFarm.id,
+        eggBatchId: eggToDelete.id,
+      });
+      Alert.alert(
+        "Delete failed",
+        "Unable to delete this egg batch right now.",
+      );
+    } finally {
+      setIsDeletingEgg(false);
+    }
   };
 
   const saveEdit = async () => {
@@ -1524,6 +1526,22 @@ export default function EggBatchColorScreen() {
           </View>
         </View>
       </Modal>
+
+      <DeleteConfirmationModal
+        visible={Boolean(eggToDelete)}
+        title="Delete Egg Batch?"
+        subtitle="This action cannot be undone."
+        itemBadge="EGG BATCH"
+        itemTitle={eggToDelete ? `Batch ${eggToDelete.batchNo}` : undefined}
+        itemSubtitle={eggToDelete ? `${eggToDelete.eggQty} eggs • ${formatBatchDateStamp(eggToDelete.createdAt, eggToDelete.updatedAt)}` : undefined}
+        message="Are you sure you want to delete this egg batch? This batch will be moved to deleted egg history."
+        confirmLabel="Delete"
+        isDeleting={isDeletingEgg}
+        onConfirm={handleDeleteEggConfirm}
+        onCancel={() => {
+          if (!isDeletingEgg) setEggToDelete(null);
+        }}
+      />
     </View>
   );
 }
