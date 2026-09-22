@@ -48,6 +48,10 @@ import {
     buildHealthCaptureGuidance,
 } from "@/utils/health-capture-quality";
 import { logError, logStep } from "@/utils/logger";
+import {
+    inferSexFromImage,
+    resolveSexDetails,
+} from "@/utils/sexing-image-inference";
 
 import {
     cropPhotoToViewfinder,
@@ -58,8 +62,10 @@ import {
 const CONTROLS_CLEARANCE_ABOVE_TAB = 0;
 const MAX_SCAN_ZOOM = 0.7;
 
+type GuestScannerMode = ScannerMode | "sex";
+
 const MODE_COPY: Record<
-  ScannerMode,
+  GuestScannerMode,
   {
     title: string;
     subtitle: string;
@@ -80,6 +86,11 @@ const MODE_COPY: Record<
     captureTip:
       "Keep the full body visible and avoid heavy shadows before capture.",
   },
+  sex: {
+    title: "Sex your chicken",
+    subtitle: "Frame the chicken clearly for a cock or hen classification.",
+    captureTip: "Keep the full chicken visible and centered before capture.",
+  },
 };
 
 export default function ScannerScreen() {
@@ -96,7 +107,7 @@ export default function ScannerScreen() {
   const cameraRef = useRef<CameraViewportRef>(null);
   const isGuestExperience = guestMode && !session;
 
-  const [mode, setMode] = useState<ScannerMode>("health");
+  const [mode, setMode] = useState<GuestScannerMode>("health");
   const [torchEnabled, setTorchEnabled] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(0);
   const [cameraReady, setCameraReady] = useState(false);
@@ -110,8 +121,8 @@ export default function ScannerScreen() {
   useEffect(() => {
     if (params.initialMode === "health" || isMonitoringRescan) {
       setMode("health");
-    } else if (params.initialMode === "breed") {
-      setMode("breed");
+    } else if (params.initialMode === "breed" || params.initialMode === "sex") {
+      setMode(params.initialMode);
     }
   }, [isMonitoringRescan, params.initialMode]);
 
@@ -283,6 +294,20 @@ export default function ScannerScreen() {
             initialMode: "breed",
           },
         } as any);
+      } else if (mode === "sex") {
+        const inference = await inferSexFromImage(photo.uri);
+        const details = resolveSexDetails(inference);
+        if (details.sex === "male" || details.sex === "female") {
+          Alert.alert(
+            "Sex detected",
+            `This chicken appears to be ${details.sex}.`,
+          );
+        } else {
+          Alert.alert(
+            "Sex not detected",
+            "Try another angle with the chicken clearly centered.",
+          );
+        }
       }
     } catch (e) {
       try {
@@ -342,19 +367,21 @@ export default function ScannerScreen() {
               color={torchEnabled ? "#FFF" : ChickIntelPalette.gray1}
             />
           </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => setSupportedInfoVisible(true)}
-            style={styles.infoButton}
-            activeOpacity={0.8}
-            accessibilityRole="button"
-            accessibilityLabel={`View supported ${mode === "health" ? "diseases" : "breeds"}`}
-          >
-            <MaterialCommunityIcons
-              name="information-outline"
-              size={22}
-              color={ChickIntelPalette.gray1}
-            />
-          </TouchableOpacity>
+          {mode !== "sex" ? (
+            <TouchableOpacity
+              onPress={() => setSupportedInfoVisible(true)}
+              style={styles.infoButton}
+              activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel={`View supported ${mode === "health" ? "diseases" : "breeds"}`}
+            >
+              <MaterialCommunityIcons
+                name="information-outline"
+                size={22}
+                color={ChickIntelPalette.gray1}
+              />
+            </TouchableOpacity>
+          ) : null}
         </View>
 
         <View
@@ -377,7 +404,7 @@ export default function ScannerScreen() {
             isCompactScreen && { gap: 4 },
           ]}
         >
-          {!isMonitoringRescan && !isGuestExperience ? (
+          {!isMonitoringRescan && !isGuestExperience && mode !== "sex" ? (
             <View style={styles.cardWrap}>
               <ModeSelectorCard mode={mode} onModeChange={setMode} />
             </View>

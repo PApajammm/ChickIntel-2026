@@ -1,7 +1,14 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { router } from "expo-router";
 import { useCameraPermissions } from "expo-camera";
-import { Alert, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { router } from "expo-router";
+import {
+    Alert,
+    Platform,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import ChickenLogo from "@/assets_imported/splash-chicken.svg";
@@ -9,14 +16,19 @@ import { AuthFrame, FarmButton } from "@/components/farm-auth";
 import { ChickFont } from "@/constants/chick-fonts";
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
 import { useAuth } from "@/providers/auth-provider";
-import { moderateScale, responsiveFontSize, scale, verticalScale } from "@/utils/responsive";
+import {
+    moderateScale,
+    responsiveFontSize,
+    scale,
+    verticalScale,
+} from "@/utils/responsive";
 
 export default function GuestModeScreen() {
   const insets = useSafeAreaInsets();
   const { enterGuestMode, exitGuestMode } = useAuth();
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
 
-  async function openScanner(initialMode: "health" | "breed") {
+  async function openScanner(initialMode: "health" | "breed" | "sex") {
     if (Platform.OS !== "web" && !cameraPermission?.granted) {
       try {
         const nextPermission = await requestCameraPermission();
@@ -61,19 +73,27 @@ export default function GuestModeScreen() {
         <ChickenLogo width={scale(150)} height={verticalScale(180)} />
         <View style={styles.headingWrap}>
           <Text style={styles.title}>Guest Mode</Text>
-          <Text style={styles.subtitle}>Choose a camera detection to begin.</Text>
+          <Text style={styles.subtitle}>
+            Choose a camera detection to begin.
+          </Text>
         </View>
         <View style={styles.buttonStack}>
           <FarmButton
-            title="Health Camera Detection"
+            title="Health Scanner"
             icon="heart-pulse"
             onPress={() => openScanner("health")}
             style={styles.button}
           />
           <FarmButton
-            title="Breed Camera Detection"
+            title="Breed Identifier"
             icon="bird"
             onPress={() => openScanner("breed")}
+            style={styles.button}
+          />
+          <FarmButton
+            title="Sex Identifier"
+            icon="gender-male-female"
+            onPress={() => openScanner("sex")}
             style={styles.button}
           />
         </View>
