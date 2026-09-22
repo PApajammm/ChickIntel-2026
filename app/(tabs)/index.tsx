@@ -1240,6 +1240,8 @@ export default function HomeScreen() {
 
       <PrimaryFab
         iconName="camera-outline"
+        variant="green"
+        draggable
         onPress={() => void openScannerWithPermission()}
         bottom={fabBottom}
         accessibilityLabel="Open scanner"

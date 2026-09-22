@@ -198,6 +198,38 @@ export function formatEggFertilityPercent(egg: {
   return value === null ? "--" : `${value}%`;
 }
 
+export function isEggBatchCompleted(egg: {
+  eggQty?: number;
+  hatchedQty?: number;
+  transferredHatchedQty?: number;
+  damagedQty?: number;
+  disposedDamagedQty?: number;
+  unhatchedQty?: number;
+  soldQty?: number;
+}) {
+  const eggQty = egg.eggQty ?? 0;
+  if (eggQty <= 0) return false;
+
+  const hatchedQty = egg.hatchedQty ?? 0;
+  const damagedQty = egg.damagedQty ?? 0;
+  const unhatchedCount = Math.max(0, eggQty - hatchedQty - damagedQty);
+
+  const transferredHatched = egg.transferredHatchedQty ?? 0;
+  const sold = egg.soldQty ?? 0;
+  const disposedDamaged = egg.disposedDamagedQty ?? 0;
+
+  const remainingHatched = Math.max(0, hatchedQty - transferredHatched);
+  const remainingUnhatched = Math.max(0, unhatchedCount - sold);
+  const remainingDamaged = Math.max(0, damagedQty - disposedDamaged);
+
+  return (
+    remainingHatched === 0 &&
+    remainingUnhatched === 0 &&
+    remainingDamaged === 0 &&
+    (transferredHatched > 0 || sold > 0 || disposedDamaged > 0)
+  );
+}
+
 const store = {
   batches: initialBatches,
   eggBatches: initialEggBatches,
