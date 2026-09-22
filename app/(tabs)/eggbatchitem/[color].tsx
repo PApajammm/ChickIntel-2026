@@ -39,6 +39,7 @@ import {
     type BatchItem,
     type EggBatchItem,
 } from "@/utils/batch-store";
+import { getCurrentBatchAgeDays } from "@/utils/chicken-batch-rules";
 import { logError } from "@/utils/logger";
 import {
     createFarmChickBatch,
@@ -56,6 +57,7 @@ import { recordEggDisposition } from "@/utils/supabase-egg-dispositions";
 
 const TAB_BAR_OFFSET = 55;
 const FAB_OFFSET_FROM_TAB_TOP = 50;
+const MIN_EGG_BATCH_CREATE_AGE_WEEKS = 8;
 
 function normalizeColor(value: string | string[] | undefined) {
   if (Array.isArray(value)) return value[0] ?? "";
@@ -178,7 +180,9 @@ export default function EggBatchColorScreen() {
   const [selectedChick, setSelectedChick] = useState<BatchItem | null>(null);
   const [chickAgeModalVisible, setChickAgeModalVisible] = useState(false);
   const [chickAgeCount, setChickAgeCount] = useState("0");
-  const [chickAgeUnit, setChickAgeUnit] = useState<"Days old" | "Weeks old">("Weeks old");
+  const [chickAgeUnit, setChickAgeUnit] = useState<"Days old" | "Weeks old">(
+    "Weeks old",
+  );
   const [savingChickAge, setSavingChickAge] = useState(false);
 
   const totalRecordedEggs = selectedEgg?.eggQty ?? 0;
@@ -219,11 +223,18 @@ export default function EggBatchColorScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      setActiveSection("eggs");
       void loadEggBatches();
     }, [loadEggBatches]),
   );
 
-  const [eggStatusFilter, setEggStatusFilter] = useState<"active" | "archived">("active");
+  useEffect(() => {
+    setActiveSection("eggs");
+  }, [detailMode, targetBatchNo]);
+
+  const [eggStatusFilter, setEggStatusFilter] = useState<"active" | "archived">(
+    "active",
+  );
 
   const filteredBatches = useMemo(
     () =>
@@ -255,6 +266,20 @@ export default function EggBatchColorScreen() {
         (batch.originBatchNo ?? "").trim().toLowerCase() === normalizedTarget,
     );
   }, [savedChickBatches, targetBatchNo]);
+
+  const canCreateEggBatch = useMemo(() => {
+    if (isEggOnlyDetail) return true;
+
+    const parentBatch = savedChickBatches.find(
+      (batch) =>
+        batch.id.trim().toLowerCase() === targetBatchNo.trim().toLowerCase(),
+    );
+
+    return Boolean(
+      parentBatch &&
+      getCurrentBatchAgeDays(parentBatch) >= MIN_EGG_BATCH_CREATE_AGE_WEEKS * 7,
+    );
+  }, [isEggOnlyDetail, savedChickBatches, targetBatchNo]);
 
   const getAvailableActionQty = (egg: EggBatchItem, type: EggAction) => {
     if (type === "transfer") {
@@ -377,7 +402,10 @@ export default function EggBatchColorScreen() {
         farmId: activeFarm.id,
         batchNo: selectedChick.id,
       });
-      Alert.alert("Update failed", "Unable to update chick batch age right now.");
+      Alert.alert(
+        "Update failed",
+        "Unable to update chick batch age right now.",
+      );
     } finally {
       setSavingChickAge(false);
     }
@@ -1097,7 +1125,10 @@ export default function EggBatchColorScreen() {
                       {/* Row 2: Availability & Rates */}
                       <View style={styles.metricsRow}>
                         <View style={styles.metricChip}>
-                          <Text style={styles.metricChipLabel} numberOfLines={2}>
+                          <Text
+                            style={styles.metricChipLabel}
+                            numberOfLines={2}
+                          >
                             Chicks Ready for Transfer
                           </Text>
                           <Text style={styles.metricChipValue}>
@@ -1105,7 +1136,9 @@ export default function EggBatchColorScreen() {
                           </Text>
                         </View>
                         <View style={styles.metricChip}>
-                          <Text style={styles.metricChipLabel}>Ready to Sell</Text>
+                          <Text style={styles.metricChipLabel}>
+                            Ready to Sell
+                          </Text>
                           <Text style={styles.metricChipValue}>
                             {remainingUnhatched}
                           </Text>
@@ -1118,7 +1151,9 @@ export default function EggBatchColorScreen() {
                         </View>
                         <View style={styles.metricChip}>
                           <Text style={styles.metricChipLabel}>Fertility</Text>
-                          <Text style={styles.metricChipValue}>{fertility}</Text>
+                          <Text style={styles.metricChipValue}>
+                            {fertility}
+                          </Text>
                         </View>
                       </View>
 
@@ -1149,7 +1184,8 @@ export default function EggBatchColorScreen() {
                     />
                     <Text style={styles.emptyTitle}>All batches completed</Text>
                     <Text style={styles.emptyText}>
-                      All {archivedBatches.length} egg batch(es) under this origin have been fully settled and archived.
+                      All {archivedBatches.length} egg batch(es) under this
+                      origin have been fully settled and archived.
                     </Text>
                     <Pressable
                       onPress={() => setEggStatusFilter("archived")}
@@ -1180,23 +1216,26 @@ export default function EggBatchColorScreen() {
         )}
       </ScrollView>
 
-      <PrimaryFab
-        iconName="plus"
-        variant="green"
-        onPress={() =>
-          router.push({
-            pathname: "/(tabs)/eggbatchitem/ageunit" as any,
-            params: colorName
-              ? {
-                  color: colorName,
-                  colorHex: displayHex,
-                }
-              : undefined,
-          })
-        }
-        bottom={TAB_BAR_OFFSET - 2 - FAB_OFFSET_FROM_TAB_TOP}
-        accessibilityLabel="Add egg batch"
-      />
+      {canCreateEggBatch ? (
+        <PrimaryFab
+          iconName="plus"
+          variant="green"
+          onPress={() =>
+            router.push({
+              pathname: "/(tabs)/eggbatchitem/ageunit" as any,
+              params: colorName
+                ? {
+                    color: colorName,
+                    colorHex: displayHex,
+                    batchNo: targetBatchNo,
+                  }
+                : undefined,
+            })
+          }
+          bottom={TAB_BAR_OFFSET - 2 - FAB_OFFSET_FROM_TAB_TOP}
+          accessibilityLabel="Add egg batch"
+        />
+      ) : null}
 
       {/* Chick Age Edit Modal */}
       <Modal
@@ -1289,7 +1328,8 @@ export default function EggBatchColorScreen() {
                 </View>
 
                 <Text style={styles.actionModalHint}>
-                  Chicks can be transferred to Chicken Batches at 5 weeks (35 days).
+                  Chicks can be transferred to Chicken Batches at 5 weeks (35
+                  days).
                 </Text>
 
                 <View style={styles.modalActions}>
@@ -1362,9 +1402,7 @@ export default function EggBatchColorScreen() {
                 </View>
                 <Text style={styles.modalSubtitle}>
                   Available:{" "}
-                  {actionEgg
-                    ? getAvailableActionQty(actionEgg, actionType)
-                    : 0}{" "}
+                  {actionEgg ? getAvailableActionQty(actionEgg, actionType) : 0}{" "}
                   eggs ready for this action.
                 </Text>
               </View>
@@ -1435,9 +1473,7 @@ export default function EggBatchColorScreen() {
                         color="#FFFFFF"
                       />
                     </View>
-                    <Text style={styles.modalTitle}>
-                      Update Egg Batch
-                    </Text>
+                    <Text style={styles.modalTitle}>Update Egg Batch</Text>
                   </View>
                   <Text style={styles.modalSubtitle}>
                     {selectedEgg
@@ -1578,9 +1614,7 @@ export default function EggBatchColorScreen() {
                       accessibilityLabel="Save changes"
                     >
                       <Text style={styles.modalSaveText}>
-                        {hasDiscrepancy
-                          ? "Cannot Save"
-                          : "Save Changes"}
+                        {hasDiscrepancy ? "Cannot Save" : "Save Changes"}
                       </Text>
                     </Pressable>
                   </View>
@@ -1669,7 +1703,11 @@ export default function EggBatchColorScreen() {
         subtitle="This action cannot be undone."
         itemBadge="EGG BATCH"
         itemTitle={eggToDelete ? `Batch ${eggToDelete.batchNo}` : undefined}
-        itemSubtitle={eggToDelete ? `${eggToDelete.eggQty} eggs • ${formatBatchDateStamp(eggToDelete.createdAt, eggToDelete.updatedAt)}` : undefined}
+        itemSubtitle={
+          eggToDelete
+            ? `${eggToDelete.eggQty} eggs • ${formatBatchDateStamp(eggToDelete.createdAt, eggToDelete.updatedAt)}`
+            : undefined
+        }
         message="Are you sure you want to delete this egg batch? This batch will be moved to deleted egg history."
         confirmLabel="Delete"
         isDeleting={isDeletingEgg}

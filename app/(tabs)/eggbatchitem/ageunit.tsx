@@ -114,9 +114,14 @@ export default function EggBatchAgeUnitScreen() {
   const params = useLocalSearchParams<{
     color?: string;
     colorHex?: string;
+    batchNo?: string;
+    originBatchNo?: string;
   }>();
   const colorParam = normalizeParam(params.color);
   const colorHexParam = normalizeParam(params.colorHex);
+  const parentBatchNoParam = normalizeParam(
+    params.batchNo || params.originBatchNo,
+  );
 
   const [batchNo, setBatchNo] = useState("");
   const [eggQty, setEggQty] = useState("");
@@ -201,21 +206,24 @@ export default function EggBatchAgeUnitScreen() {
       return;
     }
 
-    const requested = colorParam?.toString().trim().toLowerCase();
-    if (!requested) {
+    const requestedBatchNo = parentBatchNoParam.trim().toLowerCase();
+    const requestedColor = colorParam.trim().toLowerCase();
+    if (!requestedBatchNo && !requestedColor) {
       setSelectedColorId(null);
       return;
     }
 
-    const matchingOption = batchColors.find(
-      (option) => option.id === requested,
+    const matchingOption = batchColors.find((option) =>
+      requestedBatchNo
+        ? option.id === requestedBatchNo
+        : option.colorName.trim().toLowerCase() === requestedColor,
     );
     if (matchingOption) {
-      setSelectedColorId(requested);
+      setSelectedColorId(matchingOption.id);
     } else {
       setSelectedColorId(null);
     }
-  }, [batchColors, colorParam]);
+  }, [batchColors, colorParam, parentBatchNoParam]);
 
   const selectedBatchColor = useMemo(
     () =>
