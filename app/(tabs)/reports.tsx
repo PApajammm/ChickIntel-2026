@@ -1481,12 +1481,6 @@ export default function ReportsScreen() {
                 onSelect={handlePeriodSelect}
                 containerStyle={styles.timeframePillsContainer}
                 itemStyle={styles.timeframePillItem}
-                icons={{
-                  "7 Days": "calendar-week",
-                  "Last 30 Days": "calendar-month",
-                  "12 Months": "calendar-multiselect",
-                  "Custom Date": "calendar-range",
-                }}
               />
             </View>
             {period === "Custom Date" ? (
@@ -1808,13 +1802,14 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   timeframeBarContainer: {
-    flexDirection: "column",
-    alignItems: "stretch",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     backgroundColor: "rgba(255, 255, 255, 0.85)",
     borderRadius: 14,
     paddingHorizontal: moderateScale(10),
-    paddingVertical: verticalScale(8),
-    gap: verticalScale(6),
+    paddingVertical: verticalScale(6),
+    gap: moderateScale(6),
   },
   timeframeLabel: {
     fontFamily: ChickFont.sans,
@@ -1825,21 +1820,18 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   timeframePillsContainer: {
-    width: "100%",
+    flex: 1,
     flexDirection: "row",
-    flexWrap: "wrap",
     justifyContent: "space-between",
-    gap: moderateScale(5),
+    gap: moderateScale(2),
   },
   timeframePillItem: {
-    flexGrow: 1,
-    flexBasis: "48%",
-    minWidth: 0,
-    minHeight: verticalScale(38),
+    flex: 1,
     justifyContent: "center",
-    paddingHorizontal: moderateScale(6),
-    paddingVertical: verticalScale(7),
-    gap: 3,
+    minHeight: verticalScale(34),
+    paddingHorizontal: moderateScale(2),
+    paddingVertical: verticalScale(5),
+    borderRadius: 999,
   },
   customDateSummary: {
     flexDirection: "row",
@@ -1880,9 +1872,10 @@ const styles = StyleSheet.create({
   },
   segmentedText: {
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(10.5),
+    fontSize: responsiveFontSize(9.5),
     fontWeight: "600",
     color: ChickIntelPalette.gray1,
+    textAlign: "center",
   },
   segmentedTextActive: {
     color: "#FFFFFF",

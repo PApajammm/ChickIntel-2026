@@ -1,32 +1,40 @@
 ﻿import {
-  moderateScale,
-  responsiveFontSize,
-  scale,
-  verticalScale,
+    moderateScale,
+    responsiveFontSize,
+    scale,
+    verticalScale,
 } from "@/utils/responsive";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import Slider from "@react-native-community/slider";
 import { useFocusEffect } from "@react-navigation/native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Alert,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
+    Alert,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
+    useWindowDimensions,
 } from "react-native";
 import {
-  SafeAreaView,
-  useSafeAreaInsets,
+    SafeAreaView,
+    useSafeAreaInsets,
 } from "react-native-safe-area-context";
 
 import BackgroundGradient from "@/assets_imported/background-gradient.svg";
+import {
+    CameraViewport,
+    type CameraViewportRef,
+} from "@/components/scanner/camera-viewport";
+import { ScannerShutter } from "@/components/scanner/scanner-shutter";
+import { ViewfinderOverlay } from "@/components/scanner/viewfinder-overlay";
 import { BlurCard } from "@/components/ui/blur-card";
 import { DeleteConfirmationModal } from "@/components/ui/delete-confirmation-modal";
 import { PrimaryFab } from "@/components/ui/primary-fab";
@@ -36,23 +44,31 @@ import { getFarmColors } from "@/constants/farm-theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useAuth } from "@/providers/auth-provider";
 import {
-  type BatchItem,
-  type EggBatchItem,
-  formatBatchDateStamp,
-  formatEggFertilityPercent,
-  getCurrentBatchAgeLabel,
+    type BatchItem,
+    type EggBatchItem,
+    formatBatchDateStamp,
+    formatEggFertilityPercent,
+    getCurrentBatchAgeLabel,
 } from "@/utils/batch-store";
-import { MIN_CHICKEN_BATCH_AGE_WEEKS } from "@/utils/chicken-batch-rules";
+import {
+    MIN_CHICKEN_BATCH_AGE_WEEKS,
+    SEXING_START_AGE_WEEKS,
+} from "@/utils/chicken-batch-rules";
+import { optimizePhotoForInference } from "@/utils/image-crop-helper";
 import { logError, logStep } from "@/utils/logger";
 import {
-  deleteFarmBatch,
-  fetchFarmBatches,
-  updateFarmBatch,
+    inferSexFromImage,
+    resolveSexDetails,
+} from "@/utils/sexing-image-inference";
+import {
+    deleteFarmBatch,
+    fetchFarmBatches,
+    updateFarmBatch,
 } from "@/utils/supabase-batches";
 import { recordDeletedChickenBatch } from "@/utils/supabase-chicken-batch-history";
 import {
-  fetchFarmEggBatches,
-  updateFarmEggBatch,
+    fetchFarmEggBatches,
+    updateFarmEggBatch,
 } from "@/utils/supabase-egg-batches";
 
 const TAB_BAR_OFFSET = 55;
@@ -124,6 +140,7 @@ function formatCreatedDate(value?: string) {
 
 export default function ProfilesScreen() {
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
   const router = useRouter();
   const { activeFarm } = useAuth();
   const colorScheme = useColorScheme();
@@ -150,6 +167,15 @@ export default function ProfilesScreen() {
 
   const [selectedBatch, setSelectedBatch] = useState<BatchItem | null>(null);
   const [editVisible, setEditVisible] = useState(false);
+  const [sexScannerOpen, setSexScannerOpen] = useState(false);
+  const [sexCameraReady, setSexCameraReady] = useState(false);
+  const [sexTorchEnabled, setSexTorchEnabled] = useState(false);
+  const [sexZoomLevel, setSexZoomLevel] = useState(0);
+  const [isScanningSex, setIsScanningSex] = useState(false);
+  const [capturedSexPhotoUri, setCapturedSexPhotoUri] = useState<string | null>(
+    null,
+  );
+  const sexCameraRef = useRef<CameraViewportRef>(null);
   const [ageUnitMenuVisible, setAgeUnitMenuVisible] = useState(false);
   const [formState, setFormState] = useState<ChickenEditFormState>({
     breed: "",
@@ -273,6 +299,81 @@ export default function ProfilesScreen() {
   function closeEdit() {
     setEditVisible(false);
     setSelectedBatch(null);
+    closeSexScanner();
+  }
+
+  const sexingEligible =
+    parseCount(formState.ageCount) >= SEXING_START_AGE_WEEKS;
+
+  function closeSexScanner() {
+    setSexScannerOpen(false);
+    setSexCameraReady(false);
+    setSexTorchEnabled(false);
+    setSexZoomLevel(0);
+    setIsScanningSex(false);
+    setCapturedSexPhotoUri(null);
+  }
+
+  async function handleEditSexCapture() {
+    if (
+      !sexingEligible ||
+      !sexCameraReady ||
+      !sexCameraRef.current ||
+      isScanningSex
+    ) {
+      return;
+    }
+
+    try {
+      const rawPhoto = await sexCameraRef.current.takePictureAsync({
+        quality: 0.8,
+        skipProcessing: Platform.OS === "ios",
+      });
+      const photo = await optimizePhotoForInference({
+        photoUri: rawPhoto.uri,
+        photoWidth: rawPhoto.width,
+        photoHeight: rawPhoto.height,
+        maxDimension: 1024,
+        quality: 0.8,
+      });
+
+      setCapturedSexPhotoUri(photo.uri);
+      setIsScanningSex(true);
+      const inference = await inferSexFromImage(photo.uri);
+      const details = resolveSexDetails(inference);
+
+      if (details.sex === "male" || details.sex === "female") {
+        setFormState((state) => {
+          const male = parseCount(state.maleCount);
+          const female = parseCount(state.femaleCount);
+          const unknown = parseCount(state.unknownCount);
+          const total = parseCount(state.totalCount);
+          const hasUnknown = unknown > 0;
+          const nextMale = details.sex === "male" ? male + 1 : male;
+          const nextFemale = details.sex === "female" ? female + 1 : female;
+
+          return {
+            ...state,
+            maleCount: String(nextMale),
+            femaleCount: String(nextFemale),
+            unknownCount: String(hasUnknown ? unknown - 1 : unknown),
+            totalCount: String(
+              hasUnknown ? total : Math.max(total, nextMale + nextFemale),
+            ),
+          };
+        });
+      } else {
+        Alert.alert(
+          "No sex detected",
+          "Try another angle with the chicken clearly centered.",
+        );
+      }
+    } catch (error) {
+      Alert.alert("Capture failed", "Unable to classify the chicken sex.");
+      logError("Edit chicken batch sex camera failed", error);
+    } finally {
+      closeSexScanner();
+    }
   }
 
   async function saveEdit() {
@@ -389,17 +490,16 @@ export default function ProfilesScreen() {
     try {
       await recordDeletedChickenBatch(activeFarm.id, batchToDelete);
       await deleteFarmBatch(activeFarm.id, batchToDelete.id);
-      setChickenData((prev) => prev.filter((item) => item.id !== batchToDelete.id));
+      setChickenData((prev) =>
+        prev.filter((item) => item.id !== batchToDelete.id),
+      );
       logStep("Profiles chicken batch deleted", {
         farmId: activeFarm.id,
         batchNo: batchToDelete.id,
       });
       setBatchToDelete(null);
     } catch (error) {
-      Alert.alert(
-        "Delete failed",
-        "Unable to delete this batch right now.",
-      );
+      Alert.alert("Delete failed", "Unable to delete this batch right now.");
       logError("Profiles chicken batch delete failed", error, {
         farmId: activeFarm.id,
         batchNo: batchToDelete.id,
@@ -711,14 +811,18 @@ export default function ProfilesScreen() {
               </Text>
             ) : null}
             {parentChickenBatches.map((item) => {
-              const eggSummary = chickenEggSummaries[item.id.trim().toLowerCase()] ?? {
+              const eggSummary = chickenEggSummaries[
+                item.id.trim().toLowerCase()
+              ] ?? {
                 batchCount: 0,
                 totalEggs: 0,
                 hatched: 0,
                 unhatched: 0,
                 damaged: 0,
               };
-              const chickSummary = chickenSubBatchSummaries[item.id.trim().toLowerCase()] ?? {
+              const chickSummary = chickenSubBatchSummaries[
+                item.id.trim().toLowerCase()
+              ] ?? {
                 batchCount: 0,
                 chicks: 0,
               };
@@ -833,7 +937,9 @@ export default function ProfilesScreen() {
                       </View>
                       <View style={styles.metricChip}>
                         <Text style={styles.metricChipLabel}>Males</Text>
-                        <Text style={styles.metricChipValue}>{item.maleCount}</Text>
+                        <Text style={styles.metricChipValue}>
+                          {item.maleCount}
+                        </Text>
                       </View>
                       <View style={styles.metricChip}>
                         <Text style={styles.metricChipLabel}>Age</Text>
@@ -876,7 +982,9 @@ export default function ProfilesScreen() {
                         {item.notes.map((note) => (
                           <View key={note.id} style={styles.noteSummaryCard}>
                             <Text style={styles.noteSummaryLabel}>Note:</Text>
-                            <Text style={styles.noteSummaryText}>{note.text}</Text>
+                            <Text style={styles.noteSummaryText}>
+                              {note.text}
+                            </Text>
                             <Text style={styles.noteSummaryMeta}>
                               {new Date(note.createdAt).toLocaleString()}
                             </Text>
@@ -946,7 +1054,9 @@ export default function ProfilesScreen() {
                             },
                           ]}
                         />
-                        <Text style={styles.colorPillText}>{item.colorName}</Text>
+                        <Text style={styles.colorPillText}>
+                          {item.colorName}
+                        </Text>
                       </View>
                     </View>
                   </View>
@@ -1085,7 +1195,11 @@ export default function ProfilesScreen() {
                           }))
                         }
                         keyboardType="number-pad"
-                        style={styles.modalInput}
+                        editable={sexingEligible}
+                        style={[
+                          styles.modalInput,
+                          !sexingEligible && styles.modalInputDisabled,
+                        ]}
                       />
                     </View>
                     <View style={styles.halfInput}>
@@ -1099,7 +1213,11 @@ export default function ProfilesScreen() {
                           }))
                         }
                         keyboardType="number-pad"
-                        style={styles.modalInput}
+                        editable={sexingEligible}
+                        style={[
+                          styles.modalInput,
+                          !sexingEligible && styles.modalInputDisabled,
+                        ]}
                       />
                     </View>
                   </View>
@@ -1167,6 +1285,28 @@ export default function ProfilesScreen() {
                   </View>
                   <Text style={styles.ageLimitHint}>Minimum: 2 weeks</Text>
 
+                  {sexingEligible ? (
+                    <Pressable
+                      onPress={() => setSexScannerOpen(true)}
+                      style={styles.sexCameraButton}
+                      accessibilityRole="button"
+                      accessibilityLabel="Open camera sexing"
+                    >
+                      <MaterialCommunityIcons
+                        name="gender-male-female"
+                        size={20}
+                        color="#FFFFFF"
+                      />
+                      <Text style={styles.sexCameraButtonText}>
+                        Camera Sexing
+                      </Text>
+                    </Pressable>
+                  ) : (
+                    <Text style={styles.sexingAgeHint}>
+                      Male, female, and camera sexing are available at 9 weeks.
+                    </Text>
+                  )}
+
                   <View style={styles.modalActions}>
                     <Pressable
                       onPress={closeEdit}
@@ -1190,6 +1330,112 @@ export default function ProfilesScreen() {
         </KeyboardAvoidingView>
       </Modal>
 
+      <Modal
+        visible={sexScannerOpen}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        statusBarTranslucent
+        navigationBarTranslucent
+        onRequestClose={closeSexScanner}
+      >
+        <View style={styles.sexCameraScreen}>
+          <StatusBar style="light" />
+          {isScanningSex && capturedSexPhotoUri ? (
+            <View style={styles.sexScanLoadingOverlay}>
+              <Text style={styles.sexScanLoadingText}>Scanning sex...</Text>
+              <Text style={styles.sexScanLoadingSubtitle}>
+                Comparing cock and hen confidence
+              </Text>
+            </View>
+          ) : (
+            <>
+              <CameraViewport
+                ref={sexCameraRef}
+                active={sexScannerOpen && !isScanningSex}
+                enableTorch={sexTorchEnabled}
+                zoom={sexZoomLevel}
+                onReadyChange={setSexCameraReady}
+              />
+              <View style={styles.sexCameraOverlay} pointerEvents="box-none">
+                <View
+                  style={[
+                    styles.sexCameraHeader,
+                    { paddingTop: insets.top + 12 },
+                  ]}
+                >
+                  <View style={styles.sexCameraTitleWrap}>
+                    <Text style={styles.sexCameraTitle}>Camera Sexing</Text>
+                    <Text style={styles.sexCameraSubtitle}>
+                      Frame the chicken clearly, then capture to classify sex.
+                    </Text>
+                  </View>
+                  <Pressable
+                    onPress={() => setSexTorchEnabled((value) => !value)}
+                    style={styles.sexCameraIconButton}
+                    accessibilityRole="button"
+                    accessibilityLabel="Toggle camera flash"
+                  >
+                    <MaterialCommunityIcons
+                      name={sexTorchEnabled ? "flash" : "flash-off"}
+                      size={20}
+                      color={
+                        sexTorchEnabled
+                          ? ChickIntelPalette.green1
+                          : ChickIntelPalette.gray1
+                      }
+                    />
+                  </Pressable>
+                  <Pressable
+                    onPress={closeSexScanner}
+                    style={styles.sexCameraIconButton}
+                    accessibilityRole="button"
+                    accessibilityLabel="Close camera sexing"
+                  >
+                    <MaterialCommunityIcons
+                      name="close"
+                      size={20}
+                      color={ChickIntelPalette.gray1}
+                    />
+                  </Pressable>
+                </View>
+                <View style={styles.sexViewfinderArea}>
+                  <ViewfinderOverlay size={Math.min(width - 64, 300)} />
+                </View>
+                <View style={styles.sexCameraBottom}>
+                  <View style={styles.sexZoomRow}>
+                    <MaterialCommunityIcons
+                      name="magnify-minus-outline"
+                      size={16}
+                      color="#FFF"
+                    />
+                    <Slider
+                      style={styles.sexZoomSlider}
+                      minimumValue={0}
+                      maximumValue={0.7}
+                      value={sexZoomLevel}
+                      step={0.01}
+                      onValueChange={setSexZoomLevel}
+                      minimumTrackTintColor={ChickIntelPalette.green1}
+                      maximumTrackTintColor="rgba(255,255,255,0.35)"
+                      thumbTintColor={ChickIntelPalette.green2}
+                    />
+                    <MaterialCommunityIcons
+                      name="magnify-plus-outline"
+                      size={16}
+                      color="#FFF"
+                    />
+                  </View>
+                  <ScannerShutter
+                    onPress={handleEditSexCapture}
+                    disabled={!sexCameraReady}
+                  />
+                </View>
+              </View>
+            </>
+          )}
+        </View>
+      </Modal>
+
       <Modal visible={eggEditVisible} animationType="fade" transparent>
         <KeyboardAvoidingView
           style={styles.modalKeyboardArea}
@@ -1203,12 +1449,12 @@ export default function ProfilesScreen() {
               keyboardDismissMode="on-drag"
               showsVerticalScrollIndicator={false}
             >
-              <View style={styles.modalCard}>
+              <View style={styles.eggModalCard}>
                 <View style={styles.modalHeader}>
                   <View style={styles.modalHeaderTitleRow}>
                     <View style={styles.modalHeaderIconBadge}>
                       <MaterialCommunityIcons
-                        name="pencil-outline"
+                        name="egg-outline"
                         size={20}
                         color="#FFFFFF"
                       />
@@ -1221,7 +1467,7 @@ export default function ProfilesScreen() {
                   </Text>
                 </View>
 
-                <View style={styles.modalBody}>
+                <View style={styles.eggModalBody}>
                   <Text style={styles.modalLabel}>Batch No.</Text>
                   <TextInput
                     value={eggForm.batchNo}
@@ -1369,8 +1615,18 @@ export default function ProfilesScreen() {
         title="Delete Chicken Batch?"
         subtitle="This action cannot be undone."
         itemBadge="CHICKEN BATCH"
-        itemTitle={batchToDelete?.breed ? batchToDelete.breed : (batchToDelete?.id ? `Batch #${batchToDelete.id}` : undefined)}
-        itemSubtitle={batchToDelete ? `${batchToDelete.totalCount} birds ΓÇó ${formatBatchDateStamp(batchToDelete.createdAt, batchToDelete.updatedAt)}` : undefined}
+        itemTitle={
+          batchToDelete?.breed
+            ? batchToDelete.breed
+            : batchToDelete?.id
+              ? `Batch #${batchToDelete.id}`
+              : undefined
+        }
+        itemSubtitle={
+          batchToDelete
+            ? `${batchToDelete.totalCount} birds ΓÇó ${formatBatchDateStamp(batchToDelete.createdAt, batchToDelete.updatedAt)}`
+            : undefined
+        }
         message="Are you sure you want to delete this chicken batch? This batch will be moved to deleted history."
         confirmLabel="Delete"
         isDeleting={isDeletingBatch}
@@ -1701,6 +1957,89 @@ const styles = StyleSheet.create({
   modalKeyboardArea: {
     flex: 1,
   },
+  sexCameraScreen: {
+    flex: 1,
+    backgroundColor: "#000000",
+  },
+  sexCameraOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    flex: 1,
+    justifyContent: "space-between",
+  },
+  sexCameraHeader: {
+    paddingHorizontal: moderateScale(16),
+    paddingBottom: verticalScale(12),
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+  },
+  sexCameraTitleWrap: {
+    flex: 1,
+    gap: 3,
+  },
+  sexCameraTitle: {
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(20),
+    fontWeight: "800",
+    color: "#FFFFFF",
+  },
+  sexCameraSubtitle: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12),
+    lineHeight: 16,
+    color: "rgba(255,255,255,0.86)",
+  },
+  sexCameraIconButton: {
+    width: scale(40),
+    height: verticalScale(40),
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.92)",
+  },
+  sexViewfinderArea: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  sexCameraBottom: {
+    alignItems: "center",
+    paddingHorizontal: moderateScale(18),
+    paddingBottom: verticalScale(24),
+    gap: 12,
+  },
+  sexZoomRow: {
+    width: "100%",
+    maxWidth: scale(360),
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  sexZoomSlider: {
+    flex: 1,
+    height: verticalScale(32),
+  },
+  sexScanLoadingOverlay: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(0,0,0,0.86)",
+    padding: moderateScale(24),
+  },
+  sexScanLoadingText: {
+    marginTop: verticalScale(14),
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(20),
+    fontWeight: "800",
+    color: "#FFFFFF",
+  },
+  sexScanLoadingSubtitle: {
+    marginTop: verticalScale(6),
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(13),
+    color: "rgba(255,255,255,0.78)",
+    textAlign: "center",
+  },
   modalScrollContent: {
     flexGrow: 1,
     justifyContent: "center",
@@ -1708,6 +2047,18 @@ const styles = StyleSheet.create({
   modalCard: {
     width: "100%",
     maxWidth: scale(500),
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
+    shadowOffset: { width: scale(0), height: verticalScale(6) },
+    elevation: 8,
+  },
+  eggModalCard: {
+    width: "100%",
+    maxWidth: scale(440),
     backgroundColor: "#FFFFFF",
     borderRadius: 20,
     overflow: "hidden",
@@ -1751,6 +2102,12 @@ const styles = StyleSheet.create({
     padding: moderateScale(18),
     gap: 12,
   },
+  eggModalBody: {
+    paddingHorizontal: moderateScale(16),
+    paddingTop: verticalScale(14),
+    paddingBottom: verticalScale(16),
+    gap: 9,
+  },
   modalLabel: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(12),
@@ -1769,6 +2126,10 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(14),
     color: ChickIntelPalette.gray1,
     backgroundColor: "#F9FAFA",
+  },
+  modalInputDisabled: {
+    color: "#9CA3AF",
+    backgroundColor: "#EEF1F0",
   },
   modalSelect: {
     minHeight: verticalScale(44),
@@ -1798,6 +2159,28 @@ const styles = StyleSheet.create({
     lineHeight: 14,
     fontWeight: "600",
     color: ChickIntelPalette.green1,
+  },
+  sexingAgeHint: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(11),
+    lineHeight: 15,
+    fontWeight: "600",
+    color: ChickIntelPalette.textMuted,
+  },
+  sexCameraButton: {
+    minHeight: verticalScale(44),
+    borderRadius: 12,
+    backgroundColor: ChickIntelPalette.green1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  sexCameraButtonText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(14),
+    fontWeight: "800",
+    color: "#FFFFFF",
   },
   modalSelectText: {
     fontFamily: ChickFont.sans,

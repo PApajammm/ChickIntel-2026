@@ -359,7 +359,11 @@ export default function ScannerScreen() {
 
         <View
           pointerEvents="box-none"
-          style={[styles.viewfinderRegion, isCompactScreen && { gap: 6 }]}
+          style={[
+            styles.viewfinderRegion,
+            isGuestExperience && styles.viewfinderRegionGuest,
+            isCompactScreen && { gap: 6 },
+          ]}
         >
           <ViewfinderOverlay size={viewfinderSize} />
         </View>
@@ -642,9 +646,13 @@ const styles = StyleSheet.create({
   viewfinderRegion: {
     flex: 1,
     alignItems: "center",
-    justifyContent: "flex-end",
-    paddingBottom: verticalScale(8),
+    justifyContent: "center",
+    paddingBottom: 0,
     gap: 14,
+  },
+  viewfinderRegionGuest: {
+    justifyContent: "center",
+    paddingBottom: 0,
   },
   captureTipCard: {
     width: "80%",
