@@ -1,6 +1,7 @@
 import BackgroundGradient from "@/assets_imported/background-gradient.svg";
 import { BlurCard } from "@/components/ui/blur-card";
 import { ChickDatePickerModal } from "@/components/ui/chick-date-picker-modal";
+import { DeleteConfirmationModal } from "@/components/ui/delete-confirmation-modal";
 import {
     ChickSelectionModal,
     ChickSelectRow,
@@ -370,6 +371,9 @@ export default function InventoryScreen() {
   const [selectedTab, setSelectedTab] = useState<InventoryTabId>("equipment");
   const [inventoryError, setInventoryError] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  const [itemToDelete, setItemToDelete] = useState<InventoryItem | null>(null);
+  const [isDeletingItem, setIsDeletingItem] = useState(false);
 
   // Selection Modal State for Table Rows & Form Dropdowns
   const [selectionModal, setSelectionModal] = useState<{
@@ -1066,34 +1070,7 @@ export default function InventoryScreen() {
                         )}
                         <TouchableOpacity
                           style={styles.actionBtn}
-                          onPress={async () => {
-                            if (!activeFarm?.id) return;
-                            Alert.alert(
-                              "Delete inventory item?",
-                              `Remove ${item.name} from inventory? This action cannot be undone.`,
-                              [
-                                { text: "Cancel", style: "cancel" },
-                                {
-                                  text: "Delete",
-                                  style: "destructive",
-                                  onPress: async () => {
-                                    try {
-                                      await removeInventoryItem(item.id);
-                                    } catch (error) {
-                                      logError(
-                                        "Inventory delete failed",
-                                        error,
-                                        {
-                                          farmId: activeFarm.id,
-                                          itemId: item.id,
-                                        },
-                                      );
-                                    }
-                                  },
-                                },
-                              ],
-                            );
-                          }}
+                          onPress={() => setItemToDelete(item)}
                           accessibilityLabel="Discard expired supply"
                         >
                           <MaterialCommunityIcons
@@ -2069,6 +2046,37 @@ export default function InventoryScreen() {
         onClose={() =>
           setSelectionModal((prev) => ({ ...prev, visible: false }))
         }
+      />
+
+      <DeleteConfirmationModal
+        visible={Boolean(itemToDelete)}
+        title="Delete Inventory Item?"
+        subtitle="This action cannot be undone."
+        itemBadge={itemToDelete?.type?.toUpperCase() || "INVENTORY ITEM"}
+        itemTitle={itemToDelete?.name}
+        itemSubtitle={itemToDelete ? `${formatQuantityValue(itemToDelete.qty ?? 0)} ${itemToDelete.unit || ""}` : undefined}
+        message="Are you sure you want to remove this item from your inventory? This action cannot be undone."
+        confirmLabel="Delete"
+        isDeleting={isDeletingItem}
+        onConfirm={async () => {
+          if (!itemToDelete || !activeFarm?.id) return;
+          setIsDeletingItem(true);
+          try {
+            await removeInventoryItem(itemToDelete.id);
+            setItemToDelete(null);
+          } catch (error) {
+            logError("Inventory delete failed", error, {
+              farmId: activeFarm.id,
+              itemId: itemToDelete.id,
+            });
+            Alert.alert("Delete failed", "Unable to delete this inventory item right now.");
+          } finally {
+            setIsDeletingItem(false);
+          }
+        }}
+        onCancel={() => {
+          if (!isDeletingItem) setItemToDelete(null);
+        }}
       />
     </View>
   );
