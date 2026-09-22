@@ -774,12 +774,12 @@ export default function ScheduleScreen() {
     ? "rgba(202, 227, 221, 0.2)"
     : "rgba(255, 255, 255, 0.65)";
 
-  const [calendarViewMode, setCalendarViewMode] = useState<"week" | "month">(
-    "month",
-  );
+  const [calendarViewMode, setCalendarViewMode] = useState<
+    "today" | "week" | "month"
+  >("month");
 
   const calendarRows = useMemo(() => {
-    if (calendarViewMode === "week") {
+    if (calendarViewMode === "today" || calendarViewMode === "week") {
       const baseDate = selectedDate || viewDate;
       const dayOfWeek = baseDate.getDay();
       const startOfWeek = new Date(
@@ -849,30 +849,64 @@ export default function ScheduleScreen() {
   }, [calendarViewMode, selectedDate, viewDate]);
 
   const calendarNavTitle = useMemo(() => {
-    if (calendarViewMode === "month") {
-      return `${MONTHS[viewDate.getMonth()]} ${viewDate.getFullYear()}`;
+    if (calendarViewMode === "today") {
+      const baseDate = selectedDate || viewDate;
+      const isCurrentDay =
+        formatScheduleDateKey(baseDate) ===
+        formatScheduleDateKey(new Date());
+      if (isCurrentDay) {
+        return `Today, ${MONTHS_SHORT[baseDate.getMonth()]} ${baseDate.getDate()}, ${baseDate.getFullYear()}`;
+      }
+      return `${baseDate.toLocaleDateString("en-US", { weekday: "short" })}, ${MONTHS_SHORT[baseDate.getMonth()]} ${baseDate.getDate()}, ${baseDate.getFullYear()}`;
     }
-    const baseDate = selectedDate || viewDate;
-    const dayOfWeek = baseDate.getDay();
-    const startOfWeek = new Date(
-      baseDate.getFullYear(),
-      baseDate.getMonth(),
-      baseDate.getDate() - dayOfWeek,
-    );
-    const endOfWeek = new Date(
-      startOfWeek.getFullYear(),
-      startOfWeek.getMonth(),
-      startOfWeek.getDate() + 6,
-    );
+    if (calendarViewMode === "week") {
+      const baseDate = selectedDate || viewDate;
+      const dayOfWeek = baseDate.getDay();
+      const startOfWeek = new Date(
+        baseDate.getFullYear(),
+        baseDate.getMonth(),
+        baseDate.getDate() - dayOfWeek,
+      );
+      const endOfWeek = new Date(
+        startOfWeek.getFullYear(),
+        startOfWeek.getMonth(),
+        startOfWeek.getDate() + 6,
+      );
 
-    if (startOfWeek.getMonth() === endOfWeek.getMonth()) {
-      return `${MONTHS[startOfWeek.getMonth()]} ${startOfWeek.getDate()} - ${endOfWeek.getDate()}, ${startOfWeek.getFullYear()}`;
+      const firstDayOfMonth = new Date(
+        startOfWeek.getFullYear(),
+        startOfWeek.getMonth(),
+        1,
+      ).getDay();
+      const weekNum = Math.min(
+        5,
+        Math.max(1, Math.ceil((startOfWeek.getDate() + firstDayOfMonth) / 7)),
+      );
+
+      const startMonth = MONTHS_SHORT[startOfWeek.getMonth()];
+      const endMonth = MONTHS_SHORT[endOfWeek.getMonth()];
+      const dateRangeStr =
+        startOfWeek.getMonth() === endOfWeek.getMonth()
+          ? `${startMonth} ${startOfWeek.getDate()} - ${endOfWeek.getDate()}, ${startOfWeek.getFullYear()}`
+          : `${startMonth} ${startOfWeek.getDate()} - ${endMonth} ${endOfWeek.getDate()}, ${endOfWeek.getFullYear()}`;
+
+      return `Week ${weekNum} (${dateRangeStr})`;
     }
-    return `${MONTHS_SHORT[startOfWeek.getMonth()]} ${startOfWeek.getDate()} - ${MONTHS_SHORT[endOfWeek.getMonth()]} ${endOfWeek.getDate()}, ${endOfWeek.getFullYear()}`;
+    return `${MONTHS[viewDate.getMonth()]} ${viewDate.getFullYear()}`;
   }, [calendarViewMode, selectedDate, viewDate]);
 
   const handleNavigateCalendar = (delta: number) => {
-    if (calendarViewMode === "week") {
+    if (calendarViewMode === "today") {
+      const baseDate = selectedDate || viewDate;
+      const nextDate = new Date(
+        baseDate.getFullYear(),
+        baseDate.getMonth(),
+        baseDate.getDate() + delta,
+      );
+      setSelectedDate(nextDate);
+      setViewDate(new Date(nextDate.getFullYear(), nextDate.getMonth(), 1));
+      setPreviewBaseDate(new Date(nextDate));
+    } else if (calendarViewMode === "week") {
       const baseDate = selectedDate || viewDate;
       const nextDate = new Date(
         baseDate.getFullYear(),
@@ -993,6 +1027,106 @@ export default function ScheduleScreen() {
 
   const displayedPreviewTasks =
     previewTimeframe === "Weekly" ? currentWeeklyTasks : currentMonthTasks;
+
+  const currentViewOccurrences = useMemo(() => {
+    if (calendarViewMode === "today") {
+      return currentDayTasks.map((task) => ({
+        task,
+        dateKey: selectedKey,
+        date: selectedDate,
+      }));
+    }
+
+    if (calendarViewMode === "week") {
+      const baseDate = selectedDate || viewDate;
+      const dayOfWeek = baseDate.getDay();
+      const startOfWeek = new Date(
+        baseDate.getFullYear(),
+        baseDate.getMonth(),
+        baseDate.getDate() - dayOfWeek,
+      );
+      startOfWeek.setHours(0, 0, 0, 0);
+
+      const endOfWeek = new Date(startOfWeek);
+      endOfWeek.setDate(endOfWeek.getDate() + 6);
+      endOfWeek.setHours(23, 59, 59, 999);
+
+      const occurrences: Array<{ task: ScheduleTask; dateKey: string; date: Date }> = [];
+      allTasks.forEach((task) => {
+        const cur = new Date(startOfWeek);
+        while (cur <= endOfWeek) {
+          if (
+            scheduleTaskMatchesDate(task, cur) &&
+            !isExcludedOccurrence(task, cur, occurrenceExclusions)
+          ) {
+            occurrences.push({
+              task,
+              dateKey: formatScheduleDateKey(cur),
+              date: new Date(cur),
+            });
+          }
+          cur.setDate(cur.getDate() + 1);
+        }
+      });
+
+      return occurrences.sort((a, b) => {
+        if (a.dateKey !== b.dateKey) {
+          return a.dateKey.localeCompare(b.dateKey);
+        }
+        return a.task.time.localeCompare(b.task.time);
+      });
+    }
+
+    // month
+    const viewYear = viewDate.getFullYear();
+    const viewMonth = viewDate.getMonth();
+    const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+
+    const occurrences: Array<{ task: ScheduleTask; dateKey: string; date: Date }> = [];
+    allTasks.forEach((task) => {
+      for (let d = 1; d <= daysInMonth; d++) {
+        const testDate = new Date(viewYear, viewMonth, d);
+        if (
+          scheduleTaskMatchesDate(task, testDate) &&
+          !isExcludedOccurrence(task, testDate, occurrenceExclusions)
+        ) {
+          occurrences.push({
+            task,
+            dateKey: formatScheduleDateKey(testDate),
+            date: testDate,
+          });
+        }
+      }
+    });
+
+    return occurrences.sort((a, b) => {
+      if (a.dateKey !== b.dateKey) {
+        return a.dateKey.localeCompare(b.dateKey);
+      }
+      return a.task.time.localeCompare(b.task.time);
+    });
+  }, [
+    allTasks,
+    calendarViewMode,
+    currentDayTasks,
+    occurrenceExclusions,
+    selectedDate,
+    selectedKey,
+    viewDate,
+  ]);
+
+
+  const taskPreviewTitle = useMemo(() => {
+    if (calendarViewMode === "today") return "TODAY TASK PREVIEW";
+    if (calendarViewMode === "week") return "THIS WEEK TASK PREVIEW";
+    return "THIS MONTH TASK PREVIEW";
+  }, [calendarViewMode]);
+
+  const emptyViewText = useMemo(() => {
+    if (calendarViewMode === "today") return "No events today";
+    if (calendarViewMode === "week") return "No events scheduled for this week";
+    return `No events scheduled for ${MONTHS[viewDate.getMonth()]}`;
+  }, [calendarViewMode, viewDate]);
 
   useEffect(() => {
     void scheduleTasksNotifications(allTasks);
@@ -1388,9 +1522,53 @@ export default function ScheduleScreen() {
               ]}
             >
               <View style={styles.monthCol}>
-                {/* Mode Selector Tab: Week / Month */}
+                {/* Mode Selector Tab: Today / Week / Month */}
                 <View style={styles.calendarModeSelectorWrap}>
                   <View style={styles.calendarModeSelector}>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setCalendarViewMode("today");
+                        const today = new Date();
+                        setSelectedDate(today);
+                        setViewDate(
+                          new Date(
+                            today.getFullYear(),
+                            today.getMonth(),
+                            1,
+                          ),
+                        );
+                      }}
+                      style={[
+                        styles.calendarModeTab,
+                        calendarViewMode === "today" &&
+                          styles.calendarModeTabActive,
+                      ]}
+                      activeOpacity={0.8}
+                      accessibilityRole="tab"
+                      accessibilityState={{
+                        selected: calendarViewMode === "today",
+                      }}
+                    >
+                      <MaterialCommunityIcons
+                        name="calendar-today"
+                        size={15}
+                        color={
+                          calendarViewMode === "today"
+                            ? "#FFFFFF"
+                            : ChickIntelPalette.gray2
+                        }
+                      />
+                      <Text
+                        style={[
+                          styles.calendarModeTabText,
+                          calendarViewMode === "today" &&
+                            styles.calendarModeTabTextActive,
+                        ]}
+                      >
+                        Today
+                      </Text>
+                    </TouchableOpacity>
+
                     <TouchableOpacity
                       onPress={() => setCalendarViewMode("week")}
                       style={[
@@ -1468,116 +1646,249 @@ export default function ScheduleScreen() {
                   </View>
                 </View>
 
-                {/* Calendar Navigation Row */}
-                <View style={styles.monthNavRow}>
-                  <Pressable
-                    onPress={() => handleNavigateCalendar(-1)}
-                    hitSlop={15}
-                    accessibilityRole="button"
-                    accessibilityLabel={
-                      calendarViewMode === "week"
-                        ? "Previous week"
-                        : "Previous month"
-                    }
-                  >
-                    <MaterialCommunityIcons
-                      name="chevron-left"
-                      size={28}
-                      color={ChickIntelPalette.green1}
-                    />
-                  </Pressable>
-                  <Text
-                    style={[
-                      styles.monthTitle,
-                      {
-                        fontSize:
-                          calendarViewMode === "week"
-                            ? responsiveFontSize(15)
-                            : responsiveMonthSize,
-                      },
-                    ]}
-                    numberOfLines={1}
-                  >
-                    {calendarNavTitle}
-                  </Text>
-                  <Pressable
-                    onPress={() => handleNavigateCalendar(1)}
-                    hitSlop={15}
-                    accessibilityRole="button"
-                    accessibilityLabel={
-                      calendarViewMode === "week" ? "Next week" : "Next month"
-                    }
-                  >
-                    <MaterialCommunityIcons
-                      name="chevron-right"
-                      size={28}
-                      color={ChickIntelPalette.green1}
-                    />
-                  </Pressable>
-                </View>
+                {/* Calendar Navigation Row (Matching Preview Header Row Style) */}
+                <View style={styles.previewHeaderRow}>
+                  <View style={styles.previewNavHeaderCenter}>
+                    <TouchableOpacity
+                      onPress={() => handleNavigateCalendar(-1)}
+                      style={styles.previewNavBtn}
+                      hitSlop={10}
+                      activeOpacity={0.7}
+                      accessibilityRole="button"
+                      accessibilityLabel={
+                        calendarViewMode === "today"
+                          ? "Previous day"
+                          : calendarViewMode === "week"
+                            ? "Previous week"
+                            : "Previous month"
+                      }
+                    >
+                      <MaterialCommunityIcons
+                        name="chevron-left"
+                        size={18}
+                        color={ChickIntelPalette.green1}
+                      />
+                    </TouchableOpacity>
 
-                <View style={styles.weekRow}>
-                  {DAYS_OF_WEEK.map((d, index) => (
-                    <Text key={`dow-${d}-${index}`} style={styles.weekLabel}>
-                      {d}
+                    <View style={styles.previewTitleStack}>
+                      <MaterialCommunityIcons
+                        name={
+                          calendarViewMode === "today"
+                            ? "calendar-today"
+                            : calendarViewMode === "week"
+                              ? "calendar-week-outline"
+                              : "calendar-month-outline"
+                        }
+                        size={16}
+                        color={ChickIntelPalette.green1}
+                      />
+                      <Text style={styles.previewHeaderTitle} numberOfLines={1}>
+                        {calendarNavTitle}
+                      </Text>
+                    </View>
+
+                    <TouchableOpacity
+                      onPress={() => handleNavigateCalendar(1)}
+                      style={styles.previewNavBtn}
+                      hitSlop={10}
+                      activeOpacity={0.7}
+                      accessibilityRole="button"
+                      accessibilityLabel={
+                        calendarViewMode === "today"
+                          ? "Next day"
+                          : calendarViewMode === "week"
+                            ? "Next week"
+                            : "Next month"
+                      }
+                    >
+                      <MaterialCommunityIcons
+                        name="chevron-right"
+                        size={18}
+                        color={ChickIntelPalette.green1}
+                      />
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={styles.previewCountBadge}>
+                    <Text style={styles.previewCountText}>
+                      {currentViewOccurrences.length} task
+                      {currentViewOccurrences.length === 1 ? "" : "s"}
                     </Text>
-                  ))}
+                  </View>
                 </View>
 
-                {calendarRows.map((row, ridx) => (
-                  <View key={`row-${ridx}`} style={styles.gridRow}>
-                    {row.map((slot, sidx) => {
-                      const dateKey = formatScheduleDateKey(slot.date);
-                      const isSelected = dateKey === selectedKey;
-                      const taskColors = getTaskColorsForDate(
-                        allTasks,
-                        slot.date,
-                        occurrenceExclusions,
-                      );
-
-                      return (
-                        <Pressable
-                          key={`slot-${sidx}`}
-                          onPress={() => handleDateSelect(slot.date)}
-                          style={[
-                            styles.gridSlot,
-                            isSelected && styles.selectedSlot,
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.dayText,
-                              !slot.current && styles.mutedDayText,
-                              isSelected && styles.selectedDayText,
-                            ]}
-                          >
-                            {slot.day}
+                {calendarViewMode === "today" ? (
+                  <View style={styles.todayHeroContainer}>
+                    <Pressable
+                      onPress={() => handleDateSelect(selectedDate)}
+                      style={styles.todayHeroCard}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Selected date ${selectedDate.toDateString()}`}
+                    >
+                      <View style={styles.todayHeroTopRow}>
+                        <View style={styles.todayBadge}>
+                          <MaterialCommunityIcons
+                            name="calendar-check"
+                            size={13}
+                            color={ChickIntelPalette.green1}
+                          />
+                          <Text style={styles.todayBadgeText}>
+                            {formatScheduleDateKey(selectedDate) ===
+                            formatScheduleDateKey(new Date())
+                              ? "TODAY'S SCHEDULE"
+                              : "SELECTED DATE"}
                           </Text>
-                          {taskColors.length > 0 && (
-                            <View style={styles.taskIndicatorRow}>
-                              {taskColors.map((color, index) => (
+                        </View>
+                        <Text style={styles.todayWeekdayLabel}>
+                          {selectedDate
+                            .toLocaleDateString("en-US", { weekday: "long" })
+                            .toUpperCase()}
+                        </Text>
+                      </View>
+
+                      <View style={styles.todayHeroMainRow}>
+                        <View style={styles.todayHeroDayWrap}>
+                          <Text style={styles.todayHeroDayNumber}>
+                            {selectedDate.getDate()}
+                          </Text>
+                        </View>
+                        <View style={styles.todayHeroMonthWrap}>
+                          <Text style={styles.todayHeroMonthText}>
+                            {MONTHS[selectedDate.getMonth()]}
+                          </Text>
+                          <Text style={styles.todayHeroYearText}>
+                            {selectedDate.getFullYear()}
+                          </Text>
+                        </View>
+                      </View>
+
+                      <View style={styles.todayHeroFooterRow}>
+                        {currentDayTasks.length > 0 ? (
+                          <View style={styles.todayHeroFooterContent}>
+                            <View style={styles.todayHeroDotsRow}>
+                              {getTaskColorsForDate(
+                                allTasks,
+                                selectedDate,
+                                occurrenceExclusions,
+                              ).map((color, index) => (
                                 <View
-                                  key={`${dateKey}-${color}-${index}`}
+                                  key={`today-ind-${color}-${index}`}
                                   style={[
-                                    styles.taskIndicator,
-                                    isSelected && styles.selectedIndicator,
-                                    {
-                                      backgroundColor: color,
-                                    },
+                                    styles.todayHeroDot,
+                                    { backgroundColor: color },
                                   ]}
                                 />
                               ))}
                             </View>
-                          )}
-                        </Pressable>
-                      );
-                    })}
+                            <Text style={styles.todayHeroTaskText}>
+                              {currentDayTasks.length} task
+                              {currentDayTasks.length === 1 ? "" : "s"} scheduled
+                            </Text>
+                          </View>
+                        ) : (
+                          <View style={styles.todayHeroFooterContent}>
+                            <MaterialCommunityIcons
+                              name="check-circle-outline"
+                              size={15}
+                              color={ChickIntelPalette.green1}
+                            />
+                            <Text style={styles.todayHeroFooterTextMuted}>
+                              No tasks scheduled for this day
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                    </Pressable>
                   </View>
-                ))}
+                ) : (
+                  <>
+                    <View style={styles.weekRow}>
+                      {DAYS_OF_WEEK.map((d, index) => (
+                        <Text
+                          key={`dow-${d}-${index}`}
+                          style={styles.weekLabel}
+                        >
+                          {d}
+                        </Text>
+                      ))}
+                    </View>
+
+                    {calendarRows.map((row, ridx) => (
+                      <View key={`row-${ridx}`} style={styles.gridRow}>
+                        {row.map((slot, sidx) => {
+                          const dateKey = formatScheduleDateKey(slot.date);
+                          const isSelected = dateKey === selectedKey;
+                          const isTodaySlot =
+                            formatScheduleDateKey(slot.date) ===
+                            formatScheduleDateKey(new Date());
+                          const taskColors = getTaskColorsForDate(
+                            allTasks,
+                            slot.date,
+                            occurrenceExclusions,
+                          );
+
+                          return (
+                            <Pressable
+                              key={`slot-${sidx}`}
+                              onPress={() => handleDateSelect(slot.date)}
+                              style={[
+                                styles.gridSlot,
+                                isTodaySlot && !isSelected && styles.todaySlot,
+                                isSelected && styles.selectedSlot,
+                              ]}
+                            >
+                              <Text
+                                style={[
+                                  styles.dayText,
+                                  !slot.current && styles.mutedDayText,
+                                  isTodaySlot && !isSelected && styles.todayDayText,
+                                  isSelected && styles.selectedDayText,
+                                ]}
+                              >
+                                {slot.day}
+                              </Text>
+                              {taskColors.length > 0 && (
+                                <View style={styles.taskIndicatorRow}>
+                                  {taskColors.map((color, index) => (
+                                    <View
+                                      key={`${dateKey}-${color}-${index}`}
+                                      style={[
+                                        styles.taskIndicator,
+                                        isSelected
+                                          ? styles.selectedIndicator
+                                          : { backgroundColor: color },
+                                      ]}
+                                    />
+                                  ))}
+                                </View>
+                              )}
+                            </Pressable>
+                          );
+                        })}
+                      </View>
+                    ))}
+                  </>
+                )}
               </View>
+            </View>
+          </BlurCard>
 
-              <View style={styles.divider} />
-
+          {/* Separate Task Previews Card */}
+          <BlurCard
+            style={[styles.glassCard, { marginTop: 14 }]}
+            borderRadius={10}
+            intensity={16}
+          >
+            <View
+              style={[
+                styles.cardSurface,
+                {
+                  backgroundColor: "rgba(255, 255, 255, 0.95)",
+                  paddingHorizontal: 16,
+                  paddingVertical: 14,
+                },
+              ]}
+            >
               <View style={styles.agendaWrap}>
                 <View style={styles.dayHeadRow}>
                   <Text
@@ -1586,20 +1897,14 @@ export default function ScheduleScreen() {
                       { fontSize: responsiveAgendaSize },
                     ]}
                   >
-                    {selectedDate
-                      .toLocaleDateString("en-US", {
-                        weekday: "long",
-                      })
-                      .toUpperCase()}{" "}
-                    {selectedDate.getDate()}{" "}
-                    {MONTHS[selectedDate.getMonth()].toUpperCase()}
+                    {taskPreviewTitle}
                   </Text>
                   <TouchableOpacity
                     onPress={() => openAddTaskModal(selectedDate)}
                     style={styles.quickAddBtn}
                     activeOpacity={0.8}
                     accessibilityRole="button"
-                    accessibilityLabel="Add scheduled task for selected day"
+                    accessibilityLabel="Add scheduled task"
                   >
                     <MaterialCommunityIcons
                       name="plus"
@@ -1619,29 +1924,29 @@ export default function ScheduleScreen() {
                         Loading schedule...
                       </Text>
                     </View>
-                  ) : currentDayTasks.length > 0 ? (
-                    currentDayTasks.map((task) => {
+                  ) : currentViewOccurrences.length > 0 ? (
+                    currentViewOccurrences.map(({ task, dateKey }) => {
                       const completion = completions.find(
                         (c) =>
                           c.taskId === task.id &&
-                          c.completionDate === selectedKey,
+                          c.completionDate === dateKey,
                       );
                       const statusResult = computeTaskStatus(
                         task,
-                        selectedKey,
+                        dateKey,
                         completion,
                       );
 
                       return (
                         <Pressable
-                          key={task.id}
+                          key={`${task.id}-${dateKey}`}
                           style={styles.taskItem}
                           disabled={!statusResult.isCompleted || !completion}
                           onPress={() => {
                             if (completion) {
                               openCompletionDetails(
                                 task,
-                                selectedKey,
+                                dateKey,
                                 completion,
                               );
                             }
@@ -1661,6 +1966,13 @@ export default function ScheduleScreen() {
                                 <Text style={styles.taskTitle}>
                                   {task.title}
                                 </Text>
+                                {calendarViewMode !== "today" && (
+                                  <View style={styles.dateTag}>
+                                    <Text style={styles.dateTagText}>
+                                      {formatAppDate(dateKey)}
+                                    </Text>
+                                  </View>
+                                )}
                                 <View
                                   style={[
                                     styles.statusBadge,
@@ -1703,7 +2015,7 @@ export default function ScheduleScreen() {
                               {!statusResult.isCompleted ? (
                                 <Pressable
                                   onPress={() =>
-                                    handleMarkComplete(task, selectedKey)
+                                    handleMarkComplete(task, dateKey)
                                   }
                                   style={({ pressed }) => [
                                     styles.completeBtn,
@@ -1729,7 +2041,7 @@ export default function ScheduleScreen() {
                             <Pressable
                               onPress={(event) => {
                                 event.stopPropagation();
-                                confirmDeleteTask(task, selectedKey);
+                                confirmDeleteTask(task, dateKey);
                               }}
                               hitSlop={10}
                               style={styles.deleteTaskBtn}
@@ -1745,267 +2057,10 @@ export default function ScheduleScreen() {
                       );
                     })
                   ) : (
-                    <Text style={styles.noEvents}>No events today</Text>
+                    <Text style={styles.noEvents}>{emptyViewText}</Text>
                   )}
                 </View>
               </View>
-            </View>
-          </BlurCard>
-
-          {/* Tasks Preview Section with Weekly & Monthly Timeframe Filter */}
-          <BlurCard
-            style={[styles.glassCard, { marginTop: 14 }]}
-            borderRadius={10}
-            intensity={16}
-          >
-            <View
-              {...previewPanResponder.panHandlers}
-              style={[
-                styles.cardSurface,
-                {
-                  backgroundColor: "rgba(255, 255, 255, 0.95)",
-                  paddingHorizontal: 16,
-                  paddingVertical: 10,
-                },
-              ]}
-            >
-              {/* Timeframe Filter Bar (Matching Reports Page Design) */}
-              <View style={styles.previewTimeframeBar}>
-                <Text style={styles.previewTimeframeLabel}>TASKS HISTORY</Text>
-                <View style={styles.previewSegmentedContainer}>
-                  {PREVIEW_TIMEFRAME_OPTIONS.map((option) => {
-                    const active = previewTimeframe === option;
-                    return (
-                      <TouchableOpacity
-                        key={option}
-                        onPress={() => setPreviewTimeframe(option)}
-                        activeOpacity={0.8}
-                        style={[
-                          styles.previewSegmentedItem,
-                          active && styles.previewSegmentedItemActive,
-                        ]}
-                      >
-                        <MaterialCommunityIcons
-                          name={
-                            option === "Weekly"
-                              ? "calendar-week"
-                              : "calendar-month"
-                          }
-                          size={14}
-                          color={active ? "#FFF" : ChickIntelPalette.gray2}
-                        />
-                        <Text
-                          style={[
-                            styles.previewSegmentedText,
-                            active && styles.previewSegmentedTextActive,
-                          ]}
-                        >
-                          {option}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
-
-              {/* Preview Navigation Header: Centered [<] Week Range [>] and Counter */}
-              <View style={styles.previewHeaderRow}>
-                <View style={styles.previewNavHeaderCenter}>
-                  <TouchableOpacity
-                    onPress={handlePrevPreview}
-                    style={styles.previewNavBtn}
-                    hitSlop={10}
-                    activeOpacity={0.7}
-                    accessibilityRole="button"
-                    accessibilityLabel={
-                      previewTimeframe === "Weekly"
-                        ? "Previous week"
-                        : "Previous month"
-                    }
-                  >
-                    <MaterialCommunityIcons
-                      name="chevron-left"
-                      size={18}
-                      color={ChickIntelPalette.green1}
-                    />
-                  </TouchableOpacity>
-
-                  <View style={styles.previewTitleStack}>
-                    <MaterialCommunityIcons
-                      name={
-                        previewTimeframe === "Weekly"
-                          ? "calendar-week-outline"
-                          : "calendar-month-outline"
-                      }
-                      size={16}
-                      color={ChickIntelPalette.green1}
-                    />
-                    <Text style={styles.previewHeaderTitle} numberOfLines={1}>
-                      {previewTimeframeTitle}
-                    </Text>
-                  </View>
-
-                  <TouchableOpacity
-                    onPress={handleNextPreview}
-                    style={styles.previewNavBtn}
-                    hitSlop={10}
-                    activeOpacity={0.7}
-                    accessibilityRole="button"
-                    accessibilityLabel={
-                      previewTimeframe === "Weekly" ? "Next week" : "Next month"
-                    }
-                  >
-                    <MaterialCommunityIcons
-                      name="chevron-right"
-                      size={18}
-                      color={ChickIntelPalette.green1}
-                    />
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.previewCountBadge}>
-                  <Text style={styles.previewCountText}>
-                    {displayedPreviewTasks.length} task
-                    {displayedPreviewTasks.length === 1 ? "" : "s"}
-                  </Text>
-                </View>
-              </View>
-
-              {displayedPreviewTasks.length > 0 ? (
-                <View style={styles.previewList}>
-                  {displayedPreviewTasks.map((task) => {
-                    const completion = completions.find(
-                      (c) =>
-                        c.taskId === task.id &&
-                        c.completionDate === task.startDate,
-                    );
-                    const statusResult = computeTaskStatus(
-                      task,
-                      task.startDate,
-                      completion,
-                    );
-
-                    return (
-                      <Pressable
-                        key={`preview-${task.id}`}
-                        style={styles.previewTaskItem}
-                        disabled={!statusResult.isCompleted || !completion}
-                        onPress={() => {
-                          if (completion) {
-                            openCompletionDetails(
-                              task,
-                              task.startDate,
-                              completion,
-                            );
-                          }
-                        }}
-                      >
-                        <View style={styles.taskLeft}>
-                          <View
-                            style={[
-                              styles.categoryBar,
-                              { backgroundColor: getTaskColor(task) },
-                            ]}
-                          />
-                          <View style={{ flex: 1 }}>
-                            <View style={styles.previewTaskTopRow}>
-                              <Text style={styles.taskTitle}>{task.title}</Text>
-                              <View style={styles.dateTag}>
-                                <Text style={styles.dateTagText}>
-                                  {formatAppDate(task.startDate)}
-                                </Text>
-                              </View>
-                              <View
-                                style={[
-                                  styles.statusBadge,
-                                  { backgroundColor: statusResult.badgeBg },
-                                ]}
-                              >
-                                <Text
-                                  style={[
-                                    styles.statusBadgeText,
-                                    { color: statusResult.color },
-                                  ]}
-                                >
-                                  {statusResult.label}
-                                </Text>
-                              </View>
-                            </View>
-                            {task.feedInventoryItemName ? (
-                              <Text style={styles.taskMeta}>
-                                {task.feedInventoryItemName}
-                                {task.feedDailyAmount
-                                  ? ` | ${formatQuantityValue(task.feedDailyAmount)} ${task.feedDailyUnit ?? ""}/day`
-                                  : ""}
-                              </Text>
-                            ) : null}
-                            {task.batchNos?.length || task.batchNo ? (
-                              <Text style={styles.taskMeta}>
-                                Use for: Batch{" "}
-                                {(task.batchNos?.length
-                                  ? task.batchNos
-                                  : [task.batchNo]
-                                ).join(", Batch ")}
-                              </Text>
-                            ) : null}
-                            <Text style={styles.taskRepeat}>
-                              {task.repeat === "Never"
-                                ? "One-time task"
-                                : `Repeats ${task.repeat.toLowerCase()}`}
-                            </Text>
-
-                            {!statusResult.isCompleted ? (
-                              <Pressable
-                                onPress={() =>
-                                  handleMarkComplete(task, task.startDate)
-                                }
-                                style={({ pressed }) => [
-                                  styles.completeBtn,
-                                  { opacity: pressed ? 0.75 : 1 },
-                                ]}
-                              >
-                                <MaterialCommunityIcons
-                                  name="check-circle-outline"
-                                  size={15}
-                                  color={ChickIntelPalette.green1}
-                                />
-                                <Text style={styles.completeBtnText}>
-                                  Mark as Completed
-                                </Text>
-                              </Pressable>
-                            ) : null}
-                          </View>
-                        </View>
-                        <View style={styles.taskRight}>
-                          <Text style={styles.taskTime}>
-                            {formatDisplayTime(task.time)}
-                          </Text>
-                          <Pressable
-                            onPress={(event) => {
-                              event.stopPropagation();
-                              confirmDeleteTask(task, task.startDate);
-                            }}
-                            hitSlop={10}
-                            style={styles.deleteTaskBtn}
-                          >
-                            <MaterialCommunityIcons
-                              name="trash-can-outline"
-                              size={18}
-                              color="#B04B58"
-                            />
-                          </Pressable>
-                        </View>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              ) : (
-                <Text style={styles.noEvents}>
-                  {previewTimeframe === "Weekly"
-                    ? "No tasks scheduled for this week"
-                    : `No tasks scheduled for ${MONTHS[viewDate.getMonth()]}`}
-                </Text>
-              )}
             </View>
           </BlurCard>
         </View>
@@ -3086,6 +3141,134 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontWeight: "800",
   },
+  todayHeroContainer: {
+    width: "100%",
+    paddingHorizontal: moderateScale(4),
+    paddingVertical: verticalScale(6),
+  },
+  todayHeroCard: {
+    width: "100%",
+    backgroundColor: "rgba(49, 118, 103, 0.07)",
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: "rgba(49, 118, 103, 0.22)",
+    paddingHorizontal: moderateScale(16),
+    paddingVertical: verticalScale(14),
+    gap: verticalScale(10),
+  },
+  todayHeroTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  todayBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(49, 118, 103, 0.12)",
+    paddingHorizontal: moderateScale(8),
+    paddingVertical: verticalScale(3),
+    borderRadius: 6,
+  },
+  todayBadgeText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(10.5),
+    fontWeight: "800",
+    color: ChickIntelPalette.green1,
+    letterSpacing: 0.5,
+  },
+  todayWeekdayLabel: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12),
+    fontWeight: "700",
+    color: ChickIntelPalette.gray1,
+    letterSpacing: 0.6,
+  },
+  todayHeroMainRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: moderateScale(14),
+  },
+  todayHeroDayWrap: {
+    width: scale(62),
+    height: scale(62),
+    borderRadius: 14,
+    backgroundColor: ChickIntelPalette.green1,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#317667",
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
+  },
+  todayHeroDayNumber: {
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(32),
+    fontWeight: "900",
+    color: "#FFFFFF",
+    lineHeight: 36,
+  },
+  todayHeroMonthWrap: {
+    justifyContent: "center",
+    gap: 1,
+  },
+  todayHeroMonthText: {
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(20),
+    fontWeight: "800",
+    color: ChickIntelPalette.gray1,
+  },
+  todayHeroYearText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12),
+    fontWeight: "600",
+    color: ChickIntelPalette.textMuted,
+  },
+  todayHeroFooterRow: {
+    borderTopWidth: 1,
+    borderTopColor: "rgba(49, 118, 103, 0.14)",
+    paddingTop: verticalScale(8),
+  },
+  todayHeroFooterContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  todayHeroDotsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  todayHeroDot: {
+    width: scale(6),
+    height: verticalScale(6),
+    borderRadius: 3,
+  },
+  todayHeroTaskText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12),
+    fontWeight: "700",
+    color: ChickIntelPalette.green1,
+  },
+  todayHeroEmptySummary: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  todayHeroEmptyText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(11.5),
+    fontWeight: "500",
+    color: ChickIntelPalette.textMuted,
+    fontStyle: "italic",
+  },
+  todayHeroFooterTextMuted: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12),
+    fontWeight: "500",
+    color: ChickIntelPalette.textMuted,
+  },
   monthNavRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -3103,61 +3286,83 @@ const styles = StyleSheet.create({
   },
   weekRow: {
     flexDirection: "row",
-    marginBottom: 6,
+    backgroundColor: "rgba(49, 118, 103, 0.06)",
+    borderRadius: 8,
+    paddingVertical: verticalScale(5),
+    marginBottom: verticalScale(8),
+    marginHorizontal: moderateScale(2),
   },
   weekLabel: {
     flex: 1,
     textAlign: "center",
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(11),
-    fontWeight: "500",
+    fontWeight: "700",
     color: ChickIntelPalette.green1,
   },
   gridRow: {
     flexDirection: "row",
-    marginBottom: 4,
+    marginBottom: verticalScale(5),
   },
   gridSlot: {
     flex: 1,
     aspectRatio: 1,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 6,
+    borderRadius: 8,
     marginHorizontal: moderateScale(2),
-    paddingVertical: verticalScale(6),
+    paddingVertical: verticalScale(4),
+    backgroundColor: "transparent",
+  },
+  todaySlot: {
+    borderWidth: 1.5,
+    borderColor: ChickIntelPalette.green1,
+    backgroundColor: "rgba(49, 118, 103, 0.08)",
   },
   selectedSlot: {
-    backgroundColor: "rgba(49, 118, 103, 0.15)",
+    backgroundColor: ChickIntelPalette.green1,
+    shadowColor: "#317667",
+    shadowOpacity: 0.28,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
   },
   dayText: {
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(14),
-    fontWeight: "500",
-    color: ChickIntelPalette.gray1,
+    fontSize: responsiveFontSize(13.5),
+    fontWeight: "600",
+    color: "#1E293B",
   },
   mutedDayText: {
-    opacity: 0.35,
+    opacity: 0.28,
+    color: "#94A3B8",
   },
   selectedDayText: {
-    fontWeight: "700",
+    color: "#FFFFFF",
+    fontWeight: "800",
+  },
+  todayDayText: {
+    color: ChickIntelPalette.green1,
+    fontWeight: "800",
   },
   taskIndicatorRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 4,
-    marginTop: 6,
-    minHeight: verticalScale(6),
+    gap: 3,
+    marginTop: 3,
+    minHeight: verticalScale(5),
   },
   taskIndicator: {
     width: scale(4),
     height: verticalScale(4),
-    borderRadius: 4,
+    borderRadius: 2,
   },
   selectedIndicator: {
-    width: scale(10),
-    height: verticalScale(6),
-    borderRadius: 4,
+    width: scale(4),
+    height: verticalScale(4),
+    borderRadius: 2,
+    backgroundColor: "#FFFFFF",
   },
   divider: {
     height: verticalScale(1),
