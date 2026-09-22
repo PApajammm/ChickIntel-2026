@@ -671,8 +671,7 @@ export default function AddBatchScreen() {
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
         >
-          <View style={styles.formCard}>
-            <View style={styles.formSection}>
+          <View style={styles.formSection}>
               <View style={styles.formSectionHeader}>
                 <MaterialCommunityIcons
                   name="tag-multiple-outline"
@@ -1003,7 +1002,6 @@ export default function AddBatchScreen() {
             >
               <Text style={styles.saveText}>Save Record</Text>
             </Pressable>
-          </View>
         </ScrollView>
       </KeyboardAvoidingView>
 
@@ -1860,12 +1858,10 @@ const styles = StyleSheet.create({
   },
   formSection: {
     gap: 10,
-    borderRadius: 16,
-    paddingHorizontal: moderateScale(12),
-    paddingVertical: verticalScale(12),
-    backgroundColor: "rgba(254, 254, 254, 0.82)",
-    borderWidth: 1,
-    borderColor: "rgba(67, 139, 123, 0.18)",
+    borderRadius: 10,
+    paddingHorizontal: moderateScale(14),
+    paddingVertical: verticalScale(14),
+    backgroundColor: "rgba(254, 254, 254, 0.92)",
   },
   formSectionHeader: {
     flexDirection: "row",

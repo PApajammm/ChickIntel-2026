@@ -35,6 +35,7 @@ import {
     formatBatchDateStamp,
     formatEggFertilityPercent,
     getCurrentBatchAgeLabel,
+    isEggBatchCompleted,
     type BatchItem,
     type EggBatchItem,
 } from "@/utils/batch-store";
@@ -67,9 +68,9 @@ function formatEggBatchId(value: string | number) {
 }
 
 function formatOriginBatchId(value?: string | number) {
-  if (!value) return "BATCH C001";
+  if (!value) return "ORIGIN C0001";
   const digits = String(value).replace(/[^0-9]/g, "");
-  return `BATCH C${(digits || "1").padStart(3, "0")}`;
+  return `ORIGIN C${(digits || "1").padStart(4, "0")}`;
 }
 
 function matchesOriginBatch(
@@ -222,12 +223,29 @@ export default function EggBatchColorScreen() {
     }, [loadEggBatches]),
   );
 
+  const [eggStatusFilter, setEggStatusFilter] = useState<"active" | "archived">("active");
+
   const filteredBatches = useMemo(
     () =>
       savedEggBatches.filter((egg) =>
         matchesOriginBatch(egg, colorName, targetBatchNo),
       ),
     [colorName, targetBatchNo, savedEggBatches],
+  );
+
+  const activeBatches = useMemo(
+    () => filteredBatches.filter((egg) => !isEggBatchCompleted(egg)),
+    [filteredBatches],
+  );
+
+  const archivedBatches = useMemo(
+    () => filteredBatches.filter((egg) => isEggBatchCompleted(egg)),
+    [filteredBatches],
+  );
+
+  const displayedEggBatches = useMemo(
+    () => (eggStatusFilter === "active" ? activeBatches : archivedBatches),
+    [eggStatusFilter, activeBatches, archivedBatches],
   );
 
   const filteredChickBatches = useMemo(() => {
@@ -728,11 +746,51 @@ export default function EggBatchColorScreen() {
               ? "Egg records from this chicken batch. Transfer hatched eggs, sell unhatched eggs, or dispose damaged eggs."
               : "Chick batches created from this chicken batch appear here."}
           </Text>
-          {activeSection === "eggs" ? (
-            <Text style={styles.actionGuide}>
-              Bird: transfer hatched eggs | Cart: mark unhatched eggs sold |
-              Bin: dispose damaged eggs. Fertility at collection stays fixed.
-            </Text>
+          {activeSection === "eggs" && archivedBatches.length > 0 ? (
+            <View style={styles.statusPillBar}>
+              <Pressable
+                onPress={() => setEggStatusFilter("active")}
+                style={[
+                  styles.statusPill,
+                  eggStatusFilter === "active" && styles.statusPillActive,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.statusPillText,
+                    eggStatusFilter === "active" && styles.statusPillTextActive,
+                  ]}
+                >
+                  Active ({activeBatches.length})
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => setEggStatusFilter("archived")}
+                style={[
+                  styles.statusPill,
+                  eggStatusFilter === "archived" && styles.statusPillActive,
+                ]}
+              >
+                <MaterialCommunityIcons
+                  name="check-circle-outline"
+                  size={12}
+                  color={
+                    eggStatusFilter === "archived"
+                      ? "#FFFFFF"
+                      : ChickIntelPalette.green1
+                  }
+                />
+                <Text
+                  style={[
+                    styles.statusPillText,
+                    eggStatusFilter === "archived" &&
+                      styles.statusPillTextActive,
+                  ]}
+                >
+                  Archived ({archivedBatches.length})
+                </Text>
+              </Pressable>
+            </View>
           ) : null}
         </View>
 
@@ -847,8 +905,9 @@ export default function EggBatchColorScreen() {
                   Fetching saved egg batches for this color.
                 </Text>
               </View>
-            ) : filteredBatches.length ? (
-              filteredBatches.map((egg) => {
+            ) : displayedEggBatches.length ? (
+              displayedEggBatches.map((egg) => {
+                const isCompleted = isEggBatchCompleted(egg);
                 const fertility = formatEggFertilityPercent(egg);
                 const unhatchedCount = getDerivedUnhatchedQty(
                   egg.eggQty ?? 0,
@@ -890,70 +949,85 @@ export default function EggBatchColorScreen() {
                         </View>
 
                         <View style={styles.cardActionRow}>
-                          <Pressable
-                            onPress={() => openEggAction(egg, "transfer")}
-                            hitSlop={8}
-                            style={({ pressed }) => [
-                              styles.createChickBtn,
-                              { opacity: pressed ? 0.72 : 1 },
-                            ]}
-                            accessibilityRole="button"
-                            accessibilityLabel={`Transfer hatched eggs from batch ${egg.batchNo}`}
-                          >
-                            <MaterialCommunityIcons
-                              name="bird"
-                              size={15}
-                              color={ChickIntelPalette.green1}
-                            />
-                          </Pressable>
-                          <Pressable
-                            onPress={() => openEggAction(egg, "sell")}
-                            hitSlop={8}
-                            style={({ pressed }) => [
-                              styles.actionIconBtn,
-                              { opacity: pressed ? 0.72 : 1 },
-                            ]}
-                            accessibilityRole="button"
-                            accessibilityLabel={`Sell unhatched eggs from batch ${egg.batchNo}`}
-                          >
-                            <MaterialCommunityIcons
-                              name="cart-outline"
-                              size={15}
-                              color="#2D8C74"
-                            />
-                          </Pressable>
-                          <Pressable
-                            onPress={() => openEggAction(egg, "dispose")}
-                            hitSlop={8}
-                            style={({ pressed }) => [
-                              styles.actionIconBtn,
-                              { opacity: pressed ? 0.72 : 1 },
-                            ]}
-                            accessibilityRole="button"
-                            accessibilityLabel={`Dispose damaged eggs from batch ${egg.batchNo}`}
-                          >
-                            <MaterialCommunityIcons
-                              name="delete-sweep-outline"
-                              size={15}
-                              color="#923737"
-                            />
-                          </Pressable>
-                          <Pressable
-                            onPress={() => openEdit(egg)}
-                            hitSlop={8}
-                            style={({ pressed }) => [
-                              styles.actionIconBtn,
-                              { opacity: pressed ? 0.72 : 1 },
-                            ]}
-                            accessibilityRole="button"
-                            accessibilityLabel={`Edit batch ${egg.batchNo}`}
-                          >
-                            <MaterialCommunityIcons
-                              name="pencil-outline"
-                              size={15}
-                              color="#111111"
-                            />
-                          </Pressable>
+                          {isCompleted ? (
+                            <View style={styles.completedStatusBadge}>
+                              <MaterialCommunityIcons
+                                name="check-circle"
+                                size={13}
+                                color={ChickIntelPalette.green1}
+                              />
+                              <Text style={styles.completedStatusText}>
+                                Archived
+                              </Text>
+                            </View>
+                          ) : (
+                            <>
+                              <Pressable
+                                onPress={() => openEggAction(egg, "transfer")}
+                                hitSlop={8}
+                                style={({ pressed }) => [
+                                  styles.createChickBtn,
+                                  { opacity: pressed ? 0.72 : 1 },
+                                ]}
+                                accessibilityRole="button"
+                                accessibilityLabel={`Transfer hatched eggs from batch ${egg.batchNo}`}
+                              >
+                                <MaterialCommunityIcons
+                                  name="bird"
+                                  size={15}
+                                  color={ChickIntelPalette.green1}
+                                />
+                              </Pressable>
+                              <Pressable
+                                onPress={() => openEggAction(egg, "sell")}
+                                hitSlop={8}
+                                style={({ pressed }) => [
+                                  styles.actionIconBtn,
+                                  { opacity: pressed ? 0.72 : 1 },
+                                ]}
+                                accessibilityRole="button"
+                                accessibilityLabel={`Sell unhatched eggs from batch ${egg.batchNo}`}
+                              >
+                                <MaterialCommunityIcons
+                                  name="cart-outline"
+                                  size={15}
+                                  color="#2D8C74"
+                                />
+                              </Pressable>
+                              <Pressable
+                                onPress={() => openEggAction(egg, "dispose")}
+                                hitSlop={8}
+                                style={({ pressed }) => [
+                                  styles.actionIconBtn,
+                                  { opacity: pressed ? 0.72 : 1 },
+                                ]}
+                                accessibilityRole="button"
+                                accessibilityLabel={`Dispose damaged eggs from batch ${egg.batchNo}`}
+                              >
+                                <MaterialCommunityIcons
+                                  name="delete-sweep-outline"
+                                  size={15}
+                                  color="#923737"
+                                />
+                              </Pressable>
+                              <Pressable
+                                onPress={() => openEdit(egg)}
+                                hitSlop={8}
+                                style={({ pressed }) => [
+                                  styles.actionIconBtn,
+                                  { opacity: pressed ? 0.72 : 1 },
+                                ]}
+                                accessibilityRole="button"
+                                accessibilityLabel={`Edit batch ${egg.batchNo}`}
+                              >
+                                <MaterialCommunityIcons
+                                  name="pencil-outline"
+                                  size={15}
+                                  color="#111111"
+                                />
+                              </Pressable>
+                            </>
+                          )}
 
                           <Pressable
                             onPress={() => confirmDeleteEgg(egg)}
@@ -1064,10 +1138,40 @@ export default function EggBatchColorScreen() {
               })
             ) : (
               <View style={styles.emptyCard}>
-                <Text style={styles.emptyTitle}>No saved records yet</Text>
-                <Text style={styles.emptyText}>
-                  Add the first batch for this color from the create screen.
-                </Text>
+                {eggStatusFilter === "active" && archivedBatches.length > 0 ? (
+                  <>
+                    <MaterialCommunityIcons
+                      name="check-decagram-outline"
+                      size={36}
+                      color={ChickIntelPalette.green1}
+                    />
+                    <Text style={styles.emptyTitle}>All batches completed</Text>
+                    <Text style={styles.emptyText}>
+                      All {archivedBatches.length} egg batch(es) under this origin have been fully settled and archived.
+                    </Text>
+                    <Pressable
+                      onPress={() => setEggStatusFilter("archived")}
+                      style={styles.viewArchiveBtn}
+                    >
+                      <Text style={styles.viewArchiveBtnText}>
+                        View Archived ({archivedBatches.length})
+                      </Text>
+                    </Pressable>
+                  </>
+                ) : (
+                  <>
+                    <Text style={styles.emptyTitle}>
+                      {eggStatusFilter === "archived"
+                        ? "No archived egg batches"
+                        : "No egg batches yet"}
+                    </Text>
+                    <Text style={styles.emptyText}>
+                      {eggStatusFilter === "archived"
+                        ? "Completed egg batches will appear here."
+                        : "Use the plus button below to create your first egg batch."}
+                    </Text>
+                  </>
+                )}
               </View>
             )}
           </View>
@@ -1091,8 +1195,9 @@ export default function EggBatchColorScreen() {
         accessibilityLabel="Add egg batch"
       />
 
+      {/* Chick Age Edit Modal */}
       <Modal
-        visible={chickAgeModalVisible}
+        visible={chickAgeModalVisible && selectedChick !== null}
         transparent
         animationType="fade"
         onRequestClose={() => {
@@ -1106,153 +1211,201 @@ export default function EggBatchColorScreen() {
           keyboardVerticalOffset={insets.top}
         >
           <View style={styles.modalOverlay}>
-            <View style={styles.actionModalCard}>
-              <Text style={styles.modalTitle}>Edit Chick Batch Age</Text>
-              <Text style={styles.subtitle}>
-                {selectedChick
-                  ? `${formatChickBatchId(selectedChick)} | ${selectedChick.breed || "Chick batch"}`
-                  : "Chick batch"}
-              </Text>
-
-              <Text style={styles.insideLabel}>Age Value</Text>
-              <TextInput
-                value={chickAgeCount}
-                onChangeText={(value) =>
-                  setChickAgeCount(value.replace(/[^0-9.]/g, ""))
-                }
-                keyboardType="decimal-pad"
-                style={[styles.modalInputInside, styles.actionQuantityInput]}
-                placeholder="Age value"
-                placeholderTextColor={ChickIntelPalette.gray2}
-              />
-
-              <Text style={[styles.insideLabel, { marginTop: 6 }]}>Age Unit</Text>
-              <View style={styles.chickAgeUnitRow}>
-                <Pressable
-                  onPress={() => setChickAgeUnit("Weeks old")}
-                  style={[
-                    styles.chickAgeUnitBtn,
-                    chickAgeUnit === "Weeks old" && styles.chickAgeUnitBtnActive,
-                  ]}
-                  accessibilityRole="button"
-                >
-                  <Text
-                    style={[
-                      styles.chickAgeUnitBtnText,
-                      chickAgeUnit === "Weeks old" &&
-                        styles.chickAgeUnitBtnTextActive,
-                    ]}
-                  >
-                    Weeks old
-                  </Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => setChickAgeUnit("Days old")}
-                  style={[
-                    styles.chickAgeUnitBtn,
-                    chickAgeUnit === "Days old" && styles.chickAgeUnitBtnActive,
-                  ]}
-                  accessibilityRole="button"
-                >
-                  <Text
-                    style={[
-                      styles.chickAgeUnitBtnText,
-                      chickAgeUnit === "Days old" &&
-                        styles.chickAgeUnitBtnTextActive,
-                    ]}
-                  >
-                    Days old
-                  </Text>
-                </Pressable>
+            <View style={styles.modalCard}>
+              <View style={styles.modalHeader}>
+                <View style={styles.modalHeaderTitleRow}>
+                  <View style={styles.modalHeaderIconBadge}>
+                    <MaterialCommunityIcons
+                      name="pencil-outline"
+                      size={18}
+                      color="#FFFFFF"
+                    />
+                  </View>
+                  <Text style={styles.modalTitle}>Edit Chick Batch Age</Text>
+                </View>
+                <Text style={styles.modalSubtitle}>
+                  {selectedChick
+                    ? `${formatChickBatchId(selectedChick)} • ${selectedChick.breed || "Chick batch"}`
+                    : "Chick batch"}
+                </Text>
               </View>
 
-              <Text style={styles.actionModalHint}>
-                Chicks can be transferred to Chicken Batches at 5 weeks (35 days).
-              </Text>
+              <View style={styles.modalBody}>
+                <Text style={styles.modalLabel}>Age Value</Text>
+                <TextInput
+                  value={chickAgeCount}
+                  onChangeText={(value) =>
+                    setChickAgeCount(value.replace(/[^0-9.]/g, ""))
+                  }
+                  keyboardType="decimal-pad"
+                  style={styles.modalInput}
+                  placeholder="Age value"
+                  placeholderTextColor={ChickIntelPalette.gray2}
+                />
 
-              <View style={styles.modalActions}>
-                <Pressable
-                  onPress={() => {
-                    setChickAgeModalVisible(false);
-                    setSelectedChick(null);
-                  }}
-                  style={styles.cancelBtn}
-                  accessibilityRole="button"
-                >
-                  <Text style={styles.cancelText}>Cancel</Text>
-                </Pressable>
-                <Pressable
-                  onPress={saveChickAge}
-                  style={[styles.saveBtn, savingChickAge && { opacity: 0.6 }]}
-                  disabled={savingChickAge}
-                  accessibilityRole="button"
-                >
-                  <Text style={styles.saveText}>
-                    {savingChickAge ? "Saving..." : "Save Age"}
-                  </Text>
-                </Pressable>
+                <Text style={styles.modalLabel}>Age Unit</Text>
+                <View style={styles.chickAgeUnitRow}>
+                  <Pressable
+                    onPress={() => setChickAgeUnit("Weeks old")}
+                    style={[
+                      styles.chickAgeUnitBtn,
+                      chickAgeUnit === "Weeks old" &&
+                        styles.chickAgeUnitBtnActive,
+                    ]}
+                    accessibilityRole="button"
+                  >
+                    <Text
+                      style={[
+                        styles.chickAgeUnitBtnText,
+                        chickAgeUnit === "Weeks old" &&
+                          styles.chickAgeUnitBtnTextActive,
+                      ]}
+                    >
+                      Weeks old
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => setChickAgeUnit("Days old")}
+                    style={[
+                      styles.chickAgeUnitBtn,
+                      chickAgeUnit === "Days old" &&
+                        styles.chickAgeUnitBtnActive,
+                    ]}
+                    accessibilityRole="button"
+                  >
+                    <Text
+                      style={[
+                        styles.chickAgeUnitBtnText,
+                        chickAgeUnit === "Days old" &&
+                          styles.chickAgeUnitBtnTextActive,
+                      ]}
+                    >
+                      Days old
+                    </Text>
+                  </Pressable>
+                </View>
+
+                <Text style={styles.actionModalHint}>
+                  Chicks can be transferred to Chicken Batches at 5 weeks (35 days).
+                </Text>
+
+                <View style={styles.modalActions}>
+                  <Pressable
+                    onPress={() => {
+                      setChickAgeModalVisible(false);
+                      setSelectedChick(null);
+                    }}
+                    style={styles.modalCancel}
+                    accessibilityRole="button"
+                  >
+                    <Text style={styles.modalCancelText}>Cancel</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={saveChickAge}
+                    style={[
+                      styles.modalSave,
+                      savingChickAge && { opacity: 0.6 },
+                    ]}
+                    disabled={savingChickAge}
+                    accessibilityRole="button"
+                  >
+                    <Text style={styles.modalSaveText}>
+                      {savingChickAge ? "Saving..." : "Save Age"}
+                    </Text>
+                  </Pressable>
+                </View>
               </View>
             </View>
           </View>
         </KeyboardAvoidingView>
       </Modal>
 
+      {/* Egg Action Modal (Transfer Hatched Eggs / Sell / Dispose) */}
       <Modal
         visible={actionEgg !== null}
         transparent
         animationType="fade"
         onRequestClose={() => setActionEgg(null)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.actionModalCard}>
-            <Text style={styles.modalTitle}>
-              {actionType === "transfer"
-                ? "Transfer hatched eggs"
-                : actionType === "sell"
-                  ? "Sell unhatched eggs"
-                  : "Dispose damaged eggs"}
-            </Text>
-            <Text style={styles.subtitle}>
-              Available:{" "}
-              {actionEgg ? getAvailableActionQty(actionEgg, actionType) : 0}
-            </Text>
-            <Text style={styles.insideLabel}>Quantity</Text>
-            <TextInput
-              value={actionQty}
-              onChangeText={(value) =>
-                setActionQty(value.replace(/[^0-9]/g, ""))
-              }
-              keyboardType="number-pad"
-              style={[styles.modalInputInside, styles.actionQuantityInput]}
-              autoFocus
-              placeholder="Quantity"
-              placeholderTextColor={ChickIntelPalette.gray2}
-            />
-            <Text style={styles.actionModalHint}>
-              {actionType === "transfer"
-                ? "This quantity will be recorded in the Chicks tab after confirmation."
-                : actionType === "sell"
-                  ? "Only remaining unhatched eggs can be sold."
-                  : "Only remaining damaged eggs can be disposed. This cannot be undone."}
-            </Text>
-            <View style={styles.modalActions}>
-              <Pressable
-                onPress={() => setActionEgg(null)}
-                style={styles.cancelBtn}
-                accessibilityRole="button"
-              >
-                <Text style={styles.cancelText}>Cancel</Text>
-              </Pressable>
-              <Pressable
-                onPress={confirmEggAction}
-                style={styles.saveBtn}
-                accessibilityRole="button"
-              >
-                <Text style={styles.saveText}>Continue</Text>
-              </Pressable>
+        <KeyboardAvoidingView
+          style={styles.modalKeyboardArea}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          keyboardVerticalOffset={insets.top}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalCard}>
+              <View style={styles.modalHeader}>
+                <View style={styles.modalHeaderTitleRow}>
+                  <View style={styles.modalHeaderIconBadge}>
+                    <MaterialCommunityIcons
+                      name={
+                        actionType === "transfer"
+                          ? "bird"
+                          : actionType === "sell"
+                            ? "cart-outline"
+                            : "delete-sweep-outline"
+                      }
+                      size={18}
+                      color="#FFFFFF"
+                    />
+                  </View>
+                  <Text style={styles.modalTitle}>
+                    {actionType === "transfer"
+                      ? "Transfer Hatched Eggs"
+                      : actionType === "sell"
+                        ? "Sell Unhatched Eggs"
+                        : "Dispose Damaged Eggs"}
+                  </Text>
+                </View>
+                <Text style={styles.modalSubtitle}>
+                  Available:{" "}
+                  {actionEgg
+                    ? getAvailableActionQty(actionEgg, actionType)
+                    : 0}{" "}
+                  eggs ready for this action.
+                </Text>
+              </View>
+
+              <View style={styles.modalBody}>
+                <Text style={styles.modalLabel}>Quantity to {actionType}</Text>
+                <TextInput
+                  value={actionQty}
+                  onChangeText={(value) =>
+                    setActionQty(value.replace(/[^0-9]/g, ""))
+                  }
+                  keyboardType="number-pad"
+                  style={styles.modalInput}
+                  autoFocus
+                  placeholder="Enter quantity"
+                  placeholderTextColor={ChickIntelPalette.gray2}
+                />
+                <Text style={styles.actionModalHint}>
+                  {actionType === "transfer"
+                    ? "Transferred hatched eggs will be recorded as chicks under this chicken batch."
+                    : actionType === "sell"
+                      ? "Only remaining unhatched eggs can be marked as sold."
+                      : "Only remaining damaged eggs can be disposed. This action cannot be undone."}
+                </Text>
+                <View style={styles.modalActions}>
+                  <Pressable
+                    onPress={() => setActionEgg(null)}
+                    style={styles.modalCancel}
+                    accessibilityRole="button"
+                  >
+                    <Text style={styles.modalCancelText}>Cancel</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={confirmEggAction}
+                    style={styles.modalSave}
+                    accessibilityRole="button"
+                  >
+                    <Text style={styles.modalSaveText}>Continue</Text>
+                  </Pressable>
+                </View>
+              </View>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       <Modal visible={editVisible} transparent animationType="fade">
@@ -1995,6 +2148,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.45)",
     justifyContent: "center",
+    alignItems: "center",
     padding: moderateScale(20),
   },
   modalKeyboardArea: {
@@ -2005,46 +2159,99 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   modalCard: {
-    borderRadius: 14,
-    backgroundColor: "rgba(255, 255, 255, 0.98)",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.22)",
-    padding: moderateScale(18),
-    gap: 12,
-    alignSelf: "stretch",
+    width: "100%",
+    maxWidth: scale(500),
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    overflow: "hidden",
     shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 5,
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: verticalScale(6) },
+    elevation: 8,
   },
-  actionModalCard: {
-    borderRadius: 14,
-    backgroundColor: "rgba(255, 255, 255, 0.98)",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.22)",
-    padding: moderateScale(18),
-    gap: 12,
-    alignSelf: "stretch",
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 5,
+  modalHeader: {
+    backgroundColor: ChickIntelPalette.green1,
+    paddingHorizontal: moderateScale(18),
+    paddingVertical: verticalScale(14),
   },
-  actionModalHint: {
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(11),
-    lineHeight: 16,
-    color: ChickIntelPalette.textMuted,
+  modalHeaderTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  modalHeaderIconBadge: {
+    width: scale(32),
+    height: verticalScale(32),
+    borderRadius: 16,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    alignItems: "center",
+    justifyContent: "center",
   },
   modalTitle: {
     fontFamily: ChickFont.display,
-    fontSize: responsiveFontSize(16),
+    fontSize: responsiveFontSize(17),
     fontWeight: "800",
+    color: "#FFFFFF",
+  },
+  modalSubtitle: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12),
+    color: "rgba(255, 255, 255, 0.85)",
+    marginTop: 4,
+  },
+  modalBody: {
+    padding: moderateScale(18),
+    gap: 12,
+  },
+  modalLabel: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12),
     color: ChickIntelPalette.gray1,
-    letterSpacing: -0.2,
-    marginBottom: 2,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.2,
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.22)",
+    borderRadius: 10,
+    paddingHorizontal: moderateScale(12),
+    paddingVertical: verticalScale(10),
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(14),
+    color: ChickIntelPalette.gray1,
+    backgroundColor: "#F9FAFA",
+  },
+  actionModalHint: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(11.5),
+    lineHeight: 16,
+    color: ChickIntelPalette.textMuted,
+  },
+  modalCancel: {
+    paddingVertical: verticalScale(10),
+    paddingHorizontal: moderateScale(16),
+    borderRadius: 10,
+    backgroundColor: "#F0F2F2",
+  },
+  modalCancelText: {
+    fontFamily: ChickFont.sans,
+    color: ChickIntelPalette.gray1,
+    fontSize: responsiveFontSize(14),
+    fontWeight: "600",
+  },
+  modalSave: {
+    paddingVertical: verticalScale(10),
+    paddingHorizontal: moderateScale(18),
+    backgroundColor: ChickIntelPalette.green1,
+    borderRadius: 10,
+  },
+  modalSaveText: {
+    fontFamily: ChickFont.sans,
+    color: "#FFFFFF",
+    fontSize: responsiveFontSize(14),
+    fontWeight: "700",
   },
   batchInfoRefRow: {
     flexDirection: "row",
@@ -2286,6 +2493,66 @@ const styles = StyleSheet.create({
   discrepancyModalBtnText: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(13.5),
+    fontWeight: "700",
+    color: "#FFFFFF",
+  },
+  statusPillBar: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: verticalScale(6),
+  },
+  statusPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: moderateScale(10),
+    paddingVertical: verticalScale(4),
+    borderRadius: 999,
+    backgroundColor: "rgba(49, 118, 103, 0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.16)",
+  },
+  statusPillActive: {
+    backgroundColor: ChickIntelPalette.green1,
+    borderColor: ChickIntelPalette.green1,
+  },
+  statusPillText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(11),
+    fontWeight: "600",
+    color: ChickIntelPalette.gray1,
+  },
+  statusPillTextActive: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+  },
+  completedStatusBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(49, 118, 103, 0.12)",
+    paddingHorizontal: moderateScale(8),
+    paddingVertical: verticalScale(4),
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.25)",
+  },
+  completedStatusText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(11),
+    fontWeight: "700",
+    color: ChickIntelPalette.green1,
+  },
+  viewArchiveBtn: {
+    marginTop: verticalScale(10),
+    paddingHorizontal: moderateScale(16),
+    paddingVertical: verticalScale(8),
+    borderRadius: 8,
+    backgroundColor: ChickIntelPalette.green1,
+  },
+  viewArchiveBtnText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12),
     fontWeight: "700",
     color: "#FFFFFF",
   },

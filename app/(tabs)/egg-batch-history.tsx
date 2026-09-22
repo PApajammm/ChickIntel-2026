@@ -23,7 +23,14 @@ import {
     scale,
     verticalScale,
 } from "@/utils/responsive";
-import { fetchFarmEggBatches } from "@/utils/supabase-egg-batches";
+import {
+    formatEggFertilityPercent,
+    isEggBatchCompleted,
+    type EggBatchItem,
+} from "@/utils/batch-store";
+import {
+    fetchFarmEggBatches,
+} from "@/utils/supabase-egg-batches";
 import {
     fetchDeletedEggBatches,
     type EggBatchHistoryItem,
@@ -34,7 +41,7 @@ import {
     type EggDispositionType,
 } from "@/utils/supabase-egg-dispositions";
 
-type TabMode = "all" | "transfer" | "sell" | "dispose" | "deleted";
+type TabMode = "all" | "transfer" | "sell" | "dispose" | "archived" | "deleted";
 type TimeFilter = "all" | "today" | "week" | "month";
 
 function formatDateTime(value?: string) {
@@ -110,6 +117,7 @@ export default function EggBatchHistoryScreen() {
 
   const [dispositions, setDispositions] = useState<EggDispositionLog[]>([]);
   const [deletedBatches, setDeletedBatches] = useState<EggBatchHistoryItem[]>([]);
+  const [rawEggBatches, setRawEggBatches] = useState<EggBatchItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -198,6 +206,7 @@ export default function EggBatchHistoryScreen() {
 
       setDispositions(allDispositions);
       setDeletedBatches(fetchedDeleted);
+      setRawEggBatches(activeEggBatches);
     } catch (loadError) {
       setError(
         loadError instanceof Error
@@ -213,6 +222,11 @@ export default function EggBatchHistoryScreen() {
     useCallback(() => {
       void loadData();
     }, [loadData]),
+  );
+
+  const completedBatches = useMemo(
+    () => rawEggBatches.filter(isEggBatchCompleted),
+    [rawEggBatches],
   );
 
   // Counts for tabs
@@ -232,9 +246,10 @@ export default function EggBatchHistoryScreen() {
       transfer: transferred,
       sell: sold,
       dispose: disposed,
+      archived: completedBatches.length,
       deleted: deletedBatches.length,
     };
-  }, [dispositions, deletedBatches]);
+  }, [dispositions, deletedBatches, completedBatches]);
 
   // Overall totals
   const totalStats = useMemo(() => {
@@ -287,6 +302,21 @@ export default function EggBatchHistoryScreen() {
       return true;
     });
   }, [deletedBatches, timeFilter, originFilter]);
+
+  const filteredCompleted = useMemo(() => {
+    return completedBatches.filter((item) => {
+      const itemDate = item.updatedAt || item.createdAt;
+      if (!matchesTimeframe(itemDate, timeFilter)) {
+        return false;
+      }
+      if (originFilter) {
+        const itemOrigin = (item.origin || item.batchNo || "").trim().toLowerCase();
+        const normFilter = originFilter.trim().toLowerCase();
+        if (!itemOrigin.includes(normFilter)) return false;
+      }
+      return true;
+    });
+  }, [completedBatches, timeFilter, originFilter]);
 
   const getActionConfig = (type: EggDispositionType) => {
     switch (type) {
@@ -485,6 +515,30 @@ export default function EggBatchHistoryScreen() {
             </Pressable>
 
             <Pressable
+              onPress={() => setActiveTab("archived")}
+              style={[
+                styles.tabButton,
+                activeTab === "archived" && styles.tabButtonActive,
+              ]}
+            >
+              <MaterialCommunityIcons
+                name="check-circle-outline"
+                size={13}
+                color={
+                  activeTab === "archived" ? "#FFF" : ChickIntelPalette.green1
+                }
+              />
+              <Text
+                style={[
+                  styles.tabButtonText,
+                  activeTab === "archived" && styles.tabButtonTextActive,
+                ]}
+              >
+                Archived ({tabCounts.archived})
+              </Text>
+            </Pressable>
+
+            <Pressable
               onPress={() => setActiveTab("deleted")}
               style={[
                 styles.tabButton,
@@ -576,7 +630,7 @@ export default function EggBatchHistoryScreen() {
           {error ? <Text style={styles.emptyText}>{error}</Text> : null}
 
           {/* Render Dispositions (All, Transferred, Sold, Disposed) */}
-          {!loading && activeTab !== "deleted" ? (
+          {!loading && activeTab !== "deleted" && activeTab !== "archived" ? (
             filteredDispositions.length ? (
               filteredDispositions.map((item) => {
                 const config = getActionConfig(item.actionType);
@@ -774,6 +828,152 @@ export default function EggBatchHistoryScreen() {
                 <Text style={styles.emptyTitle}>No deleted batches</Text>
                 <Text style={styles.emptySub}>
                   Batches removed from the active inventory will be archived here.
+                </Text>
+              </View>
+            )
+          ) : null}
+
+          {/* Render Completed & Archived Batches */}
+          {!loading && activeTab === "archived" ? (
+            filteredCompleted.length ? (
+              filteredCompleted.map((item) => {
+                const fertility = formatEggFertilityPercent(item);
+                const unhatchedCount = Math.max(
+                  0,
+                  (item.eggQty ?? 0) -
+                    (item.hatchedQty ?? 0) -
+                    (item.damagedQty ?? 0),
+                );
+                return (
+                  <BlurCard
+                    key={item.id}
+                    style={styles.card}
+                    borderRadius={14}
+                    intensity={20}
+                  >
+                    <View style={styles.cardInner}>
+                      <View style={styles.cardTopRow}>
+                        <View style={styles.archivedBadge}>
+                          <MaterialCommunityIcons
+                            name="check-circle"
+                            size={14}
+                            color={ChickIntelPalette.green1}
+                          />
+                          <Text style={styles.archivedBadgeText}>
+                            BATCH E
+                            {item.batchNo.replace(/\D/g, "").padStart(3, "0")} •
+                            Settled
+                          </Text>
+                        </View>
+                        <Text style={styles.timestampText}>
+                          {formatDateTime(item.updatedAt || item.createdAt)}
+                        </Text>
+                      </View>
+
+                      <View style={styles.originTagRow}>
+                        <View style={styles.metaRow}>
+                          <View
+                            style={[
+                              styles.colorDot,
+                              {
+                                backgroundColor:
+                                  item.colorHex || ChickIntelPalette.gray2,
+                              },
+                            ]}
+                          />
+                          <Text style={styles.originBadgeText}>
+                            ORIGIN C
+                            {(item.origin || "1")
+                              .replace(/\D/g, "")
+                              .padStart(4, "0")}
+                          </Text>
+                        </View>
+                        {item.colorName ? (
+                          <Text style={styles.colorSubText}>
+                            • {item.colorName}
+                          </Text>
+                        ) : null}
+                      </View>
+
+                      {/* Row 1 Metrics */}
+                      <View style={styles.metricsRow}>
+                        <View style={styles.metricChip}>
+                          <Text style={styles.metricChipLabel}>Recorded</Text>
+                          <Text style={styles.metricChipValue}>
+                            {item.eggQty}
+                          </Text>
+                        </View>
+                        <View style={styles.metricChip}>
+                          <Text style={styles.metricChipLabel}>Hatched</Text>
+                          <Text style={styles.metricChipValue}>
+                            {item.hatchedQty}
+                          </Text>
+                        </View>
+                        <View style={styles.metricChip}>
+                          <Text style={styles.metricChipLabel}>Damaged</Text>
+                          <Text style={styles.metricChipValue}>
+                            {item.damagedQty}
+                          </Text>
+                        </View>
+                        <View style={styles.metricChip}>
+                          <Text style={styles.metricChipLabel}>Unhatched</Text>
+                          <Text style={styles.metricChipValue}>
+                            {unhatchedCount}
+                          </Text>
+                        </View>
+                      </View>
+
+                      {/* Row 2 Metrics */}
+                      <View style={[styles.metricsRow, { marginTop: 6 }]}>
+                        <View style={styles.metricChip}>
+                          <Text style={styles.metricChipLabel}>
+                            Transferred
+                          </Text>
+                          <Text style={styles.metricChipValue}>
+                            {item.transferredHatchedQty}
+                          </Text>
+                        </View>
+                        <View style={styles.metricChip}>
+                          <Text style={styles.metricChipLabel}>Sold</Text>
+                          <Text style={styles.metricChipValue}>
+                            {item.soldQty}
+                          </Text>
+                        </View>
+                        <View style={styles.metricChip}>
+                          <Text style={styles.metricChipLabel}>Disposed</Text>
+                          <Text style={styles.metricChipValue}>
+                            {item.disposedDamagedQty}
+                          </Text>
+                        </View>
+                        <View style={styles.metricChip}>
+                          <Text style={styles.metricChipLabel}>Fertility</Text>
+                          <Text style={styles.metricChipValue}>{fertility}</Text>
+                        </View>
+                      </View>
+
+                      <View style={styles.dispositionSummaryFooter}>
+                        <Text style={styles.dispositionSummaryFooterText}>
+                          Chicks transferred: {item.transferredHatchedQty}/
+                          {item.hatchedQty} | Sold: {item.soldQty}/
+                          {unhatchedCount} | Disposed:{" "}
+                          {item.disposedDamagedQty}/{item.damagedQty}
+                        </Text>
+                      </View>
+                    </View>
+                  </BlurCard>
+                );
+              })
+            ) : (
+              <View style={styles.emptyCard}>
+                <MaterialCommunityIcons
+                  name="check-decagram-outline"
+                  size={42}
+                  color={ChickIntelPalette.green1}
+                />
+                <Text style={styles.emptyTitle}>No archived batches</Text>
+                <Text style={styles.emptySub}>
+                  When all eggs in a batch are transferred, sold, or disposed,
+                  they will appear here.
                 </Text>
               </View>
             )
@@ -1154,9 +1354,62 @@ const styles = StyleSheet.create({
   },
   emptySub: {
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(11.5),
-    color: "#52615D",
+    fontSize: responsiveFontSize(12),
+    color: "#8A8F8F",
     textAlign: "center",
-    lineHeight: 16,
+    maxWidth: scale(260),
+    lineHeight: 17,
+  },
+  archivedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: moderateScale(9),
+    paddingVertical: verticalScale(4),
+    borderRadius: 8,
+    backgroundColor: "rgba(49, 118, 103, 0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.25)",
+  },
+  archivedBadgeText: {
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(12),
+    fontWeight: "700",
+    color: ChickIntelPalette.green1,
+  },
+  originTagRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: verticalScale(6),
+    marginBottom: verticalScale(4),
+  },
+  originBadgeText: {
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(11.5),
+    fontWeight: "700",
+    color: ChickIntelPalette.gray1,
+  },
+  colorSubText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(11),
+    color: "#52615D",
+    fontWeight: "600",
+  },
+  dispositionSummaryFooter: {
+    marginTop: verticalScale(8),
+    paddingVertical: verticalScale(6),
+    paddingHorizontal: moderateScale(8),
+    borderRadius: 8,
+    backgroundColor: "rgba(49, 118, 103, 0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.14)",
+  },
+  dispositionSummaryFooterText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(10.5),
+    fontWeight: "600",
+    color: ChickIntelPalette.green1,
+    textAlign: "center",
   },
 });
