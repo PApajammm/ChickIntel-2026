@@ -276,31 +276,40 @@ export const BREED_TRAIT_LIBRARY: Record<string, string[]> = {
 
 function fallbackImageForBreed(breedName: string): ImageSourcePropType {
   const norm = breedName.toLowerCase();
-  if (
-    norm.includes("rhode island") ||
-    norm.includes("new hampshire") ||
-    norm.includes("buckeye")
-  ) {
-    return require("@/assets_imported/images_imported/rhode-island-red.jpg");
+  if (norm.includes("leghorn")) {
+    return require("@/assets_imported/images_imported/leghorn.jpg");
+  }
+  if (norm.includes("australorp")) {
+    return require("@/assets_imported/images_imported/australorp.jpg");
+  }
+  if (norm.includes("bielefelder")) {
+    return require("@/assets_imported/images_imported/bielefelder.jpg");
+  }
+  if (norm.includes("orpington")) {
+    return require("@/assets_imported/images_imported/black-orpington.jpg");
+  }
+  if (norm.includes("sussex")) {
+    return require("@/assets_imported/images_imported/sussex.jpg");
+  }
+  if (norm.includes("new hampshire")) {
+    return require("@/assets_imported/images_imported/new-hampshire.jpg");
+  }
+  if (norm.includes("fayoumi")) {
+    return require("@/assets_imported/images_imported/fayoumi.jpg");
+  }
+  if (norm.includes("buckeye")) {
+    return require("@/assets_imported/images_imported/buckeye.jpg");
   }
   if (norm.includes("silkie")) {
     return require("@/assets_imported/images_imported/silkie-chicken-header.jpg");
   }
-  if (
-    norm.includes("plymouth") ||
-    norm.includes("barred") ||
-    norm.includes("bielefelder") ||
-    norm.includes("fayoumi")
-  ) {
+  if (norm.includes("rhode island")) {
+    return require("@/assets_imported/images_imported/rhode-island-red.jpg");
+  }
+  if (norm.includes("plymouth") || norm.includes("barred")) {
     return require("@/assets_imported/images_imported/barred-rock-chickens.jpg");
   }
-  if (
-    norm.includes("orpington") ||
-    norm.includes("australorp") ||
-    norm.includes("turken") ||
-    norm.includes("sussex") ||
-    norm.includes("leghorn")
-  ) {
+  if (norm.includes("turken")) {
     return require("@/assets_imported/images_imported/bantam_rock.jpg");
   }
   return dashboardHeroImage;
@@ -342,7 +351,7 @@ const DEFAULT_BREED_FEATURE_CARDS: FeaturedBreedCard[] = [
     breedName: "Leghorn",
     traits: BREED_TRAIT_LIBRARY.Leghorn,
     detail: "High egg production, heat tolerant",
-    image: require("@/assets_imported/images_imported/bantam_rock.jpg"),
+    image: require("@/assets_imported/images_imported/leghorn.jpg"),
     tint: "rgba(49, 118, 103, 0.18)",
     isDefault: true,
     capturedAt: 0,
@@ -353,26 +362,11 @@ const DEFAULT_BREED_FEATURE_CARDS: FeaturedBreedCard[] = [
     metadata: BREED_METADATA_MAP.Leghorn,
   },
   {
-    id: "default-plymouth-rock",
-    breedName: "Plymouth Rock",
-    traits: BREED_TRAIT_LIBRARY["Plymouth Rock"],
-    detail: "Dual-purpose classic, cold hardy",
-    image: require("@/assets_imported/images_imported/barred-rock-chickens.jpg"),
-    tint: "rgba(35, 62, 54, 0.18)",
-    isDefault: true,
-    capturedAt: 0,
-    eggProduction: BREED_METADATA_MAP["Plymouth Rock"].eggProduction,
-    purpose: BREED_METADATA_MAP["Plymouth Rock"].purpose,
-    hardiness: BREED_METADATA_MAP["Plymouth Rock"].hardiness,
-    dailyTrivia: getDailyBreedTrivia("Plymouth Rock"),
-    metadata: BREED_METADATA_MAP["Plymouth Rock"],
-  },
-  {
     id: "default-australorp",
     breedName: "Australorp",
     traits: BREED_TRAIT_LIBRARY.Australorp,
     detail: "Record egg layer, sweet temperament",
-    image: require("@/assets_imported/images_imported/bantam_rock.jpg"),
+    image: require("@/assets_imported/images_imported/australorp.jpg"),
     tint: "rgba(22, 45, 38, 0.18)",
     isDefault: true,
     capturedAt: 0,
@@ -383,26 +377,11 @@ const DEFAULT_BREED_FEATURE_CARDS: FeaturedBreedCard[] = [
     metadata: BREED_METADATA_MAP.Australorp,
   },
   {
-    id: "default-turken",
-    breedName: "Turken",
-    traits: BREED_TRAIT_LIBRARY.Turken,
-    detail: "Featherless neck, extreme heat tolerant",
-    image: require("@/assets_imported/images_imported/bantam_rock.jpg"),
-    tint: "rgba(66, 99, 108, 0.18)",
-    isDefault: true,
-    capturedAt: 0,
-    eggProduction: BREED_METADATA_MAP.Turken.eggProduction,
-    purpose: BREED_METADATA_MAP.Turken.purpose,
-    hardiness: BREED_METADATA_MAP.Turken.hardiness,
-    dailyTrivia: getDailyBreedTrivia("Turken"),
-    metadata: BREED_METADATA_MAP.Turken,
-  },
-  {
     id: "default-bielefelder",
     breedName: "Bielefelder",
     traits: BREED_TRAIT_LIBRARY.Bielefelder,
     detail: "Auto-sexing breed, jumbo brown eggs",
-    image: require("@/assets_imported/images_imported/barred-rock-chickens.jpg"),
+    image: require("@/assets_imported/images_imported/bielefelder.jpg"),
     tint: "rgba(49, 118, 103, 0.18)",
     isDefault: true,
     capturedAt: 0,
@@ -417,7 +396,7 @@ const DEFAULT_BREED_FEATURE_CARDS: FeaturedBreedCard[] = [
     breedName: "Black Orpington",
     traits: BREED_TRAIT_LIBRARY["Black Orpington"],
     detail: "Fluffy winter coat, calm & cuddly",
-    image: require("@/assets_imported/images_imported/bantam_rock.jpg"),
+    image: require("@/assets_imported/images_imported/black-orpington.jpg"),
     tint: "rgba(18, 34, 24, 0.2)",
     isDefault: true,
     capturedAt: 0,
@@ -432,7 +411,7 @@ const DEFAULT_BREED_FEATURE_CARDS: FeaturedBreedCard[] = [
     breedName: "Sussex",
     traits: BREED_TRAIT_LIBRARY.Sussex,
     detail: "Ancient heritage, curious forager",
-    image: require("@/assets_imported/images_imported/bantam_rock.jpg"),
+    image: require("@/assets_imported/images_imported/sussex.jpg"),
     tint: "rgba(49, 118, 103, 0.18)",
     isDefault: true,
     capturedAt: 0,
@@ -447,7 +426,7 @@ const DEFAULT_BREED_FEATURE_CARDS: FeaturedBreedCard[] = [
     breedName: "New Hampshire",
     traits: BREED_TRAIT_LIBRARY["New Hampshire"],
     detail: "Fast feathering, high flock vigor",
-    image: require("@/assets_imported/images_imported/rhode-island-red.jpg"),
+    image: require("@/assets_imported/images_imported/new-hampshire.jpg"),
     tint: "rgba(66, 99, 108, 0.18)",
     isDefault: true,
     capturedAt: 0,
@@ -462,7 +441,7 @@ const DEFAULT_BREED_FEATURE_CARDS: FeaturedBreedCard[] = [
     breedName: "Fayoumi",
     traits: BREED_TRAIT_LIBRARY.Fayoumi,
     detail: "Ancient lineage, extreme heat champion",
-    image: require("@/assets_imported/images_imported/barred-rock-chickens.jpg"),
+    image: require("@/assets_imported/images_imported/fayoumi.jpg"),
     tint: "rgba(35, 62, 54, 0.18)",
     isDefault: true,
     capturedAt: 0,
@@ -477,7 +456,7 @@ const DEFAULT_BREED_FEATURE_CARDS: FeaturedBreedCard[] = [
     breedName: "Buckeye",
     traits: BREED_TRAIT_LIBRARY.Buckeye,
     detail: "Pea comb frost proof, barn mouser",
-    image: require("@/assets_imported/images_imported/rhode-island-red.jpg"),
+    image: require("@/assets_imported/images_imported/buckeye.jpg"),
     tint: "rgba(66, 99, 108, 0.18)",
     isDefault: true,
     capturedAt: 0,
