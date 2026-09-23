@@ -633,15 +633,17 @@ export default function DevelopersScreen() {
                   />
                 </View>
 
-                {/* "ChickIntel App 2026" & "Version 1.0.9" */}
-                <Text style={styles.appTitle}>ChickIntel App 2026</Text>
+                {/* App Title & Version */}
+                <Text style={styles.appTitle}>
+                  ChickIntel: A Smart Chicken Poultry Health Monitoring and Farm Management System Using CNN Algorithm
+                </Text>
                 <View style={styles.versionBadge}>
                   <Text style={styles.appVersion}>Version 1.0.9</Text>
                 </View>
 
-                {/* Darkened font color for clarity */}
+                {/* Tagline */}
                 <Text style={styles.appTagline}>
-                  Smart Poultry Management, Health & Diagnostics Screening
+                  Smart Poultry Management & AI-Assisted Health Monitoring
                 </Text>
               </View>
 
@@ -681,7 +683,7 @@ export default function DevelopersScreen() {
                 </View>
 
                 <View style={styles.featureList}>
-                  {/* Capability 1: Health & Behavior Diagnostics */}
+                  {/* Capability 1: Health & Behavior Monitoring */}
                   <View style={styles.featureItem}>
                     <View style={styles.featureBullet}>
                       <MaterialCommunityIcons
@@ -692,7 +694,7 @@ export default function DevelopersScreen() {
                     </View>
                     <View style={styles.featureTextWrap}>
                       <Text style={styles.featureTitle}>
-                        AI Health & Behavior Diagnostics
+                        AI Health & Behavior Monitoring & Screening
                       </Text>
                       <Text style={styles.featureDesc}>
                         Visual symptom scanning combined with behavioral
@@ -780,8 +782,9 @@ export default function DevelopersScreen() {
                       </Text>
                       <Text style={styles.featureDesc}>
                         Visual morphological identification and attribute
-                        profiling for supported pure chicken breeds: Silkie and
-                        Rhode Island Red.
+                        profiling for supported pure chicken breeds: Bielefelder,
+                        Black Orpington, Buckeye, Fayoumi, Leghorn, New Hampshire,
+                        Rhode Island Red, Silkie, and Sussex.
                       </Text>
                     </View>
                   </View>
@@ -822,11 +825,19 @@ export default function DevelopersScreen() {
                         screen for{" "}
                         <Text style={styles.boldInlineText}>Healthy</Text>,{" "}
                         <Text style={styles.boldInlineText}>
+                          Fowlpox (Dry/Wet)
+                        </Text>
+                        ,{" "}
+                        <Text style={styles.boldInlineText}>
                           Infectious Coryza
+                        </Text>
+                        ,{" "}
+                        <Text style={styles.boldInlineText}>
+                          Chronic Respiratory Disease (CRD)
                         </Text>
                         , and{" "}
                         <Text style={styles.boldInlineText}>
-                          Fowlpox (Dry/Wet)
+                          Bumblefoot
                         </Text>
                         . It does NOT detect general avian influenza, internal
                         parasites, systemic bacterial septicemia, or nutritional
@@ -835,7 +846,7 @@ export default function DevelopersScreen() {
                     </View>
                   </View>
 
-                  {/* Breed Scope: Silkie, Rhode Island Red only */}
+                  {/* Breed Scope: 9 Supported Pure Breeds (excluding Plymouth Rock & Turken) */}
                   <View style={styles.limitationItem}>
                     <View style={styles.limitationBullet}>
                       <MaterialCommunityIcons
@@ -846,11 +857,15 @@ export default function DevelopersScreen() {
                     </View>
                     <View style={styles.limitationTextWrap}>
                       <Text style={styles.limitationTitleText}>
-                        Supported Breeds: Silkie, Rhode Island Red only
+                        Supported Breeds (9 Recognized Pure Breeds):
                       </Text>
                       <Text style={styles.limitationDesc}>
                         Breed recognition is currently trained and optimized
-                        strictly for Silkie and Rhode Island Red. Other breeds,
+                        for{" "}
+                        <Text style={styles.boldInlineText}>
+                          Bielefelder, Black Orpington, Buckeye, Fayoumi, Leghorn, New Hampshire, Rhode Island Red, Silkie, and Sussex
+                        </Text>{" "}
+                        (excluding Plymouth Rock and Turken). Other breeds,
                         native mixed crosses, or juvenile chicks cannot be
                         reliably identified.
                       </Text>
@@ -871,10 +886,10 @@ export default function DevelopersScreen() {
                         Advisory Screening Only:
                       </Text>
                       <Text style={styles.limitationDesc}>
-                        Outputs provide early decision-support and must never
-                        replace diagnostic verification, laboratory
-                        bacterial/viral culture, or treatment prescription by a
-                        licensed veterinarian.
+                        Outputs provide early decision-support and condition
+                        screening, and must never replace clinical veterinary
+                        examination, laboratory bacterial/viral testing, or
+                        treatment prescription by a licensed veterinarian.
                       </Text>
                     </View>
                   </View>
@@ -908,7 +923,7 @@ export default function DevelopersScreen() {
                   Developed for BPSU BSCS SD4A Thesis Project 2026
                 </Text>
                 <Text style={styles.footerSubText}>
-                  ChickIntel | Smart Poultry Management & Diagnostics
+                  ChickIntel | Smart Poultry Management & Health Monitoring
                 </Text>
               </View>
             </ScrollView>
@@ -1326,11 +1341,12 @@ const styles = StyleSheet.create({
   },
   appTitle: {
     fontFamily: ChickFont.display,
-    fontSize: responsiveFontSize(20),
+    fontSize: responsiveFontSize(16),
+    lineHeight: responsiveFontSize(22),
     fontWeight: "800",
     color: ChickIntelPalette.gray1,
     letterSpacing: -0.3,
-    marginBottom: verticalScale(4),
+    marginBottom: verticalScale(6),
     textAlign: "center",
   },
   versionBadge: {
