@@ -15,6 +15,7 @@ import {
     type EffectiveInventoryItem,
 } from "@/utils/stock-alerts";
 import {
+    calculateRestockedTotal,
     createInventoryItem,
     deleteInventoryItem,
     fetchInventoryItems,
@@ -211,7 +212,11 @@ export function FarmDataProvider({ children }: { children: React.ReactNode }) {
         : targetEffectiveItem.baseQty;
       const currentRemainingQty = targetEffectiveItem.remainingQty;
       const totalBaseline = Math.max(currentTotalQty, currentRemainingQty);
-      const newTotalQty = totalBaseline + safeRestockQty;
+      const newTotalQty = calculateRestockedTotal(
+        currentRemainingQty,
+        totalBaseline,
+        safeRestockQty,
+      );
       const newRestockCreditQty =
         Math.max(0, targetItem.restockCreditQty) + safeRestockQty;
 

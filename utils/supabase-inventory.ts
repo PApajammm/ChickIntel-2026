@@ -72,6 +72,21 @@ export function haveSameExpirationDate(
   return getDateKey(left) === getDateKey(right);
 }
 
+export function calculateRestockedTotal(
+  currentQty: number,
+  currentTotalQty: number,
+  restockQty: number,
+) {
+  const safeCurrentQty = Math.max(0, currentQty);
+  const safeCurrentTotalQty = Math.max(safeCurrentQty, currentTotalQty);
+  const safeRestockQty = Math.max(0, restockQty);
+  const nextQty = safeCurrentQty + safeRestockQty;
+
+  return nextQty > safeCurrentTotalQty
+    ? safeCurrentTotalQty + safeRestockQty
+    : safeCurrentTotalQty;
+}
+
 function parseDatabaseDate(dateStr?: string | null): Date | undefined {
   if (!dateStr) return undefined;
   if (dateStr.includes("T")) return new Date(dateStr);
@@ -200,7 +215,11 @@ export async function createInventoryItem(
     const totalBaseline = Math.max(currentTotalQty, currentAvailableQty);
     const updatePayload: Record<string, unknown> = {
       qty: currentQty,
-      total_qty: totalBaseline + safeInputQty,
+      total_qty: calculateRestockedTotal(
+        currentAvailableQty,
+        totalBaseline,
+        safeInputQty,
+      ),
       restock_credit_qty: currentRestockCreditQty + safeInputQty,
       unit: input.unit,
       price: input.price ?? null,
