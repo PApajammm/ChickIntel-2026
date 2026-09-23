@@ -182,15 +182,15 @@ export function mapBreedPredictionToAttributes(
     {
       contains: "leghorn",
       attributes: {
-        breedName: "White Leghorn",
-        temperament: "Low",
+        breedName: "Leghorn",
+        temperament: "Active",
         type: "Layer",
       },
     },
     {
       contains: "new hampshire",
       attributes: {
-        breedName: "New Hampshire Red",
+        breedName: "New Hampshire",
         temperament: "Hardy",
         type: "Dual-purpose",
       },
@@ -205,6 +205,14 @@ export function mapBreedPredictionToAttributes(
     },
     {
       contains: "black orpington",
+      attributes: {
+        breedName: "Black Orpington",
+        temperament: "Docile",
+        type: "Dual-purpose",
+      },
+    },
+    {
+      contains: "orpington",
       attributes: {
         breedName: "Black Orpington",
         temperament: "Docile",
@@ -241,6 +249,14 @@ export function mapBreedPredictionToAttributes(
         breedName: "Rhode Island Red",
         temperament: "Hardy",
         type: "Dual-purpose",
+      },
+    },
+    {
+      contains: "australorp",
+      attributes: {
+        breedName: "Australorp",
+        temperament: "Calm",
+        type: "Egg production",
       },
     },
     {
@@ -284,4 +300,71 @@ export function mapBreedPredictionToAttributes(
     temperament: "Unknown",
     type: "Unknown",
   };
+}
+
+/**
+ * Resolves a detected breed name against the available breed dropdown options.
+ * Guarantees that the name selected in the dropdown EXACTLY matches an existing option.
+ * Handles common synonyms:
+ * - "White Leghorn" / "Leghorn" -> matches whichever exists in availableOptions
+ * - "New Hampshire Red" / "New Hampshire" -> matches whichever exists
+ * - "Rhode Island Red" / "RIR" -> matches whichever exists
+ * - "Black Orpington" / "Orpington" -> matches whichever exists
+ * - "Barred Rock" / "Plymouth Rock" -> matches whichever exists
+ */
+export function matchBreedToAvailableOptions(
+  detectedBreedName: string,
+  availableOptions: string[] = [],
+): string {
+  if (!detectedBreedName || !detectedBreedName.trim()) {
+    return availableOptions[0] || "";
+  }
+
+  const rawNorm = detectedBreedName.trim().toLowerCase();
+
+  // 1. Exact match (case-insensitive)
+  const exact = availableOptions.find(
+    (opt) => opt.trim().toLowerCase() === rawNorm,
+  );
+  if (exact) return exact;
+
+  // 2. Canonical synonym clusters
+  const clusters = [
+    ["leghorn", "white leghorn", "white leghorn chicken"],
+    ["new hampshire", "new hampshire red"],
+    ["rhode island red", "rhode island", "rir"],
+    ["black orpington", "orpington"],
+    ["barred rock", "plymouth rock"],
+    ["australorp", "black australorp"],
+    ["bielefelder"],
+    ["buckeye"],
+    ["fayoumi", "egyptian fayoumi"],
+    ["silkie"],
+    ["sussex"],
+    ["wyandotte"],
+  ];
+
+  for (const cluster of clusters) {
+    const isDetectedInCluster = cluster.some(
+      (alias) => rawNorm === alias || rawNorm.includes(alias) || alias.includes(rawNorm),
+    );
+    if (isDetectedInCluster) {
+      // Find which option in availableOptions matches any alias in this cluster
+      const matchedOpt = availableOptions.find((opt) => {
+        const optNorm = opt.trim().toLowerCase();
+        return cluster.some((alias) => optNorm === alias || optNorm.includes(alias) || alias.includes(optNorm));
+      });
+      if (matchedOpt) return matchedOpt;
+    }
+  }
+
+  // 3. Substring match fallback
+  const subMatch = availableOptions.find((opt) => {
+    const optNorm = opt.trim().toLowerCase();
+    return rawNorm.includes(optNorm) || optNorm.includes(rawNorm);
+  });
+  if (subMatch) return subMatch;
+
+  // 4. Fallback: return title-cased detected name
+  return detectedBreedName;
 }

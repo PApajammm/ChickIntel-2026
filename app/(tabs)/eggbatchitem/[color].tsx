@@ -909,7 +909,7 @@ export default function EggBatchColorScreen() {
                           { opacity: pressed ? 0.78 : 1, marginTop: 4 },
                         ]}
                         accessibilityRole="button"
-                        accessibilityLabel={`Transfer ${batch.id} to Chicken Batches`}
+                        accessibilityLabel={`Register ${batch.id} as a new chicken batch`}
                       >
                         <MaterialCommunityIcons
                           name="arrow-up-circle-outline"
@@ -918,7 +918,7 @@ export default function EggBatchColorScreen() {
                         />
                         <Text style={styles.promoteChickText}>
                           {getAgeWeeks(batch) >= 5
-                            ? "Transfer to Chicken Batches"
+                            ? "Register these matured chicks as a new chicken batch"
                             : "Ready at 5 weeks"}
                         </Text>
                       </Pressable>

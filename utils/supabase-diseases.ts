@@ -51,8 +51,14 @@ export type MatchedDisease = DiseaseDetails & {
   resultSummary: string;
   detectionDescription: string;
   recommendationText: string;
-  detectionSource: "image_model";
+  detectionSource: "image_model" | "image_plus_behavior" | "manual" | "reference_match";
   classifierLabel?: string;
+  diagnosticNotes?: string[];
+  differentialDiagnosis?: {
+    diseaseName: string;
+    reason: string;
+  };
+  supportingBehaviors?: string[];
   topPredictions?: {
     className: string;
     confidence: number;
@@ -167,6 +173,15 @@ export async function detectDiseaseFromClassifierLabel(
     className: string;
     confidence: number;
   }[],
+  options?: {
+    detectionSource?: "image_model" | "image_plus_behavior" | "manual" | "reference_match";
+    diagnosticNotes?: string[];
+    differentialDiagnosis?: {
+      diseaseName: string;
+      reason: string;
+    };
+    supportingBehaviors?: string[];
+  },
 ): Promise<MatchedDisease | null> {
   if (!className.trim()) return null;
 
@@ -184,7 +199,10 @@ export async function detectDiseaseFromClassifierLabel(
         .map((alias) => alias.alias),
     ].map(normalizeLabel);
 
-    return candidates.includes(normalizedInput);
+    return (
+      candidates.includes(normalizedInput) ||
+      candidates.some((c) => c && (normalizedInput.includes(c) || c.includes(normalizedInput)))
+    );
   });
 
   if (!disease) return null;
@@ -200,8 +218,11 @@ export async function detectDiseaseFromClassifierLabel(
     resultSummary: details.diseaseName,
     detectionDescription: details.description,
     recommendationText: treatmentText,
-    detectionSource: "image_model",
+    detectionSource: options?.detectionSource ?? "image_model",
     classifierLabel: className,
+    diagnosticNotes: options?.diagnosticNotes,
+    differentialDiagnosis: options?.differentialDiagnosis,
+    supportingBehaviors: options?.supportingBehaviors,
     topPredictions: predictions,
   };
 }

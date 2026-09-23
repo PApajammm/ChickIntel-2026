@@ -45,6 +45,7 @@ import {
     normalizeHealthClassifierLabel,
     type HealthImageInferenceResult,
 } from "@/utils/health-image-inference";
+import { evaluateHealthAssessment } from "@/utils/health-rule-engine";
 import { logError, logStep } from "@/utils/logger";
 import { fetchFarmBatches } from "@/utils/supabase-batches";
 import { mapBehaviorIdsToLabels } from "@/utils/supabase-behaviors";
@@ -211,7 +212,10 @@ export default function ScannedHealthResultScreen() {
   const isNonChickenImage = isNonChickenClassifierLabel(
     imageInference?.topPrediction?.className ?? "",
   );
-  const hasStrongPrediction = hasStrongHealthPrediction(imageInference);
+  const hasStrongPrediction = Boolean(
+    (imageMatchedDisease && imageMatchedDisease.confidence >= 60) ||
+    hasStrongHealthPrediction(imageInference)
+  );
 
   const resolvedDetectedIllness = isNonChickenImage
     ? NON_CHICKEN_RESULT
@@ -303,15 +307,27 @@ export default function ScannedHealthResultScreen() {
           return;
         }
 
-        if (!hasStrongHealthPrediction(inference)) {
-          setImageMatchedDisease(null);
-          return;
-        }
+        // Run multi-factor rule engine combining image inference with selected behaviors:
+        const assessment = evaluateHealthAssessment({
+          imageInference: inference,
+          selectedBehaviorNames: selectedLabels,
+        });
+
+        const targetLabel =
+          assessment.resolvedSlug !== "unknown"
+            ? assessment.resolvedSlug
+            : topPrediction.className;
 
         const mappedDisease = await detectDiseaseFromClassifierLabel(
-          topPrediction.className,
-          topPrediction.confidence,
+          targetLabel,
+          assessment.confidence,
           inference?.predictions,
+          {
+            detectionSource: assessment.detectionSource,
+            diagnosticNotes: assessment.diagnosticNotes,
+            differentialDiagnosis: assessment.differentialDiagnosis,
+            supportingBehaviors: assessment.supportingBehaviorsFound,
+          },
         );
 
         if (!cancelled) {
@@ -333,7 +349,7 @@ export default function ScannedHealthResultScreen() {
     return () => {
       cancelled = true;
     };
-  }, [photoUri]);
+  }, [photoUri, selectedLabels]);
 
   useEffect(() => {
     try {
@@ -650,6 +666,11 @@ export default function ScannedHealthResultScreen() {
             treatmentSteps={treatmentSteps}
             actionStatus={imageMatchedDisease?.status ?? ""}
             durationValue={imageMatchedDisease?.recoveryDuration ?? ""}
+            confidence={imageMatchedDisease?.confidence}
+            detectionSource={imageMatchedDisease?.detectionSource}
+            diagnosticNotes={imageMatchedDisease?.diagnosticNotes}
+            differentialDiagnosis={imageMatchedDisease?.differentialDiagnosis}
+            supportingBehaviors={imageMatchedDisease?.supportingBehaviors}
           />
 
           {isGuestExperience ? (

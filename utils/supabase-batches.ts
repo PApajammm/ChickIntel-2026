@@ -126,7 +126,7 @@ export async function createFarmBatch(
       source_egg_batch_id: input.sourceEggBatchId ?? null,
     })
     .select(
-      "id, batch_no, breed_name, female_count, male_count, age_label, isolated_count, killed_count, color_name, color_hex, origin_batch_no, source_egg_batch_id, created_at",
+      "id, batch_no, breed_name, total_count, female_count, male_count, unknown_count, age_label, isolated_count, killed_count, color_name, color_hex, origin_batch_no, source_egg_batch_id, created_at",
     )
     .single();
 

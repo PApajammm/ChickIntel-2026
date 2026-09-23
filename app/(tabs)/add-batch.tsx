@@ -42,6 +42,7 @@ import { useAuth } from "@/providers/auth-provider";
 import {
     inferBreedFromImage,
     mapBreedPredictionToAttributes,
+    matchBreedToAvailableOptions,
     resolveBestBreedPrediction,
 } from "@/utils/breed-image-inference";
 import {
@@ -64,10 +65,17 @@ const MAX_SCAN_ZOOM = 0.7;
 const AGE_UNIT_OPTIONS = ["Weeks old"] as const;
 
 const DEFAULT_BREED_OPTIONS = [
+  "Bielefelder",
+  "Black Orpington",
+  "Buckeye",
+  "Fayoumi",
+  "Leghorn",
+  "New Hampshire",
   "Rhode Island Red",
-  "White Leghorn",
-  "Australorp",
   "Silkie",
+  "Sussex",
+  "Australorp",
+  "Barred Rock",
 ] as const;
 
 const COLOR_OPTIONS = [
@@ -370,6 +378,9 @@ export default function AddBatchScreen() {
         skipProcessing: Platform.OS === "ios",
       });
 
+      setCapturedPhotoUri(rawPhoto.uri);
+      setIsScanningSex(true);
+
       photo = await optimizePhotoForInference({
         photoUri: rawPhoto.uri,
         photoWidth: rawPhoto.width,
@@ -377,9 +388,6 @@ export default function AddBatchScreen() {
         maxDimension: 1024,
         quality: 0.8,
       });
-
-      setCapturedPhotoUri(photo.uri);
-      setIsScanningSex(true);
     } catch (error) {
       closeSexScanner();
       Alert.alert(
@@ -540,14 +548,23 @@ export default function AddBatchScreen() {
             resolved.prediction!,
           );
 
-          setBreed(detectedBreed.breedName);
+          const matchedBreedOption = matchBreedToAvailableOptions(
+            detectedBreed.breedName,
+            breedOptions,
+          );
+
+          setBreed(matchedBreedOption);
           addRecentBreedScan({
-            breedName: detectedBreed.breedName,
+            breedName: matchedBreedOption,
             photoUri: photo.uri,
-            attributes: detectedBreed,
+            attributes: {
+              ...detectedBreed,
+              breedName: matchedBreedOption,
+            },
           });
           logStep("Add batch breed detected from camera", {
-            breedName: detectedBreed.breedName,
+            breedName: matchedBreedOption,
+            rawDetected: detectedBreed.breedName,
             modelId: inference?.modelId ?? "unknown",
           });
           closeBreedScanner();

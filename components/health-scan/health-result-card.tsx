@@ -20,6 +20,14 @@ type HealthResultCardProps = {
   treatmentSteps?: string[];
   actionStatus: string;
   durationValue: string;
+  confidence?: number;
+  detectionSource?: string;
+  diagnosticNotes?: string[];
+  differentialDiagnosis?: {
+    diseaseName: string;
+    reason: string;
+  };
+  supportingBehaviors?: string[];
 };
 
 function Row({ label, value }: { label: string; value: string }) {
@@ -43,6 +51,11 @@ export function HealthResultCard({
   treatmentSteps,
   actionStatus,
   durationValue,
+  confidence,
+  detectionSource,
+  diagnosticNotes,
+  differentialDiagnosis,
+  supportingBehaviors,
 }: HealthResultCardProps) {
   const descriptionText = resultDescription?.trim();
   const treatmentItems =
@@ -77,7 +90,13 @@ export function HealthResultCard({
             </Text>
           </View>
 
-          {actionStatus ? (
+          {typeof confidence === "number" && confidence > 0 ? (
+            <View style={styles.confidenceBadge}>
+              <Text style={styles.confidenceText}>
+                {Math.round(confidence)}% Confidence
+              </Text>
+            </View>
+          ) : actionStatus ? (
             <View style={styles.statusBadge}>
               <Text style={styles.statusBadgeText}>{actionStatus}</Text>
             </View>
@@ -86,6 +105,63 @@ export function HealthResultCard({
 
         {/* Result Title */}
         <Text style={styles.resultBody}>{resultSummary || diseaseName}</Text>
+
+        {/* Supporting Behaviors Chips */}
+        {supportingBehaviors && supportingBehaviors.length > 0 ? (
+          <View style={styles.supportingBehaviorsContainer}>
+            <Text style={styles.supportingBehaviorsLabel}>Supported by symptoms:</Text>
+            <View style={styles.supportingChipsRow}>
+              {supportingBehaviors.map((beh, idx) => (
+                <View key={`${beh}-${idx}`} style={styles.supportingChip}>
+                  <MaterialCommunityIcons
+                    name="check"
+                    size={11}
+                    color={ChickIntelPalette.green1}
+                  />
+                  <Text style={styles.supportingChipText}>{beh}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        ) : null}
+
+        {/* Diagnostic Notes */}
+        {diagnosticNotes && diagnosticNotes.length > 0 ? (
+          <View style={styles.diagnosticNotesBox}>
+            <View style={styles.diagnosticNotesHeader}>
+              <MaterialCommunityIcons
+                name="lightbulb-on-outline"
+                size={13}
+                color={ChickIntelPalette.green1}
+              />
+              <Text style={styles.diagnosticNotesTitle}>Diagnostic Assessment</Text>
+            </View>
+            {diagnosticNotes.map((note, i) => (
+              <Text key={`note-${i}`} style={styles.diagnosticNoteText}>
+                • {note}
+              </Text>
+            ))}
+          </View>
+        ) : null}
+
+        {/* Differential Diagnosis (e.g. CRD vs Coryza or Bumblefoot vs Respiratory) */}
+        {differentialDiagnosis ? (
+          <View style={styles.differentialBox}>
+            <View style={styles.differentialHeader}>
+              <MaterialCommunityIcons
+                name="information-outline"
+                size={13}
+                color="#0369A1"
+              />
+              <Text style={styles.differentialTitle}>
+                Differential: {differentialDiagnosis.diseaseName}
+              </Text>
+            </View>
+            <Text style={styles.differentialText}>
+              {differentialDiagnosis.reason}
+            </Text>
+          </View>
+        ) : null}
 
         {/* Description */}
         {descriptionText ? (
@@ -126,6 +202,16 @@ export function HealthResultCard({
         {/* Key-Value Metadata Block */}
         <View style={styles.metaBlock}>
           <Row label="Disease" value={diseaseName} />
+          {detectionSource ? (
+            <Row
+              label="Detection Mode"
+              value={
+                detectionSource === "image_plus_behavior"
+                  ? "AI Image + Symptoms"
+                  : "Visual AI Model"
+              }
+            />
+          ) : null}
           {actionStatus ? <Row label="Status" value={actionStatus} /> : null}
           {durationValue ? (
             <Row label="Recovery Duration" value={durationValue} />
@@ -270,6 +356,108 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     fontWeight: "600",
     color: ChickIntelPalette.gray1,
+  },
+  confidenceBadge: {
+    paddingHorizontal: moderateScale(8),
+    paddingVertical: verticalScale(3),
+    borderRadius: 8,
+    backgroundColor: "rgba(49, 118, 103, 0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.22)",
+  },
+  confidenceText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(11),
+    fontWeight: "700",
+    color: ChickIntelPalette.green1,
+  },
+  supportingBehaviorsContainer: {
+    gap: 4,
+    marginTop: verticalScale(2),
+  },
+  supportingBehaviorsLabel: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(11),
+    fontWeight: "700",
+    color: "#5A6060",
+  },
+  supportingChipsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  supportingChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(202, 227, 221, 0.4)",
+    borderRadius: 6,
+    paddingHorizontal: moderateScale(7),
+    paddingVertical: verticalScale(3),
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.18)",
+  },
+  supportingChipText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(11),
+    fontWeight: "600",
+    color: ChickIntelPalette.gray1,
+  },
+  diagnosticNotesBox: {
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(49, 118, 103, 0.18)",
+    backgroundColor: "rgba(244, 248, 247, 0.9)",
+    paddingHorizontal: moderateScale(12),
+    paddingVertical: verticalScale(8),
+    gap: 4,
+  },
+  diagnosticNotesHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  diagnosticNotesTitle: {
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(11),
+    fontWeight: "800",
+    textTransform: "uppercase",
+    color: ChickIntelPalette.green1,
+    letterSpacing: 0.2,
+  },
+  diagnosticNoteText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12),
+    lineHeight: 17,
+    color: ChickIntelPalette.gray1,
+  },
+  differentialBox: {
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(3, 105, 161, 0.22)",
+    backgroundColor: "rgba(238, 246, 255, 0.9)",
+    paddingHorizontal: moderateScale(12),
+    paddingVertical: verticalScale(8),
+    gap: 4,
+  },
+  differentialHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  differentialTitle: {
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(11),
+    fontWeight: "800",
+    textTransform: "uppercase",
+    color: "#0369A1",
+    letterSpacing: 0.2,
+  },
+  differentialText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12),
+    lineHeight: 17,
+    color: "#1E3A5F",
   },
   metaBlock: {
     marginTop: verticalScale(4),

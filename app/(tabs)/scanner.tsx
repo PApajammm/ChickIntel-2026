@@ -12,6 +12,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useRef, useState } from "react";
 import {
+    ActivityIndicator,
     Alert,
     Modal,
     Platform,
@@ -54,8 +55,7 @@ import {
 } from "@/utils/sexing-image-inference";
 
 import {
-    cropPhotoToViewfinder,
-    optimizePhotoForInference,
+    optimizePhotoForInference
 } from "@/utils/image-crop-helper";
 
 /** Keep controls near the bottom edge, just clear of the tab bar. */
@@ -75,9 +75,9 @@ const MODE_COPY: Record<
   health: {
     title: "Scan your chicken",
     subtitle:
-      "Frame the head, eyes, comb, beak, and feathers clearly for a cleaner symptom scan.",
+      "Frame the head, eyes, comb, posture, or affected feet clearly for an accurate symptom scan.",
     captureTip:
-      "Use bright light and keep the chicken centered inside the guide before capture.",
+      "Use bright light and keep the affected area centered inside the guide before capture.",
   },
   breed: {
     title: "Scan your chicken",
@@ -111,6 +111,7 @@ export default function ScannerScreen() {
   const [torchEnabled, setTorchEnabled] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(0);
   const [cameraReady, setCameraReady] = useState(false);
+  const [isAnalyzingSex, setIsAnalyzingSex] = useState(false);
   const [supportedInfoVisible, setSupportedInfoVisible] = useState(false);
 
   const monitoringId =
@@ -157,9 +158,7 @@ export default function ScannerScreen() {
 
   function openHealthFlow(photoUri: string, width?: number, height?: number) {
     const capturedAt = new Date().toISOString();
-    const healthPathname = isGuestExperience
-      ? "/(tabs)/scanned-health/result"
-      : "/(tabs)/scanned-health";
+    const healthPathname = "/(tabs)/scanned-health";
 
     router.push({
       pathname: healthPathname,
@@ -226,25 +225,18 @@ export default function ScannerScreen() {
         skipProcessing: Platform.OS === "ios",
       });
 
-      // In health mode, crop tightly to the head/eye/comb viewfinder.
-      // In breed mode, preserve the full photo while optimizing dimensions and compression for fast inference.
-      const photo =
-        mode === "health"
-          ? await cropPhotoToViewfinder({
-              photoUri: rawPhoto.uri,
-              photoWidth: rawPhoto.width,
-              photoHeight: rawPhoto.height,
-              viewfinderSize,
-              screenWidth: width,
-              screenHeight: width * 1.5,
-            })
-          : await optimizePhotoForInference({
-              photoUri: rawPhoto.uri,
-              photoWidth: rawPhoto.width,
-              photoHeight: rawPhoto.height,
-              maxDimension: 1024,
-              quality: 0.88,
-            });
+      if (mode === "sex") {
+        setIsAnalyzingSex(true);
+      }
+
+      // Preserve full photo clarity and aspect ratio for inference across head, feet, and full-body symptoms
+      const photo = await optimizePhotoForInference({
+        photoUri: rawPhoto.uri,
+        photoWidth: rawPhoto.width,
+        photoHeight: rawPhoto.height,
+        maxDimension: 1024,
+        quality: 0.88,
+      });
 
       try {
         logStep("Scanner capture complete", {
@@ -315,6 +307,8 @@ export default function ScannerScreen() {
       } catch {
         // ignore
       }
+    } finally {
+      setIsAnalyzingSex(false);
     }
   }
 
@@ -328,6 +322,16 @@ export default function ScannerScreen() {
         zoom={zoomLevel}
         onReadyChange={setCameraReady}
       />
+
+      {isAnalyzingSex ? (
+        <View style={styles.analysisOverlay} accessibilityLiveRegion="polite">
+          <ActivityIndicator size="large" color={ChickIntelPalette.light1} />
+          <Text style={styles.analysisTitle}>Analyzing image...</Text>
+          <Text style={styles.analysisSubtitle}>
+            Checking whether the chicken is male or female.
+          </Text>
+        </View>
+      ) : null}
 
       <View style={styles.overlay} pointerEvents="box-none">
         <View style={[styles.topRow, { paddingTop: insets.top + 10 }]}>
@@ -463,7 +467,10 @@ export default function ScannerScreen() {
               {Math.max(1, 1 + zoomLevel * 2).toFixed(1)}x
             </Text>
           </View>
-          <ScannerShutter onPress={handleCapture} disabled={!cameraReady} />
+          <ScannerShutter
+            onPress={handleCapture}
+            disabled={!cameraReady || isAnalyzingSex}
+          />
         </View>
       </View>
 
@@ -534,6 +541,30 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: "#000000",
+  },
+  analysisOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 3,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: moderateScale(28),
+    backgroundColor: "rgba(0, 0, 0, 0.78)",
+  },
+  analysisTitle: {
+    marginTop: verticalScale(16),
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(22),
+    fontWeight: "800",
+    color: ChickIntelPalette.light1,
+    textAlign: "center",
+  },
+  analysisSubtitle: {
+    marginTop: verticalScale(8),
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(13),
+    lineHeight: 19,
+    color: ChickIntelPalette.textMuted,
+    textAlign: "center",
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
