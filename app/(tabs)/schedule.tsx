@@ -776,7 +776,7 @@ export default function ScheduleScreen() {
 
   const [calendarViewMode, setCalendarViewMode] = useState<
     "today" | "week" | "month"
-  >("month");
+  >("today");
 
   const calendarRows = useMemo(() => {
     if (calendarViewMode === "today" || calendarViewMode === "week") {
