@@ -1,0 +1,48 @@
+<svg width="104" height="110" viewBox="0 0 104 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Soft ground shadow -->
+  <ellipse cx="52" cy="100" rx="34" ry="7" fill="#E8D5C4" fill-opacity="0.6"/>
+  
+  <!-- Left Little Foot -->
+  <path d="M42 93L38 101M38 101L32 101M38 101L37 103M38 101L43 103" stroke="#F4A00B" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Right Little Foot -->
+  <path d="M60 93L64 101M64 101L58 101M64 101L65 103M64 101L70 101" stroke="#F4A00B" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Body Base (Plump Chick) -->
+  <ellipse cx="52" cy="65" rx="32" ry="28" fill="#FDD835"/>
+  <path d="M22 67C22 81.5 35.5 93 52 93C68.5 93 82 81.5 82 67C82 64 81 61 79.5 58C73 70 61 78 50 78C37 78 27 72 23 60C22.3 62.2 22 64.5 22 67Z" fill="#FBC02D"/>
+  
+  <!-- Fluffy Head -->
+  <circle cx="52" cy="40" r="24" fill="#FFEB3B"/>
+  <path d="M28.5 42C29 55 39 64 52 64C65 64 75 55 75.5 42C74 52 64 59 52 59C40 59 30 52 28.5 42Z" fill="#FDD835"/>
+
+  <!-- Fluffy tuft on top of head -->
+  <path d="M50 17C48 11 51 8 52 8C53 8 56 11 54 17Z" fill="#FFEB3B"/>
+  <path d="M46 19C43 14 46 11 47 11C48.5 11 50 14 48 19Z" fill="#FDD835"/>
+  <path d="M57 19C60 14 57 11 56 11C54.5 11 53 14 55 19Z" fill="#FDD835"/>
+
+  <!-- Left Wing -->
+  <path d="M24 54C19 59 18 69 22 75C25 79 31 80 34 76C36 73 34 65 31 59C29 55 26 52 24 54Z" fill="#FBC02D"/>
+  <path d="M25 56C21 60 20 68 23 73C25 76 30 77 32 74C30 70 28 64 27 58C26 57 25.5 56.5 25 56Z" fill="#FFF176"/>
+
+  <!-- Right Wing -->
+  <path d="M80 54C85 59 86 69 82 75C79 79 73 80 70 76C68 73 70 65 73 59C75 55 78 52 80 54Z" fill="#FBC02D"/>
+  <path d="M79 56C83 60 84 68 81 73C79 76 74 77 72 74C74 70 76 64 77 58C78 57 78.5 56.5 79 56Z" fill="#FFF176"/>
+
+  <!-- Rosy Cheeks -->
+  <ellipse cx="36" cy="46" rx="4.5" ry="3" fill="#FF8A65" fill-opacity="0.75"/>
+  <ellipse cx="68" cy="46" rx="4.5" ry="3" fill="#FF8A65" fill-opacity="0.75"/>
+
+  <!-- Eyes -->
+  <ellipse cx="41" cy="37" rx="3.5" ry="4.5" fill="#263238"/>
+  <circle cx="42.2" cy="35.5" r="1.4" fill="#FFFFFF"/>
+  <ellipse cx="63" cy="37" rx="3.5" ry="4.5" fill="#263238"/>
+  <circle cx="64.2" cy="35.5" r="1.4" fill="#FFFFFF"/>
+
+  <!-- Cute Beak -->
+  <path d="M47 41C47 41 52 47 52 47C52 47 57 41 57 41C57 39 47 39 47 41Z" fill="#FF9800"/>
+  <path d="M48 41.5C49.5 44.5 52 46.5 52 46.5C52 46.5 54.5 44.5 56 41.5C54.5 41 49.5 41 48 41.5Z" fill="#F57C00"/>
+
+  <!-- Cracked Eggshell on side (Decorative Accent) -->
+  <path d="M74 74L77 69L82 73L85 67L89 74L87 81C84 84 78 83 75 79L74 74Z" fill="#FFF8E1" stroke="#FFE082" stroke-width="1.2" stroke-linejoin="round"/>
+  <path d="M15 76L19 71L23 75L27 69L29 76L27 82C24 85 18 84 16 80L15 76Z" fill="#FFF8E1" stroke="#FFE082" stroke-width="1.2" stroke-linejoin="round"/>
+</svg>

@@ -13,13 +13,22 @@ import {
 export type HomeKpiPeriod = "7 days" | "30 days" | "12 months";
 
 type BatchKpiRow = {
+  batch_no?: string;
   female_count: number;
   male_count: number;
+  total_count?: number;
+  unknown_count?: number;
+  isolated_count?: number;
+  killed_count?: number;
+  origin_batch_no?: string | null;
+  source_egg_batch_id?: string | null;
   created_at: string;
 };
 
 type EggKpiRow = {
   egg_qty: number;
+  hatched_qty?: number;
+  transferred_hatched_qty?: number;
   created_at: string;
 };
 
@@ -38,7 +47,9 @@ type WindowMetric = {
 
 export type HomeKpiSnapshot = {
   totalBirds: number;
+  totalChicks: number;
   birdAdditionsByPeriod: Record<HomeKpiPeriod, WindowMetric>;
+  chickAdditionsByPeriod: Record<HomeKpiPeriod, WindowMetric>;
   collectedEggsByPeriod: Record<HomeKpiPeriod, WindowMetric>;
   feedQtyByPeriod: Record<HomeKpiPeriod, WindowMetric>;
 };
@@ -210,11 +221,11 @@ export async function fetchHomeKpiSnapshot(
   ] = await Promise.all([
     supabase
       .from("batches")
-      .select("batch_no, female_count, male_count, isolated_count, killed_count, created_at")
+      .select("batch_no, female_count, male_count, total_count, unknown_count, isolated_count, killed_count, origin_batch_no, source_egg_batch_id, created_at")
       .eq("farm_id", farmId),
     supabase
       .from("egg_batches")
-      .select("egg_qty, created_at")
+      .select("egg_qty, hatched_qty, transferred_hatched_qty, created_at")
       .eq("farm_id", farmId),
     supabase
       .from("inventory_items")
@@ -232,11 +243,7 @@ export async function fetchHomeKpiSnapshot(
   if (eggError) throw eggError;
   if (inventoryError) throw inventoryError;
 
-  const batches = (batchRows ?? []) as (BatchKpiRow & {
-    batch_no?: string;
-    isolated_count?: number;
-    killed_count?: number;
-  })[];
+  const batches = (batchRows ?? []) as BatchKpiRow[];
   const eggs = (eggRows ?? []) as EggKpiRow[];
   const inventory = (inventoryRows ?? []) as InventoryKpiRow[];
 
@@ -278,6 +285,16 @@ export async function fetchHomeKpiSnapshot(
     };
   });
 
+  const hatchedChickEvents = eggs.map((egg) => ({
+    createdAt: egg.created_at,
+    value: Number(egg.hatched_qty ?? 0),
+  }));
+
+  const totalChicks = eggs.reduce(
+    (sum, egg) => sum + Number(egg.hatched_qty ?? 0),
+    0,
+  );
+
   const eggEvents = eggs.map((egg) => ({
     createdAt: egg.created_at,
     value: Number(egg.egg_qty),
@@ -299,8 +316,12 @@ export async function fetchHomeKpiSnapshot(
 
   return {
     totalBirds,
+    totalChicks,
     birdAdditionsByPeriod: Object.fromEntries(
       PERIODS.map((period) => [period, sumWindowValues(birdEvents, period)]),
+    ) as Record<HomeKpiPeriod, WindowMetric>,
+    chickAdditionsByPeriod: Object.fromEntries(
+      PERIODS.map((period) => [period, sumEggValues(hatchedChickEvents, period)]),
     ) as Record<HomeKpiPeriod, WindowMetric>,
     collectedEggsByPeriod: Object.fromEntries(
       PERIODS.map((period) => [period, sumEggValues(eggEvents, period)]),
