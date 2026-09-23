@@ -31,6 +31,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import BackgroundGradient from "@/assets_imported/background-gradient.svg";
 import ChickenKpiArt from "@/assets_imported/card-chicken.svg";
+import ChicksKpiArt from "@/assets_imported/card-chicks.svg";
 import EggsKpiArt from "@/assets_imported/card-eggs.svg";
 import FeedsKpiArt from "@/assets_imported/card-feeds.svg";
 import ScheduleIcon from "@/assets_imported/icon-calendar.svg";
@@ -101,11 +102,19 @@ const initialKpiCards: KpiCardData[] = [
     Artwork: EggsKpiArt,
   },
   {
+    title: "Total Chicks",
+    value: "0",
+    trend: "+0% this week",
+    period: "7 days",
+    background: "primarySoft",
+    Artwork: ChicksKpiArt,
+  },
+  {
     title: "Feeds Consumed",
     value: "0 kg",
     trend: "0% this week",
     period: "7 days",
-    background: "primarySoft",
+    background: "accentSoft",
     Artwork: FeedsKpiArt,
   },
 ];
@@ -231,6 +240,7 @@ export default function HomeScreen() {
   const [periodByTitle, setPeriodByTitle] = useState<Record<string, string>>({
     "Total Chickens": "30 days",
     "Collected Eggs": "7 days",
+    "Total Chicks": "7 days",
     "Feeds Consumed": "7 days",
   });
   const [periodPickerFor, setPeriodPickerFor] = useState<string | null>(null);
@@ -545,6 +555,8 @@ export default function HomeScreen() {
       "30 days") as HomeKpiPeriod;
     const eggsPeriod = (periodByTitle["Collected Eggs"] ??
       "7 days") as HomeKpiPeriod;
+    const chicksPeriod = (periodByTitle["Total Chicks"] ??
+      "7 days") as HomeKpiPeriod;
     const feedPeriod = (periodByTitle["Feeds Consumed"] ??
       "7 days") as HomeKpiPeriod;
 
@@ -599,6 +611,30 @@ export default function HomeScreen() {
       },
       {
         ...initialKpiCards[2],
+        value: String(snapshot.chickAdditionsByPeriod[chicksPeriod].current),
+        period: chicksPeriod,
+        valueByPeriod: Object.fromEntries(
+          PERIOD_OPTIONS.map((period) => [
+            period,
+            String(snapshot.chickAdditionsByPeriod[period].current),
+          ]),
+        ) as Record<HomeKpiPeriod, string>,
+        trendByPeriod: Object.fromEntries(
+          PERIOD_OPTIONS.map((period) => [
+            period,
+            formatBirdAdditionTrend(
+              snapshot.chickAdditionsByPeriod[period].current,
+              snapshot.chickAdditionsByPeriod[period].previous,
+            ),
+          ]),
+        ) as Record<HomeKpiPeriod, string>,
+        trend: `${formatBirdAdditionTrend(
+          snapshot.chickAdditionsByPeriod[chicksPeriod].current,
+          snapshot.chickAdditionsByPeriod[chicksPeriod].previous,
+        )} ${periodLabelFromPeriod(chicksPeriod)}`,
+      },
+      {
+        ...initialKpiCards[3],
         value: `${snapshot.feedQtyByPeriod[feedPeriod].current} kg`,
         period: feedPeriod,
         valueByPeriod: Object.fromEntries(
@@ -729,6 +765,17 @@ export default function HomeScreen() {
     }
 
     if (k.title === "Collected Eggs") {
+      const rawTrend = k.trendByPeriod?.[period as HomeKpiPeriod] ?? "+0%";
+      const cleanTrend = rawTrend.replace(/^-/, "+");
+      return {
+        ...k,
+        value: k.valueByPeriod?.[period as HomeKpiPeriod] ?? k.value,
+        period,
+        trend: `${cleanTrend} ${periodLabelFromPeriod(period)}`,
+      };
+    }
+
+    if (k.title === "Total Chicks") {
       const rawTrend = k.trendByPeriod?.[period as HomeKpiPeriod] ?? "+0%";
       const cleanTrend = rawTrend.replace(/^-/, "+");
       return {
