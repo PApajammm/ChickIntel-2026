@@ -500,6 +500,7 @@ function buildPrintableHtml({
     <html>
         <head>
             <meta charset="utf-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=0.25, maximum-scale=5.0, user-scalable=yes" />
             <title>ChickIntel Farm Report - ${escapeHtml(overview)}</title>
             <style>
                 @page {
@@ -511,15 +512,18 @@ function buildPrintableHtml({
                     margin: 0;
                     padding: 0;
                     width: 100%;
-                    height: 100%;
+                    min-height: 100%;
                     font-family: 'Segoe UI', Helvetica, Arial, sans-serif;
                     color: #203029;
                     background: #f4faf7;
                     -webkit-print-color-adjust: exact;
                     print-color-adjust: exact;
+                    touch-action: pan-x pan-y pinch-zoom;
+                    -webkit-text-size-adjust: 100%;
                 }
                 body {
                     padding: 16px;
+                    overflow: auto;
                 }
                 .page-break {
                     page-break-after: always;

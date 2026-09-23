@@ -151,7 +151,22 @@ function toNiceAxisMax(maxValue: number) {
   return Math.ceil(maxValue / 10) * 10;
 }
 
-function formatOverviewWindow(overview: ReportOverview) {
+function formatShortDate(date: Date) {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(date);
+}
+
+function formatOverviewWindow(
+  overview: ReportOverview,
+  customStart?: Date | null,
+  customEnd?: Date | null,
+) {
+  if (customStart && customEnd) {
+    return `the selected period (${formatShortDate(customStart)} – ${formatShortDate(customEnd)})`;
+  }
   if (overview === "Weekly") return "the last 7 days";
   if (overview === "Monthly") return "the last 30 days";
   return "the last 12 months";
@@ -179,6 +194,8 @@ function isWithinWindow(
 function buildEggProductionSnapshot(
   rows: EggBatchReportRow[],
   overview: ReportOverview,
+  customStart?: Date | null,
+  customEnd?: Date | null,
 ) {
   const hatched = rows.reduce((sum, row) => sum + Number(row.hatched_qty), 0);
   const unhatched = rows.reduce(
@@ -211,8 +228,8 @@ function buildEggProductionSnapshot(
 
   const analyticsText =
     total === 0
-      ? `No egg production records were found for ${formatOverviewWindow(overview)}.`
-      : `For ${formatOverviewWindow(overview)}, ${slices[0].displayPercent} of recorded egg outcomes hatched, ${slices[1].displayPercent} remained unhatched, and ${slices[2].displayPercent} were marked damaged.`;
+      ? `No egg production records were found for ${formatOverviewWindow(overview, customStart, customEnd)}.`
+      : `For ${formatOverviewWindow(overview, customStart, customEnd)}, ${slices[0].displayPercent} of recorded egg outcomes hatched, ${slices[1].displayPercent} remained unhatched, and ${slices[2].displayPercent} were marked damaged.`;
 
   return {
     title: "Egg Production Overview",
@@ -245,6 +262,8 @@ function rowMatchesEggScope(
 function buildEggFertilitySnapshot(
   rows: EggBatchReportRow[],
   overview: ReportOverview,
+  customStart?: Date | null,
+  customEnd?: Date | null,
 ) {
   const fertileCount = rows.reduce(
     (sum, row) => sum + Number(row.hatched_qty),
@@ -288,8 +307,8 @@ function buildEggFertilitySnapshot(
 
   const analyticsText =
     totalEggs === 0
-      ? `No egg fertility records were found for ${formatOverviewWindow(overview)}.`
-      : `For ${formatOverviewWindow(overview)}, fertility rate reached ${fertilityRate}% from ${fertileCount} fertile eggs out of ${totalEggs} recorded eggs. Production rate across recorded outcomes was ${productionRate}%, with ${unhatchedCount} unhatched and ${damagedCount} damaged eggs.`;
+      ? `No egg fertility records were found for ${formatOverviewWindow(overview, customStart, customEnd)}.`
+      : `For ${formatOverviewWindow(overview, customStart, customEnd)}, fertility rate reached ${fertilityRate}% from ${fertileCount} fertile eggs out of ${totalEggs} recorded eggs. Production rate across recorded outcomes was ${productionRate}%, with ${unhatchedCount} unhatched and ${damagedCount} damaged eggs.`;
 
   return {
     title: "Egg Fertility Rate Overview",
@@ -309,6 +328,8 @@ function buildChickenProductionSnapshot(
   rows: BatchReportRow[],
   overview: ReportOverview,
   deceasedRows: { batch_no?: string | null }[] = [],
+  customStart?: Date | null,
+  customEnd?: Date | null,
 ) {
   const deceasedCountByBatch = new Map<string, number>();
   deceasedRows.forEach((row) => {
@@ -364,8 +385,8 @@ function buildChickenProductionSnapshot(
 
   const analyticsText =
     total === 0
-      ? `No chicken batch records were found for ${formatOverviewWindow(overview)}.`
-      : `For ${formatOverviewWindow(overview)}, ${slices[0].displayPercent} of recorded birds remained active, while ${slices[1].displayPercent} were isolated and ${slices[2].displayPercent} were lost.`;
+      ? `No chicken batch records were found for ${formatOverviewWindow(overview, customStart, customEnd)}.`
+      : `For ${formatOverviewWindow(overview, customStart, customEnd)}, ${slices[0].displayPercent} of recorded birds remained active, while ${slices[1].displayPercent} were isolated and ${slices[2].displayPercent} were lost.`;
 
   return {
     title: "Chicken Batch Overview",
@@ -461,6 +482,7 @@ function buildSupplySnapshot(
   windowStart: Date,
   now: Date,
   customEnd?: Date,
+  customStart?: Date | null,
 ) {
   const isTargetSupply =
     supplyType === "Feeds" ? isFeedInventory : isVitaminOrMedInventory;
@@ -612,8 +634,8 @@ function buildSupplySnapshot(
   const peakBar = bars.find((bar) => bar.highlight);
   const analyticsText =
     totalConsumed === 0
-      ? `No ${supplyType.toLowerCase()} consumption was recorded from schedule tasks for ${formatOverviewWindow(overview)}.`
-      : `${supplyType} consumption totaled ${totalConsumed.toFixed(2)} units across completed schedule tasks for ${formatOverviewWindow(overview)}. Peak usage period was ${peakBar?.label ?? "N/A"} with ${peakBar?.value.toFixed(2) ?? "0.00"} units consumed.`;
+      ? `No ${supplyType.toLowerCase()} consumption was recorded from schedule tasks for ${formatOverviewWindow(overview, customStart, customEnd)}.`
+      : `${supplyType} consumption totaled ${totalConsumed.toFixed(2)} units across completed schedule tasks for ${formatOverviewWindow(overview, customStart, customEnd)}. Peak usage period was ${peakBar?.label ?? "N/A"} with ${peakBar?.value.toFixed(2) ?? "0.00"} units consumed.`;
 
   let slices: ReportDonutSlice[] | undefined;
   let totalSlices: number | undefined;
@@ -806,6 +828,8 @@ export async function fetchFarmReportSnapshot(input: {
             isWithinWindow(row.created_at, windowStart, reportEnd),
           ),
           input.overview,
+          customStart,
+          customEnd,
         )
       : buildChickenProductionSnapshot(
           ((batchRows ?? []) as BatchReportRow[]).filter((row) =>
@@ -813,6 +837,8 @@ export async function fetchFarmReportSnapshot(input: {
           ),
           input.overview,
           (deceasedRows ?? []) as { batch_no?: string | null }[],
+          customStart,
+          customEnd,
         );
 
   const supply = buildSupplySnapshot(
@@ -824,6 +850,7 @@ export async function fetchFarmReportSnapshot(input: {
     windowStart,
     reportEnd,
     customEnd ?? undefined,
+    customStart,
   );
 
   return { production, supply } satisfies FarmReportSnapshot;
@@ -871,5 +898,10 @@ export async function fetchEggFertilityReportSnapshot(input: {
       ) && rowMatchesEggScope(row, input.scope),
   );
 
-  return buildEggFertilitySnapshot(rows, input.overview);
+  return buildEggFertilitySnapshot(
+    rows,
+    input.overview,
+    customStart,
+    customEnd,
+  );
 }

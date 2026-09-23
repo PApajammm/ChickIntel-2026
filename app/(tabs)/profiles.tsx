@@ -367,14 +367,34 @@ export default function ProfilesScreen() {
           const male = parseCount(state.maleCount);
           const female = parseCount(state.femaleCount);
           const total = parseCount(state.totalCount);
+
+          if (total > 0) {
+            if (details.sex === "female") {
+              const nextFemale = Math.min(total, female + 1);
+              const nextMale = total - nextFemale;
+              return {
+                ...state,
+                femaleCount: String(nextFemale),
+                maleCount: String(nextMale),
+              };
+            } else {
+              const nextMale = Math.min(total, male + 1);
+              const nextFemale = total - nextMale;
+              return {
+                ...state,
+                maleCount: String(nextMale),
+                femaleCount: String(nextFemale),
+              };
+            }
+          }
+
           const nextMale = details.sex === "male" ? male + 1 : male;
           const nextFemale = details.sex === "female" ? female + 1 : female;
-
           return {
             ...state,
             maleCount: String(nextMale),
             femaleCount: String(nextFemale),
-            totalCount: String(Math.max(total, nextMale + nextFemale)),
+            totalCount: String(nextMale + nextFemale),
           };
         });
       } else {

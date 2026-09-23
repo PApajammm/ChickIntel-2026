@@ -277,8 +277,8 @@ export const JournalLogCard = memo(function JournalLogCard({
 
                 <Text style={styles.contextLabel} numberOfLines={1}>
                   {detectedIllness
-                    ? `Diagnosis: ${detectedIllness}`
-                    : "Diagnosis: Not recorded"}
+                    ? `Detected: ${detectedIllness}`
+                    : "Detected: Not recorded"}
                 </Text>
 
                 {behaviorLabels && behaviorLabels.length > 0 ? (

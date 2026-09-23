@@ -441,35 +441,40 @@ export default function AddBatchScreen() {
   function applyDetectedSex(sex: "male" | "female") {
     const currentMale = parseCount(maleCount);
     const currentFemale = parseCount(femaleCount);
-    const currentUnknown = parseCount(unknownCount);
     const currentTotal = parseCount(totalCount);
 
-    if (sex === "male") {
-      const nextMale = currentMale + 1;
-      const nextUnknown = Math.max(0, currentUnknown - 1);
-      const nextTotal =
-        currentUnknown > 0
-          ? currentTotal
-          : Math.max(currentTotal + 1, nextMale + currentFemale);
+    if (currentTotal > 0) {
+      if (sex === "female") {
+        const nextFemale = Math.min(currentTotal, currentFemale + 1);
+        const nextMale = currentTotal - nextFemale;
 
-      setMaleCount(String(nextMale));
-      setFemaleCount(String(currentFemale));
-      setUnknownCount(String(nextUnknown));
-      setTotalCount(String(nextTotal));
+        setFemaleCount(String(nextFemale));
+        setMaleCount(String(nextMale));
+        setUnknownCount("0");
+      } else {
+        const nextMale = Math.min(currentTotal, currentMale + 1);
+        const nextFemale = currentTotal - nextMale;
+
+        setMaleCount(String(nextMale));
+        setFemaleCount(String(nextFemale));
+        setUnknownCount("0");
+      }
       return;
     }
 
-    const nextFemale = currentFemale + 1;
-    const nextUnknown = Math.max(0, currentUnknown - 1);
-    const nextTotal =
-      currentUnknown > 0
-        ? currentTotal
-        : Math.max(currentTotal + 1, currentMale + nextFemale);
-
-    setFemaleCount(String(nextFemale));
-    setMaleCount(String(currentMale));
-    setUnknownCount(String(nextUnknown));
-    setTotalCount(String(nextTotal));
+    if (sex === "female") {
+      const nextFemale = currentFemale + 1;
+      setFemaleCount(String(nextFemale));
+      setMaleCount(String(currentMale));
+      setUnknownCount("0");
+      setTotalCount(String(nextFemale + currentMale));
+    } else {
+      const nextMale = currentMale + 1;
+      setMaleCount(String(nextMale));
+      setFemaleCount(String(currentFemale));
+      setUnknownCount("0");
+      setTotalCount(String(nextMale + currentFemale));
+    }
   }
 
   function closeBreedScanner() {
