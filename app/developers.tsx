@@ -522,8 +522,8 @@ export default function DevelopersScreen() {
             >
               <MaterialCommunityIcons
                 name="arrow-left"
-                size={22}
-                color="#FFF"
+                size={24}
+                color={ChickIntelPalette.gray1}
               />
             </Pressable>
             <Text style={styles.headerTitle}>
@@ -1232,22 +1232,13 @@ const styles = StyleSheet.create({
     marginBottom: verticalScale(6),
   },
   backBtn: {
-    width: scale(42),
-    height: verticalScale(42),
-    borderRadius: 14,
-    backgroundColor: ChickIntelPalette.green1,
+    width: scale(40),
+    height: verticalScale(40),
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.25)",
-    shadowColor: "#317667",
-    shadowOpacity: 0.22,
-    shadowRadius: 10,
-    shadowOffset: { width: scale(0), height: verticalScale(4) },
-    elevation: 4,
   },
   backBtnPressed: {
-    opacity: 0.7,
+    opacity: 0.6,
     transform: [{ scale: 0.94 }],
   },
   headerTitle: {

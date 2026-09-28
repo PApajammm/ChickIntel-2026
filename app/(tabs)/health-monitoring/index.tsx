@@ -14,8 +14,10 @@ import {
     ListRenderItem,
     Modal,
     Pressable,
+    ScrollView,
     StyleSheet,
     Text,
+    TextInput,
     TouchableOpacity,
     View,
 } from "react-native";
@@ -57,36 +59,47 @@ function getMonitoringStatusTheme(status?: string, illness?: string) {
   // 1. Recovered -> GREEN
   if (normStatus === "recovered") {
     return {
-      accentColor: "#10B981",
-      badgeBg: "rgba(16, 185, 129, 0.12)",
-      badgeText: "#059669",
-      badgeBorder: "rgba(16, 185, 129, 0.25)",
+      accentColor: ChickIntelPalette.green1,
+      badgeBg: ChickIntelPalette.lightGreen,
+      badgeText: ChickIntelPalette.green1,
+      badgeBorder: "rgba(64, 83, 77, 0.25)",
       label: "Recovered",
     };
   }
 
-  // 2. Dead / Deceased -> RED
+  // 2. Dead / Deceased -> MAROON ALERT
   if (normStatus === "deceased" || normStatus === "dead") {
     return {
-      accentColor: "#EF4444",
-      badgeBg: "rgba(239, 68, 68, 0.12)",
-      badgeText: "#DC2626",
-      badgeBorder: "rgba(239, 68, 68, 0.25)",
+      accentColor: "#923737",
+      badgeBg: "rgba(146, 55, 55, 0.10)",
+      badgeText: "#923737",
+      badgeBorder: "rgba(146, 55, 55, 0.25)",
       label: "Deceased",
     };
   }
 
-  // 3. Isolated / Monitored / Active -> YELLOW (AMBER)
+  // 3. Isolated / Isolation -> ACCENT PEACH
+  if (normStatus === "isolated" || normStatus === "isolation") {
+    return {
+      accentColor: ChickIntelPalette.accent,
+      badgeBg: "rgba(247, 192, 144, 0.25)",
+      badgeText: ChickIntelPalette.gray1,
+      badgeBorder: "rgba(247, 192, 144, 0.6)",
+      label: "Isolated",
+    };
+  }
+
+  // 4. Monitored / Monitoring / Active -> SAGE / NEUTRAL
   let displayLabel = status?.trim();
   if (!displayLabel || displayLabel.toLowerCase() === "unknown") {
     displayLabel = "Active";
   }
 
   return {
-    accentColor: "#F59E0B",
-    badgeBg: "rgba(245, 158, 11, 0.12)",
-    badgeText: "#D97706",
-    badgeBorder: "rgba(245, 158, 11, 0.25)",
+    accentColor: ChickIntelPalette.mediumGreen,
+    badgeBg: ChickIntelPalette.lightGreen,
+    badgeText: ChickIntelPalette.gray1,
+    badgeBorder: ChickIntelPalette.mediumGreen,
     label: displayLabel,
   };
 }
@@ -129,13 +142,84 @@ export default function HealthMonitoringIndexScreen() {
     }, [refresh]),
   );
 
-  const displayedRecords = useMemo(() => {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeFilter, setActiveFilter] = useState("all");
+
+  const tabRecords = useMemo(() => {
     if (selectedTab === "Active") {
       return records.filter((record) => record.monitoringStatus === "Active");
     }
-
     return records.filter((record) => record.monitoringStatus !== "Active");
   }, [records, selectedTab]);
+
+  const filterOptions = useMemo(() => {
+    const list: { label: string; value: string }[] = [
+      { label: "All", value: "all" },
+    ];
+    const seen = new Set<string>();
+
+    tabRecords.forEach((r) => {
+      const illness = (
+        r.healthLog?.detectedIllness ||
+        r.healthLog?.additionalObservation ||
+        ""
+      ).trim();
+      if (illness && !seen.has(illness.toLowerCase())) {
+        seen.add(illness.toLowerCase());
+        list.push({ label: illness, value: illness.toLowerCase() });
+      }
+    });
+
+    if (selectedTab === "History") {
+      list.push({ label: "Recovered", value: "status:recovered" });
+      list.push({ label: "Deceased", value: "status:deceased" });
+    }
+
+    return list;
+  }, [tabRecords, selectedTab]);
+
+  const displayedRecords = useMemo(() => {
+    let result = tabRecords;
+
+    if (activeFilter !== "all") {
+      if (activeFilter.startsWith("status:")) {
+        const targetStatus = activeFilter.replace("status:", "");
+        result = result.filter(
+          (r) => r.monitoringStatus.toLowerCase() === targetStatus,
+        );
+      } else {
+        result = result.filter((r) => {
+          const illness = (
+            r.healthLog?.detectedIllness ||
+            r.healthLog?.additionalObservation ||
+            ""
+          ).toLowerCase();
+          return illness === activeFilter;
+        });
+      }
+    }
+
+    const q = searchQuery.trim().toLowerCase();
+    if (q) {
+      result = result.filter((r) => {
+        const tag = (r.chtTag ?? "").toLowerCase();
+        const batch = (r.batchNo ?? "").toLowerCase();
+        const illness = (r.healthLog?.detectedIllness ?? "").toLowerCase();
+        const notes = (
+          r.healthLog?.additionalObservation ?? ""
+        ).toLowerCase();
+        return (
+          tag.includes(q) ||
+          batch.includes(q) ||
+          `c${batch}`.includes(q) ||
+          illness.includes(q) ||
+          notes.includes(q)
+        );
+      });
+    }
+
+    return result;
+  }, [tabRecords, activeFilter, searchQuery]);
 
   const completeMonitoring = useCallback(
     async (
@@ -316,36 +400,26 @@ export default function HealthMonitoringIndexScreen() {
           {!isHistory ? (
             <View style={styles.actionRow}>
               <Pressable
-                onPress={() => openStatusChangeConfirm(item, "Recovered")}
-                style={({ pressed }) => [
-                  styles.actionButton,
-                  styles.recoveredButton,
-                  { opacity: pressed ? 0.85 : 1 },
-                ]}
-              >
-                <MaterialCommunityIcons
-                  name="check-circle-outline"
-                  size={15}
-                  color={ChickIntelPalette.green1}
-                />
-                <Text style={styles.recoveredButtonText}>
-                  Mark as Recovered
-                </Text>
-              </Pressable>
-              <Pressable
                 onPress={() => openStatusChangeConfirm(item, "Deceased")}
                 style={({ pressed }) => [
                   styles.actionButton,
                   styles.deceasedButton,
-                  { opacity: pressed ? 0.85 : 1 },
+                  { opacity: pressed ? 0.88 : 1 },
                 ]}
               >
-                <MaterialCommunityIcons
-                  name="close-circle-outline"
-                  size={15}
-                  color="#923737"
-                />
-                <Text style={styles.deceasedButtonText}>Mark as Deceased</Text>
+                <Text style={styles.deceasedButtonText}>Deceased</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => openStatusChangeConfirm(item, "Recovered")}
+                style={({ pressed }) => [
+                  styles.actionButton,
+                  styles.recoveredButton,
+                  { opacity: pressed ? 0.88 : 1 },
+                ]}
+              >
+                <Text style={styles.recoveredButtonText}>
+                  Recovered
+                </Text>
               </Pressable>
             </View>
           ) : null}
@@ -362,15 +436,6 @@ export default function HealthMonitoringIndexScreen() {
 
   return (
     <View style={styles.screen}>
-      <BackgroundGradient
-        width="110%"
-        height="110%"
-        preserveAspectRatio="xMidYMid slice"
-        style={[
-          StyleSheet.absoluteFill,
-          { transform: [{ scale: 1.08 }, { translateY: -14 }] },
-        ]}
-      />
       <View
         style={[
           styles.safeContent,
@@ -390,8 +455,8 @@ export default function HealthMonitoringIndexScreen() {
           >
             <MaterialCommunityIcons
               name="arrow-left"
-              size={22}
-              color="#FFF"
+              size={24}
+              color={ChickIntelPalette.gray1}
             />
           </TouchableOpacity>
           <Text style={styles.pageTitle} numberOfLines={1}>Health Monitoring</Text>
@@ -404,7 +469,10 @@ export default function HealthMonitoringIndexScreen() {
             return (
               <Pressable
                 key={tab}
-                onPress={() => setSelectedTab(tab)}
+                onPress={() => {
+                  setSelectedTab(tab);
+                  setActiveFilter("all");
+                }}
                 style={[styles.tab, active && styles.tabActive]}
               >
                 <MaterialCommunityIcons
@@ -422,18 +490,87 @@ export default function HealthMonitoringIndexScreen() {
 
         <FlatList
           data={displayedRecords}
-          extraData={{ selectedTab, records }}
+          extraData={{ selectedTab, records, activeFilter, searchQuery }}
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
           contentContainerStyle={[styles.listContent, { paddingBottom: 15 }]}
           ItemSeparatorComponent={() => <View style={styles.sep} />}
-          ListHeaderComponent={<View style={styles.listTop} />}
+          ListHeaderComponent={
+            <View>
+              <View style={styles.listTop} />
+
+              {/* Search Bar */}
+              <View style={styles.searchBar}>
+                <MaterialCommunityIcons
+                  name="magnify"
+                  size={20}
+                  color={ChickIntelPalette.gray1}
+                />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Search CHT tag, batch #, illness..."
+                  placeholderTextColor={ChickIntelPalette.gray2}
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                />
+                {searchQuery.length > 0 ? (
+                  <Pressable
+                    onPress={() => setSearchQuery("")}
+                    hitSlop={8}
+                    style={styles.searchClearBtn}
+                  >
+                    <MaterialCommunityIcons
+                      name="close-circle"
+                      size={18}
+                      color={ChickIntelPalette.gray2}
+                    />
+                  </Pressable>
+                ) : null}
+              </View>
+
+              {/* Filter Pills */}
+              {filterOptions.length > 1 ? (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.filterRow}
+                >
+                  {filterOptions.map((opt) => {
+                    const active = activeFilter === opt.value;
+                    return (
+                      <Pressable
+                        key={opt.value}
+                        style={[
+                          styles.filterPill,
+                          active && styles.filterPillActive,
+                        ]}
+                        onPress={() => setActiveFilter(opt.value)}
+                      >
+                        <Text
+                          style={[
+                            styles.filterPillText,
+                            active && styles.filterPillTextActive,
+                          ]}
+                        >
+                          {opt.label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+              ) : null}
+            </View>
+          }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyText}>
-                {selectedTab === "Active"
-                  ? 'No chickens are being monitored yet. Complete a health scan and use the "Add to Health Monitoring" option on the result screen to start tracking.'
-                  : "No completed monitoring records yet. Recovered and deceased chickens will appear here."}
+                {searchQuery.trim()
+                  ? `No health records found matching "${searchQuery}".`
+                  : activeFilter !== "all"
+                    ? "No records found matching this filter."
+                    : selectedTab === "Active"
+                      ? 'No chickens are being monitored yet. Complete a health scan and use the "Add to Health Monitoring" option on the result screen to start tracking.'
+                      : "No completed monitoring records yet. Recovered and deceased chickens will appear here."}
               </Text>
             </View>
           }
@@ -520,7 +657,7 @@ export default function HealthMonitoringIndexScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: ChickIntelPalette.light1,
+    backgroundColor: ChickIntelPalette.canvas,
   },
   safeContent: {
     flex: 1,
@@ -544,30 +681,23 @@ const styles = StyleSheet.create({
     color: ChickIntelPalette.gray1,
   },
   headerRightPlaceholder: {
-    width: scale(42),
+    width: scale(40),
   },
   backButton: {
-    width: scale(42),
-    height: verticalScale(42),
-    borderRadius: 14,
-    backgroundColor: ChickIntelPalette.green1,
+    width: scale(40),
+    height: verticalScale(40),
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.25)",
-    shadowColor: "#317667",
-    shadowOpacity: 0.22,
-    shadowRadius: 10,
-    shadowOffset: { width: scale(0), height: verticalScale(4) },
-    elevation: 4,
-    flexShrink: 0,
+    backgroundColor: "transparent",
   },
   tabs: {
     flexDirection: "row",
-    backgroundColor: "rgba(255, 255, 255, 0.85)",
+    backgroundColor: "#FFFFFF",
     borderRadius: 10,
     padding: 4,
     gap: 4,
+    borderWidth: 1,
+    borderColor: ChickIntelPalette.gray2,
   },
   tab: {
     flex: 1,
@@ -575,9 +705,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     minHeight: verticalScale(38),
-    borderRadius: 10,
+    borderRadius: 8,
     paddingHorizontal: moderateScale(10),
     gap: 6,
+    backgroundColor: "transparent",
   },
   tabActive: {
     backgroundColor: ChickIntelPalette.green1,
@@ -586,7 +717,7 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(13),
     fontWeight: "700",
-    color: "#4A5452",
+    color: ChickIntelPalette.textMuted,
   },
   tabTextActive: {
     color: "#FFFFFF",
@@ -618,8 +749,15 @@ const styles = StyleSheet.create({
     paddingRight: 16,
     paddingTop: 14,
     paddingBottom: 14,
-    backgroundColor: "rgba(255, 255, 255, 0.94)",
-    borderRadius: 10,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: ChickIntelPalette.gray2,
+    shadowColor: "#161E1A",
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: verticalScale(2) },
+    elevation: 2,
     overflow: "hidden",
   },
   cardPressable: {
@@ -643,12 +781,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "rgba(49, 118, 103, 0.12)",
+    backgroundColor: ChickIntelPalette.lightGreen,
     paddingHorizontal: moderateScale(8),
     paddingVertical: verticalScale(3),
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.22)",
+    borderColor: ChickIntelPalette.mediumGreen,
   },
   chtTag: {
     fontFamily: ChickFont.display,
@@ -703,17 +841,17 @@ const styles = StyleSheet.create({
     width: scale(72),
     height: verticalScale(72),
     borderRadius: 14,
-    backgroundColor: "rgba(49, 118, 103, 0.08)",
+    backgroundColor: ChickIntelPalette.lightGreen,
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.16)",
+    borderColor: ChickIntelPalette.gray2,
   },
   cardThumbPlaceholder: {
     width: scale(72),
     height: verticalScale(72),
     borderRadius: 14,
-    backgroundColor: "rgba(49, 118, 103, 0.1)",
+    backgroundColor: ChickIntelPalette.lightGreen,
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.16)",
+    borderColor: ChickIntelPalette.gray2,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -740,18 +878,18 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "rgba(244, 248, 247, 0.9)",
+    backgroundColor: ChickIntelPalette.lightGreen,
     paddingHorizontal: moderateScale(8),
     paddingVertical: verticalScale(3),
-    borderRadius: 6,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.16)",
+    borderColor: ChickIntelPalette.mediumGreen,
   },
   batchText: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(11),
     fontWeight: "600",
-    color: "#4A5252",
+    color: ChickIntelPalette.gray1,
   },
   actionRow: {
     flexDirection: "row",
@@ -759,97 +897,99 @@ const styles = StyleSheet.create({
     marginTop: 12,
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: "rgba(49, 118, 103, 0.12)",
+    borderTopColor: ChickIntelPalette.gray2,
   },
   actionButton: {
     flex: 1,
-    minHeight: verticalScale(38),
+    minHeight: verticalScale(42),
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    borderRadius: 10,
-    paddingHorizontal: moderateScale(10),
+    borderRadius: scale(10),
+    paddingHorizontal: moderateScale(12),
   },
   recoveredButton: {
-    backgroundColor: "rgba(49, 118, 103, 0.12)",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.26)",
+    backgroundColor: ChickIntelPalette.green1,
   },
   deceasedButton: {
-    backgroundColor: "rgba(146, 55, 55, 0.1)",
+    backgroundColor: ChickIntelPalette.lightGreen,
     borderWidth: 1,
-    borderColor: "rgba(146, 55, 55, 0.24)",
+    borderColor: ChickIntelPalette.mediumGreen,
   },
   recoveredButtonText: {
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(11),
-    fontWeight: "800",
-    color: ChickIntelPalette.green1,
+    fontSize: responsiveFontSize(13.5),
+    fontWeight: "600",
+    color: "#FFFFFF",
     textAlign: "center",
   },
   deceasedButtonText: {
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(11),
-    fontWeight: "800",
-    color: "#923737",
+    fontSize: responsiveFontSize(13.5),
+    fontWeight: "600",
+    color: ChickIntelPalette.gray1,
     textAlign: "center",
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(51, 51, 51, 0.38)",
+    backgroundColor: "rgba(31, 46, 43, 0.45)",
     alignItems: "center",
     justifyContent: "center",
     padding: moderateScale(24),
   },
   modalCard: {
     width: "100%",
-    maxWidth: scale(340),
-    borderRadius: 12,
-    padding: moderateScale(16),
-    backgroundColor: ChickIntelPalette.light1,
+    maxWidth: scale(360),
+    borderRadius: scale(16),
+    padding: moderateScale(18),
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.18)",
-    shadowColor: "#000",
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-    shadowOffset: { width: scale(0), height: verticalScale(8) },
+    borderColor: ChickIntelPalette.gray2,
+    shadowColor: "#161E1A",
+    shadowOpacity: 0.12,
+    shadowRadius: scale(16),
+    shadowOffset: { width: 0, height: verticalScale(6) },
     elevation: 8,
   },
   modalTitle: {
     fontFamily: ChickFont.display,
     fontSize: responsiveFontSize(18),
-    fontWeight: "800",
+    fontWeight: "700",
     color: ChickIntelPalette.gray1,
-    marginBottom: 8,
+    textAlign: "center",
+    marginBottom: verticalScale(8),
   },
   modalMessage: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(14),
-    lineHeight: 20,
-    color: "rgba(51, 51, 51, 0.78)",
-    marginBottom: 16,
+    lineHeight: responsiveFontSize(20),
+    fontWeight: "500",
+    color: ChickIntelPalette.textMuted,
+    textAlign: "center",
+    marginBottom: verticalScale(16),
   },
   modalRow: {
     flexDirection: "row",
-    gap: 10,
+    gap: moderateScale(12),
+    justifyContent: "center",
   },
   modalBtn: {
     flex: 1,
-    minHeight: verticalScale(40),
+    minHeight: verticalScale(42),
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 10,
-    paddingHorizontal: moderateScale(12),
+    borderRadius: scale(10),
+    paddingHorizontal: moderateScale(16),
   },
   modalBtnFull: {
     flex: 0,
     width: "100%",
   },
   modalBtnSecondary: {
-    backgroundColor: "rgba(49, 118, 103, 0.1)",
+    backgroundColor: ChickIntelPalette.lightGreen,
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.24)",
+    borderColor: ChickIntelPalette.mediumGreen,
   },
   modalBtnPrimary: {
     backgroundColor: ChickIntelPalette.green1,
@@ -857,13 +997,68 @@ const styles = StyleSheet.create({
   modalBtnSecondaryText: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(14),
-    fontWeight: "700",
-    color: ChickIntelPalette.green1,
+    fontWeight: "600",
+    color: ChickIntelPalette.gray1,
   },
   modalBtnPrimaryText: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(14),
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#FFFFFF",
+  },
+  searchBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderRadius: scale(12),
+    borderWidth: 1,
+    borderColor: ChickIntelPalette.mediumGreen,
+    paddingHorizontal: moderateScale(12),
+    height: verticalScale(42),
+    gap: 8,
+    marginBottom: verticalScale(8),
+    shadowColor: "#000",
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  searchInput: {
+    flex: 1,
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(13),
+    color: ChickIntelPalette.gray1,
+    paddingVertical: 0,
+  },
+  searchClearBtn: {
+    padding: 2,
+  },
+  filterRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingBottom: verticalScale(10),
+  },
+  filterPill: {
+    paddingHorizontal: moderateScale(12),
+    paddingVertical: verticalScale(6),
+    borderRadius: 20,
+    backgroundColor: ChickIntelPalette.lightGreen,
+    borderWidth: 1,
+    borderColor: ChickIntelPalette.mediumGreen,
+  },
+  filterPillActive: {
+    backgroundColor: ChickIntelPalette.green1,
+    borderColor: ChickIntelPalette.green1,
+  },
+  filterPillText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12),
+    fontWeight: "600",
+    color: ChickIntelPalette.gray1,
+  },
+  filterPillTextActive: {
+    color: "#FFFFFF",
+    fontWeight: "700",
   },
 });

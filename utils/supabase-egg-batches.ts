@@ -29,6 +29,14 @@ function normalizeEggBatchOrigin(value: string | null | undefined) {
 }
 
 function mapEggBatchRow(row: EggBatchRow): EggBatchItem {
+  let colorName = row.color_name ?? undefined;
+  let colorHex = row.color_hex ?? undefined;
+  const n = (colorName ?? "").trim().toLowerCase();
+  const h = (colorHex ?? "").trim().toLowerCase();
+  if (n === "white" || n === "light pink" || n === "pink" || h === "#ffffff" || h === "#fff" || h === "#f8bbd0") {
+    colorName = "Pink";
+    colorHex = "#F8BBD0";
+  }
   return {
     id: row.id,
     batchNo: row.batch_no,
@@ -41,9 +49,9 @@ function mapEggBatchRow(row: EggBatchRow): EggBatchItem {
     disposedDamagedQty: row.disposed_damaged_qty ?? 0,
     unhatchedQty: row.unhatched_qty,
     soldQty: row.sold_qty ?? 0,
-    colorName: row.color_name ?? undefined,
-    colorHex: row.color_hex ?? undefined,
-    origin: row.origin ?? row.color_name ?? "Unknown",
+    colorName,
+    colorHex,
+    origin: row.origin ?? colorName ?? "Unknown",
     createdAt: row.created_at,
     updatedAt: row.updated_at ?? undefined,
   };

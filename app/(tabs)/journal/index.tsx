@@ -20,11 +20,11 @@ import {
     ScrollView,
     StyleSheet,
     Text,
+    TextInput,
     View,
 } from "react-native";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-
-import BackgroundGradient from "@/assets_imported/background-gradient.svg";
 
 import { JournalHeader } from "@/components/journal/journal-header";
 import { JournalLogCard } from "@/components/journal/journal-log-card";
@@ -59,6 +59,7 @@ export default function JournalIndexScreen() {
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
   const [archiveModalVisible, setArchiveModalVisible] = useState(false);
   const [statusFilter, setStatusFilter] = useState<JournalStatusFilter>("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const { behaviors: behaviorItems } = useBehaviors();
   const fabBottom = TAB_BAR_OFFSET - 2 - FAB_OFFSET_FROM_TAB_TOP;
@@ -211,13 +212,25 @@ export default function JournalIndexScreen() {
   );
 
   const selectionKey = `${isSelecting}-${[...selected].sort().join(",")}`;
-  const filteredEntries = useMemo(
-    () =>
-      entries.filter((entry) =>
-        matchesJournalStatus(entry.actionStatus, statusFilter),
-      ),
-    [entries, statusFilter],
-  );
+  const filteredEntries = useMemo(() => {
+    let result = entries.filter((entry) =>
+      matchesJournalStatus(entry.actionStatus, statusFilter),
+    );
+
+    const q = searchQuery.trim().toLowerCase();
+    if (q) {
+      result = result.filter((entry) => {
+        const tagMatch = (entry.chtTag ?? "").toLowerCase().includes(q);
+        const illnessMatch = (entry.detectedIllness ?? "").toLowerCase().includes(q);
+        const obsMatch = (entry.additionalObservation ?? "").toLowerCase().includes(q);
+        const labels = mapBehaviorIdsToLabels(entry.behaviorIds, behaviorItems);
+        const behaviorMatch = labels.some((b) => b.toLowerCase().includes(q));
+        return tagMatch || illnessMatch || obsMatch || behaviorMatch;
+      });
+    }
+
+    return result;
+  }, [entries, statusFilter, searchQuery, behaviorItems]);
 
   const statusFilters: { label: string; value: JournalStatusFilter }[] = [
     { label: "Monitor", value: "monitor" },
@@ -228,15 +241,6 @@ export default function JournalIndexScreen() {
 
   return (
     <View style={styles.screen}>
-      <BackgroundGradient
-        width="110%"
-        height="110%"
-        preserveAspectRatio="xMidYMid slice"
-        style={[
-          StyleSheet.absoluteFill,
-          { transform: [{ scale: 1.08 }, { translateY: -14 }] },
-        ]}
-      />
       <View
         style={[
           styles.safeContent,
@@ -272,8 +276,9 @@ export default function JournalIndexScreen() {
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Text style={styles.empty}>
-                No health scans saved yet. Complete a Health scan and tap Save
-                on the result screen to archive it here.
+                {searchQuery.trim()
+                  ? `No journal entries found matching "${searchQuery}".`
+                  : "No health scans saved yet. Complete a Health scan and tap Save on the result screen to archive it here."}
               </Text>
             </View>
           }
@@ -281,6 +286,36 @@ export default function JournalIndexScreen() {
           ListHeaderComponent={
             <View>
               <View style={styles.listTop} />
+
+              {/* Search Bar */}
+              <View style={styles.searchBar}>
+                <MaterialCommunityIcons
+                  name="magnify"
+                  size={20}
+                  color={ChickIntelPalette.gray1}
+                />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Search tag, illness, behavior, notes..."
+                  placeholderTextColor={ChickIntelPalette.gray2}
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                />
+                {searchQuery.length > 0 ? (
+                  <Pressable
+                    onPress={() => setSearchQuery("")}
+                    hitSlop={8}
+                    style={styles.searchClearBtn}
+                  >
+                    <MaterialCommunityIcons
+                      name="close-circle"
+                      size={18}
+                      color={ChickIntelPalette.gray2}
+                    />
+                  </Pressable>
+                ) : null}
+              </View>
+
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -358,7 +393,7 @@ export default function JournalIndexScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: ChickIntelPalette.light1,
+    backgroundColor: ChickIntelPalette.canvas,
   },
   safeContent: {
     flex: 1,
@@ -374,9 +409,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: moderateScale(12),
     paddingVertical: verticalScale(7),
     borderRadius: 999,
-    backgroundColor: "rgba(202, 227, 221, 0.42)",
+    backgroundColor: ChickIntelPalette.lightGreen,
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.18)",
+    borderColor: ChickIntelPalette.gray2,
   },
   filterPillActive: {
     backgroundColor: ChickIntelPalette.green1,
@@ -411,7 +446,7 @@ const styles = StyleSheet.create({
   },
   deleteBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(51,51,51,0.38)",
+    backgroundColor: "rgba(31, 46, 43, 0.45)",
     alignItems: "center",
     justifyContent: "center",
     padding: moderateScale(24),
@@ -419,16 +454,16 @@ const styles = StyleSheet.create({
   deleteCard: {
     width: "100%",
     maxWidth: scale(340),
-    borderRadius: 5,
-    padding: moderateScale(14),
-    backgroundColor: ChickIntelPalette.light1,
+    borderRadius: 16,
+    padding: moderateScale(16),
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "rgba(49,118,103,0.18)",
+    borderColor: ChickIntelPalette.gray2,
     shadowColor: "#000",
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.08,
     shadowRadius: 16,
     shadowOffset: { width: scale(0), height: verticalScale(8) },
-    elevation: 8,
+    elevation: 6,
   },
   deleteIconWrap: {
     width: scale(48),
@@ -488,6 +523,33 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(14),
     fontWeight: "600",
-    color: ChickIntelPalette.light1,
+    color: "#FFFFFF",
+  },
+  searchBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: ChickIntelPalette.mediumGreen,
+    paddingHorizontal: moderateScale(12),
+    height: verticalScale(42),
+    gap: 8,
+    marginBottom: verticalScale(10),
+    shadowColor: "#000",
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  searchInput: {
+    flex: 1,
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(13),
+    color: ChickIntelPalette.gray1,
+    paddingVertical: 0,
+  },
+  searchClearBtn: {
+    padding: 2,
   },
 });

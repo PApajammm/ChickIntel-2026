@@ -19,7 +19,20 @@ type BatchRow = {
   source_egg_batch_id?: string | null;
 };
 
+function normalizeBatchColor(name?: string | null, hex?: string | null): { colorName: string; colorHex: string } {
+  const n = (name ?? "").trim().toLowerCase();
+  const h = (hex ?? "").trim().toLowerCase();
+  if (n === "white" || n === "light pink" || n === "pink" || h === "#ffffff" || h === "#fff" || h === "#f8bbd0") {
+    return { colorName: "Pink", colorHex: "#F8BBD0" };
+  }
+  return {
+    colorName: name ?? "Unspecified",
+    colorHex: hex ?? "#9AA3A3",
+  };
+}
+
 function mapBatchRow(row: BatchRow): BatchItem {
+  const { colorName, colorHex } = normalizeBatchColor(row.color_name, row.color_hex);
   return {
     id: row.batch_no,
     originBatchNo: row.origin_batch_no ?? undefined,
@@ -33,8 +46,8 @@ function mapBatchRow(row: BatchRow): BatchItem {
     ageLabel: row.age_label,
     isolatedCount: row.isolated_count,
     killedCount: row.killed_count,
-    colorName: row.color_name ?? "Unspecified",
-    colorHex: row.color_hex ?? "#9AA3A3",
+    colorName,
+    colorHex,
     notes: [],
   };
 }

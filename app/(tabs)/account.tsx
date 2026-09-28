@@ -100,12 +100,6 @@ export default function AccountScreen() {
 
   return (
     <View style={styles.screen}>
-      <BackgroundGradient
-        width="110%"
-        height="110%"
-        preserveAspectRatio="xMidYMid slice"
-        style={[StyleSheet.absoluteFill, { transform: [{ scale: 1.08 }] }]}
-      />
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
         <View style={[styles.header, { paddingTop: verticalScale(8) }]}>
           <Pressable
@@ -114,7 +108,11 @@ export default function AccountScreen() {
             accessibilityRole="button"
             accessibilityLabel="Go back"
           >
-            <MaterialCommunityIcons name="arrow-left" size={22} color="#FFF" />
+            <MaterialCommunityIcons
+              name="arrow-left"
+              size={24}
+              color={ChickIntelPalette.gray1}
+            />
           </Pressable>
           <View style={styles.headerCopy}>
             <Text style={styles.headerTitle}>My Account</Text>
@@ -300,7 +298,7 @@ export default function AccountScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: ChickIntelPalette.light1,
+    backgroundColor: ChickIntelPalette.canvas,
   },
   safeArea: {
     flex: 1,
@@ -317,15 +315,14 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   headerButton: {
-    width: scale(42),
-    height: verticalScale(42),
+    width: scale(40),
+    height: verticalScale(40),
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 14,
-    backgroundColor: ChickIntelPalette.green1,
+    backgroundColor: "transparent",
   },
   headerButtonPlaceholder: {
-    width: scale(42),
+    width: scale(40),
   },
   headerCopy: {
     flex: 1,
@@ -352,9 +349,14 @@ const styles = StyleSheet.create({
     gap: 8,
     padding: moderateScale(16),
     borderRadius: 16,
-    backgroundColor: "rgba(255, 255, 255, 0.94)",
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.18)",
+    borderColor: ChickIntelPalette.gray2,
+    shadowColor: "#161E1A",
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   identityRow: {
     flexDirection: "row",
@@ -388,13 +390,13 @@ const styles = StyleSheet.create({
   identityEmail: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(12),
-    color: "#40524B",
+    color: ChickIntelPalette.textMuted,
   },
   cardDivider: {
     width: "100%",
     height: 1,
     marginVertical: 3,
-    backgroundColor: "rgba(49, 118, 103, 0.14)",
+    backgroundColor: ChickIntelPalette.lightGreen,
   },
   sectionHeading: {
     flexDirection: "row",
@@ -408,7 +410,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 10,
-    backgroundColor: "rgba(49, 118, 103, 0.11)",
+    backgroundColor: ChickIntelPalette.lightGreen,
   },
   sectionTitle: {
     fontFamily: ChickFont.display,
@@ -420,14 +422,14 @@ const styles = StyleSheet.create({
     marginTop: 1,
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(11),
-    color: "#40524B",
+    color: ChickIntelPalette.textMuted,
   },
   label: {
     marginTop: 4,
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(11),
     fontWeight: "800",
-    color: "#30443C",
+    color: ChickIntelPalette.gray1,
     textTransform: "uppercase",
     letterSpacing: 0.4,
   },
@@ -436,8 +438,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: moderateScale(12),
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.2)",
-    backgroundColor: "rgba(248, 252, 250, 0.9)",
+    borderColor: ChickIntelPalette.gray2,
+    backgroundColor: "#FFFFFF",
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(14),
     color: ChickIntelPalette.gray1,
@@ -448,8 +450,8 @@ const styles = StyleSheet.create({
     minHeight: verticalScale(46),
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.2)",
-    backgroundColor: "rgba(248, 252, 250, 0.9)",
+    borderColor: ChickIntelPalette.gray2,
+    backgroundColor: "#FFFFFF",
   },
   passwordInput: {
     flex: 1,
@@ -469,7 +471,7 @@ const styles = StyleSheet.create({
   divider: {
     height: 1,
     marginVertical: 8,
-    backgroundColor: "rgba(49, 118, 103, 0.12)",
+    backgroundColor: ChickIntelPalette.lightGreen,
   },
   saveButton: {
     minHeight: verticalScale(46),

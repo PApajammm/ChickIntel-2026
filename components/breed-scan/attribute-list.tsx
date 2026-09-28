@@ -41,9 +41,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: 14,
-    backgroundColor: "rgba(254, 254, 254, 0.72)",
+    backgroundColor: ChickIntelPalette.lightGreen,
     borderWidth: 1,
-    borderColor: "rgba(67, 139, 123, 0.16)",
+    borderColor: ChickIntelPalette.gray2,
   },
   label: {
     ...HealthTypography.bodyMedium,

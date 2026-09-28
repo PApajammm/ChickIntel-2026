@@ -12,7 +12,6 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import BackgroundGradient from "@/assets_imported/background-gradient.svg";
 import { BlurCard } from "@/components/ui/blur-card";
 import { ChickFont } from "@/constants/chick-fonts";
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
@@ -349,12 +348,6 @@ export default function EggBatchHistoryScreen() {
 
   return (
     <View style={styles.screen}>
-      <BackgroundGradient
-        width="110%"
-        height="110%"
-        preserveAspectRatio="xMidYMid slice"
-        style={StyleSheet.absoluteFill}
-      />
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
         {/* Header */}
         <View style={styles.header}>
@@ -372,7 +365,7 @@ export default function EggBatchHistoryScreen() {
             accessibilityLabel="Back"
             activeOpacity={0.8}
           >
-            <MaterialCommunityIcons name="arrow-left" size={22} color="#FFF" />
+            <MaterialCommunityIcons name="arrow-left" size={24} color={ChickIntelPalette.gray1} />
           </TouchableOpacity>
           <View style={styles.headerTitleWrap}>
             <Text style={styles.title}>Egg Activity & Archive</Text>
@@ -985,7 +978,7 @@ export default function EggBatchHistoryScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: ChickIntelPalette.light1 },
+  screen: { flex: 1, backgroundColor: ChickIntelPalette.canvas },
   safeArea: { flex: 1 },
   header: {
     flexDirection: "row",
@@ -996,19 +989,14 @@ const styles = StyleSheet.create({
     paddingBottom: verticalScale(10),
   },
   backButton: {
-    width: scale(40),
-    height: verticalScale(40),
-    borderRadius: 14,
-    backgroundColor: ChickIntelPalette.green1,
+    width: scale(38),
+    height: verticalScale(38),
+    backgroundColor: "transparent",
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.25)",
-    shadowColor: "#317667",
-    shadowOpacity: 0.22,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: verticalScale(4) },
-    elevation: 4,
+    borderWidth: 0,
+    elevation: 0,
+    shadowOpacity: 0,
     flexShrink: 0,
   },
   headerTitleWrap: {
@@ -1026,12 +1014,12 @@ const styles = StyleSheet.create({
   subtitle: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(11),
-    color: "#52615D",
+    color: ChickIntelPalette.textMuted,
     marginTop: 1,
     textAlign: "center",
   },
   headerRightPlaceholder: {
-    width: scale(40),
+    width: scale(38),
   },
 
   /* Stats Banner */
@@ -1043,10 +1031,10 @@ const styles = StyleSheet.create({
     marginBottom: verticalScale(8),
     paddingVertical: verticalScale(10),
     paddingHorizontal: moderateScale(12),
-    backgroundColor: "rgba(255, 255, 255, 0.85)",
+    backgroundColor: "#FFFFFF",
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.15)",
+    borderColor: ChickIntelPalette.mediumGreen,
     shadowColor: "#000",
     shadowOpacity: 0.04,
     shadowRadius: 6,
@@ -1072,12 +1060,12 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(10),
     fontWeight: "600",
-    color: "#52615D",
+    color: ChickIntelPalette.textMuted,
   },
   statDivider: {
     width: 1,
     height: verticalScale(24),
-    backgroundColor: "rgba(49, 118, 103, 0.15)",
+    backgroundColor: ChickIntelPalette.mediumGreen,
   },
 
   /* Tabs */
@@ -1095,9 +1083,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: moderateScale(12),
     paddingVertical: verticalScale(7),
     borderRadius: 20,
-    backgroundColor: "rgba(255, 255, 255, 0.78)",
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.16)",
+    borderColor: ChickIntelPalette.mediumGreen,
   },
   tabButtonActive: {
     backgroundColor: ChickIntelPalette.green1,
@@ -1107,7 +1095,7 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(11.5),
     fontWeight: "700",
-    color: "#40524B",
+    color: ChickIntelPalette.textMuted,
   },
   tabButtonTextActive: {
     color: "#FFFFFF",
@@ -1128,19 +1116,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: moderateScale(10),
     paddingVertical: verticalScale(5),
     borderRadius: 8,
-    backgroundColor: "rgba(244, 248, 247, 0.9)",
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.12)",
+    borderColor: ChickIntelPalette.mediumGreen,
   },
   filterChipActive: {
-    backgroundColor: "rgba(49, 118, 103, 0.14)",
+    backgroundColor: ChickIntelPalette.lightGreen,
     borderColor: ChickIntelPalette.green1,
   },
   filterChipText: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(11),
     fontWeight: "600",
-    color: "#52615D",
+    color: ChickIntelPalette.textMuted,
   },
   filterChipTextActive: {
     color: ChickIntelPalette.green1,
@@ -1173,12 +1161,12 @@ const styles = StyleSheet.create({
   loadingText: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(12),
-    color: "#52615D",
+    color: ChickIntelPalette.textMuted,
   },
   emptyText: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(12),
-    color: "#52615D",
+    color: ChickIntelPalette.textMuted,
     textAlign: "center",
     marginTop: 20,
   },
@@ -1186,9 +1174,9 @@ const styles = StyleSheet.create({
   /* Card */
   card: {
     padding: moderateScale(13),
-    backgroundColor: "rgba(255, 255, 255, 0.88)",
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.55)",
+    borderColor: ChickIntelPalette.mediumGreen,
     shadowColor: "#000",
     shadowOpacity: 0.04,
     shadowRadius: 8,
@@ -1236,7 +1224,7 @@ const styles = StyleSheet.create({
   timestampText: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(10.5),
-    color: "#52615D",
+    color: ChickIntelPalette.textMuted,
     fontWeight: "500",
   },
 
@@ -1245,16 +1233,18 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    backgroundColor: "rgba(244, 248, 247, 0.7)",
+    backgroundColor: ChickIntelPalette.lightGreen,
     borderRadius: 10,
     padding: moderateScale(10),
+    borderWidth: 1,
+    borderColor: ChickIntelPalette.mediumGreen,
   },
   quantityWrap: {
     alignItems: "center",
     justifyContent: "center",
     minWidth: scale(60),
     borderRightWidth: 1,
-    borderRightColor: "rgba(49, 118, 103, 0.15)",
+    borderRightColor: ChickIntelPalette.mediumGreen,
     paddingRight: scale(10),
   },
   quantityNumber: {
@@ -1283,7 +1273,7 @@ const styles = StyleSheet.create({
   metaLabel: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(11),
-    color: "#263832",
+    color: ChickIntelPalette.gray1,
     fontWeight: "600",
   },
   colorDot: {
@@ -1294,7 +1284,7 @@ const styles = StyleSheet.create({
   notesText: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(11),
-    color: "#52615D",
+    color: ChickIntelPalette.textMuted,
     fontStyle: "italic",
     paddingLeft: 2,
   },
@@ -1309,7 +1299,7 @@ const styles = StyleSheet.create({
   createdDateSub: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(11),
-    color: "#52615D",
+    color: ChickIntelPalette.textMuted,
   },
   metricsRow: {
     flexDirection: "row",
@@ -1318,16 +1308,18 @@ const styles = StyleSheet.create({
   },
   metricChip: {
     flex: 1,
-    backgroundColor: "rgba(49, 118, 103, 0.08)",
+    backgroundColor: ChickIntelPalette.lightGreen,
     borderRadius: 7,
     paddingVertical: verticalScale(5),
     paddingHorizontal: moderateScale(6),
     alignItems: "center",
+    borderWidth: 1,
+    borderColor: ChickIntelPalette.mediumGreen,
   },
   metricChipLabel: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(9.5),
-    color: "#52615D",
+    color: ChickIntelPalette.textMuted,
   },
   metricChipValue: {
     fontFamily: ChickFont.display,
@@ -1355,7 +1347,7 @@ const styles = StyleSheet.create({
   emptySub: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(12),
-    color: "#8A8F8F",
+    color: ChickIntelPalette.textMuted,
     textAlign: "center",
     maxWidth: scale(260),
     lineHeight: 17,
@@ -1367,9 +1359,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: moderateScale(9),
     paddingVertical: verticalScale(4),
     borderRadius: 8,
-    backgroundColor: "rgba(49, 118, 103, 0.12)",
+    backgroundColor: ChickIntelPalette.lightGreen,
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.25)",
+    borderColor: ChickIntelPalette.mediumGreen,
   },
   archivedBadgeText: {
     fontFamily: ChickFont.display,
@@ -1393,7 +1385,7 @@ const styles = StyleSheet.create({
   colorSubText: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(11),
-    color: "#52615D",
+    color: ChickIntelPalette.textMuted,
     fontWeight: "600",
   },
   dispositionSummaryFooter: {
@@ -1401,9 +1393,9 @@ const styles = StyleSheet.create({
     paddingVertical: verticalScale(6),
     paddingHorizontal: moderateScale(8),
     borderRadius: 8,
-    backgroundColor: "rgba(49, 118, 103, 0.08)",
+    backgroundColor: ChickIntelPalette.lightGreen,
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.14)",
+    borderColor: ChickIntelPalette.mediumGreen,
   },
   dispositionSummaryFooterText: {
     fontFamily: ChickFont.sans,

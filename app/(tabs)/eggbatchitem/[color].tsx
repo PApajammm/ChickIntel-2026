@@ -24,7 +24,6 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import BackgroundGradient from "@/assets_imported/background-gradient.svg";
 import { BlurCard } from "@/components/ui/blur-card";
 import { DeleteConfirmationModal } from "@/components/ui/delete-confirmation-modal";
 import { PrimaryFab } from "@/components/ui/primary-fab";
@@ -637,15 +636,6 @@ export default function EggBatchColorScreen() {
 
   return (
     <View style={styles.screen}>
-      <BackgroundGradient
-        width="110%"
-        height="110%"
-        preserveAspectRatio="xMidYMid slice"
-        style={[
-          StyleSheet.absoluteFill,
-          { transform: [{ scale: 1.08 }, { translateY: -14 }] },
-        ]}
-      />
       <StatusBar style="dark" />
       <View style={[styles.fixedHeader, { paddingTop: insets.top + 10 }]}>
         <View style={styles.headerRow}>
@@ -661,7 +651,7 @@ export default function EggBatchColorScreen() {
             style={styles.backButton}
             activeOpacity={0.8}
           >
-            <MaterialCommunityIcons name="arrow-left" size={22} color="#FFF" />
+            <MaterialCommunityIcons name="arrow-left" size={24} color={ChickIntelPalette.gray1} />
           </TouchableOpacity>
           <View style={styles.headerTitleWrap}>
             <Text style={styles.pageTitle} numberOfLines={1}>
@@ -694,7 +684,7 @@ export default function EggBatchColorScreen() {
               accessibilityRole="button"
               accessibilityLabel="Open egg disposition history"
             >
-              <MaterialCommunityIcons name="history" size={21} color="#FFF" />
+              <MaterialCommunityIcons name="history" size={24} color={ChickIntelPalette.gray1} />
             </Pressable>
           </View>
         </View>
@@ -758,11 +748,6 @@ export default function EggBatchColorScreen() {
               </Pressable>
             </View>
           ) : null}
-          <Text style={styles.selectionHint}>
-            {activeSection === "eggs"
-              ? "Egg records from this chicken batch. Transfer hatched eggs, sell unhatched eggs, or dispose damaged eggs."
-              : "Chick batches created from this chicken batch appear here."}
-          </Text>
           {activeSection === "eggs" && archivedBatches.length > 0 ? (
             <View style={styles.statusPillBar}>
               <Pressable
@@ -1082,7 +1067,7 @@ export default function EggBatchColorScreen() {
                             <MaterialCommunityIcons
                               name="trash-can-outline"
                               size={15}
-                              color="#923737"
+                              color="#111111"
                             />
                           </Pressable>
                         </View>
@@ -1509,9 +1494,6 @@ export default function EggBatchColorScreen() {
                     <Text style={styles.readonlyMetricValue}>
                       {totalRecordedEggs} eggs
                     </Text>
-                    <Text style={styles.readonlyMetricHint}>
-                      Total recorded quantity for this egg batch.
-                    </Text>
                   </View>
 
                   {/* Discrepancy Warning Banner */}
@@ -1725,7 +1707,7 @@ export default function EggBatchColorScreen() {
         itemTitle={eggToDelete ? `Batch ${eggToDelete.batchNo}` : undefined}
         itemSubtitle={
           eggToDelete
-            ? `${eggToDelete.eggQty} eggs • ${formatBatchDateStamp(eggToDelete.createdAt, eggToDelete.updatedAt)}`
+            ? `${eggToDelete.eggQty} ${eggToDelete.eggQty === 1 ? "egg" : "eggs"} • ${formatBatchDateStamp(eggToDelete.createdAt, eggToDelete.updatedAt)}`
             : undefined
         }
         message="Are you sure you want to delete this egg batch? This batch will be moved to deleted egg history."
@@ -1743,7 +1725,7 @@ export default function EggBatchColorScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: ChickIntelPalette.light1,
+    backgroundColor: ChickIntelPalette.canvas,
   },
   fixedHeader: {
     paddingHorizontal: moderateScale(16),
@@ -1779,70 +1761,50 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   headerCloseBtn: {
-    width: scale(42),
-    height: verticalScale(42),
-    borderRadius: 14,
-    backgroundColor: ChickIntelPalette.green1,
+    width: scale(38),
+    height: verticalScale(38),
+    backgroundColor: "transparent",
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.25)",
-    shadowColor: "#317667",
-    shadowOpacity: 0.22,
-    shadowRadius: 10,
-    shadowOffset: { width: scale(0), height: verticalScale(4) },
-    elevation: 4,
+    borderWidth: 0,
+    elevation: 0,
+    shadowOpacity: 0,
     flexShrink: 0,
   },
   headerDeleteBtn: {
-    width: scale(42),
-    height: verticalScale(42),
-    borderRadius: 14,
-    backgroundColor: "#DC2626",
+    width: scale(38),
+    height: verticalScale(38),
+    backgroundColor: "transparent",
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(220, 38, 38, 0.35)",
-    shadowColor: "#DC2626",
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    shadowOffset: { width: scale(0), height: verticalScale(4) },
-    elevation: 4,
+    borderWidth: 0,
+    elevation: 0,
+    shadowOpacity: 0,
     flexShrink: 0,
   },
   backButton: {
-    width: scale(42),
-    height: verticalScale(42),
-    borderRadius: 14,
-    backgroundColor: ChickIntelPalette.green1,
+    width: scale(38),
+    height: verticalScale(38),
+    backgroundColor: "transparent",
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.25)",
-    shadowColor: "#317667",
-    shadowOpacity: 0.22,
-    shadowRadius: 10,
-    shadowOffset: { width: scale(0), height: verticalScale(4) },
-    elevation: 4,
+    borderWidth: 0,
+    elevation: 0,
+    shadowOpacity: 0,
     flexShrink: 0,
   },
   headerRightPlaceholder: {
-    width: scale(42),
+    width: scale(38),
   },
   headerHistoryButton: {
-    width: scale(42),
-    height: verticalScale(42),
-    borderRadius: 14,
-    backgroundColor: ChickIntelPalette.green1,
+    width: scale(38),
+    height: verticalScale(38),
+    backgroundColor: "transparent",
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.25)",
-    shadowColor: "#317667",
-    shadowOpacity: 0.22,
-    shadowRadius: 10,
-    shadowOffset: { width: scale(0), height: verticalScale(4) },
-    elevation: 4,
+    borderWidth: 0,
+    elevation: 0,
+    shadowOpacity: 0,
     flexShrink: 0,
   },
   pageTitle: {
@@ -1863,7 +1825,7 @@ const styles = StyleSheet.create({
   },
   subtitleMuted: {
     fontFamily: ChickFont.sans,
-    color: "#8A8F8F",
+    color: ChickIntelPalette.textMuted,
     fontSize: responsiveFontSize(13),
   },
   selectionHintWrap: {
@@ -1873,14 +1835,14 @@ const styles = StyleSheet.create({
   selectionHint: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(12),
-    color: "#40524B",
+    color: ChickIntelPalette.textMuted,
   },
   actionGuide: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(10.5),
     lineHeight: 15,
-    color: "#40524B",
-    backgroundColor: "rgba(49, 118, 103, 0.07)",
+    color: ChickIntelPalette.textMuted,
+    backgroundColor: ChickIntelPalette.lightGreen,
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 6,
@@ -1891,8 +1853,8 @@ const styles = StyleSheet.create({
     gap: 6,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.2)",
-    backgroundColor: "rgba(49, 118, 103, 0.08)",
+    borderColor: ChickIntelPalette.mediumGreen,
+    backgroundColor: ChickIntelPalette.lightGreen,
     paddingHorizontal: 9,
     paddingVertical: 7,
   },
@@ -1900,14 +1862,16 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(11),
     fontWeight: "700",
-    color: "#40524B",
+    color: ChickIntelPalette.green1,
   },
   sectionTabs: {
     flexDirection: "row",
     gap: 6,
     padding: 3,
     borderRadius: 10,
-    backgroundColor: "rgba(255, 255, 255, 0.78)",
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: ChickIntelPalette.gray2,
   },
   sectionTab: {
     flex: 1,
@@ -1934,9 +1898,9 @@ const styles = StyleSheet.create({
   backBtn: {
     width: scale(38),
     height: verticalScale(38),
-    borderRadius: 5,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: "rgba(49,118,103,0.18)",
+    borderColor: ChickIntelPalette.mediumGreen,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: ChickIntelPalette.light1,
@@ -1950,8 +1914,15 @@ const styles = StyleSheet.create({
     paddingRight: 16,
     paddingTop: 14,
     paddingBottom: 14,
-    backgroundColor: "rgba(255, 255, 255, 0.94)",
-    borderRadius: 10,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: ChickIntelPalette.gray2,
+    shadowColor: "#161E1A",
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: verticalScale(2) },
+    elevation: 2,
     overflow: "hidden",
   },
   cardSelected: {
@@ -1985,13 +1956,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "rgba(49, 118, 103, 0.12)",
+    backgroundColor: ChickIntelPalette.lightGreen,
     paddingHorizontal: moderateScale(8),
     paddingVertical: verticalScale(3),
     minHeight: verticalScale(28),
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.22)",
+    borderColor: ChickIntelPalette.mediumGreen,
     alignSelf: "flex-start",
   },
   batchPillText: {
@@ -2014,13 +1985,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "rgba(244, 248, 247, 0.9)",
+    backgroundColor: "#FFFFFF",
     paddingHorizontal: moderateScale(8),
     paddingVertical: verticalScale(3),
     minHeight: verticalScale(26),
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.18)",
+    borderColor: ChickIntelPalette.gray2,
     alignSelf: "flex-start",
     marginTop: verticalScale(2),
   },
@@ -2049,14 +2020,14 @@ const styles = StyleSheet.create({
   originName: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(11),
-    color: "#263832",
+    color: ChickIntelPalette.gray1,
     fontWeight: "600",
   },
   createdDateText: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(11),
     lineHeight: 16,
-    color: "#52615D",
+    color: ChickIntelPalette.textMuted,
     paddingBottom: 10,
     marginTop: verticalScale(-2),
   },
@@ -2069,9 +2040,9 @@ const styles = StyleSheet.create({
     width: scale(28),
     height: verticalScale(28),
     borderRadius: 8,
-    backgroundColor: "rgba(49, 118, 103, 0.12)",
+    backgroundColor: ChickIntelPalette.lightGreen,
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.2)",
+    borderColor: ChickIntelPalette.mediumGreen,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -2079,9 +2050,9 @@ const styles = StyleSheet.create({
     width: scale(28),
     height: verticalScale(28),
     borderRadius: 8,
-    backgroundColor: "rgba(244, 248, 247, 0.9)",
+    backgroundColor: ChickIntelPalette.lightGreen,
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.16)",
+    borderColor: ChickIntelPalette.mediumGreen,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -2092,7 +2063,7 @@ const styles = StyleSheet.create({
   },
   metricChip: {
     flex: 1,
-    backgroundColor: "rgba(49, 118, 103, 0.08)",
+    backgroundColor: ChickIntelPalette.lightGreen,
     borderRadius: 8,
     paddingVertical: verticalScale(6),
     paddingHorizontal: moderateScale(4),
@@ -2100,9 +2071,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   metricChipEditable: {
-    backgroundColor: "rgba(49, 118, 103, 0.12)",
+    backgroundColor: ChickIntelPalette.lightGreen,
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.28)",
+    borderColor: ChickIntelPalette.mediumGreen,
   },
   metricChipLabelRow: {
     flexDirection: "row",
@@ -2114,7 +2085,7 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(9.5),
     fontWeight: "600",
-    color: "#52615D",
+    color: ChickIntelPalette.textMuted,
     textAlign: "center",
   },
   metricChipValue: {
@@ -2135,8 +2106,8 @@ const styles = StyleSheet.create({
     paddingVertical: verticalScale(9),
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.2)",
-    backgroundColor: "rgba(49, 118, 103, 0.06)",
+    borderColor: ChickIntelPalette.mediumGreen,
+    backgroundColor: ChickIntelPalette.lightGreen,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -2148,7 +2119,7 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(11.5),
     fontWeight: "700",
-    color: "#40524B",
+    color: ChickIntelPalette.textMuted,
   },
   chickAgeUnitBtnTextActive: {
     color: "#FFFFFF",
@@ -2164,8 +2135,8 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(10),
     fontWeight: "600",
-    color: "#52615D",
-    backgroundColor: "rgba(49, 118, 103, 0.06)",
+    color: ChickIntelPalette.textMuted,
+    backgroundColor: ChickIntelPalette.lightGreen,
     borderRadius: 6,
     paddingHorizontal: moderateScale(6),
     paddingVertical: verticalScale(4),
@@ -2174,8 +2145,8 @@ const styles = StyleSheet.create({
   emptyCard: {
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.18)",
-    backgroundColor: "rgba(255, 255, 255, 0.94)",
+    borderColor: ChickIntelPalette.gray2,
+    backgroundColor: "#FFFFFF",
     paddingHorizontal: moderateScale(16),
     paddingVertical: verticalScale(16),
     gap: 4,
@@ -2190,7 +2161,7 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(13),
     lineHeight: 18,
-    color: "#40524B",
+    color: ChickIntelPalette.textMuted,
   },
   modalOverlay: {
     flex: 1,

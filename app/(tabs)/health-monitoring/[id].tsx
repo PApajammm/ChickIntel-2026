@@ -23,7 +23,6 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import BackgroundGradient from "@/assets_imported/background-gradient.svg";
 import { HealthInputSummaryCard } from "@/components/health-scan/health-input-summary-card";
 import { HealthResultCard } from "@/components/health-scan/health-result-card";
 import { ChickFont } from "@/constants/chick-fonts";
@@ -524,7 +523,7 @@ export default function HealthMonitoringDetailScreen() {
             accessibilityLabel={`Add note for ${task.title}`}
           >
             <MaterialCommunityIcons
-              name="pencil-outline"
+              name="note-edit-outline"
               size={17}
               color={ChickIntelPalette.green1}
             />
@@ -533,7 +532,7 @@ export default function HealthMonitoringDetailScreen() {
         {occurrence.treatmentNote?.trim() ? (
           <View style={styles.protocolNotePreview}>
             <MaterialCommunityIcons
-              name="note-text-outline"
+              name="note-edit-outline"
               size={16}
               color={ChickIntelPalette.green1}
             />
@@ -567,15 +566,6 @@ export default function HealthMonitoringDetailScreen() {
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top + 8 }]}>
-      <BackgroundGradient
-        width="110%"
-        height="110%"
-        preserveAspectRatio="xMidYMid slice"
-        style={[
-          StyleSheet.absoluteFill,
-          { transform: [{ scale: 1.08 }, { translateY: -14 }] },
-        ]}
-      />
       <StatusBar style="dark" />
       <View style={styles.topBar}>
         <TouchableOpacity
@@ -585,7 +575,11 @@ export default function HealthMonitoringDetailScreen() {
           accessibilityRole="button"
           accessibilityLabel="Back"
         >
-          <MaterialCommunityIcons name="arrow-left" size={22} color="#FFF" />
+          <MaterialCommunityIcons
+            name="arrow-left"
+            size={22}
+            color={ChickIntelPalette.gray1}
+          />
         </TouchableOpacity>
         <Text style={styles.pageTitle}>Health Monitoring</Text>
         <View style={styles.topMeta}>
@@ -950,7 +944,7 @@ export default function HealthMonitoringDetailScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: ChickIntelPalette.light1,
+    backgroundColor: ChickIntelPalette.canvas,
   },
   topBar: {
     flexDirection: "row",
@@ -961,19 +955,12 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   backBtn: {
-    width: scale(42),
-    height: verticalScale(42),
-    borderRadius: 14,
-    backgroundColor: ChickIntelPalette.green1,
+    width: scale(38),
+    height: verticalScale(38),
+    borderRadius: 12,
+    backgroundColor: "transparent",
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.25)",
-    shadowColor: "#317667",
-    shadowOpacity: 0.22,
-    shadowRadius: 10,
-    shadowOffset: { width: scale(0), height: verticalScale(4) },
-    elevation: 4,
     flexShrink: 0,
   },
   savedMeta: {
@@ -1064,10 +1051,10 @@ const styles = StyleSheet.create({
     marginTop: 14,
     marginBottom: 14,
     padding: moderateScale(14),
-    borderRadius: 12,
-    backgroundColor: "rgba(255, 255, 255, 0.92)",
+    borderRadius: 14,
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.18)",
+    borderColor: ChickIntelPalette.gray2,
     gap: 8,
   },
   protocolHeader: {
@@ -1085,7 +1072,7 @@ const styles = StyleSheet.create({
     gap: 6,
     padding: 3,
     borderRadius: 9,
-    backgroundColor: "rgba(49, 118, 103, 0.08)",
+    backgroundColor: ChickIntelPalette.lightGreen,
   },
   protocolFilterItem: {
     flex: 1,
@@ -1132,7 +1119,7 @@ const styles = StyleSheet.create({
   },
   protocolTaskCard: {
     borderTopWidth: 1,
-    borderTopColor: "rgba(49, 118, 103, 0.12)",
+    borderTopColor: ChickIntelPalette.lightGreen,
     paddingTop: 8,
   },
   protocolTaskCardOverdue: {
@@ -1200,9 +1187,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 8,
     borderRadius: 9,
-    backgroundColor: "rgba(49, 118, 103, 0.09)",
+    backgroundColor: ChickIntelPalette.lightGreen,
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.18)",
+    borderColor: ChickIntelPalette.gray2,
   },
   protocolNoteCopy: {
     flex: 1,
@@ -1240,14 +1227,14 @@ const styles = StyleSheet.create({
   protocolNoteInput: {
     minHeight: 38,
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.18)",
+    borderColor: ChickIntelPalette.gray2,
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 7,
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(12),
     color: ChickIntelPalette.gray1,
-    backgroundColor: "rgba(244, 248, 247, 0.7)",
+    backgroundColor: "#FFFFFF",
   },
   protocolNoteButton: {
     alignSelf: "flex-end",
@@ -1276,21 +1263,23 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(49, 118, 103, 0.1)",
+    backgroundColor: ChickIntelPalette.lightGreen,
   },
   noteModalBackdrop: {
     flex: 1,
     justifyContent: "center",
     paddingHorizontal: moderateScale(18),
-    backgroundColor: "rgba(20, 31, 29, 0.42)",
+    backgroundColor: "rgba(31, 46, 43, 0.45)",
   },
   noteKeyboardAvoiding: {
     flex: 1,
   },
   noteModalCard: {
-    borderRadius: 14,
+    borderRadius: 16,
     padding: moderateScale(16),
     backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: ChickIntelPalette.gray2,
     maxHeight: "88%",
     gap: 10,
   },
@@ -1319,7 +1308,7 @@ const styles = StyleSheet.create({
   noteModalInput: {
     minHeight: 120,
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.2)",
+    borderColor: ChickIntelPalette.gray2,
     borderRadius: 9,
     paddingHorizontal: 10,
     paddingVertical: 9,
@@ -1327,7 +1316,7 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(13),
     lineHeight: 19,
     color: ChickIntelPalette.gray1,
-    backgroundColor: "rgba(244, 248, 247, 0.7)",
+    backgroundColor: ChickIntelPalette.lightGreen,
   },
   noteModalSaveButton: {
     alignItems: "center",
@@ -1345,7 +1334,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: "rgba(49, 118, 103, 0.14)",
+    borderTopColor: ChickIntelPalette.gray2,
   },
   historyTitle: {
     fontFamily: ChickFont.display,
@@ -1358,18 +1347,18 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(12),
     lineHeight: 16,
-    color: "#5A6161",
+    color: ChickIntelPalette.textMuted,
     marginBottom: 12,
   },
   historyList: {
     gap: 10,
   },
   historyEntryCard: {
-    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    backgroundColor: "#FFFFFF",
     borderRadius: 12,
     padding: moderateScale(12),
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.18)",
+    borderColor: ChickIntelPalette.gray2,
     gap: 4,
   },
   historyEntryHeader: {
@@ -1387,19 +1376,19 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     paddingHorizontal: moderateScale(20),
-    backgroundColor: "rgba(22, 38, 32, 0.48)",
+    backgroundColor: "rgba(31, 46, 43, 0.45)",
   },
   confirmModalCard: {
     borderRadius: 20,
     padding: moderateScale(16),
-    backgroundColor: "#F8FCFA",
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.2)",
+    borderColor: ChickIntelPalette.gray2,
     shadowColor: "#000",
-    shadowOpacity: 0.18,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 8,
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 6,
     gap: 7,
   },
   confirmIconBadge: {
@@ -1408,7 +1397,7 @@ const styles = StyleSheet.create({
     borderRadius: 13,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(49, 118, 103, 0.13)",
+    backgroundColor: ChickIntelPalette.lightGreen,
   },
   confirmModalTopRow: {
     flexDirection: "row",

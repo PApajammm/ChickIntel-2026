@@ -3,8 +3,8 @@ import { ChickIntelPalette } from "@/constants/chickintel-palette";
 
 export const ReportsCardTheme = {
     borderRadius: 15,
-    borderColor: "rgba(255, 255, 255, 0.6)",
-    surfaceBorderColor: ChickIntelPalette.lightGreen,
+    borderColor: ChickIntelPalette.mediumGreen,
+    surfaceBorderColor: ChickIntelPalette.mediumGreen,
     surfacePadding: 12,
     titleFontFamily: ChickFont.display,
     titleFontSize: 18,
@@ -34,7 +34,7 @@ export const ReportsCardTheme = {
     centerValueColor: ChickIntelPalette.gray1,
     centerLabelFontFamily: ChickFont.sans,
     centerLabelFontSize: 11,
-    centerLabelColor: "#666",
+    centerLabelColor: ChickIntelPalette.textMuted,
     sectionTitleFontFamily: ChickFont.sans,
     sectionTitleFontSize: 11,
     sectionTitleFontWeight: "600" as const,
@@ -42,11 +42,11 @@ export const ReportsCardTheme = {
     footerTextFontFamily: ChickFont.sans,
     footerTextFontSize: 11,
     footerTextLineHeight: 16,
-    footerTextColor: "#666",
+    footerTextColor: ChickIntelPalette.textMuted,
 } as const;
 
 export const ReportsPageTheme = {
-    screenBackground: ChickIntelPalette.light1,
+    screenBackground: ChickIntelPalette.canvas,
     contentPaddingHorizontal: 16,
     contentGap: 12,
     headerPaddingHorizontal: 20,

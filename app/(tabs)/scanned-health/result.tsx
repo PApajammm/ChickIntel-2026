@@ -24,7 +24,6 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import BackgroundGradient from "@/assets_imported/background-gradient.svg";
 import { HealthFlowFooterButton } from "@/components/health-scan/health-flow-footer-button";
 import { HealthInputSummaryCard } from "@/components/health-scan/health-input-summary-card";
 import { HealthResultCard } from "@/components/health-scan/health-result-card";
@@ -32,6 +31,7 @@ import {
     ChickSelectRow,
     ChickSelectionModal,
 } from "@/components/ui/chick-form";
+import { ConfirmationNoticeModal } from "@/components/ui/confirmation-notice-modal";
 import { ChickFont } from "@/constants/chick-fonts";
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
 import { DEFAULT_IMAGE_BASED_DETECTION } from "@/constants/health-scan-behaviors";
@@ -256,6 +256,9 @@ export default function ScannedHealthResultScreen() {
   const [updateSuccessVisible, setUpdateSuccessVisible] = useState(false);
   const [updateError, setUpdateError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [addedMonitoringModalVisible, setAddedMonitoringModalVisible] =
+    useState(false);
+  const [addedMonitoringMessage, setAddedMonitoringMessage] = useState("");
 
   const batchOptionLabels = useMemo(
     () => availableBatches.map((batch) => formatBatchOptionLabel(batch)),
@@ -527,21 +530,10 @@ export default function ScannedHealthResultScreen() {
 
       setChtDialogVisible(false);
       setSaveDialogVisible(false);
-      Alert.alert(
-        "Added to Health Monitoring",
+      setAddedMonitoringMessage(
         `Chicken ${chtTag} from Batch ${selectedBatchNo} is now being monitored.`,
-        [
-          {
-            text: "Go to Health Monitoring",
-            onPress: () => router.replace("/(tabs)/health-monitoring" as any),
-          },
-          {
-            text: "Stay here",
-            style: "cancel",
-            onPress: () => router.replace("/(tabs)" as any),
-          },
-        ],
       );
+      setAddedMonitoringModalVisible(true);
     } catch (error) {
       logError("Failed to create health monitoring record", error);
       setChtError("Could not add to Health Monitoring. Please try again.");
@@ -558,15 +550,6 @@ export default function ScannedHealthResultScreen() {
 
   return (
     <View style={styles.screen}>
-      <BackgroundGradient
-        width="110%"
-        height="110%"
-        preserveAspectRatio="xMidYMid slice"
-        style={[
-          StyleSheet.absoluteFill,
-          { transform: [{ scale: 1.08 }, { translateY: -14 }] },
-        ]}
-      />
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
         <StatusBar style="dark" />
 
@@ -594,7 +577,7 @@ export default function ScannedHealthResultScreen() {
               <MaterialCommunityIcons
                 name="arrow-left"
                 size={22}
-                color="#FFF"
+                color={ChickIntelPalette.gray1}
               />
             </TouchableOpacity>
             <Text style={styles.pageTitle} numberOfLines={1}>
@@ -703,64 +686,86 @@ export default function ScannedHealthResultScreen() {
 
         {/* Save dialog with optional Add to Health Monitoring */}
         <Modal visible={saveDialogVisible} transparent animationType="fade">
-          <View style={styles.modalBg}>
-            <View style={styles.modalCard}>
-              <View style={styles.modalHeader}>
-                <View style={styles.modalHeaderTitleRow}>
-                  <View style={styles.modalHeaderIconBadge}>
-                    <MaterialCommunityIcons
-                      name="check-circle-outline"
-                      size={20}
-                      color="#FFFFFF"
-                    />
-                  </View>
-                  <Text style={styles.modalHeaderTitle}>
-                    Behavior Check Saved
-                  </Text>
-                </View>
-                <Text style={styles.modalHeaderSubtitle}>
-                  The chicken behavior note has been saved to your Behavior
-                  Journal.
-                </Text>
-              </View>
+          <View style={styles.savedNoticeBackdrop}>
+            <View style={styles.savedNoticeCard}>
+              <Text style={styles.savedNoticeTitle}>Behavior Check Saved</Text>
 
-              <View style={styles.modalBodyWrap}>
-                {canMonitor && savedHealthLogId && (
+              <View style={styles.savedNoticeActions}>
+                {canMonitor && savedHealthLogId ? (
+                  <>
+                    <Pressable
+                      style={({ pressed }) => [
+                        styles.savedNoticeBtnSecondary,
+                        { opacity: pressed ? 0.88 : 1 },
+                      ]}
+                      onPress={() => {
+                        setSaveDialogVisible(false);
+                        router.replace("/(tabs)/journal");
+                      }}
+                      accessibilityRole="button"
+                    >
+                      <Text style={styles.savedNoticeBtnTextSecondary}>
+                        Go to Journal
+                      </Text>
+                    </Pressable>
+
+                    <Pressable
+                      style={({ pressed }) => [
+                        styles.savedNoticeBtnPrimary,
+                        chtLoading && { opacity: 0.7 },
+                        { opacity: pressed ? 0.88 : 1 },
+                      ]}
+                      onPress={openChtDialog}
+                      disabled={chtLoading}
+                      accessibilityRole="button"
+                    >
+                      {chtLoading ? (
+                        <ActivityIndicator size="small" color="#FFF" />
+                      ) : (
+                        <Text style={styles.savedNoticeBtnTextPrimary}>
+                          Add to Monitoring
+                        </Text>
+                      )}
+                    </Pressable>
+                  </>
+                ) : (
                   <Pressable
-                    style={[styles.monitorBtn, chtLoading && { opacity: 0.7 }]}
-                    onPress={openChtDialog}
-                    disabled={chtLoading}
+                    style={({ pressed }) => [
+                      styles.savedNoticeBtnPrimary,
+                      { opacity: pressed ? 0.88 : 1 },
+                    ]}
+                    onPress={() => {
+                      setSaveDialogVisible(false);
+                      router.replace("/(tabs)/journal");
+                    }}
+                    accessibilityRole="button"
                   >
-                    {chtLoading ? (
-                      <ActivityIndicator size="small" color="#FFF" />
-                    ) : (
-                      <MaterialCommunityIcons
-                        name="heart-pulse"
-                        size={18}
-                        color="#FFF"
-                      />
-                    )}
-                    <Text style={styles.monitorBtnText}>
-                      Add to Health Monitoring
+                    <Text style={styles.savedNoticeBtnTextPrimary}>
+                      Go to Behavior Journal
                     </Text>
                   </Pressable>
                 )}
-
-                <Pressable
-                  style={styles.modalBtn}
-                  onPress={() => {
-                    setSaveDialogVisible(false);
-                    router.replace("/(tabs)/journal");
-                  }}
-                >
-                  <Text style={styles.modalBtnText}>
-                    Go to Behavior Journal
-                  </Text>
-                </Pressable>
               </View>
             </View>
           </View>
         </Modal>
+
+        {/* Added to Health Monitoring Notice Modal (Matching Logout Modal style) */}
+        <ConfirmationNoticeModal
+          visible={addedMonitoringModalVisible}
+          title="Added to Health Monitoring"
+          message={addedMonitoringMessage}
+          confirmLabel="Go to Health Monitoring"
+          cancelLabel="Stay here"
+          onConfirm={() => {
+            setAddedMonitoringModalVisible(false);
+            router.replace("/(tabs)/health-monitoring" as any);
+          }}
+          onCancel={() => {
+            setAddedMonitoringModalVisible(false);
+            router.replace("/(tabs)" as any);
+          }}
+        />
 
         {/* CHT Tag editor dialog */}
         <Modal visible={chtDialogVisible} transparent animationType="fade">
@@ -974,7 +979,7 @@ export default function ScannedHealthResultScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: ChickIntelPalette.light1,
+    backgroundColor: ChickIntelPalette.canvas,
   },
   safeArea: {
     flex: 1,
@@ -1008,36 +1013,98 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   headerRightPlaceholder: {
-    width: scale(42),
+    width: scale(38),
   },
   pageSubtitle: {
     ...HealthTypography.meta,
     textAlign: "center",
     marginBottom: 12,
-    color: ChickIntelPalette.green1,
+    color: ChickIntelPalette.textMuted,
   },
   backButton: {
-    width: scale(42),
-    height: verticalScale(42),
-    borderRadius: 14,
-    backgroundColor: ChickIntelPalette.green1,
+    width: scale(38),
+    height: verticalScale(38),
+    borderRadius: 12,
+    backgroundColor: "transparent",
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.25)",
-    shadowColor: "#317667",
-    shadowOpacity: 0.22,
-    shadowRadius: 10,
-    shadowOffset: { width: scale(0), height: verticalScale(4) },
-    elevation: 4,
     flexShrink: 0,
   },
   cardSpacer: {
     height: verticalScale(4),
   },
+  savedNoticeBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(31, 46, 43, 0.45)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: moderateScale(24),
+  },
+  savedNoticeCard: {
+    width: "100%",
+    maxWidth: scale(360),
+    borderRadius: scale(16),
+    padding: moderateScale(20),
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: ChickIntelPalette.gray2,
+    shadowColor: "#161E1A",
+    shadowOpacity: 0.12,
+    shadowRadius: scale(16),
+    shadowOffset: { width: 0, height: verticalScale(6) },
+    elevation: 8,
+  },
+  savedNoticeTitle: {
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(18),
+    fontWeight: "700",
+    color: ChickIntelPalette.gray1,
+    textAlign: "center",
+    marginBottom: verticalScale(16),
+  },
+  savedNoticeActions: {
+    flexDirection: "row",
+    gap: 10,
+    justifyContent: "center",
+    width: "100%",
+  },
+  savedNoticeBtnSecondary: {
+    flex: 1,
+    minHeight: verticalScale(42),
+    backgroundColor: ChickIntelPalette.lightGreen,
+    borderWidth: 1,
+    borderColor: ChickIntelPalette.mediumGreen,
+    borderRadius: scale(10),
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: moderateScale(8),
+  },
+  savedNoticeBtnPrimary: {
+    flex: 1,
+    minHeight: verticalScale(42),
+    backgroundColor: ChickIntelPalette.green1,
+    borderRadius: scale(10),
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: moderateScale(8),
+  },
+  savedNoticeBtnTextSecondary: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(13.5),
+    fontWeight: "600",
+    color: ChickIntelPalette.gray1,
+    textAlign: "center",
+  },
+  savedNoticeBtnTextPrimary: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(13.5),
+    fontWeight: "600",
+    color: "#FFFFFF",
+    textAlign: "center",
+  },
   modalBg: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.45)",
+    backgroundColor: "rgba(31, 46, 43, 0.45)",
     justifyContent: "center",
     alignItems: "center",
     padding: moderateScale(20),
@@ -1045,14 +1112,16 @@ const styles = StyleSheet.create({
   modalCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: 20,
+    borderWidth: 1,
+    borderColor: ChickIntelPalette.gray2,
     width: "100%",
     maxWidth: scale(420),
     overflow: "hidden",
     shadowColor: "#000",
-    shadowOpacity: 0.18,
+    shadowOpacity: 0.08,
     shadowRadius: 16,
     shadowOffset: { width: scale(0), height: verticalScale(6) },
-    elevation: 8,
+    elevation: 6,
   },
   updateModalCard: {
     padding: moderateScale(16),
@@ -1063,7 +1132,7 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingBottom: verticalScale(12),
     borderBottomWidth: 1,
-    borderBottomColor: "#E6EEEC",
+    borderBottomColor: ChickIntelPalette.gray2,
   },
   updateModalIconBadge: {
     width: scale(48),
@@ -1071,9 +1140,9 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#E5F3EE",
+    backgroundColor: ChickIntelPalette.lightGreen,
     borderWidth: 1,
-    borderColor: "#C5E4DA",
+    borderColor: ChickIntelPalette.gray2,
   },
   updateModalHeaderText: {
     flex: 1,
@@ -1102,7 +1171,7 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(14),
     lineHeight: 20,
-    color: "#4F5D5A",
+    color: ChickIntelPalette.gray1,
   },
   updateModalHistoryRow: {
     flexDirection: "row",
@@ -1110,7 +1179,7 @@ const styles = StyleSheet.create({
     gap: 8,
     padding: moderateScale(9),
     borderRadius: 10,
-    backgroundColor: "#F2F8F6",
+    backgroundColor: ChickIntelPalette.lightGreen,
   },
   updateModalHistoryText: {
     flex: 1,
@@ -1183,7 +1252,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     textAlign: "center",
     marginBottom: 16,
-    color: "#5A6262",
+    color: ChickIntelPalette.textMuted,
   },
   chtFieldWrap: {
     width: "100%",
@@ -1197,8 +1266,8 @@ const styles = StyleSheet.create({
   chtInputCard: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.22)",
-    backgroundColor: "#F9FAFA",
+    borderColor: ChickIntelPalette.gray2,
+    backgroundColor: ChickIntelPalette.lightGreen,
     paddingHorizontal: moderateScale(14),
     paddingVertical: verticalScale(10),
     gap: 4,
@@ -1207,7 +1276,7 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(10),
     fontWeight: "700",
-    color: "#5A6262",
+    color: ChickIntelPalette.textMuted,
     letterSpacing: 0.3,
   },
   chtRow: {
@@ -1315,9 +1384,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: moderateScale(16),
     paddingVertical: verticalScale(14),
     borderRadius: 16,
-    backgroundColor: "rgba(255, 255, 255, 0.88)",
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.22)",
+    borderColor: ChickIntelPalette.gray2,
     marginBottom: 12,
   },
   analysisLoadingTextWrap: {
@@ -1332,7 +1401,7 @@ const styles = StyleSheet.create({
   analysisLoadingSub: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(12),
-    color: "#5E6665",
+    color: ChickIntelPalette.textMuted,
     marginTop: 2,
   },
   guestModeNote: {

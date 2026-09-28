@@ -36,6 +36,7 @@ import {
 } from "@/components/scanner/mode-selector-card";
 import { ScannerShutter } from "@/components/scanner/scanner-shutter";
 import { ViewfinderOverlay } from "@/components/scanner/viewfinder-overlay";
+import { ConfirmationNoticeModal } from "@/components/ui/confirmation-notice-modal";
 import { ChickFont } from "@/constants/chick-fonts";
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
 import { DEFAULT_IMAGE_BASED_DETECTION } from "@/constants/health-scan-behaviors";
@@ -113,6 +114,10 @@ export default function ScannerScreen() {
   const [cameraReady, setCameraReady] = useState(false);
   const [isAnalyzingSex, setIsAnalyzingSex] = useState(false);
   const [supportedInfoVisible, setSupportedInfoVisible] = useState(false);
+  const [retakeNoticeData, setRetakeNoticeData] = useState<{
+    message: string;
+    photo: { uri: string; width: number; height: number };
+  } | null>(null);
 
   const monitoringId =
     typeof params.monitoringId === "string" ? params.monitoringId : "";
@@ -263,17 +268,14 @@ export default function ScannerScreen() {
         }
 
         if (!assessment.isAcceptable) {
-          Alert.alert("Retake photo?", buildHealthCaptureGuidance(assessment), [
-            {
-              text: "Retake",
-              style: "cancel",
+          setRetakeNoticeData({
+            message: buildHealthCaptureGuidance(assessment),
+            photo: {
+              uri: photo.uri,
+              width: photo.width,
+              height: photo.height,
             },
-            {
-              text: "Use anyway",
-              onPress: () =>
-                openHealthFlow(photo.uri, photo.width, photo.height),
-            },
-          ]);
+          });
           return;
         }
 
@@ -533,6 +535,23 @@ export default function ScannerScreen() {
           </Pressable>
         </Pressable>
       </Modal>
+
+      <ConfirmationNoticeModal
+        visible={Boolean(retakeNoticeData)}
+        title="Retake photo?"
+        message={retakeNoticeData?.message || ""}
+        confirmLabel="Use anyway"
+        cancelLabel="Retake"
+        iconName="camera-retake-outline"
+        onConfirm={() => {
+          const p = retakeNoticeData?.photo;
+          setRetakeNoticeData(null);
+          if (p) {
+            openHealthFlow(p.uri, p.width, p.height);
+          }
+        }}
+        onCancel={() => setRetakeNoticeData(null)}
+      />
     </View>
   );
 }

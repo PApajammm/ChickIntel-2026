@@ -29,21 +29,23 @@ export function JournalHeader({
 }: JournalHeaderProps) {
   return (
     <View style={styles.row}>
-      {onBackPress ? (
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={onBackPress}
-          activeOpacity={0.8}
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-        >
-          <MaterialCommunityIcons
-            name="arrow-left"
-            size={22}
-            color="#FFF"
-          />
-        </TouchableOpacity>
-      ) : null}
+      <View style={styles.headerSideLeft}>
+        {onBackPress ? (
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={onBackPress}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+          >
+            <MaterialCommunityIcons
+              name="arrow-left"
+              size={22}
+              color={ChickIntelPalette.gray1}
+            />
+          </TouchableOpacity>
+        ) : null}
+      </View>
       <Text style={styles.title} numberOfLines={1}>
         {isSelecting
           ? selectedCount > 0
@@ -51,7 +53,7 @@ export function JournalHeader({
             : "Select Logs to Archive"
           : "Behavior Journal"}
       </Text>
-      <View style={styles.headerIcons}>
+      <View style={styles.headerSideRight}>
         {!isSelecting ? (
           <>
             <TouchableOpacity
@@ -64,7 +66,7 @@ export function JournalHeader({
               <MaterialCommunityIcons
                 name="archive-outline"
                 size={22}
-                color="#FFF"
+                color={ChickIntelPalette.gray1}
               />
             </TouchableOpacity>
             <TouchableOpacity
@@ -77,7 +79,7 @@ export function JournalHeader({
               <MaterialCommunityIcons
                 name="checkbox-multiple-marked-outline"
                 size={22}
-                color="#FFF"
+                color={ChickIntelPalette.gray1}
               />
             </TouchableOpacity>
           </>
@@ -97,7 +99,7 @@ export function JournalHeader({
               <MaterialCommunityIcons
                 name="archive-arrow-down-outline"
                 size={22}
-                color="#FFF"
+                color={ChickIntelPalette.gray1}
               />
             </TouchableOpacity>
             <TouchableOpacity
@@ -110,7 +112,7 @@ export function JournalHeader({
               <MaterialCommunityIcons
                 name="check"
                 size={22}
-                color="#FFF"
+                color={ChickIntelPalette.gray1}
               />
             </TouchableOpacity>
           </>
@@ -125,9 +127,21 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 12,
     marginTop: verticalScale(10),
     marginBottom: verticalScale(8),
+  },
+  headerSideLeft: {
+    minWidth: scale(80),
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-start",
+  },
+  headerSideRight: {
+    minWidth: scale(80),
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: 4,
   },
   titleLeftRow: {
     flex: 1,
@@ -136,25 +150,17 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   backButton: {
-    width: scale(42),
-    height: verticalScale(42),
-    borderRadius: 14,
-    backgroundColor: ChickIntelPalette.green1,
+    width: scale(38),
+    height: verticalScale(38),
+    borderRadius: 12,
+    backgroundColor: "transparent",
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.25)",
-    shadowColor: "#317667",
-    shadowOpacity: 0.22,
-    shadowRadius: 10,
-    shadowOffset: { width: scale(0), height: verticalScale(4) },
-    elevation: 4,
     flexShrink: 0,
   },
   title: {
     flex: 1,
     textAlign: "center",
-    paddingLeft: 40,
     fontFamily: ChickFont.display,
     fontSize: responsiveFontSize(20),
     lineHeight: 30,
@@ -169,22 +175,15 @@ const styles = StyleSheet.create({
   headerIcons: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 4,
   },
   headerButton: {
-    width: scale(42),
-    height: verticalScale(42),
-    borderRadius: 14,
-    backgroundColor: ChickIntelPalette.green1,
+    width: scale(38),
+    height: verticalScale(38),
+    borderRadius: 12,
+    backgroundColor: "transparent",
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.25)",
-    shadowColor: "#317667",
-    shadowOpacity: 0.22,
-    shadowRadius: 10,
-    shadowOffset: { width: scale(0), height: verticalScale(4) },
-    elevation: 4,
     flexShrink: 0,
   },
   headerButtonDisabled: {

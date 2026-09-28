@@ -7,21 +7,29 @@ import { ChickIntelPalette } from "@/constants/chickintel-palette";
 type ChipListProps = {
     labels: string[];
     compact?: boolean;
+    variant?: "dark" | "light";
 };
 
-export function ChipList({ labels, compact = false }: ChipListProps) {
+export function ChipList({ labels, compact = false, variant = "dark" }: ChipListProps) {
     if (labels.length === 0) return null;
+
+    const isDark = variant === "dark";
 
     return (
         <View style={[styles.wrap, compact ? styles.wrapCompact : null]}>
             {labels.map((label) => (
                 <View
                     key={label}
-                    style={[styles.chip, compact ? styles.chipCompact : null]}
+                    style={[
+                        styles.chip,
+                        isDark ? styles.chipDark : styles.chipLight,
+                        compact ? styles.chipCompact : null,
+                    ]}
                 >
                     <Text
                         style={[
                             styles.text,
+                            isDark ? styles.textDark : styles.textLight,
                             compact ? styles.textCompact : null,
                         ]}
                         numberOfLines={1}
@@ -47,19 +55,30 @@ const styles = StyleSheet.create({
         paddingHorizontal: moderateScale(10),
         paddingVertical: verticalScale(6),
         borderRadius: 999,
-        backgroundColor: "rgba(202, 227, 221, 0.75)",
         borderWidth: 1,
+    },
+    chipDark: {
+        backgroundColor: "rgba(255, 255, 255, 0.16)",
+        borderColor: "rgba(255, 255, 255, 0.28)",
+    },
+    chipLight: {
+        backgroundColor: "rgba(202, 227, 221, 0.75)",
         borderColor: "rgba(67, 139, 123, 0.24)",
     },
     chipCompact: {
         paddingHorizontal: moderateScale(8),
-        paddingVertical: verticalScale(5),
+        paddingVertical: verticalScale(4),
     },
     text: {
         fontFamily: ChickFont.sans,
         fontSize: responsiveFontSize(12),
         lineHeight: 16,
         fontWeight: "700",
+    },
+    textDark: {
+        color: "#FFFFFF",
+    },
+    textLight: {
         color: ChickIntelPalette.green1,
     },
     textCompact: {

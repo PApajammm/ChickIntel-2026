@@ -61,7 +61,7 @@ export function getCurrentBatchAgeLabel(
     const roundedWeeks = Math.round(rawWeeks * 2) / 2;
     const formatted =
       roundedWeeks % 1 === 0 ? String(roundedWeeks) : roundedWeeks.toFixed(1);
-    return `${formatted} ${roundedWeeks === 1 ? "Week" : "Weeks"} old`;
+    return `${formatted} ${roundedWeeks === 1 ? "Week" : "Weeks"}`;
   }
 
   const currentAgeDays =
@@ -71,7 +71,7 @@ export function getCurrentBatchAgeLabel(
   const roundedWeeks = Math.round(rawAgeWeeks * 2) / 2;
   const formattedWeeks =
     roundedWeeks % 1 === 0 ? String(roundedWeeks) : roundedWeeks.toFixed(1);
-  return `${formattedWeeks} ${roundedWeeks === 1 ? "Week" : "Weeks"} old`;
+  return `${formattedWeeks} ${roundedWeeks === 1 ? "Week" : "Weeks"}`;
 }
 
 export function formatBatchDateStamp(createdAt?: string, updatedAt?: string) {

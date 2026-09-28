@@ -1433,15 +1433,6 @@ export default function ReportsScreen() {
 
   return (
     <View style={styles.screen}>
-      <BackgroundGradient
-        width="110%"
-        height="110%"
-        preserveAspectRatio="xMidYMid slice"
-        style={[
-          StyleSheet.absoluteFill,
-          { transform: [{ scale: 1.08 }, { translateY: -14 }] },
-        ]}
-      />
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
         <View style={styles.viewShot}>
           {/* Pinned Top Header */}
@@ -1458,8 +1449,8 @@ export default function ReportsScreen() {
               >
                 <MaterialCommunityIcons
                   name="arrow-left"
-                  size={22}
-                  color="#FFF"
+                  size={24}
+                  color={ChickIntelPalette.gray1}
                 />
               </TouchableOpacity>
               <View style={styles.headerTitleWrap}>
@@ -1479,8 +1470,8 @@ export default function ReportsScreen() {
               >
                 <MaterialCommunityIcons
                   name="printer-outline"
-                  size={22}
-                  color="#FFF"
+                  size={23}
+                  color={ChickIntelPalette.gray1}
                 />
               </TouchableOpacity>
             </View>
@@ -1818,19 +1809,11 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   printButton: {
-    width: scale(42),
-    height: verticalScale(42),
-    borderRadius: 14,
-    backgroundColor: ChickIntelPalette.green1,
+    width: scale(40),
+    height: verticalScale(40),
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.25)",
-    shadowColor: "#317667",
-    shadowOpacity: 0.22,
-    shadowRadius: 10,
-    shadowOffset: { width: scale(0), height: verticalScale(4) },
-    elevation: 4,
+    backgroundColor: "transparent",
   },
   timeframeBarContainer: {
     flexDirection: "row",
@@ -1868,10 +1851,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    borderRadius: 12,
-    backgroundColor: "rgba(255, 255, 255, 0.85)",
+    borderRadius: 10,
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.16)",
+    borderColor: ChickIntelPalette.gray2,
     paddingHorizontal: moderateScale(12),
     paddingVertical: verticalScale(8),
   },
@@ -1884,10 +1867,12 @@ const styles = StyleSheet.create({
   },
   segmentedContainer: {
     flexDirection: "row",
-    backgroundColor: "rgba(49, 118, 103, 0.08)",
+    backgroundColor: "#FFFFFF",
     borderRadius: 10,
-    padding: 3,
-    gap: 3,
+    padding: 4,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: ChickIntelPalette.gray2,
   },
   segmentedItem: {
     flexDirection: "row",
@@ -1897,6 +1882,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: moderateScale(8),
     paddingVertical: verticalScale(6),
     borderRadius: 8,
+    backgroundColor: "transparent",
   },
   segmentedItemActive: {
     backgroundColor: ChickIntelPalette.green1,
@@ -1905,7 +1891,7 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(9.5),
     fontWeight: "600",
-    color: ChickIntelPalette.gray1,
+    color: ChickIntelPalette.textMuted,
     textAlign: "center",
   },
   segmentedTextActive: {
@@ -1943,8 +1929,15 @@ const styles = StyleSheet.create({
   },
   kpiCard: {
     flex: 1,
-    backgroundColor: "rgba(255, 255, 255, 0.88)",
-    borderRadius: 16,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: ChickIntelPalette.gray2,
+    shadowColor: "#161E1A",
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: verticalScale(2) },
+    elevation: 2,
     padding: moderateScale(12),
     gap: 2,
   },
@@ -1952,7 +1945,7 @@ const styles = StyleSheet.create({
     width: scale(28),
     height: verticalScale(28),
     borderRadius: 8,
-    backgroundColor: "rgba(49, 118, 103, 0.12)",
+    backgroundColor: ChickIntelPalette.lightGreen,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 4,
@@ -1980,16 +1973,22 @@ const styles = StyleSheet.create({
   // Cards & Headers
   reportCard: {
     overflow: "hidden",
-    borderRadius: 20,
-    backgroundColor: "rgba(255, 255, 255, 0.86)",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: ChickIntelPalette.gray2,
+    backgroundColor: "#FFFFFF",
+    shadowColor: "#161E1A",
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: verticalScale(2) },
+    elevation: 2,
   },
   reportCardDark: {
-    backgroundColor: "rgba(255, 255, 255, 0.18)",
+    backgroundColor: "#FFFFFF",
   },
   cardSurface: {
-    borderRadius: ReportsPageTheme.cardInnerRadius,
+    borderRadius: 14,
     padding: ReportsPageTheme.cardInnerPadding,
-    borderWidth: 1,
     overflow: "hidden",
     gap: 12,
   },
@@ -2011,7 +2010,7 @@ const styles = StyleSheet.create({
     width: scale(34),
     height: verticalScale(34),
     borderRadius: 10,
-    backgroundColor: "rgba(49, 118, 103, 0.12)",
+    backgroundColor: ChickIntelPalette.lightGreen,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -2027,10 +2026,10 @@ const styles = StyleSheet.create({
   chartWrapper: {
     paddingVertical: verticalScale(14),
     paddingHorizontal: moderateScale(14),
-    borderRadius: 16,
-    backgroundColor: "rgba(244, 248, 247, 0.72)",
+    borderRadius: 14,
+    backgroundColor: ChickIntelPalette.lightGreen,
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.1)",
+    borderColor: ChickIntelPalette.gray2,
   },
   donutContainer: {
     width: "100%",

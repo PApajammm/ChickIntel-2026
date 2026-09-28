@@ -1,4 +1,3 @@
-import BackgroundGradient from "@/assets_imported/background-gradient.svg";
 import { BlurCard } from "@/components/ui/blur-card";
 import { ChickDatePickerModal } from "@/components/ui/chick-date-picker-modal";
 import { ChickFont } from "@/constants/chick-fonts";
@@ -29,6 +28,7 @@ import {
     ScrollView,
     StyleSheet,
     Text,
+    TextInput,
     TouchableOpacity,
     View,
 } from "react-native";
@@ -614,11 +614,56 @@ export default function EggFertilityReportScreen() {
     },
   ]);
   const [selectedScopeKey, setSelectedScopeKey] = useState("overall");
+  const [scopeSortOrder, setScopeSortOrder] = useState<"asc" | "desc">("asc");
+  const [scopeSearchQuery, setScopeSearchQuery] = useState("");
   const [scopeModalVisible, setScopeModalVisible] = useState(false);
   const [report, setReport] =
     useState<EggFertilityReportSnapshot>(EMPTY_REPORT);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const displayedScopeOptions = useMemo(() => {
+    const overallOption = scopeOptions.find((o) => o.key === "overall");
+    let batchOptions = scopeOptions.filter((o) => o.key !== "overall");
+
+    const query = scopeSearchQuery.trim().toLowerCase();
+    if (query) {
+      batchOptions = batchOptions.filter((opt) => {
+        return (
+          opt.label.toLowerCase().includes(query) ||
+          (opt.colorName || "").toLowerCase().includes(query) ||
+          (opt.originBatchNo || "").toLowerCase().includes(query) ||
+          `c${(opt.originBatchNo || "").toLowerCase()}`.includes(query)
+        );
+      });
+    }
+
+    batchOptions.sort((left, right) => {
+      const leftDigits = (left.originBatchNo || "").replace(/\D/g, "");
+      const rightDigits = (right.originBatchNo || "").replace(/\D/g, "");
+      const leftNum = leftDigits ? parseInt(leftDigits, 10) : -1;
+      const rightNum = rightDigits ? parseInt(rightDigits, 10) : -1;
+
+      if (leftNum !== -1 && rightNum !== -1 && leftNum !== rightNum) {
+        return scopeSortOrder === "asc" ? leftNum - rightNum : rightNum - leftNum;
+      }
+      return scopeSortOrder === "asc"
+        ? left.label.localeCompare(right.label, undefined, { numeric: true })
+        : right.label.localeCompare(left.label, undefined, { numeric: true });
+    });
+
+    const result: ScopeOption[] = [];
+    if (
+      overallOption &&
+      (!query ||
+        overallOption.label.toLowerCase().includes(query) ||
+        query === "all" ||
+        query === "overall")
+    ) {
+      result.push(overallOption);
+    }
+    return result.concat(batchOptions);
+  }, [scopeOptions, scopeSearchQuery, scopeSortOrder]);
 
   const generatedBy = profile?.display_name || profile?.email || "Farm User";
   const generatedDate = new Intl.DateTimeFormat("en-US", {
@@ -834,15 +879,6 @@ export default function EggFertilityReportScreen() {
 
   return (
     <View style={styles.screen}>
-      <BackgroundGradient
-        width="110%"
-        height="110%"
-        preserveAspectRatio="xMidYMid slice"
-        style={[
-          StyleSheet.absoluteFill,
-          { transform: [{ scale: 1.08 }, { translateY: -14 }] },
-        ]}
-      />
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
         {/* Pinned Top Header & Controls */}
         <View style={styles.fixedHeader}>
@@ -862,8 +898,8 @@ export default function EggFertilityReportScreen() {
             >
               <MaterialCommunityIcons
                 name="arrow-left"
-                size={22}
-                color="#FFF"
+                size={24}
+                color={ChickIntelPalette.gray1}
               />
             </TouchableOpacity>
             <View style={styles.headerCopy}>
@@ -881,8 +917,8 @@ export default function EggFertilityReportScreen() {
             >
               <MaterialCommunityIcons
                 name="printer-outline"
-                size={22}
-                color="#FFF"
+                size={24}
+                color={ChickIntelPalette.gray1}
               />
             </TouchableOpacity>
           </View>
@@ -911,11 +947,27 @@ export default function EggFertilityReportScreen() {
                   </Text>
                 </View>
               )}
-              <MaterialCommunityIcons
-                name="chevron-down"
-                size={20}
-                color={ChickIntelPalette.gray1}
-              />
+              <View style={styles.scopeDropdownRight}>
+                <View style={styles.scopeSortIndicator}>
+                  <MaterialCommunityIcons
+                    name={
+                      scopeSortOrder === "asc"
+                        ? "sort-numeric-ascending"
+                        : "sort-numeric-descending"
+                    }
+                    size={13}
+                    color={ChickIntelPalette.green1}
+                  />
+                  <Text style={styles.scopeSortIndicatorText}>
+                    {scopeSortOrder === "asc" ? "Asc" : "Desc"}
+                  </Text>
+                </View>
+                <MaterialCommunityIcons
+                  name="chevron-down"
+                  size={20}
+                  color={ChickIntelPalette.gray1}
+                />
+              </View>
             </View>
           </Pressable>
 
@@ -1037,16 +1089,12 @@ export default function EggFertilityReportScreen() {
 
           {/* Donut & Breakdown Card */}
           <BlurCard
-            style={[styles.glassCard, isDark && styles.glassCardDark]}
+            style={styles.glassCard}
             borderRadius={20}
-            intensity={18}
-            transparent
+            intensity={0}
           >
             <View
-              style={[
-                styles.cardSurface,
-                { backgroundColor: "transparent", borderColor: glassBorder },
-              ]}
+              style={styles.cardSurface}
             >
               <View style={styles.cardHeaderRow}>
                 <View style={styles.cardIconBadge}>
@@ -1119,11 +1167,117 @@ export default function EggFertilityReportScreen() {
                   </Text>
                 </View>
               </View>
+
+              {/* Scope Modal Search & Sort Controls */}
+              <View style={styles.scopeSearchSortContainer}>
+                <View style={styles.scopeSearchBar}>
+                  <MaterialCommunityIcons
+                    name="magnify"
+                    size={18}
+                    color={ChickIntelPalette.gray1}
+                  />
+                  <TextInput
+                    style={styles.scopeSearchInput}
+                    placeholder="Search color or batch #..."
+                    placeholderTextColor={ChickIntelPalette.gray2}
+                    value={scopeSearchQuery}
+                    onChangeText={setScopeSearchQuery}
+                  />
+                  {scopeSearchQuery.length > 0 ? (
+                    <Pressable
+                      onPress={() => setScopeSearchQuery("")}
+                      hitSlop={8}
+                    >
+                      <MaterialCommunityIcons
+                        name="close-circle"
+                        size={16}
+                        color={ChickIntelPalette.gray2}
+                      />
+                    </Pressable>
+                  ) : null}
+                </View>
+
+                {/* Sort Toggle Row */}
+                <View style={styles.scopeSortRow}>
+                  <Text style={styles.scopeSortLabel}>Sort Batches:</Text>
+                  <View style={styles.scopeSortToggleGroup}>
+                    <TouchableOpacity
+                      style={[
+                        styles.scopeSortBtn,
+                        scopeSortOrder === "asc" && styles.scopeSortBtnActive,
+                      ]}
+                      onPress={() => setScopeSortOrder("asc")}
+                      activeOpacity={0.8}
+                    >
+                      <MaterialCommunityIcons
+                        name="sort-numeric-ascending"
+                        size={14}
+                        color={
+                          scopeSortOrder === "asc"
+                            ? "#FFFFFF"
+                            : ChickIntelPalette.gray1
+                        }
+                      />
+                      <Text
+                        style={[
+                          styles.scopeSortBtnText,
+                          scopeSortOrder === "asc" &&
+                            styles.scopeSortBtnTextActive,
+                        ]}
+                      >
+                        Ascending
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[
+                        styles.scopeSortBtn,
+                        scopeSortOrder === "desc" && styles.scopeSortBtnActive,
+                      ]}
+                      onPress={() => setScopeSortOrder("desc")}
+                      activeOpacity={0.8}
+                    >
+                      <MaterialCommunityIcons
+                        name="sort-numeric-descending"
+                        size={14}
+                        color={
+                          scopeSortOrder === "desc"
+                            ? "#FFFFFF"
+                            : ChickIntelPalette.gray1
+                        }
+                      />
+                      <Text
+                        style={[
+                          styles.scopeSortBtnText,
+                          scopeSortOrder === "desc" &&
+                            styles.scopeSortBtnTextActive,
+                        ]}
+                      >
+                        Descending
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+
               <ScrollView
                 style={styles.scopeModalList}
                 showsVerticalScrollIndicator={false}
               >
-                {scopeOptions.map((option) => {
+                {displayedScopeOptions.length === 0 ? (
+                  <View style={styles.scopeEmptyBox}>
+                    <MaterialCommunityIcons
+                      name="filter-off-outline"
+                      size={24}
+                      color={ChickIntelPalette.gray2}
+                    />
+                    <Text style={styles.scopeEmptyText}>
+                      No batch scopes match "{scopeSearchQuery}".
+                    </Text>
+                  </View>
+                ) : null}
+
+                {displayedScopeOptions.map((option) => {
                   const isSelected = option.key === selectedScopeKey;
 
                   return (
@@ -1283,48 +1437,38 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   backButton: {
-    width: scale(42),
-    height: verticalScale(42),
-    borderRadius: 14,
-    backgroundColor: ChickIntelPalette.green1,
+    width: scale(38),
+    height: verticalScale(38),
+    backgroundColor: "transparent",
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.25)",
-    shadowColor: "#317667",
-    shadowOpacity: 0.22,
-    shadowRadius: 10,
-    shadowOffset: { width: scale(0), height: verticalScale(4) },
-    elevation: 4,
+    borderWidth: 0,
+    elevation: 0,
+    shadowOpacity: 0,
     flexShrink: 0,
   },
   printButton: {
-    width: scale(42),
-    height: verticalScale(42),
-    borderRadius: 14,
-    backgroundColor: ChickIntelPalette.green1,
+    width: scale(38),
+    height: verticalScale(38),
+    backgroundColor: "transparent",
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.25)",
-    shadowColor: "#317667",
-    shadowOpacity: 0.22,
-    shadowRadius: 10,
-    shadowOffset: { width: scale(0), height: verticalScale(4) },
-    elevation: 4,
+    borderWidth: 0,
+    elevation: 0,
+    shadowOpacity: 0,
   },
   scopeDropdown: {
-    borderRadius: 16,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.16)",
-    backgroundColor: "rgba(255, 255, 255, 0.85)",
+    borderColor: ChickIntelPalette.mediumGreen,
+    backgroundColor: "#FFFFFF",
     paddingHorizontal: moderateScale(14),
     paddingVertical: verticalScale(10),
     gap: 6,
-    shadowColor: "#317667",
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
+    shadowColor: "#000",
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
     elevation: 2,
   },
   scopeDropdownLabel: {
@@ -1359,18 +1503,18 @@ const styles = StyleSheet.create({
     height: verticalScale(14),
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(51, 51, 51, 0.12)",
+    borderColor: ChickIntelPalette.mediumGreen,
   },
   periodBarContainer: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "rgba(255, 255, 255, 0.85)",
+    backgroundColor: "#FFFFFF",
     borderRadius: 14,
     paddingHorizontal: moderateScale(12),
     paddingVertical: verticalScale(8),
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.16)",
+    borderColor: ChickIntelPalette.mediumGreen,
     gap: 8,
   },
   periodLabel: {
@@ -1383,7 +1527,7 @@ const styles = StyleSheet.create({
   },
   periodSegmented: {
     flexDirection: "row",
-    backgroundColor: "rgba(49, 118, 103, 0.08)",
+    backgroundColor: ChickIntelPalette.lightGreen,
     borderRadius: 10,
     padding: 3,
     gap: 3,
@@ -1402,7 +1546,7 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(11),
     fontWeight: "600",
-    color: ChickIntelPalette.gray1,
+    color: ChickIntelPalette.textMuted,
   },
   periodTextActive: {
     color: "#FFFFFF",
@@ -1413,9 +1557,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
     borderRadius: 12,
-    backgroundColor: "rgba(255, 255, 255, 0.85)",
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.16)",
+    borderColor: ChickIntelPalette.mediumGreen,
     paddingHorizontal: moderateScale(12),
     paddingVertical: verticalScale(8),
   },
@@ -1451,16 +1595,22 @@ const styles = StyleSheet.create({
   },
   kpiCard: {
     flex: 1,
-    backgroundColor: "rgba(255, 255, 255, 0.88)",
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: ChickIntelPalette.mediumGreen,
     borderRadius: 16,
     padding: moderateScale(12),
     gap: 2,
+    shadowColor: "#000",
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 1,
   },
   kpiIconWrap: {
     width: scale(28),
     height: verticalScale(28),
     borderRadius: 8,
-    backgroundColor: "rgba(49, 118, 103, 0.12)",
+    backgroundColor: ChickIntelPalette.lightGreen,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 4,
@@ -1489,10 +1639,16 @@ const styles = StyleSheet.create({
   glassCard: {
     overflow: "hidden",
     borderRadius: 20,
-    backgroundColor: "rgba(255, 255, 255, 0.86)",
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: ChickIntelPalette.mediumGreen,
+    shadowColor: "#000",
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
   },
   glassCardDark: {
-    backgroundColor: "rgba(255, 255, 255, 0.18)",
+    backgroundColor: "#FFFFFF",
   },
   cardSurface: {
     borderRadius: ReportsPageTheme.cardInnerRadius,
@@ -1509,7 +1665,7 @@ const styles = StyleSheet.create({
     width: scale(34),
     height: verticalScale(34),
     borderRadius: 10,
-    backgroundColor: "rgba(49, 118, 103, 0.12)",
+    backgroundColor: ChickIntelPalette.lightGreen,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1524,9 +1680,9 @@ const styles = StyleSheet.create({
     paddingVertical: verticalScale(14),
     paddingHorizontal: moderateScale(14),
     borderRadius: 16,
-    backgroundColor: "rgba(244, 248, 247, 0.72)",
+    backgroundColor: ChickIntelPalette.lightGreen,
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.1)",
+    borderColor: ChickIntelPalette.mediumGreen,
   },
   donutContainer: {
     width: "100%",
@@ -1607,11 +1763,11 @@ const styles = StyleSheet.create({
 
   // Smart Insights Card
   insightCard: {
-    backgroundColor: "rgba(49, 118, 103, 0.07)",
+    backgroundColor: ChickIntelPalette.lightGreen,
     borderRadius: 14,
     padding: moderateScale(12),
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.14)",
+    borderColor: ChickIntelPalette.mediumGreen,
     gap: 6,
   },
   insightHeaderRow: {
@@ -1623,7 +1779,7 @@ const styles = StyleSheet.create({
     width: scale(22),
     height: verticalScale(22),
     borderRadius: 6,
-    backgroundColor: "rgba(49, 118, 103, 0.14)",
+    backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1648,11 +1804,11 @@ const styles = StyleSheet.create({
     padding: moderateScale(20),
   },
   scopeModalCard: {
-    backgroundColor: "#F8FCFA",
+    backgroundColor: "#FFFFFF",
     borderRadius: 18,
     padding: moderateScale(14),
     borderWidth: 1,
-    borderColor: "rgba(67, 139, 123, 0.18)",
+    borderColor: ChickIntelPalette.mediumGreen,
     shadowColor: "#000",
     shadowOpacity: 0.14,
     shadowRadius: 18,
@@ -1675,7 +1831,7 @@ const styles = StyleSheet.create({
     width: scale(34),
     height: verticalScale(34),
     borderRadius: 10,
-    backgroundColor: "rgba(49, 118, 103, 0.12)",
+    backgroundColor: ChickIntelPalette.lightGreen,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1687,7 +1843,7 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(12),
     lineHeight: 17,
-    color: "#526660",
+    color: ChickIntelPalette.textMuted,
   },
   scopeModalList: {
     maxHeight: 360,
@@ -1701,12 +1857,12 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: "transparent",
-    backgroundColor: "rgba(255,255,255,0.54)",
-    marginBottom: 4,
+    backgroundColor: ChickIntelPalette.lightGreen,
+    marginBottom: 6,
   },
   scopeOptionRowSelected: {
-    backgroundColor: "rgba(202, 227, 221, 0.82)",
-    borderColor: "rgba(49,118,103,0.18)",
+    backgroundColor: ChickIntelPalette.lightGreen,
+    borderColor: ChickIntelPalette.green1,
   },
   scopeOptionText: {
     fontFamily: ChickFont.sans,
@@ -1722,7 +1878,7 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(12),
     lineHeight: 16,
-    color: "#526660",
+    color: ChickIntelPalette.textMuted,
   },
   scopeOptionTextSelected: {
     color: ChickIntelPalette.green1,
@@ -1733,7 +1889,7 @@ const styles = StyleSheet.create({
     height: verticalScale(14),
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(51, 51, 51, 0.08)",
+    borderColor: ChickIntelPalette.mediumGreen,
   },
   scopeOptionContent: {
     flex: 1,
@@ -1745,8 +1901,106 @@ const styles = StyleSheet.create({
     width: scale(28),
     height: verticalScale(28),
     borderRadius: 8,
-    backgroundColor: "rgba(49, 118, 103, 0.1)",
+    backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
+  },
+  scopeDropdownRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  scopeSortIndicator: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: ChickIntelPalette.lightGreen,
+    borderWidth: 1,
+    borderColor: ChickIntelPalette.mediumGreen,
+    borderRadius: 8,
+    paddingHorizontal: moderateScale(6),
+    paddingVertical: verticalScale(2),
+  },
+  scopeSortIndicatorText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(11),
+    fontWeight: "700",
+    color: ChickIntelPalette.green1,
+  },
+  scopeSearchSortContainer: {
+    marginBottom: verticalScale(10),
+    gap: 8,
+  },
+  scopeSearchBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: ChickIntelPalette.lightGreen,
+    borderWidth: 1,
+    borderColor: ChickIntelPalette.mediumGreen,
+    borderRadius: 10,
+    paddingHorizontal: moderateScale(10),
+    height: verticalScale(38),
+    gap: 8,
+  },
+  scopeSearchInput: {
+    flex: 1,
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(13),
+    color: ChickIntelPalette.gray1,
+    paddingVertical: 0,
+  },
+  scopeSortRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  scopeSortLabel: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12),
+    fontWeight: "700",
+    color: ChickIntelPalette.gray1,
+  },
+  scopeSortToggleGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: ChickIntelPalette.lightGreen,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: ChickIntelPalette.mediumGreen,
+    padding: 2,
+    gap: 2,
+  },
+  scopeSortBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: moderateScale(8),
+    paddingVertical: verticalScale(4),
+    borderRadius: 6,
+  },
+  scopeSortBtnActive: {
+    backgroundColor: ChickIntelPalette.green1,
+  },
+  scopeSortBtnText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(11),
+    fontWeight: "600",
+    color: ChickIntelPalette.gray1,
+  },
+  scopeSortBtnTextActive: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+  },
+  scopeEmptyBox: {
+    paddingVertical: verticalScale(24),
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  scopeEmptyText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12),
+    color: ChickIntelPalette.textMuted,
+    textAlign: "center",
   },
 });

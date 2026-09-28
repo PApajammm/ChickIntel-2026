@@ -72,7 +72,7 @@ export function LogoutModal({
 const styles = StyleSheet.create({
     backdrop: {
         flex: 1,
-        backgroundColor: "rgba(51,51,51,0.38)",
+        backgroundColor: "rgba(31, 46, 43, 0.45)",
         alignItems: "center",
         justifyContent: "center",
         padding: moderateScale(24),
@@ -80,14 +80,14 @@ const styles = StyleSheet.create({
     card: {
         width: "100%",
         borderRadius: scale(16),
-        padding: moderateScale(16),
+        padding: moderateScale(18),
         backgroundColor: "#FFFFFF",
         borderWidth: 1,
-        borderColor: "rgba(49,118,103,0.18)",
-        shadowColor: "#000",
-        shadowOpacity: 0.15,
+        borderColor: ChickIntelPalette.gray2,
+        shadowColor: "#161E1A",
+        shadowOpacity: 0.12,
         shadowRadius: scale(16),
-        shadowOffset: { width: 0, height: verticalScale(8) },
+        shadowOffset: { width: 0, height: verticalScale(6) },
         elevation: 8,
     },
     title: {
@@ -121,9 +121,9 @@ const styles = StyleSheet.create({
         paddingHorizontal: moderateScale(16),
     },
     btnSecondary: {
-        backgroundColor: "#F0F2F2",
+        backgroundColor: ChickIntelPalette.lightGreen,
         borderWidth: 1,
-        borderColor: "transparent",
+        borderColor: ChickIntelPalette.mediumGreen,
     },
     btnSecondaryText: {
         fontFamily: ChickFont.sans,
@@ -138,6 +138,6 @@ const styles = StyleSheet.create({
         fontFamily: ChickFont.sans,
         fontSize: responsiveFontSize(14),
         fontWeight: "600",
-        color: ChickIntelPalette.light1,
+        color: "#FFFFFF",
     },
 });

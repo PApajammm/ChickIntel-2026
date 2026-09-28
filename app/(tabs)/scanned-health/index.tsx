@@ -22,7 +22,6 @@ import {
     useSafeAreaInsets,
 } from "react-native-safe-area-context";
 
-import BackgroundGradient from "@/assets_imported/background-gradient.svg";
 import { BehaviorChecklist } from "@/components/health-scan/behavior-checklist";
 import { HealthFlowFooterButton } from "@/components/health-scan/health-flow-footer-button";
 import { HealthInputSummaryCard } from "@/components/health-scan/health-input-summary-card";
@@ -151,15 +150,6 @@ export default function ScannedHealthInputScreen() {
       keyboardVerticalOffset={insets.top}
     >
       <View style={styles.screen}>
-        <BackgroundGradient
-          width="110%"
-          height="110%"
-          preserveAspectRatio="xMidYMid slice"
-          style={[
-            StyleSheet.absoluteFill,
-            { transform: [{ scale: 1.08 }, { translateY: -14 }] },
-          ]}
-        />
         <SafeAreaView style={styles.safeArea} edges={["top"]}>
           <StatusBar style="dark" />
 
@@ -185,7 +175,7 @@ export default function ScannedHealthInputScreen() {
                 <MaterialCommunityIcons
                   name="arrow-left"
                   size={22}
-                  color="#FFF"
+                  color={ChickIntelPalette.gray1}
                 />
               </TouchableOpacity>
               <Text style={styles.pageTitle} numberOfLines={1}>
@@ -249,7 +239,7 @@ export default function ScannedHealthInputScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: ChickIntelPalette.light1,
+    backgroundColor: ChickIntelPalette.canvas,
   },
   safeArea: {
     flex: 1,
@@ -274,28 +264,21 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   headerRightPlaceholder: {
-    width: scale(42),
+    width: scale(38),
   },
   pageSubtitle: {
     ...HealthTypography.meta,
     textAlign: "center",
     marginBottom: 12,
-    color: "#5E6665",
+    color: ChickIntelPalette.textMuted,
   },
   backButton: {
-    width: scale(42),
-    height: verticalScale(42),
-    borderRadius: 14,
-    backgroundColor: ChickIntelPalette.green1,
+    width: scale(38),
+    height: verticalScale(38),
+    borderRadius: 12,
+    backgroundColor: "transparent",
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.25)",
-    shadowColor: "#317667",
-    shadowOpacity: 0.22,
-    shadowRadius: 10,
-    shadowOffset: { width: scale(0), height: verticalScale(4) },
-    elevation: 4,
     flexShrink: 0,
   },
   gap: {

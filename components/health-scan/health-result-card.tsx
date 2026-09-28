@@ -7,485 +7,527 @@ import { ChickIntelPalette } from "@/constants/chickintel-palette";
 import {
     moderateScale,
     responsiveFontSize,
-    scale,
     verticalScale,
 } from "@/utils/responsive";
 
 type HealthResultCardProps = {
-  resultSeverity: boolean;
-  diseaseName: string;
-  resultSummary: string;
-  resultDescription?: string;
-  recommendationText: string;
-  treatmentSteps?: string[];
-  actionStatus: string;
-  durationValue: string;
-  confidence?: number;
-  detectionSource?: string;
-  diagnosticNotes?: string[];
-  differentialDiagnosis?: {
+    resultSeverity: boolean;
     diseaseName: string;
-    reason: string;
-  };
-  supportingBehaviors?: string[];
+    resultSummary: string;
+    resultDescription?: string;
+    recommendationText: string;
+    treatmentSteps?: string[];
+    actionStatus: string;
+    durationValue: string;
+    confidence?: number;
+    detectionSource?: string;
+    diagnosticNotes?: string[];
+    differentialDiagnosis?: {
+        diseaseName: string;
+        reason: string;
+    };
+    supportingBehaviors?: string[];
 };
 
 function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.kvRow}>
-      <Text style={styles.kvLabel}>{label}</Text>
-      <Text style={styles.kvValue}>{value}</Text>
-    </View>
-  );
+    return (
+        <View style={styles.kvRow}>
+            <Text style={styles.kvLabel}>{label}</Text>
+            <Text style={styles.kvValue}>{value}</Text>
+        </View>
+    );
 }
 
 /**
  * ChickIntel outcome card with compact result summary and palette-aligned metadata.
  */
 export function HealthResultCard({
-  resultSeverity,
-  diseaseName,
-  resultSummary,
-  resultDescription,
-  recommendationText,
-  treatmentSteps,
-  actionStatus,
-  durationValue,
-  confidence,
-  detectionSource,
-  diagnosticNotes,
-  differentialDiagnosis,
-  supportingBehaviors,
+    resultSeverity,
+    diseaseName,
+    resultSummary,
+    resultDescription,
+    recommendationText,
+    treatmentSteps,
+    actionStatus,
+    durationValue,
+    confidence,
+    detectionSource,
+    diagnosticNotes,
+    differentialDiagnosis,
+    supportingBehaviors,
 }: HealthResultCardProps) {
-  const descriptionText = resultDescription?.trim();
-  const treatmentItems =
-    treatmentSteps && treatmentSteps.length > 0
-      ? treatmentSteps
-      : recommendationText.trim()
-        ? [recommendationText]
-        : [];
+    const descriptionText = resultDescription?.trim();
+    const treatmentItems =
+        treatmentSteps && treatmentSteps.length > 0
+            ? treatmentSteps
+            : recommendationText.trim()
+              ? [recommendationText]
+              : [];
 
-  const accentColor = resultSeverity ? "#EF4444" : ChickIntelPalette.green1;
+    const accentColor = resultSeverity ? "#F87171" : ChickIntelPalette.accent;
 
-  return (
-    <BlurCard style={styles.card} borderRadius={10} intensity={20}>
-      <View style={styles.inner}>
-        {/* Header Badge Row */}
-        <View style={styles.headerTopRow}>
-          <View
-            style={[
-              styles.resultPill,
-              resultSeverity ? styles.resultPillUrgent : styles.resultPillMild,
-            ]}
-          >
-            <MaterialCommunityIcons
-              name={
-                resultSeverity ? "alert-circle-outline" : "shield-check-outline"
-              }
-              size={14}
-              color={accentColor}
-            />
-            <Text style={[styles.resultTag, { color: accentColor }]}>
-              {resultSeverity ? "Urgent Diagnosis" : "Assessment Result"}
-            </Text>
-          </View>
+    return (
+        <View style={styles.card}>
+            <View style={styles.inner}>
+                {/* Header Badge Row */}
+                <View style={styles.headerTopRow}>
+                    <View
+                        style={[
+                            styles.resultPill,
+                            resultSeverity
+                                ? styles.resultPillUrgent
+                                : styles.resultPillMild,
+                        ]}
+                    >
+                        <MaterialCommunityIcons
+                            name={
+                                resultSeverity
+                                    ? "alert-circle-outline"
+                                    : "shield-check-outline"
+                            }
+                            size={14}
+                            color={accentColor}
+                        />
+                        <Text
+                            style={[styles.resultTag, { color: accentColor }]}
+                        >
+                            {resultSeverity
+                                ? "Urgent Diagnosis"
+                                : "Assessment Result"}
+                        </Text>
+                    </View>
 
-          {typeof confidence === "number" && confidence > 0 ? (
-            <View style={styles.confidenceBadge}>
-              <Text style={styles.confidenceText}>
-                {Math.round(confidence)}% Confidence
-              </Text>
-            </View>
-          ) : actionStatus ? (
-            <View style={styles.statusBadge}>
-              <Text style={styles.statusBadgeText}>{actionStatus}</Text>
-            </View>
-          ) : null}
-        </View>
-
-        {/* Result Title */}
-        <Text style={styles.resultBody}>{resultSummary || diseaseName}</Text>
-
-        {/* Supporting Behaviors Chips */}
-        {supportingBehaviors && supportingBehaviors.length > 0 ? (
-          <View style={styles.supportingBehaviorsContainer}>
-            <Text style={styles.supportingBehaviorsLabel}>Supported by symptoms:</Text>
-            <View style={styles.supportingChipsRow}>
-              {supportingBehaviors.map((beh, idx) => (
-                <View key={`${beh}-${idx}`} style={styles.supportingChip}>
-                  <MaterialCommunityIcons
-                    name="check"
-                    size={11}
-                    color={ChickIntelPalette.green1}
-                  />
-                  <Text style={styles.supportingChipText}>{beh}</Text>
+                    {typeof confidence === "number" && confidence > 0 ? (
+                        <View style={styles.confidenceBadge}>
+                            <Text style={styles.confidenceText}>
+                                {Math.round(confidence)}% Confidence
+                            </Text>
+                        </View>
+                    ) : actionStatus ? (
+                        <View style={styles.statusBadge}>
+                            <Text style={styles.statusBadgeText}>
+                                {actionStatus}
+                            </Text>
+                        </View>
+                    ) : null}
                 </View>
-              ))}
-            </View>
-          </View>
-        ) : null}
 
-        {/* Diagnostic Notes */}
-        {diagnosticNotes && diagnosticNotes.length > 0 ? (
-          <View style={styles.diagnosticNotesBox}>
-            <View style={styles.diagnosticNotesHeader}>
-              <MaterialCommunityIcons
-                name="lightbulb-on-outline"
-                size={13}
-                color={ChickIntelPalette.green1}
-              />
-              <Text style={styles.diagnosticNotesTitle}>Diagnostic Assessment</Text>
-            </View>
-            {diagnosticNotes.map((note, i) => (
-              <Text key={`note-${i}`} style={styles.diagnosticNoteText}>
-                • {note}
-              </Text>
-            ))}
-          </View>
-        ) : null}
+                {/* Result Title */}
+                <Text style={styles.resultBody}>
+                    {resultSummary || diseaseName}
+                </Text>
 
-        {/* Differential Diagnosis (e.g. CRD vs Coryza or Bumblefoot vs Respiratory) */}
-        {differentialDiagnosis ? (
-          <View style={styles.differentialBox}>
-            <View style={styles.differentialHeader}>
-              <MaterialCommunityIcons
-                name="information-outline"
-                size={13}
-                color="#0369A1"
-              />
-              <Text style={styles.differentialTitle}>
-                Differential: {differentialDiagnosis.diseaseName}
-              </Text>
-            </View>
-            <Text style={styles.differentialText}>
-              {differentialDiagnosis.reason}
-            </Text>
-          </View>
-        ) : null}
+                {/* Supporting Behaviors Chips */}
+                {supportingBehaviors && supportingBehaviors.length > 0 ? (
+                    <View style={styles.supportingBehaviorsContainer}>
+                        <Text style={styles.supportingBehaviorsLabel}>
+                            Supported by symptoms:
+                        </Text>
+                        <View style={styles.supportingChipsRow}>
+                            {supportingBehaviors.map((beh, idx) => (
+                                <View
+                                    key={`${beh}-${idx}`}
+                                    style={styles.supportingChip}
+                                >
+                                    <MaterialCommunityIcons
+                                        name="check"
+                                        size={11}
+                                        color={ChickIntelPalette.green1}
+                                    />
+                                    <Text style={styles.supportingChipText}>
+                                        {beh}
+                                    </Text>
+                                </View>
+                            ))}
+                        </View>
+                    </View>
+                ) : null}
 
-        {/* Description */}
-        {descriptionText ? (
-          <View style={styles.descriptionBox}>
-            <Text style={styles.sectionTag}>Overview</Text>
-            <Text style={styles.sectionBody}>{descriptionText}</Text>
-          </View>
-        ) : null}
+                {/* Diagnostic Notes */}
+                {diagnosticNotes && diagnosticNotes.length > 0 ? (
+                    <View style={styles.diagnosticNotesBox}>
+                        <View style={styles.diagnosticNotesHeader}>
+                            <MaterialCommunityIcons
+                                name="lightbulb-on-outline"
+                                size={13}
+                                color={ChickIntelPalette.green1}
+                            />
+                            <Text style={styles.diagnosticNotesTitle}>
+                                Diagnostic Assessment
+                            </Text>
+                        </View>
+                        {diagnosticNotes.map((note, i) => (
+                            <Text
+                                key={`note-${i}`}
+                                style={styles.diagnosticNoteText}
+                            >
+                                • {note}
+                            </Text>
+                        ))}
+                    </View>
+                ) : null}
 
-        {/* Treatment Steps */}
-        {treatmentItems.length > 0 ? (
-          <View style={styles.treatmentSection}>
-            <View style={styles.sectionHeaderRow}>
-              <MaterialCommunityIcons
-                name="medical-bag"
-                size={14}
-                color={ChickIntelPalette.green1}
-              />
-              <Text style={styles.recTag}>Treatment Protocol</Text>
-            </View>
-            <View style={styles.treatmentList}>
-              {treatmentItems.map((step, index) => (
-                <View key={`${step}-${index}`} style={styles.treatmentRow}>
-                  <View style={styles.bulletIconWrap}>
-                    <MaterialCommunityIcons
-                      name="check-circle"
-                      size={14}
-                      color={ChickIntelPalette.green1}
-                    />
-                  </View>
-                  <Text style={styles.recBody}>{step}</Text>
+                {/* Differential Diagnosis (e.g. CRD vs Coryza or Bumblefoot vs Respiratory) */}
+                {differentialDiagnosis ? (
+                    <View style={styles.differentialBox}>
+                        <View style={styles.differentialHeader}>
+                            <MaterialCommunityIcons
+                                name="information-outline"
+                                size={13}
+                                color={ChickIntelPalette.green1}
+                            />
+                            <Text style={styles.differentialTitle}>
+                                Differential:{" "}
+                                {differentialDiagnosis.diseaseName}
+                            </Text>
+                        </View>
+                        <Text style={styles.differentialText}>
+                            {differentialDiagnosis.reason}
+                        </Text>
+                    </View>
+                ) : null}
+
+                {/* Description */}
+                {descriptionText ? (
+                    <View style={styles.descriptionBox}>
+                        <Text style={styles.sectionTag}>Overview</Text>
+                        <Text style={styles.sectionBody}>
+                            {descriptionText}
+                        </Text>
+                    </View>
+                ) : null}
+
+                {/* Treatment Steps */}
+                {treatmentItems.length > 0 ? (
+                    <View style={styles.treatmentSection}>
+                        <View style={styles.sectionHeaderRow}>
+                            <MaterialCommunityIcons
+                                name="medical-bag"
+                                size={14}
+                                color={ChickIntelPalette.green1}
+                            />
+                            <Text style={styles.recTag}>
+                                Treatment Protocol
+                            </Text>
+                        </View>
+                        <View style={styles.treatmentList}>
+                            {treatmentItems.map((step, index) => (
+                                <View
+                                    key={`${step}-${index}`}
+                                    style={styles.treatmentRow}
+                                >
+                                    <View style={styles.bulletIconWrap}>
+                                        <MaterialCommunityIcons
+                                            name="check-circle"
+                                            size={14}
+                                            color={ChickIntelPalette.green1}
+                                        />
+                                    </View>
+                                    <Text style={styles.recBody}>{step}</Text>
+                                </View>
+                            ))}
+                        </View>
+                    </View>
+                ) : null}
+
+                {/* Key-Value Metadata Block */}
+                <View style={styles.metaBlock}>
+                    <Row label="Disease" value={diseaseName} />
+                    {detectionSource ? (
+                        <Row
+                            label="Detection Mode"
+                            value={
+                                detectionSource === "image_plus_behavior"
+                                    ? "AI Image + Symptoms"
+                                    : "Visual AI Model"
+                            }
+                        />
+                    ) : null}
+                    {actionStatus ? (
+                        <Row label="Status" value={actionStatus} />
+                    ) : null}
+                    {durationValue ? (
+                        <Row label="Recovery Duration" value={durationValue} />
+                    ) : null}
                 </View>
-              ))}
             </View>
-          </View>
-        ) : null}
-
-        {/* Key-Value Metadata Block */}
-        <View style={styles.metaBlock}>
-          <Row label="Disease" value={diseaseName} />
-          {detectionSource ? (
-            <Row
-              label="Detection Mode"
-              value={
-                detectionSource === "image_plus_behavior"
-                  ? "AI Image + Symptoms"
-                  : "Visual AI Model"
-              }
-            />
-          ) : null}
-          {actionStatus ? <Row label="Status" value={actionStatus} /> : null}
-          {durationValue ? (
-            <Row label="Recovery Duration" value={durationValue} />
-          ) : null}
         </View>
-      </View>
-    </BlurCard>
-  );
+    );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    borderRadius: 10,
-    overflow: "hidden",
-    backgroundColor: "rgba(255, 255, 255, 0.95)",
-    position: "relative",
-  },
-  inner: {
-    paddingLeft: moderateScale(18),
-    paddingRight: moderateScale(16),
-    paddingVertical: verticalScale(14),
-    gap: 10,
-  },
-  headerTopRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 8,
-  },
-  resultPill: {
-    flexShrink: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: moderateScale(10),
-    paddingVertical: verticalScale(4),
-    borderRadius: 8,
-  },
-  resultPillUrgent: {
-    backgroundColor: "rgba(239, 68, 68, 0.12)",
-    borderWidth: 1,
-    borderColor: "rgba(239, 68, 68, 0.28)",
-  },
-  resultPillMild: {
-    backgroundColor: "rgba(49, 118, 103, 0.12)",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.22)",
-  },
-  resultTag: {
-    flexShrink: 1,
-    fontFamily: ChickFont.display,
-    fontSize: responsiveFontSize(11),
-    fontWeight: "800",
-    letterSpacing: -0.1,
-    textTransform: "uppercase",
-  },
-  statusBadge: {
-    flexShrink: 1,
-    paddingHorizontal: moderateScale(8),
-    paddingVertical: verticalScale(3),
-    borderRadius: 8,
-    backgroundColor: "rgba(244, 248, 247, 0.9)",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.14)",
-  },
-  statusBadgeText: {
-    flexShrink: 1,
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(11),
-    fontWeight: "700",
-    color: ChickIntelPalette.gray1,
-  },
-  resultBody: {
-    fontFamily: ChickFont.display,
-    fontSize: responsiveFontSize(18),
-    lineHeight: 24,
-    fontWeight: "800",
-    letterSpacing: -0.4,
-    color: ChickIntelPalette.gray1,
-  },
-  descriptionBox: {
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.14)",
-    backgroundColor: "rgba(244, 248, 247, 0.7)",
-    paddingHorizontal: moderateScale(12),
-    paddingVertical: verticalScale(10),
-    gap: 4,
-  },
-  sectionTag: {
-    fontFamily: ChickFont.display,
-    color: ChickIntelPalette.green1,
-    fontSize: responsiveFontSize(11),
-    fontWeight: "800",
-    textTransform: "uppercase",
-    letterSpacing: 0.2,
-  },
-  sectionBody: {
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(13),
-    lineHeight: 19,
-    color: ChickIntelPalette.gray1,
-  },
-  treatmentSection: {
-    gap: 6,
-    paddingTop: verticalScale(4),
-  },
-  sectionHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  recTag: {
-    fontFamily: ChickFont.display,
-    color: ChickIntelPalette.green1,
-    fontSize: responsiveFontSize(12),
-    fontWeight: "800",
-    textTransform: "uppercase",
-    letterSpacing: 0.2,
-  },
-  treatmentList: {
-    gap: 6,
-  },
-  treatmentRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 8,
-    borderRadius: 10,
-    backgroundColor: "rgba(202, 227, 221, 0.25)",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.14)",
-    paddingHorizontal: moderateScale(10),
-    paddingVertical: verticalScale(8),
-  },
-  bulletIconWrap: {
-    marginTop: verticalScale(2),
-  },
-  recBody: {
-    flex: 1,
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(12),
-    lineHeight: 18,
-    fontWeight: "600",
-    color: ChickIntelPalette.gray1,
-  },
-  confidenceBadge: {
-    paddingHorizontal: moderateScale(8),
-    paddingVertical: verticalScale(3),
-    borderRadius: 8,
-    backgroundColor: "rgba(49, 118, 103, 0.12)",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.22)",
-  },
-  confidenceText: {
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(11),
-    fontWeight: "700",
-    color: ChickIntelPalette.green1,
-  },
-  supportingBehaviorsContainer: {
-    gap: 4,
-    marginTop: verticalScale(2),
-  },
-  supportingBehaviorsLabel: {
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(11),
-    fontWeight: "700",
-    color: "#5A6060",
-  },
-  supportingChipsRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 6,
-  },
-  supportingChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: "rgba(202, 227, 221, 0.4)",
-    borderRadius: 6,
-    paddingHorizontal: moderateScale(7),
-    paddingVertical: verticalScale(3),
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.18)",
-  },
-  supportingChipText: {
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(11),
-    fontWeight: "600",
-    color: ChickIntelPalette.gray1,
-  },
-  diagnosticNotesBox: {
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.18)",
-    backgroundColor: "rgba(244, 248, 247, 0.9)",
-    paddingHorizontal: moderateScale(12),
-    paddingVertical: verticalScale(8),
-    gap: 4,
-  },
-  diagnosticNotesHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-  },
-  diagnosticNotesTitle: {
-    fontFamily: ChickFont.display,
-    fontSize: responsiveFontSize(11),
-    fontWeight: "800",
-    textTransform: "uppercase",
-    color: ChickIntelPalette.green1,
-    letterSpacing: 0.2,
-  },
-  diagnosticNoteText: {
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(12),
-    lineHeight: 17,
-    color: ChickIntelPalette.gray1,
-  },
-  differentialBox: {
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "rgba(3, 105, 161, 0.22)",
-    backgroundColor: "rgba(238, 246, 255, 0.9)",
-    paddingHorizontal: moderateScale(12),
-    paddingVertical: verticalScale(8),
-    gap: 4,
-  },
-  differentialHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-  },
-  differentialTitle: {
-    fontFamily: ChickFont.display,
-    fontSize: responsiveFontSize(11),
-    fontWeight: "800",
-    textTransform: "uppercase",
-    color: "#0369A1",
-    letterSpacing: 0.2,
-  },
-  differentialText: {
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(12),
-    lineHeight: 17,
-    color: "#1E3A5F",
-  },
-  metaBlock: {
-    marginTop: verticalScale(4),
-    gap: 6,
-    paddingTop: verticalScale(10),
-    borderTopWidth: 1,
-    borderTopColor: "rgba(49, 118, 103, 0.16)",
-  },
-  kvRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-  },
-  kvLabel: {
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(11),
-    fontWeight: "700",
-    color: "#5A6060",
-    textTransform: "uppercase",
-    letterSpacing: 0.2,
-  },
-  kvValue: {
-    flex: 1,
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(13),
-    fontWeight: "700",
-    textAlign: "right",
-    color: ChickIntelPalette.gray1,
-  },
+    card: {
+        borderRadius: 14,
+        overflow: "hidden",
+        backgroundColor: ChickIntelPalette.green1,
+        borderWidth: 1,
+        borderColor: "rgba(255, 255, 255, 0.14)",
+        shadowColor: "#161E1A",
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: verticalScale(2) },
+        elevation: 3,
+        position: "relative",
+    },
+    inner: {
+        paddingLeft: moderateScale(16),
+        paddingRight: moderateScale(16),
+        paddingVertical: verticalScale(14),
+        gap: 12,
+    },
+    headerTopRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 8,
+    },
+    resultPill: {
+        flexShrink: 1,
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 6,
+        paddingHorizontal: moderateScale(9),
+        paddingVertical: verticalScale(4),
+        borderRadius: 8,
+    },
+    resultPillUrgent: {
+        backgroundColor: "rgba(146, 55, 55, 0.45)",
+        borderWidth: 1,
+        borderColor: "rgba(248, 113, 113, 0.50)",
+    },
+    resultPillMild: {
+        backgroundColor: "rgba(255, 255, 255, 0.18)",
+        borderWidth: 1,
+        borderColor: "rgba(255, 255, 255, 0.35)",
+    },
+    resultTag: {
+        flexShrink: 1,
+        fontFamily: ChickFont.display,
+        fontSize: responsiveFontSize(11),
+        fontWeight: "800",
+        letterSpacing: 0.3,
+        textTransform: "uppercase",
+    },
+    statusBadge: {
+        flexShrink: 1,
+        paddingHorizontal: moderateScale(8),
+        paddingVertical: verticalScale(3),
+        borderRadius: 8,
+        backgroundColor: "rgba(255, 255, 255, 0.18)",
+        borderWidth: 1,
+        borderColor: "rgba(255, 255, 255, 0.35)",
+    },
+    statusBadgeText: {
+        flexShrink: 1,
+        fontFamily: ChickFont.sans,
+        fontSize: responsiveFontSize(11),
+        fontWeight: "700",
+        color: "#FFFFFF",
+    },
+    resultBody: {
+        fontFamily: ChickFont.display,
+        fontSize: responsiveFontSize(18),
+        lineHeight: 24,
+        fontWeight: "800",
+        letterSpacing: -0.4,
+        color: "#FFFFFF",
+    },
+    descriptionBox: {
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: "rgba(255, 255, 255, 0.14)",
+        backgroundColor: "rgba(255, 255, 255, 0.08)",
+        paddingHorizontal: moderateScale(12),
+        paddingVertical: verticalScale(10),
+        gap: 4,
+    },
+    sectionTag: {
+        fontFamily: ChickFont.display,
+        color: ChickIntelPalette.accent,
+        fontSize: responsiveFontSize(10.5),
+        fontWeight: "800",
+        textTransform: "uppercase",
+        letterSpacing: 0.6,
+    },
+    sectionBody: {
+        fontFamily: ChickFont.sans,
+        fontSize: responsiveFontSize(13),
+        lineHeight: 19,
+        color: "#FFFFFF",
+    },
+    treatmentSection: {
+        gap: 6,
+        paddingTop: verticalScale(4),
+    },
+    sectionHeaderRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 6,
+    },
+    recTag: {
+        fontFamily: ChickFont.display,
+        color: ChickIntelPalette.accent,
+        fontSize: responsiveFontSize(11),
+        fontWeight: "800",
+        textTransform: "uppercase",
+        letterSpacing: 0.6,
+    },
+    treatmentList: {
+        gap: 6,
+    },
+    treatmentRow: {
+        flexDirection: "row",
+        alignItems: "flex-start",
+        gap: 8,
+        borderRadius: 10,
+        backgroundColor: "rgba(255, 255, 255, 0.08)",
+        borderWidth: 1,
+        borderColor: "rgba(255, 255, 255, 0.14)",
+        paddingHorizontal: moderateScale(10),
+        paddingVertical: verticalScale(8),
+    },
+    bulletIconWrap: {
+        marginTop: verticalScale(2),
+    },
+    recBody: {
+        flex: 1,
+        fontFamily: ChickFont.sans,
+        fontSize: responsiveFontSize(12),
+        lineHeight: 18,
+        fontWeight: "600",
+        color: "#FFFFFF",
+    },
+    confidenceBadge: {
+        paddingHorizontal: moderateScale(8),
+        paddingVertical: verticalScale(3),
+        borderRadius: 8,
+        backgroundColor: "rgba(255, 255, 255, 0.18)",
+        borderWidth: 1,
+        borderColor: "rgba(255, 255, 255, 0.35)",
+    },
+    confidenceText: {
+        fontFamily: ChickFont.sans,
+        fontSize: responsiveFontSize(11),
+        fontWeight: "700",
+        color: "#FFFFFF",
+    },
+    supportingBehaviorsContainer: {
+        gap: 4,
+        marginTop: verticalScale(2),
+    },
+    supportingBehaviorsLabel: {
+        fontFamily: ChickFont.display,
+        fontSize: responsiveFontSize(11),
+        fontWeight: "800",
+        color: ChickIntelPalette.accent,
+        letterSpacing: 0.4,
+        textTransform: "uppercase",
+    },
+    supportingChipsRow: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+        gap: 6,
+    },
+    supportingChip: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 4,
+        backgroundColor: "rgba(255, 255, 255, 0.16)",
+        borderRadius: 999,
+        paddingHorizontal: moderateScale(9),
+        paddingVertical: verticalScale(4),
+        borderWidth: 1,
+        borderColor: "rgba(255, 255, 255, 0.28)",
+    },
+    supportingChipText: {
+        fontFamily: ChickFont.sans,
+        fontSize: responsiveFontSize(11),
+        fontWeight: "700",
+        color: "#FFFFFF",
+    },
+    diagnosticNotesBox: {
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: "rgba(255, 255, 255, 0.14)",
+        backgroundColor: "rgba(255, 255, 255, 0.08)",
+        paddingHorizontal: moderateScale(12),
+        paddingVertical: verticalScale(8),
+        gap: 4,
+    },
+    diagnosticNotesHeader: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 5,
+    },
+    diagnosticNotesTitle: {
+        fontFamily: ChickFont.display,
+        fontSize: responsiveFontSize(10.5),
+        fontWeight: "800",
+        textTransform: "uppercase",
+        color: ChickIntelPalette.accent,
+        letterSpacing: 0.5,
+    },
+    diagnosticNoteText: {
+        fontFamily: ChickFont.sans,
+        fontSize: responsiveFontSize(12),
+        lineHeight: 17,
+        color: "#FFFFFF",
+    },
+    differentialBox: {
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: "rgba(255, 255, 255, 0.14)",
+        backgroundColor: "rgba(255, 255, 255, 0.08)",
+        paddingHorizontal: moderateScale(12),
+        paddingVertical: verticalScale(8),
+        gap: 4,
+    },
+    differentialHeader: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 5,
+    },
+    differentialTitle: {
+        fontFamily: ChickFont.display,
+        fontSize: responsiveFontSize(10.5),
+        fontWeight: "800",
+        textTransform: "uppercase",
+        color: ChickIntelPalette.accent,
+        letterSpacing: 0.5,
+    },
+    differentialText: {
+        fontFamily: ChickFont.sans,
+        fontSize: responsiveFontSize(12),
+        lineHeight: 17,
+        color: "#FFFFFF",
+    },
+    metaBlock: {
+        marginTop: verticalScale(4),
+        gap: 6,
+        paddingTop: verticalScale(10),
+        borderTopWidth: 1,
+        borderTopColor: "rgba(255, 255, 255, 0.16)",
+    },
+    kvRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 12,
+    },
+    kvLabel: {
+        fontFamily: ChickFont.sans,
+        fontSize: responsiveFontSize(11),
+        fontWeight: "700",
+        color: ChickIntelPalette.accent,
+        textTransform: "uppercase",
+        letterSpacing: 0.4,
+    },
+    kvValue: {
+        flex: 1,
+        fontFamily: ChickFont.sans,
+        fontSize: responsiveFontSize(13),
+        fontWeight: "700",
+        textAlign: "right",
+        color: "#FFFFFF",
+    },
 });

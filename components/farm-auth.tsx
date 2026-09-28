@@ -154,12 +154,12 @@ export function FarmButton({
                     backgroundColor: disabled
                         ? "#9E9E9E"
                         : isPrimary
-                          ? "#317667"
+                          ? "#40534D"
                           : colors.surface,
                     borderColor: disabled
                         ? "#9E9E9E"
                         : isPrimary
-                          ? "#317667"
+                          ? "#40534D"
                           : colors.border,
                     opacity: disabled ? 0.6 : pressed ? 0.92 : 1,
                     shadowColor: colors.shadow,

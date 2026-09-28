@@ -1,4 +1,3 @@
-import BackgroundGradient from "@/assets_imported/background-gradient.svg";
 import {
     moderateScale,
     responsiveFontSize,
@@ -62,7 +61,7 @@ import { fetchBreedOptions } from "@/utils/supabase-lookups";
 
 const MAX_SCAN_ZOOM = 0.7;
 
-const AGE_UNIT_OPTIONS = ["Weeks old"] as const;
+const AGE_UNIT_OPTIONS = ["Weeks", "Days"] as const;
 
 const DEFAULT_BREED_OPTIONS = [
   "Bielefelder",
@@ -81,6 +80,7 @@ const DEFAULT_BREED_OPTIONS = [
 const COLOR_OPTIONS = [
   // Reds & Pinks
   { name: "Red", hex: "#D84A49" },
+  { name: "Pink", hex: "#F8BBD0" },
 
   // Oranges & Yellows
   { name: "Orange", hex: "#E67E22" },
@@ -95,7 +95,6 @@ const COLOR_OPTIONS = [
   // Browns, Greys & Monochromes
   { name: "Grey", hex: "#808080" },
   { name: "Black", hex: "#323330" },
-  { name: "White", hex: "#F4F5F2" },
 ];
 
 type BatchMode = "chicken" | "egg";
@@ -173,6 +172,7 @@ export default function AddBatchScreen() {
   const [ageUnit, setAgeUnit] = useState<(typeof AGE_UNIT_OPTIONS)[number]>(
     AGE_UNIT_OPTIONS[0],
   );
+  const [ageUnitModalOpen, setAgeUnitModalOpen] = useState(false);
   // Total chickens (keeps previous behavior for male/female auto-split)
   const [totalCount, setTotalCount] = useState("");
   const [breed, setBreed] = useState("");
@@ -184,7 +184,8 @@ export default function AddBatchScreen() {
   ]);
 
   useEffect(() => {
-    const ageInDays = parseCount(durationCount) * 7;
+    const ageInDays =
+      parseCount(durationCount) * (ageUnit === "Days" ? 1 : 7);
     if (ageInDays < SEXING_START_AGE_WEEKS * 7 && totalCount) {
       setMaleCount("0");
       setFemaleCount("0");
@@ -200,6 +201,7 @@ export default function AddBatchScreen() {
     setSelectedColor(chickColor ?? COLOR_OPTIONS[0]);
     setDurationCount(isChickBatch ? "0" : "");
     setAgeUnit(AGE_UNIT_OPTIONS[0]);
+    setAgeUnitModalOpen(false);
     setTotalCount(isChickBatch ? hatchedQtyParam || "0" : "");
     setBreed("");
     setMaleCount("");
@@ -302,7 +304,7 @@ export default function AddBatchScreen() {
 
     const n = Number.parseInt(clean, 10);
     const enteredAge =
-      parseCount(durationCount) * (ageUnit === "Weeks old" ? 7 : 1);
+      parseCount(durationCount) * (ageUnit === "Days" ? 1 : 7);
     if (enteredAge < SEXING_START_AGE_WEEKS * 7) {
       setMaleCount("0");
       setFemaleCount("0");
@@ -600,15 +602,6 @@ export default function AddBatchScreen() {
 
   return (
     <View style={styles.screen}>
-      <BackgroundGradient
-        width="110%"
-        height="110%"
-        preserveAspectRatio="xMidYMid slice"
-        style={[
-          StyleSheet.absoluteFill,
-          { transform: [{ scale: 1.08 }, { translateY: -14 }] },
-        ]}
-      />
       <StatusBar style="dark" />
       <KeyboardAvoidingView
         style={styles.keyboardArea}
@@ -633,8 +626,8 @@ export default function AddBatchScreen() {
             >
               <MaterialCommunityIcons
                 name="arrow-left"
-                size={22}
-                color="#FFF"
+                size={24}
+                color={ChickIntelPalette.gray1}
               />
             </Pressable>
           </View>
@@ -645,10 +638,6 @@ export default function AddBatchScreen() {
               <Text style={styles.kickerText}>Chicken profile</Text>
             </View>
             <Text style={styles.pageTitle}>{pageTitle}</Text>
-            <Text style={styles.createHeroSubtitle}>
-              Register a flock group with its tag color, age, breed, and sex
-              count.
-            </Text>
           </View>
 
           <View style={styles.summaryChipRow}>
@@ -762,25 +751,37 @@ export default function AddBatchScreen() {
 
             <View style={styles.gridRow}>
               <View style={styles.halfField}>
-                <Text style={styles.fieldLabel}>No.</Text>
+                <Text style={styles.fieldLabel}>Age</Text>
                 <TextInput
                   value={durationCount}
                   onChangeText={(v) =>
                     setDurationCount(v.replace(/[^0-9]/g, ""))
                   }
-                  placeholder="2"
+                  placeholder={ageUnit === "Days" ? "14" : "2"}
                   keyboardType="number-pad"
                   style={styles.input}
                   textAlignVertical="center"
                   placeholderTextColor="#8F9696"
                 />
-                <Text style={styles.ageLimitHint}>Minimum: 2 weeks</Text>
+                <Text style={styles.ageLimitHint}>
+                  {ageUnit === "Days" ? "Minimum: 14 days" : "Minimum: 2 weeks"}
+                </Text>
               </View>
               <View style={styles.halfField}>
-                <Text style={styles.fieldLabel}>Age unit</Text>
-                <View style={styles.select} accessibilityLabel="Age unit">
-                  <Text style={styles.selectText}>{ageUnit}</Text>
-                </View>
+                <View style={styles.fieldLabelSpacer} />
+                <Pressable
+                  onPress={() => setAgeUnitModalOpen(true)}
+                  style={styles.ageUnitDropdown}
+                  accessibilityRole="button"
+                  accessibilityLabel="Select age unit"
+                >
+                  <Text style={styles.ageUnitDropdownText}>{ageUnit}</Text>
+                  <MaterialCommunityIcons
+                    name="chevron-down"
+                    size={20}
+                    color={ChickIntelPalette.gray1}
+                  />
+                </Pressable>
               </View>
             </View>
 
@@ -861,7 +862,7 @@ export default function AddBatchScreen() {
             </View>
 
             <View style={styles.resultRow}>
-              {parseCount(durationCount) * (ageUnit === "Weeks old" ? 7 : 1) >=
+              {parseCount(durationCount) * (ageUnit === "Days" ? 1 : 7) >=
               SEXING_START_AGE_WEEKS * 7 ? (
                 <>
                   <View style={styles.resultField}>
@@ -891,7 +892,8 @@ export default function AddBatchScreen() {
                 </>
               ) : null}
             </View>
-            {parseCount(durationCount) * 7 >= SEXING_START_AGE_WEEKS * 7 ? (
+            {parseCount(durationCount) * (ageUnit === "Days" ? 1 : 7) >=
+            SEXING_START_AGE_WEEKS * 7 ? (
               <Pressable
                 onPress={() => setSexScannerOpen(true)}
                 style={({ pressed }) => [
@@ -925,7 +927,8 @@ export default function AddBatchScreen() {
 
               const enteredAge = Number.parseInt(durationCount || "0", 10);
               const ageInDays =
-                (Number.isFinite(enteredAge) ? enteredAge : 0) * 7;
+                (Number.isFinite(enteredAge) ? enteredAge : 0) *
+                (ageUnit === "Days" ? 1 : 7);
 
               if (
                 !isChickBatch &&
@@ -933,7 +936,9 @@ export default function AddBatchScreen() {
               ) {
                 Alert.alert(
                   "Chicken is too young",
-                  `Chicken batches must be at least ${MIN_CHICKEN_BATCH_AGE_WEEKS} weeks old.`,
+                  ageUnit === "Days"
+                    ? "Chicken batches must be at least 14 days old (2 weeks)."
+                    : `Chicken batches must be at least ${MIN_CHICKEN_BATCH_AGE_WEEKS} weeks old.`,
                 );
                 return;
               }
@@ -964,7 +969,7 @@ export default function AddBatchScreen() {
                 maleCount: parsedMale,
                 unknownCount: parsedUnknown,
                 ageLabel: isChickBatch
-                  ? "0 days old"
+                  ? "0 days"
                   : `${durationCount || "0"} ${ageUnit.toLowerCase()}`,
                 isolatedCount: 0,
                 killedCount: 0,
@@ -1542,11 +1547,11 @@ export default function AddBatchScreen() {
                           name="check"
                           size={14}
                           color={
-                            opt.name === "White" ||
+                            opt.name === "Pink" ||
                             opt.name === "Lemon" ||
                             opt.name === "Mint" ||
                             opt.name === "Lavender"
-                              ? "#203029"
+                              ? "#1F2E2B"
                               : "#FFFFFF"
                           }
                         />
@@ -1569,6 +1574,87 @@ export default function AddBatchScreen() {
           </Pressable>
         </Pressable>
       </Modal>
+
+      <Modal
+        visible={ageUnitModalOpen}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setAgeUnitModalOpen(false)}
+      >
+        <Pressable
+          style={styles.colorModalBackdrop}
+          onPress={() => setAgeUnitModalOpen(false)}
+        >
+          <Pressable
+            style={styles.ageUnitModalCard}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <View style={styles.colorModalHeader}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.colorModalTitle}>Select Age Unit</Text>
+                <Text style={styles.colorModalSubtitle}>
+                  Choose days or weeks for batch age
+                </Text>
+              </View>
+              <Pressable
+                onPress={() => setAgeUnitModalOpen(false)}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Close age unit picker"
+              >
+                <MaterialCommunityIcons
+                  name="close"
+                  size={20}
+                  color={ChickIntelPalette.gray1}
+                />
+              </Pressable>
+            </View>
+
+            <View style={styles.ageUnitOptionsList}>
+              {AGE_UNIT_OPTIONS.map((option) => {
+                const isSelected = ageUnit === option;
+                return (
+                  <Pressable
+                    key={option}
+                    onPress={() => {
+                      setAgeUnit(option);
+                      setAgeUnitModalOpen(false);
+                    }}
+                    style={({ pressed }) => [
+                      styles.ageUnitOptionItem,
+                      isSelected && styles.ageUnitOptionItemSelected,
+                      { opacity: pressed ? 0.8 : 1 },
+                    ]}
+                    accessibilityRole="button"
+                  >
+                    <Text
+                      style={[
+                        styles.ageUnitOptionText,
+                        isSelected && styles.ageUnitOptionTextSelected,
+                      ]}
+                    >
+                      {option}
+                    </Text>
+                    {isSelected ? (
+                      <MaterialCommunityIcons
+                        name="check-circle"
+                        size={20}
+                        color={ChickIntelPalette.green1}
+                      />
+                    ) : (
+                      <MaterialCommunityIcons
+                        name="circle-outline"
+                        size={20}
+                        color={ChickIntelPalette.gray2}
+                      />
+                    )}
+                  </Pressable>
+                );
+              })}
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -1588,6 +1674,69 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+  },
+  ageUnitDropdown: {
+    height: verticalScale(46),
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: ChickIntelPalette.gray2,
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: moderateScale(12),
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  ageUnitDropdownText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(14),
+    fontWeight: "600",
+    color: ChickIntelPalette.gray1,
+  },
+  fieldLabelSpacer: {
+    height: responsiveFontSize(12),
+  },
+  ageUnitModalCard: {
+    width: "100%",
+    maxWidth: scale(320),
+    borderRadius: 16,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: ChickIntelPalette.gray2,
+    padding: moderateScale(18),
+    shadowColor: "#161E1A",
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: verticalScale(6) },
+    elevation: 8,
+  },
+  ageUnitOptionsList: {
+    gap: 8,
+    marginTop: verticalScale(14),
+  },
+  ageUnitOptionItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: verticalScale(12),
+    paddingHorizontal: moderateScale(14),
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: ChickIntelPalette.gray2,
+    backgroundColor: "#FFFFFF",
+  },
+  ageUnitOptionItemSelected: {
+    borderColor: ChickIntelPalette.green1,
+    backgroundColor: ChickIntelPalette.lightGreen,
+  },
+  ageUnitOptionText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(14),
+    fontWeight: "600",
+    color: ChickIntelPalette.gray1,
+  },
+  ageUnitOptionTextSelected: {
+    fontWeight: "700",
+    color: ChickIntelPalette.green1,
   },
   colorDropdownLeft: {
     flexDirection: "row",
@@ -1747,24 +1896,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   backButton: {
-    width: scale(42),
-    height: verticalScale(42),
-    borderRadius: 14,
-    backgroundColor: ChickIntelPalette.green1,
+    width: scale(38),
+    height: verticalScale(38),
+    backgroundColor: "transparent",
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.25)",
-    shadowColor: "#317667",
-    shadowOpacity: 0.22,
-    shadowRadius: 10,
-    shadowOffset: { width: scale(0), height: verticalScale(4) },
-    elevation: 4,
+    borderWidth: 0,
+    elevation: 0,
+    shadowOpacity: 0,
     flexShrink: 0,
   },
   titleCard: {
     marginTop: verticalScale(10),
-    borderRadius: 10,
+    borderRadius: 14,
     paddingHorizontal: moderateScale(16),
     paddingVertical: verticalScale(14),
     backgroundColor: ChickIntelPalette.green1,
@@ -1781,7 +1925,7 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: 0.55,
     textTransform: "uppercase",
-    color: "#CAE3DD",
+    color: ChickIntelPalette.lightGreen,
   },
   pageTitle: {
     fontFamily: ChickFont.display,
@@ -1813,9 +1957,9 @@ const styles = StyleSheet.create({
     gap: 4,
     borderRadius: 8,
     paddingHorizontal: moderateScale(6),
-    backgroundColor: "rgba(254, 254, 254, 0.72)",
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.16)",
+    borderColor: ChickIntelPalette.gray2,
   },
   summaryChipText: {
     flexShrink: 1,
@@ -1833,21 +1977,21 @@ const styles = StyleSheet.create({
   },
   segmentWrap: {
     flexDirection: "row",
-    borderRadius: 5,
-    backgroundColor: ChickIntelPalette.lightGreen,
+    borderRadius: 10,
+    backgroundColor: "#FFFFFF",
     padding: moderateScale(4),
     borderWidth: 1,
-    borderColor: "rgba(49,118,103,0.2)",
+    borderColor: ChickIntelPalette.gray2,
   },
   segment: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: verticalScale(10),
-    borderRadius: 5,
+    borderRadius: 8,
   },
   segmentActive: {
-    backgroundColor: ChickIntelPalette.gray1,
+    backgroundColor: ChickIntelPalette.green1,
   },
   segmentInactive: {
     backgroundColor: "transparent",
@@ -1855,29 +1999,41 @@ const styles = StyleSheet.create({
   segmentText: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(13),
-    fontWeight: "600",
+    fontWeight: "700",
     letterSpacing: 0.1,
   },
   segmentTextActive: {
-    color: ChickIntelPalette.light1,
+    color: "#FFFFFF",
   },
   segmentTextInactive: {
-    color: ChickIntelPalette.gray1,
+    color: ChickIntelPalette.textMuted,
   },
   formCard: {
-    borderRadius: 20,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: "rgba(49,118,103,0.18)",
-    backgroundColor: "rgba(254, 254, 254, 0.72)",
-    padding: moderateScale(12),
+    borderColor: ChickIntelPalette.gray2,
+    backgroundColor: "#FFFFFF",
+    padding: moderateScale(14),
     gap: 12,
+    shadowColor: "#161E1A",
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: verticalScale(2) },
+    elevation: 2,
   },
   formSection: {
     gap: 10,
-    borderRadius: 10,
+    borderRadius: 14,
     paddingHorizontal: moderateScale(14),
     paddingVertical: verticalScale(14),
-    backgroundColor: "rgba(254, 254, 254, 0.92)",
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: ChickIntelPalette.gray2,
+    shadowColor: "#161E1A",
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: verticalScale(2) },
+    elevation: 2,
   },
   formSectionHeader: {
     flexDirection: "row",
@@ -1903,7 +2059,7 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(12),
     fontWeight: "600",
-    color: "#5E6666",
+    color: ChickIntelPalette.textMuted,
   },
   ageLimitHint: {
     fontFamily: ChickFont.sans,
@@ -1916,8 +2072,8 @@ const styles = StyleSheet.create({
     height: verticalScale(46),
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(67, 139, 123, 0.2)",
-    backgroundColor: "rgba(244, 248, 247, 0.96)",
+    borderColor: ChickIntelPalette.gray2,
+    backgroundColor: "#FFFFFF",
     paddingHorizontal: moderateScale(12),
     paddingVertical: verticalScale(0),
     fontFamily: ChickFont.sans,
@@ -1927,14 +2083,14 @@ const styles = StyleSheet.create({
     textAlignVertical: "center",
   },
   inputDisabled: {
-    backgroundColor: "rgba(255,255,255,0.72)",
+    backgroundColor: ChickIntelPalette.lightGreen,
     color: ChickIntelPalette.textMuted,
   },
   colorPickerRow: {
     minHeight: verticalScale(42),
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "#D5DBDB",
+    borderColor: ChickIntelPalette.gray2,
     backgroundColor: "#FFFFFF",
     paddingHorizontal: moderateScale(10),
     flexDirection: "row",
@@ -1953,7 +2109,7 @@ const styles = StyleSheet.create({
   },
   colorSwatchActive: {
     borderWidth: 2,
-    borderColor: ChickIntelPalette.gray1,
+    borderColor: ChickIntelPalette.green1,
   },
   colorSwatchDisabled: {
     opacity: 0.35,
@@ -1962,15 +2118,15 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(12),
-    color: ChickIntelPalette.gray1,
+    color: ChickIntelPalette.textMuted,
     lineHeight: 18,
   },
   select: {
     height: verticalScale(46),
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(67, 139, 123, 0.2)",
-    backgroundColor: "rgba(244, 248, 247, 0.96)",
+    borderColor: ChickIntelPalette.gray2,
+    backgroundColor: "#FFFFFF",
     paddingHorizontal: moderateScale(12),
     paddingVertical: verticalScale(0),
     flexDirection: "row",
@@ -1994,7 +2150,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: ChickIntelPalette.green1,
     borderWidth: 1,
-    borderColor: "rgba(49,118,103,0.28)",
+    borderColor: ChickIntelPalette.green1,
   },
   selectText: {
     flex: 1,
@@ -2004,7 +2160,7 @@ const styles = StyleSheet.create({
     color: ChickIntelPalette.gray1,
   },
   selectTextPlaceholder: {
-    color: "#8F9696",
+    color: ChickIntelPalette.textMuted,
   },
   sectionGap: {
     height: verticalScale(4),
@@ -2013,7 +2169,7 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(13),
     fontWeight: "700",
-    color: "#5E6666",
+    color: ChickIntelPalette.textMuted,
   },
   sexingRow: {
     flexDirection: "row",
@@ -2027,14 +2183,14 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(12),
     fontWeight: "600",
-    color: "#667171",
+    color: ChickIntelPalette.textMuted,
   },
   radioRow: {
     minHeight: verticalScale(34),
     borderRadius: 9,
-    backgroundColor: "rgba(255,255,255,0.82)",
+    backgroundColor: ChickIntelPalette.lightGreen,
     borderWidth: 1,
-    borderColor: "rgba(49,118,103,0.15)",
+    borderColor: ChickIntelPalette.mediumGreen,
     flexDirection: "row",
     alignItems: "center",
     gap: 7,
@@ -2045,7 +2201,7 @@ const styles = StyleSheet.create({
     height: verticalScale(16),
     borderRadius: 8,
     borderWidth: 1.5,
-    borderColor: "#9AA3A3",
+    borderColor: ChickIntelPalette.mediumGreen,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -2062,7 +2218,7 @@ const styles = StyleSheet.create({
     width: scale(20),
     height: verticalScale(20),
     borderRadius: 5,
-    backgroundColor: "rgba(202,227,221,0.8)",
+    backgroundColor: ChickIntelPalette.mediumGreen,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -2076,7 +2232,7 @@ const styles = StyleSheet.create({
   divider: {
     marginTop: 2,
     borderTopWidth: 1,
-    borderTopColor: "rgba(49,118,103,0.18)",
+    borderTopColor: ChickIntelPalette.gray2,
   },
   resultRow: {
     flexDirection: "row",
@@ -2090,15 +2246,15 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(12),
     fontWeight: "600",
-    color: "#667171",
+    color: ChickIntelPalette.textMuted,
     textAlign: "center",
   },
   resultInput: {
     height: verticalScale(46),
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(67, 139, 123, 0.2)",
-    backgroundColor: "rgba(244, 248, 247, 0.96)",
+    borderColor: ChickIntelPalette.gray2,
+    backgroundColor: "#FFFFFF",
     paddingVertical: verticalScale(0),
     textAlign: "center",
     fontFamily: ChickFont.sans,
@@ -2123,8 +2279,8 @@ const styles = StyleSheet.create({
     gap: 10,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(67, 139, 123, 0.28)",
-    backgroundColor: "rgba(244, 248, 247, 0.96)",
+    borderColor: ChickIntelPalette.mediumGreen,
+    backgroundColor: ChickIntelPalette.lightGreen,
     paddingHorizontal: 14,
   },
   sexScanButtonTextWrap: {
@@ -2145,21 +2301,21 @@ const styles = StyleSheet.create({
   saveButton: {
     marginTop: 8,
     height: verticalScale(52),
-    borderRadius: 999,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: ChickIntelPalette.green1,
-    shadowColor: "#317667",
-    shadowOpacity: 0.18,
+    shadowColor: "#161E1A",
+    shadowOpacity: 0.14,
     shadowRadius: 10,
-    shadowOffset: { width: scale(0), height: verticalScale(5) },
+    shadowOffset: { width: 0, height: verticalScale(4) },
     elevation: 3,
   },
   saveText: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(15),
-    fontWeight: "700",
     color: "#FFFFFF",
+    fontWeight: "700",
     letterSpacing: 0.2,
   },
   modalBackdrop: {

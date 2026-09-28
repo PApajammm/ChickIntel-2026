@@ -240,7 +240,9 @@ function buildEggProductionSnapshot(
 }
 
 function normalizeScopeValue(value: string) {
-  return value.trim().toLowerCase();
+  const v = value.trim().toLowerCase();
+  if (v === "white" || v === "light pink") return "pink";
+  return v;
 }
 
 function rowMatchesEggScope(

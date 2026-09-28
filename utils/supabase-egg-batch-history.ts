@@ -26,6 +26,14 @@ type EggBatchHistoryRow = {
 };
 
 function mapHistoryRow(row: EggBatchHistoryRow): EggBatchHistoryItem {
+  let colorName = row.color_name ?? undefined;
+  let colorHex = row.color_hex ?? undefined;
+  const n = (colorName ?? "").trim().toLowerCase();
+  const h = (colorHex ?? "").trim().toLowerCase();
+  if (n === "white" || n === "light pink" || n === "pink" || h === "#ffffff" || h === "#fff" || h === "#f8bbd0") {
+    colorName = "Pink";
+    colorHex = "#F8BBD0";
+  }
   return {
     historyId: row.id,
     id: row.id,
@@ -39,8 +47,8 @@ function mapHistoryRow(row: EggBatchHistoryRow): EggBatchHistoryItem {
     disposedDamagedQty: row.disposed_damaged_qty ?? 0,
     unhatchedQty: row.unhatched_qty,
     soldQty: row.sold_qty ?? 0,
-    colorName: row.color_name ?? undefined,
-    colorHex: row.color_hex ?? undefined,
+    colorName,
+    colorHex,
     origin: row.origin ?? "Unknown",
     createdAt: row.created_at ?? "",
     deletedAt: row.deleted_at,

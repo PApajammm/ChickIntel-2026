@@ -17,14 +17,11 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import BackgroundGradient from "@/assets_imported/background-gradient.svg";
 import { HealthInputSummaryCard } from "@/components/health-scan/health-input-summary-card";
 import { HealthResultCard } from "@/components/health-scan/health-result-card";
-import { BlurCard } from "@/components/ui/blur-card";
 import { ChipList } from "@/components/ui/chip-list";
 import { ChickFont } from "@/constants/chick-fonts";
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
-import { HealthTypography } from "@/constants/health-typography";
 import { useBehaviors } from "@/hooks/use-behaviors";
 import { useAuth } from "@/providers/auth-provider";
 import { logError } from "@/utils/logger";
@@ -41,450 +38,476 @@ import {
 import { fetchHealthMonitoringScanHistory } from "@/utils/supabase-health-monitoring";
 
 export default function JournalDetailScreen() {
-  const router = useRouter();
-  const insets = useSafeAreaInsets();
-  const { activeFarm, configured } = useAuth();
-  const { id: idParam } = useLocalSearchParams<{
-    id: string | string[];
-  }>();
-  const id = Array.isArray(idParam) ? idParam[0] : idParam;
-  const [entry, setEntry] = useState<HealthJournalSavedScan | undefined>();
-  const [scanHistory, setScanHistory] = useState<HealthJournalSavedScan[]>([]);
-  const [diseaseDetails, setDiseaseDetails] = useState<DiseaseDetails | null>(
-    null,
-  );
-  const { behaviors: behaviorItems } = useBehaviors();
+    const router = useRouter();
+    const insets = useSafeAreaInsets();
+    const { activeFarm, configured } = useAuth();
+    const { id: idParam } = useLocalSearchParams<{
+        id: string | string[];
+    }>();
+    const id = Array.isArray(idParam) ? idParam[0] : idParam;
+    const [entry, setEntry] = useState<HealthJournalSavedScan | undefined>();
+    const [scanHistory, setScanHistory] = useState<HealthJournalSavedScan[]>(
+        [],
+    );
+    const [diseaseDetails, setDiseaseDetails] = useState<DiseaseDetails | null>(
+        null,
+    );
+    const { behaviors: behaviorItems } = useBehaviors();
 
-  const handleBack = useCallback(() => {
-    if (router.canGoBack()) {
-      router.back();
-    } else {
-      router.replace("/(tabs)/journal");
-    }
-  }, [router]);
-
-  const behaviorLabels = useMemo(
-    () =>
-      entry ? mapBehaviorIdsToLabels(entry.behaviorIds, behaviorItems) : [],
-    [entry, behaviorItems],
-  );
-
-  const historyEntries = useMemo(() => {
-    if (!entry || scanHistory.length === 0) return [];
-    return scanHistory.filter((s) => s.id !== entry.id);
-  }, [entry, scanHistory]);
-
-  useEffect(() => {
-    if (typeof id !== "string" || !id || !configured || !activeFarm?.id) {
-      setEntry(undefined);
-      setScanHistory([]);
-      return;
-    }
-
-    let cancelled = false;
-
-    fetchHealthJournalEntryById(activeFarm.id, id)
-      .then((result) => {
-        if (cancelled) return;
-        if (!result) {
-          handleBack();
-          return;
-        }
-        setEntry(result);
-
-        if (result.healthMonitoringId) {
-          fetchHealthMonitoringScanHistory(
-            activeFarm.id,
-            result.healthMonitoringId,
-          )
-            .then((history) => {
-              if (!cancelled) setScanHistory(history);
-            })
-            .catch(() => {
-              if (!cancelled) setScanHistory([]);
-            });
+    const handleBack = useCallback(() => {
+        if (router.canGoBack()) {
+            router.back();
         } else {
-          setScanHistory([]);
+            router.replace("/(tabs)/journal");
+        }
+    }, [router]);
+
+    const behaviorLabels = useMemo(
+        () =>
+            entry
+                ? mapBehaviorIdsToLabels(entry.behaviorIds, behaviorItems)
+                : [],
+        [entry, behaviorItems],
+    );
+
+    const historyEntries = useMemo(() => {
+        if (!entry || scanHistory.length === 0) return [];
+        return scanHistory.filter((s) => s.id !== entry.id);
+    }, [entry, scanHistory]);
+
+    useEffect(() => {
+        if (typeof id !== "string" || !id || !configured || !activeFarm?.id) {
+            setEntry(undefined);
+            setScanHistory([]);
+            return;
         }
 
-        if (result.diseaseId) {
-          fetchDiseaseDetails(result.diseaseId)
-            .then((details) => {
-              if (!cancelled) setDiseaseDetails(details);
+        let cancelled = false;
+
+        fetchHealthJournalEntryById(activeFarm.id, id)
+            .then((result) => {
+                if (cancelled) return;
+                if (!result) {
+                    handleBack();
+                    return;
+                }
+                setEntry(result);
+
+                if (result.healthMonitoringId) {
+                    fetchHealthMonitoringScanHistory(
+                        activeFarm.id,
+                        result.healthMonitoringId,
+                    )
+                        .then((history) => {
+                            if (!cancelled) setScanHistory(history);
+                        })
+                        .catch(() => {
+                            if (!cancelled) setScanHistory([]);
+                        });
+                } else {
+                    setScanHistory([]);
+                }
+
+                if (result.diseaseId) {
+                    fetchDiseaseDetails(result.diseaseId)
+                        .then((details) => {
+                            if (!cancelled) setDiseaseDetails(details);
+                        })
+                        .catch(() => {
+                            if (!cancelled) setDiseaseDetails(null);
+                        });
+                } else {
+                    setDiseaseDetails(null);
+                }
             })
-            .catch(() => {
-              if (!cancelled) setDiseaseDetails(null);
+            .catch((error) => {
+                if (cancelled) return;
+                logError("Health journal detail load failed", error, {
+                    farmId: activeFarm.id,
+                    id,
+                });
+                handleBack();
             });
-        } else {
-          setDiseaseDetails(null);
-        }
-      })
-      .catch((error) => {
-        if (cancelled) return;
-        logError("Health journal detail load failed", error, {
-          farmId: activeFarm.id,
-          id,
-        });
-        handleBack();
-      });
 
-    return () => {
-      cancelled = true;
-    };
-  }, [activeFarm?.id, configured, handleBack, id]);
+        return () => {
+            cancelled = true;
+        };
+    }, [activeFarm?.id, configured, handleBack, id]);
 
-  if (!entry) {
-    return null;
-  }
+    if (!entry) {
+        return null;
+    }
 
-  const resultSeverity =
-    entry.actionStatus === "Isolation" ||
-    diseaseDetails?.severity === "high" ||
-    diseaseDetails?.severity === "critical";
+    const resultSeverity =
+        entry.actionStatus === "Isolation" ||
+        diseaseDetails?.severity === "high" ||
+        diseaseDetails?.severity === "critical";
 
-  return (
-    <View style={[styles.screen, { paddingTop: insets.top + 8 }]}>
-      <BackgroundGradient
-        width="110%"
-        height="110%"
-        preserveAspectRatio="xMidYMid slice"
-        style={[
-          StyleSheet.absoluteFill,
-          { transform: [{ scale: 1.08 }, { translateY: -14 }] },
-        ]}
-      />
-      <StatusBar style="dark" />
-      <View style={styles.topBar}>
-        <TouchableOpacity
-          onPress={handleBack}
-          style={styles.backBtn}
-          activeOpacity={0.8}
-          accessibilityRole="button"
-          accessibilityLabel="Back"
-        >
-          <MaterialCommunityIcons name="arrow-left" size={22} color="#FFF" />
-        </TouchableOpacity>
-        <Text style={styles.pageTitle}>Behavior Journal</Text>
-        <Text style={styles.savedMeta}>
-          {formatJournalDateTime(entry.savedAt)}
-        </Text>
-      </View>
-
-      <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingBottom: 15 }]}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Observed Behaviors Header Card */}
-        <BlurCard
-          style={styles.observedBehaviorsCard}
-          borderRadius={10}
-          intensity={20}
-        >
-          <View style={styles.observedBehaviorsInner}>
-            <View style={styles.observedHeaderRow}>
-              <View style={styles.observedTitleGroup}>
-                <MaterialCommunityIcons
-                  name="eye-check-outline"
-                  size={16}
-                  color={ChickIntelPalette.green1}
-                />
-                <Text style={styles.observedHeaderLabel}>
-                  OBSERVED BEHAVIORS
-                </Text>
-              </View>
-              {behaviorLabels.length > 0 ? (
-                <View style={styles.observedCountBadge}>
-                  <Text style={styles.observedCountText}>
-                    {behaviorLabels.length}{" "}
-                    {behaviorLabels.length === 1 ? "trait" : "traits"}
-                  </Text>
+    return (
+        <View style={[styles.screen, { paddingTop: insets.top + 8 }]}>
+            <StatusBar style="dark" />
+            <View style={styles.topBar}>
+                <TouchableOpacity
+                    onPress={handleBack}
+                    style={styles.backBtn}
+                    activeOpacity={0.8}
+                    accessibilityRole="button"
+                    accessibilityLabel="Back"
+                >
+                    <MaterialCommunityIcons
+                        name="arrow-left"
+                        size={22}
+                        color={ChickIntelPalette.gray1}
+                    />
+                </TouchableOpacity>
+                <View style={styles.titleCenterWrap}>
+                    <Text style={styles.pageTitle}>Behavior Journal</Text>
+                    <Text style={styles.savedMeta}>
+                        {formatJournalDateTime(entry.savedAt)}
+                    </Text>
                 </View>
-              ) : null}
+                <View style={styles.topBarRightPlaceholder} />
             </View>
 
-            {behaviorLabels.length > 0 ? (
-              <View style={styles.observedChipsWrap}>
-                <ChipList labels={behaviorLabels} />
-              </View>
-            ) : (
-              <Text style={styles.noBehaviorsText}>
-                No observed behaviors recorded
-              </Text>
-            )}
-          </View>
-        </BlurCard>
+            <ScrollView
+                contentContainerStyle={[styles.scroll, { paddingBottom: 15 }]}
+                showsVerticalScrollIndicator={false}
+            >
+                {/* Observed Behaviors Header Card */}
+                <View style={styles.observedBehaviorsCard}>
+                    <View style={styles.observedBehaviorsInner}>
+                        <View style={styles.observedHeaderRow}>
+                            <View style={styles.observedTitleGroup}>
+                                <MaterialCommunityIcons
+                                    name="eye-check-outline"
+                                    size={16}
+                                    color={ChickIntelPalette.accent}
+                                />
+                                <Text style={styles.observedHeaderLabel}>
+                                    OBSERVED BEHAVIORS
+                                </Text>
+                            </View>
+                            {behaviorLabels.length > 0 ? (
+                                <View style={styles.observedCountBadge}>
+                                    <Text style={styles.observedCountText}>
+                                        {behaviorLabels.length}{" "}
+                                        {behaviorLabels.length === 1
+                                            ? "trait"
+                                            : "traits"}
+                                    </Text>
+                                </View>
+                            ) : null}
+                        </View>
 
-        <View style={styles.cardSpacer} />
-
-        {/* Disease Information - Supporting Information */}
-        <HealthInputSummaryCard
-          photoUri={entry.photoUri}
-          detectedIllness={entry.detectedIllness}
-          detectionDescription={diseaseDetails?.description}
-          additionalObservation={entry.additionalObservation}
-          noteSavedAt={entry.noteSavedAt}
-          noteHistory={entry.noteHistory}
-        />
-
-        <View style={styles.cardSpacer} />
-
-        <HealthResultCard
-          resultSeverity={resultSeverity}
-          diseaseName={entry.detectedIllness}
-          resultSummary={diseaseDetails?.diseaseName ?? entry.resultSummary}
-          resultDescription={diseaseDetails?.description}
-          recommendationText={entry.recommendationText}
-          treatmentSteps={diseaseDetails?.treatmentSteps}
-          actionStatus={entry.actionStatus}
-          durationValue={entry.durationValue}
-        />
-
-        {historyEntries.length > 0 ? (
-          <View style={styles.historySection}>
-            <Text style={styles.historyTitle}>Health History</Text>
-            <Text style={styles.historySubtitle}>
-              Prior scans and retakes for this chicken are listed below in
-              reverse chronological order.
-            </Text>
-
-            <View style={styles.historyList}>
-              {historyEntries.map((scan) => {
-                const historyBehaviorLabels = mapBehaviorIdsToLabels(
-                  scan.behaviorIds,
-                  behaviorItems,
-                );
-
-                return (
-                  <View key={scan.id} style={styles.historyEntryCard}>
-                    <View style={styles.historyEntryHeader}>
-                      <Text style={styles.historyEntryTitle}>
-                        {formatJournalDateTime(scan.savedAt)}
-                      </Text>
-                      <Text style={styles.historyEntryStatus}>
-                        {scan.actionStatus || "Recorded"}
-                      </Text>
+                        {behaviorLabels.length > 0 ? (
+                            <View style={styles.observedChipsWrap}>
+                                <ChipList labels={behaviorLabels} />
+                            </View>
+                        ) : (
+                            <Text style={styles.noBehaviorsText}>
+                                No observed behaviors recorded
+                            </Text>
+                        )}
                     </View>
-                    <Text style={styles.historyEntryDisease}>
-                      {scan.detectedIllness}
-                    </Text>
-                    <Text style={styles.historyEntryValue}>
-                      {historyBehaviorLabels.length > 0
-                        ? historyBehaviorLabels.join(", ")
-                        : "No behaviors recorded"}
-                    </Text>
-                    <Text style={styles.historyEntryValue}>
-                      {scan.additionalObservation?.trim() ||
-                        "No observation added"}
-                    </Text>
-                  </View>
-                );
-              })}
-            </View>
-          </View>
-        ) : null}
-      </ScrollView>
-    </View>
-  );
+                </View>
+
+                <View style={styles.cardSpacer} />
+
+                {/* Disease Information - Supporting Information */}
+                <HealthInputSummaryCard
+                    photoUri={entry.photoUri}
+                    detectedIllness={entry.detectedIllness}
+                    detectionDescription={diseaseDetails?.description}
+                    additionalObservation={entry.additionalObservation}
+                    noteSavedAt={entry.noteSavedAt}
+                    noteHistory={entry.noteHistory}
+                />
+
+                <View style={styles.cardSpacer} />
+
+                <HealthResultCard
+                    resultSeverity={resultSeverity}
+                    diseaseName={entry.detectedIllness}
+                    resultSummary={
+                        diseaseDetails?.diseaseName ?? entry.resultSummary
+                    }
+                    resultDescription={diseaseDetails?.description}
+                    recommendationText={entry.recommendationText}
+                    treatmentSteps={diseaseDetails?.treatmentSteps}
+                    actionStatus={entry.actionStatus}
+                    durationValue={entry.durationValue}
+                />
+
+                {historyEntries.length > 0 ? (
+                    <View style={styles.historySection}>
+                        <Text style={styles.historyTitle}>Health History</Text>
+                        <Text style={styles.historySubtitle}>
+                            Prior scans and retakes for this chicken are listed
+                            below in reverse chronological order.
+                        </Text>
+
+                        <View style={styles.historyList}>
+                            {historyEntries.map((scan) => {
+                                const historyBehaviorLabels =
+                                    mapBehaviorIdsToLabels(
+                                        scan.behaviorIds,
+                                        behaviorItems,
+                                    );
+                                return (
+                                    <View
+                                        key={scan.id}
+                                        style={styles.historyEntryCard}
+                                    >
+                                        <View style={styles.historyEntryHeader}>
+                                            <Text
+                                                style={styles.historyEntryTitle}
+                                            >
+                                                {formatJournalDateTime(
+                                                    scan.savedAt,
+                                                )}
+                                            </Text>
+                                            <Text
+                                                style={
+                                                    styles.historyEntryStatus
+                                                }
+                                            >
+                                                {scan.actionStatus ||
+                                                    "Recorded"}
+                                            </Text>
+                                        </View>
+                                        <Text
+                                            style={styles.historyEntryDisease}
+                                        >
+                                            {scan.detectedIllness}
+                                        </Text>
+                                        <Text style={styles.historyEntryValue}>
+                                            {historyBehaviorLabels.length > 0
+                                                ? historyBehaviorLabels.join(
+                                                      ", ",
+                                                  )
+                                                : "No behaviors recorded"}
+                                        </Text>
+                                        <Text style={styles.historyEntryValue}>
+                                            {scan.additionalObservation?.trim() ||
+                                                "No observation added"}
+                                        </Text>
+                                    </View>
+                                );
+                            })}
+                        </View>
+                    </View>
+                ) : null}
+            </ScrollView>
+        </View>
+    );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: ChickIntelPalette.light1,
-  },
-  topBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: moderateScale(16),
-    marginBottom: 12,
-    gap: 10,
-  },
-  backBtn: {
-    width: scale(42),
-    height: verticalScale(42),
-    borderRadius: 14,
-    backgroundColor: ChickIntelPalette.green1,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.25)",
-    shadowColor: "#317667",
-    shadowOpacity: 0.22,
-    shadowRadius: 10,
-    shadowOffset: { width: scale(0), height: verticalScale(4) },
-    elevation: 4,
-    flexShrink: 0,
-  },
-  savedMeta: {
-    ...HealthTypography.meta,
-    fontSize: responsiveFontSize(12),
-    marginTop: 8,
-  },
-  scroll: {
-    paddingHorizontal: moderateScale(16),
-  },
-  pageTitle: {
-    fontFamily: ChickFont.display,
-    fontSize: responsiveFontSize(18),
-    lineHeight: 30,
-    fontWeight: "800",
-    letterSpacing: -0.55,
-    color: ChickIntelPalette.gray1,
-    flex: 1,
-    textAlign: "center",
-    paddingLeft: 30,
-  },
-  cardSpacer: {
-    height: verticalScale(8),
-  },
-  observedBehaviorsCard: {
-    borderRadius: 10,
-    overflow: "hidden",
-    backgroundColor: "rgba(255, 255, 255, 0.95)",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.16)",
-    position: "relative",
-  },
-  observedBehaviorsInner: {
-    paddingHorizontal: moderateScale(16),
-    paddingVertical: verticalScale(14),
-    gap: 10,
-  },
-  observedHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  observedTitleGroup: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  observedHeaderLabel: {
-    fontFamily: ChickFont.display,
-    fontSize: responsiveFontSize(13),
-    fontWeight: "800",
-    color: ChickIntelPalette.green1,
-    letterSpacing: 0.3,
-    textTransform: "uppercase",
-  },
-  observedCountBadge: {
-    backgroundColor: "rgba(49, 118, 103, 0.12)",
-    paddingHorizontal: moderateScale(8),
-    paddingVertical: verticalScale(2),
-    borderRadius: 6,
-  },
-  observedCountText: {
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(11),
-    fontWeight: "700",
-    color: ChickIntelPalette.green1,
-  },
-  observedChipsWrap: {
-    marginTop: 2,
-  },
-  noBehaviorsText: {
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(13),
-    color: ChickIntelPalette.textMuted,
-    fontStyle: "italic",
-  },
-  behaviorSection: {
-    backgroundColor: "rgba(202, 227, 221, 0.4)",
-    borderRadius: 12,
-    padding: moderateScale(14),
-    marginBottom: 12,
-  },
-  sectionLabel: {
-    fontFamily: ChickFont.display,
-    fontSize: responsiveFontSize(14),
-    fontWeight: "700",
-    color: ChickIntelPalette.green1,
-    marginBottom: 8,
-    letterSpacing: -0.1,
-  },
-  behaviorChips: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 6,
-  },
-  behaviorChip: {
-    backgroundColor: ChickIntelPalette.lightGreen,
-    borderRadius: 8,
-    paddingHorizontal: moderateScale(10),
-    paddingVertical: verticalScale(5),
-  },
-  behaviorChipText: {
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(12),
-    fontWeight: "600",
-    color: ChickIntelPalette.gray1,
-  },
-  observationText: {
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(14),
-    lineHeight: 20,
-    fontWeight: "500",
-    color: ChickIntelPalette.gray1,
-  },
-  historySection: {
-    marginTop: 20,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: "rgba(49, 118, 103, 0.14)",
-  },
-  historyTitle: {
-    fontFamily: ChickFont.display,
-    fontSize: responsiveFontSize(16),
-    fontWeight: "800",
-    color: ChickIntelPalette.green1,
-    marginBottom: 4,
-  },
-  historySubtitle: {
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(12),
-    lineHeight: 16,
-    color: "#5A6161",
-    marginBottom: 12,
-  },
-  historyList: {
-    gap: 10,
-  },
-  historyEntryCard: {
-    backgroundColor: "rgba(255, 255, 255, 0.9)",
-    borderRadius: 12,
-    padding: moderateScale(12),
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.18)",
-    gap: 4,
-  },
-  historyEntryHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  historyEntryTitle: {
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(11),
-    fontWeight: "700",
-    color: ChickIntelPalette.textMuted,
-  },
-  historyEntryStatus: {
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(11),
-    fontWeight: "800",
-    color: ChickIntelPalette.green1,
-  },
-  historyEntryDisease: {
-    fontFamily: ChickFont.display,
-    fontSize: responsiveFontSize(14),
-    fontWeight: "700",
-    color: ChickIntelPalette.gray1,
-  },
-  historyEntryValue: {
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(12),
-    color: "#5A6161",
-  },
+    screen: {
+        flex: 1,
+        backgroundColor: ChickIntelPalette.canvas,
+    },
+    topBar: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        paddingHorizontal: moderateScale(16),
+        marginBottom: 12,
+    },
+    backBtn: {
+        width: scale(38),
+        height: verticalScale(38),
+        borderRadius: 12,
+        backgroundColor: "transparent",
+        justifyContent: "center",
+        alignItems: "center",
+        flexShrink: 0,
+    },
+    titleCenterWrap: {
+        flex: 1,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    topBarRightPlaceholder: {
+        width: scale(38),
+    },
+    savedMeta: {
+        fontFamily: ChickFont.sans,
+        fontSize: responsiveFontSize(11),
+        lineHeight: 15,
+        color: ChickIntelPalette.textMuted,
+        marginTop: 2,
+        textAlign: "center",
+    },
+    scroll: {
+        paddingHorizontal: moderateScale(16),
+    },
+    pageTitle: {
+        fontFamily: ChickFont.display,
+        fontSize: responsiveFontSize(18),
+        lineHeight: 24,
+        fontWeight: "800",
+        letterSpacing: -0.55,
+        color: ChickIntelPalette.gray1,
+        textAlign: "center",
+    },
+    cardSpacer: {
+        height: verticalScale(8),
+    },
+    observedBehaviorsCard: {
+        borderRadius: 14,
+        overflow: "hidden",
+        backgroundColor: ChickIntelPalette.green1,
+        borderWidth: 1,
+        borderColor: "rgba(255, 255, 255, 0.14)",
+        shadowColor: "#161E1A",
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: verticalScale(2) },
+        elevation: 3,
+        position: "relative",
+    },
+    observedBehaviorsInner: {
+        paddingHorizontal: moderateScale(16),
+        paddingVertical: verticalScale(14),
+        gap: 10,
+    },
+    observedHeaderRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+    },
+    observedTitleGroup: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 6,
+    },
+    observedHeaderLabel: {
+        fontFamily: ChickFont.display,
+        fontSize: responsiveFontSize(13),
+        fontWeight: "800",
+        color: ChickIntelPalette.accent,
+        letterSpacing: 0.5,
+        textTransform: "uppercase",
+    },
+    observedCountBadge: {
+        backgroundColor: "rgba(255, 255, 255, 0.18)",
+        borderWidth: 1,
+        borderColor: "rgba(255, 255, 255, 0.35)",
+        paddingHorizontal: moderateScale(8),
+        paddingVertical: verticalScale(3),
+        borderRadius: 8,
+    },
+    observedCountText: {
+        fontFamily: ChickFont.sans,
+        fontSize: responsiveFontSize(11),
+        fontWeight: "700",
+        color: "#FFFFFF",
+    },
+    observedChipsWrap: {
+        marginTop: 2,
+    },
+    noBehaviorsText: {
+        fontFamily: ChickFont.sans,
+        fontSize: responsiveFontSize(13),
+        color: "rgba(255, 255, 255, 0.6)",
+        fontStyle: "italic",
+    },
+    behaviorSection: {
+        backgroundColor: ChickIntelPalette.lightGreen,
+        borderRadius: 12,
+        padding: moderateScale(14),
+        marginBottom: 12,
+    },
+    sectionLabel: {
+        fontFamily: ChickFont.display,
+        fontSize: responsiveFontSize(14),
+        fontWeight: "700",
+        color: ChickIntelPalette.green1,
+        marginBottom: 8,
+        letterSpacing: -0.1,
+    },
+    behaviorChips: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+        gap: 6,
+    },
+    behaviorChip: {
+        backgroundColor: ChickIntelPalette.lightGreen,
+        borderRadius: 8,
+        paddingHorizontal: moderateScale(10),
+        paddingVertical: verticalScale(5),
+    },
+    behaviorChipText: {
+        fontFamily: ChickFont.sans,
+        fontSize: responsiveFontSize(12),
+        fontWeight: "600",
+        color: ChickIntelPalette.gray1,
+    },
+    observationText: {
+        fontFamily: ChickFont.sans,
+        fontSize: responsiveFontSize(14),
+        lineHeight: 20,
+        fontWeight: "500",
+        color: ChickIntelPalette.gray1,
+    },
+    historySection: {
+        marginTop: 20,
+        paddingTop: 16,
+        borderTopWidth: 1,
+        borderTopColor: ChickIntelPalette.gray2,
+    },
+    historyTitle: {
+        fontFamily: ChickFont.display,
+        fontSize: responsiveFontSize(16),
+        fontWeight: "800",
+        color: ChickIntelPalette.green1,
+        marginBottom: 4,
+    },
+    historySubtitle: {
+        fontFamily: ChickFont.sans,
+        fontSize: responsiveFontSize(12),
+        lineHeight: 16,
+        color: ChickIntelPalette.textMuted,
+        marginBottom: 12,
+    },
+    historyList: {
+        gap: 10,
+    },
+    historyEntryCard: {
+        backgroundColor: "#FFFFFF",
+        borderRadius: 12,
+        padding: moderateScale(12),
+        borderWidth: 1,
+        borderColor: ChickIntelPalette.gray2,
+        gap: 4,
+    },
+    historyEntryHeader: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+    },
+    historyEntryTitle: {
+        fontFamily: ChickFont.sans,
+        fontSize: responsiveFontSize(11),
+        fontWeight: "700",
+        color: ChickIntelPalette.textMuted,
+    },
+    historyEntryStatus: {
+        fontFamily: ChickFont.sans,
+        fontSize: responsiveFontSize(11),
+        fontWeight: "800",
+        color: ChickIntelPalette.green1,
+    },
+    historyEntryDisease: {
+        fontFamily: ChickFont.display,
+        fontSize: responsiveFontSize(14),
+        fontWeight: "700",
+        color: ChickIntelPalette.gray1,
+    },
+    historyEntryValue: {
+        fontFamily: ChickFont.sans,
+        fontSize: responsiveFontSize(12),
+        color: ChickIntelPalette.textMuted,
+    },
 });
