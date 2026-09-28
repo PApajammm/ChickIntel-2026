@@ -121,7 +121,7 @@ const initialKpiCards: KpiCardData[] = [
 const quickActions: QuickActionData[] = [
   { title: "Batch Profile", Icon: BatchProfileIcon },
   { title: "Health", Icon: HealthIcon },
-  { title: "Behavior Journal", Icon: JournalIcon },
+  { title: "Journal", Icon: JournalIcon },
   { title: "Health Monitoring", Icon: HeartMonitorIcon },
   { title: "Inventory", Icon: InventoryIcon },
   { title: "Schedule", Icon: ScheduleIcon },
@@ -741,7 +741,11 @@ export default function HomeScreen() {
         <View style={styles.headerRow}>
           <View style={styles.headerProfileSection}>
             <View style={styles.avatarCircle}>
-              <Text style={styles.avatarText}>{userInitials}</Text>
+              <MaterialCommunityIcons
+                name="account"
+                size={22}
+                color="#FFFFFF"
+              />
             </View>
             <View style={styles.headerTitleWrap}>
               <View style={styles.greetingRow}>
@@ -760,7 +764,7 @@ export default function HomeScreen() {
             <MaterialCommunityIcons
               name="calendar-month-outline"
               size={14}
-              color={ChickIntelPalette.mediumGreen}
+              color="#FFFFFF"
             />
             <Text style={styles.dateChipText}>{todayLabel}</Text>
           </View>
@@ -1542,9 +1546,9 @@ const styles = StyleSheet.create({
     width: moderateScale(40),
     height: moderateScale(40),
     borderRadius: moderateScale(20),
-    backgroundColor: ChickIntelPalette.lightGreen,
+    backgroundColor: ChickIntelPalette.green1,
     borderWidth: 1.5,
-    borderColor: ChickIntelPalette.gray2,
+    borderColor: "rgba(64, 83, 77, 0.4)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1552,7 +1556,7 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(14),
     fontWeight: "700",
-    color: ChickIntelPalette.green1,
+    color: "#FFFFFF",
   },
   headerTitleWrap: {
     flex: 1,
@@ -1599,23 +1603,23 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: ChickIntelPalette.green1,
     paddingHorizontal: moderateScale(10),
     paddingVertical: verticalScale(6),
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: ChickIntelPalette.gray2,
+    borderColor: "rgba(64, 83, 77, 0.4)",
     shadowColor: "#161E1A",
-    shadowOpacity: 0.03,
+    shadowOpacity: 0.08,
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 1 },
-    elevation: 1,
+    elevation: 2,
   },
   dateChipText: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(12),
-    fontWeight: "600",
-    color: ChickIntelPalette.gray1,
+    fontWeight: "700",
+    color: "#FFFFFF",
   },
   kpiCarouselContainer: {
     marginBottom: verticalScale(2),
@@ -1742,7 +1746,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     shadowOffset: { width: 0, height: verticalScale(2) },
     elevation: 2,
-    paddingVertical: verticalScale(12),
+    paddingVertical: verticalScale(14),
     paddingHorizontal: moderateScale(6),
     position: "relative",
     overflow: "hidden",
@@ -1763,8 +1767,8 @@ const styles = StyleSheet.create({
   quickActionItem3Col: {
     width: "33.333%",
     alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: verticalScale(6),
+    justifyContent: "flex-start",
+    paddingVertical: verticalScale(2),
     paddingHorizontal: moderateScale(4),
   },
   quickActionPaginationRow: {
@@ -1782,10 +1786,11 @@ const styles = StyleSheet.create({
   quickActionLabel: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(11),
-    fontWeight: "600",
+    fontWeight: "700",
     color: ChickIntelPalette.gray1,
     textAlign: "center",
     lineHeight: 14,
+    minHeight: verticalScale(28),
   },
   carouselContent: {
     paddingTop: 2,

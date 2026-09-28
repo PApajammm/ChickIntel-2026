@@ -50,13 +50,21 @@ function isMissingTableError(error: unknown): boolean {
 }
 
 function mapDispositionRow(row: EggDispositionRow): EggDispositionLog {
+  let colorName = row.color_name ?? undefined;
+  let colorHex = row.color_hex ?? undefined;
+  const n = (colorName ?? "").trim().toLowerCase();
+  const h = (colorHex ?? "").trim().toLowerCase();
+  if (n === "white" || n === "light pink" || n === "pink" || h === "#ffffff" || h === "#fff" || h === "#f8bbd0") {
+    colorName = "Pink";
+    colorHex = "#F8BBD0";
+  }
   return {
     id: row.id,
     farmId: row.farm_id,
     eggBatchId: row.egg_batch_id ?? undefined,
     originBatchNo: row.origin_batch_no ?? undefined,
-    colorName: row.color_name ?? undefined,
-    colorHex: row.color_hex ?? undefined,
+    colorName,
+    colorHex,
     actionType: row.action_type,
     quantity: row.quantity ?? 0,
     targetChickBatchId: row.target_chick_batch_id ?? undefined,

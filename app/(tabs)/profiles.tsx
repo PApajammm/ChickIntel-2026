@@ -937,7 +937,7 @@ export default function ProfilesScreen() {
                             <MaterialCommunityIcons
                               name="trash-can-outline"
                               size={15}
-                              color="#923737"
+                              color="#111111"
                             />
                           </Pressable>
                         </View>

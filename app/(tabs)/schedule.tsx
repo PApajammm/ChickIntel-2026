@@ -2032,7 +2032,7 @@ export default function ScheduleScreen() {
                               <MaterialCommunityIcons
                                 name="trash-can-outline"
                                 size={18}
-                                color="#B04B58"
+                                color={ChickIntelPalette.gray1}
                               />
                             </Pressable>
                           </View>
@@ -2091,7 +2091,7 @@ export default function ScheduleScreen() {
                   <MaterialCommunityIcons
                     name="arrow-left"
                     size={22}
-                    color="#FFF"
+                    color={ChickIntelPalette.gray1}
                   />
                 </TouchableOpacity>
               </View>
@@ -2106,10 +2106,6 @@ export default function ScheduleScreen() {
                   <Text style={styles.modalKickerText}>Schedule routine</Text>
                 </View>
                 <Text style={styles.modalPageTitle}>Add New Task</Text>
-                <Text style={styles.modalPageSubtitle}>
-                  Set up feeding, treatment, egg collection, or custom flock
-                  tasks.
-                </Text>
               </View>
 
               <View style={styles.modalSummaryChipRow}>
@@ -3477,19 +3473,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   modalBackButton: {
-    width: scale(42),
-    height: verticalScale(42),
-    borderRadius: 14,
-    backgroundColor: ChickIntelPalette.green1,
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: "transparent",
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.25)",
-    shadowColor: "#317667",
-    shadowOpacity: 0.22,
-    shadowRadius: 10,
-    shadowOffset: { width: scale(0), height: verticalScale(4) },
-    elevation: 4,
     flexShrink: 0,
   },
   modalTitleCard: {
@@ -3541,7 +3530,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 4,
     borderRadius: 8,
-    backgroundColor: "rgba(254, 254, 254, 0.72)",
+    backgroundColor: ChickIntelPalette.lightGreen,
+    borderWidth: 0.5,
+    borderColor: ChickIntelPalette.mediumGreen,
   },
   modalSummaryChipText: {
     flexShrink: 1,
@@ -3764,38 +3755,33 @@ const styles = StyleSheet.create({
   },
   modalCancelButton: {
     flex: 1,
-    height: verticalScale(52),
-    borderRadius: 14,
-    backgroundColor: "rgba(254, 254, 254, 0.88)",
+    minHeight: verticalScale(44),
+    borderRadius: 10,
+    backgroundColor: ChickIntelPalette.lightGreen,
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.18)",
+    borderColor: ChickIntelPalette.mediumGreen,
     alignItems: "center",
     justifyContent: "center",
   },
   modalCancelButtonText: {
     color: ChickIntelPalette.gray1,
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(15),
-    fontWeight: "700",
+    fontSize: responsiveFontSize(14),
+    fontWeight: "600",
   },
   modalSaveButton: {
     flex: 1,
-    height: verticalScale(52),
-    borderRadius: 14,
+    minHeight: verticalScale(44),
+    borderRadius: 10,
     backgroundColor: ChickIntelPalette.green1,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#317667",
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    shadowOffset: { width: scale(0), height: verticalScale(4) },
-    elevation: 3,
   },
   modalSaveButtonText: {
-    color: "#FFF",
+    color: "#FFFFFF",
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(15),
-    fontWeight: "700",
+    fontSize: responsiveFontSize(14),
+    fontWeight: "600",
   },
   evidenceOverlay: {
     flex: 1,

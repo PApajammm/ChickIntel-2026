@@ -80,7 +80,7 @@ const DEFAULT_BREED_OPTIONS = [
 const COLOR_OPTIONS = [
   // Reds & Pinks
   { name: "Red", hex: "#D84A49" },
-  { name: "Light Pink", hex: "#F8BBD0" },
+  { name: "Pink", hex: "#F8BBD0" },
 
   // Oranges & Yellows
   { name: "Orange", hex: "#E67E22" },
@@ -1528,7 +1528,7 @@ export default function AddBatchScreen() {
                           name="check"
                           size={14}
                           color={
-                            opt.name === "Light Pink" ||
+                            opt.name === "Pink" ||
                             opt.name === "Lemon" ||
                             opt.name === "Mint" ||
                             opt.name === "Lavender"
