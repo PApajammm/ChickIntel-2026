@@ -29,7 +29,6 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import BackgroundGradient from "@/assets_imported/background-gradient.svg";
 import ChickenKpiArt from "@/assets_imported/card-chicken.svg";
 import ChicksKpiArt from "@/assets_imported/card-chicks.svg";
 import EggsKpiArt from "@/assets_imported/card-eggs.svg";
@@ -131,7 +130,7 @@ const quickActions: QuickActionData[] = [
 
 const PERIOD_OPTIONS = ["7 days", "30 days", "12 months"] as const;
 
-const walkingChickenGif = require("../../assets/images/Chicken walkinggif-clean.gif");
+
 
 /** Space reserved for custom tab bar + FAB clearance */
 const TAB_BAR_OFFSET = 55;
@@ -162,12 +161,19 @@ function withAlpha(color: string, alpha: number) {
 
 function formatTodayLabel() {
   return new Intl.DateTimeFormat("en-US", {
-    weekday: "long",
-    month: "long",
+    weekday: "short",
+    month: "short",
     day: "numeric",
-    year: "numeric",
   }).format(new Date());
 }
+
+function getGreetingTimeOfDay() {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
+}
+
 
 export default function HomeScreen() {
   const colorScheme = useColorScheme();
@@ -187,36 +193,7 @@ export default function HomeScreen() {
   const snapInterval = featureCardWidth + featureCardGap;
   const sideInset = Math.max((width - featureCardWidth) / 2, rms(18));
   const scrollX = useRef(new Animated.Value(0)).current;
-  // Walking range: 40% of screen width so the chicken stays on screen on all sizes
-  const walkRange = Math.round(width * 0.4);
-  const walkingX = useRef(new Animated.Value(Math.round(width * 0.15))).current;
-  const [isFacingRight, setIsFacingRight] = useState(true);
   const [isQuickActionsExpanded, setIsQuickActionsExpanded] = useState(false);
-  const roleAnim = useRef(new Animated.Value(1)).current;
-  const roleColor = useMemo(() => {
-    return roleAnim.interpolate({
-      inputRange: [0.7, 1],
-      outputRange: ["#317667", "#1B4A40"],
-    });
-  }, [roleAnim]);
-
-  useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(roleAnim, {
-          toValue: 0.7,
-          duration: 1500,
-          useNativeDriver: false,
-        }),
-        Animated.timing(roleAnim, {
-          toValue: 1,
-          duration: 1500,
-          useNativeDriver: false,
-        }),
-      ]),
-      { iterations: 5 },
-    ).start();
-  }, [roleAnim]);
 
   const dynamicKpiCardWidth = useMemo(() => {
     if (width < 360) return Math.floor(width * 0.5);
@@ -437,41 +414,7 @@ export default function HomeScreen() {
     return () => clearInterval(id);
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
 
-    const runCycle = () => {
-      if (cancelled) return;
-
-      Animated.timing(walkingX, {
-        toValue: walkRange,
-        duration: 2500,
-        easing: Easing.linear,
-        useNativeDriver: true,
-      }).start(({ finished }) => {
-        if (!finished || cancelled) return;
-        setIsFacingRight(false);
-
-        Animated.timing(walkingX, {
-          toValue: -walkRange,
-          duration: 2500,
-          easing: Easing.linear,
-          useNativeDriver: true,
-        }).start(({ finished: finishedBack }) => {
-          if (!finishedBack || cancelled) return;
-          setIsFacingRight(true);
-          runCycle();
-        });
-      });
-    };
-
-    runCycle();
-    return () => {
-      cancelled = true;
-    };
-  }, [walkingX, walkRange]);
-
-  const walkingScaleX = isFacingRight ? 1 : -1;
 
   useFocusEffect(
     useCallback(() => {
@@ -815,45 +758,47 @@ export default function HomeScreen() {
   const fabBottom =
     insets.bottom + TAB_BAR_OFFSET - 2 - FAB_OFFSET_FROM_TAB_TOP;
 
-  const displayName = profile?.display_name?.trim() || "there";
-  const roleLabel = profile?.is_admin ? "Admin Owner" : `Farmer ${displayName}`;
+  const displayName = profile?.display_name?.trim() || "Farmer";
+  const userInitials =
+    displayName
+      .split(" ")
+      .map((n) => n[0])
+      .filter(Boolean)
+      .slice(0, 2)
+      .join("")
+      .toUpperCase() || "CI";
+  const roleLabel = profile?.is_admin ? "Admin" : "Farmer";
+  const greeting = getGreetingTimeOfDay();
 
   return (
-    <View style={[styles.screen, { backgroundColor: colors.background }]}>
-      <BackgroundGradient
-        width="110%"
-        height="110%"
-        preserveAspectRatio="xMidYMid slice"
-        style={[
-          StyleSheet.absoluteFill,
-          { transform: [{ scale: 1.08 }, { translateY: -14 }] },
-        ]}
-      />
-
-      <View style={[styles.headerPinned, { paddingTop: insets.top + 12 }]}>
+    <View style={[styles.screen, { backgroundColor: ChickIntelPalette.canvas }]}>
+      <View style={[styles.headerPinned, { paddingTop: insets.top + 8 }]}>
         <View style={styles.headerRow}>
-          <View style={styles.headerTitleWrap}>
-            <Text style={[styles.greeting, { color: colors.text }]}>
-              Welcome!
-            </Text>
-            <Animated.Text
-              style={[
-                styles.userRoleText,
-                {
-                  color: roleColor,
-                  opacity: roleAnim,
-                  textShadowColor: "rgba(49, 118, 103, 0.5)",
-                  textShadowOffset: { width: 0, height: 0 },
-                  textShadowRadius: 8,
-                },
-              ]}
-            >
-              {roleLabel}
-            </Animated.Text>
+          <View style={styles.headerProfileSection}>
+            <View style={styles.avatarCircle}>
+              <Text style={styles.avatarText}>{userInitials}</Text>
+            </View>
+            <View style={styles.headerTitleWrap}>
+              <View style={styles.greetingRow}>
+                <Text style={styles.greetingSub}>{greeting}</Text>
+                <View style={styles.roleBadge}>
+                  <Text style={styles.roleBadgeText}>{roleLabel}</Text>
+                </View>
+              </View>
+              <Text style={styles.userNameText} numberOfLines={1}>
+                {displayName}
+              </Text>
+            </View>
           </View>
-          <Text style={[styles.headerDateLive, { color: colors.textMuted }]}>
-            {todayLabel}
-          </Text>
+
+          <View style={styles.dateChip}>
+            <MaterialCommunityIcons
+              name="calendar-month-outline"
+              size={14}
+              color={ChickIntelPalette.mediumGreen}
+            />
+            <Text style={styles.dateChipText}>{todayLabel}</Text>
+          </View>
         </View>
       </View>
 
@@ -1022,21 +967,7 @@ export default function HomeScreen() {
               />
             </Pressable>
           </View>
-          <View style={styles.walkingGifWrap}>
-            <Animated.View style={{ transform: [{ translateX: walkingX }] }}>
-              <Animated.View
-                style={{
-                  transform: [{ scaleX: walkingScaleX }],
-                }}
-              >
-                <Image
-                  source={walkingChickenGif}
-                  style={styles.walkingGif}
-                  contentFit="contain"
-                />
-              </Animated.View>
-            </Animated.View>
-          </View>
+
           <View style={styles.quickActionsGrid}>
             {(isQuickActionsExpanded
               ? quickActions
@@ -1577,7 +1508,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: ChickIntelPalette.light1,
+    backgroundColor: ChickIntelPalette.canvas,
   },
   scroll: {
     flex: 1,
@@ -1588,42 +1519,100 @@ const styles = StyleSheet.create({
   },
   headerPinned: {
     paddingHorizontal: moderateScale(18),
+    paddingBottom: verticalScale(4),
     backgroundColor: "transparent",
   },
   headerRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginTop: 16,
+    alignItems: "center",
+    marginTop: verticalScale(8),
     gap: 12,
+  },
+  headerProfileSection: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: moderateScale(10),
+    flex: 1,
+  },
+  avatarCircle: {
+    width: moderateScale(40),
+    height: moderateScale(40),
+    borderRadius: moderateScale(20),
+    backgroundColor: ChickIntelPalette.lightGreen,
+    borderWidth: 1.5,
+    borderColor: ChickIntelPalette.gray2,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(14),
+    fontWeight: "700",
+    color: ChickIntelPalette.green1,
   },
   headerTitleWrap: {
     flex: 1,
+    justifyContent: "center",
   },
-  greeting: {
-    fontFamily: ChickFont.display,
-    fontSize: responsiveFontSize(20),
-    lineHeight: 28,
-    fontWeight: "600",
-    letterSpacing: -0.65,
+  greetingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
-  userRoleText: {
+  greetingSub: {
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(19),
-    lineHeight: 20,
+    fontSize: responsiveFontSize(12),
+    fontWeight: "500",
+    color: ChickIntelPalette.textMuted,
+    letterSpacing: 0.1,
+  },
+  roleBadge: {
+    backgroundColor: ChickIntelPalette.lightGreen,
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+    borderRadius: 6,
+    borderWidth: 0.5,
+    borderColor: ChickIntelPalette.mediumGreen,
+  },
+  roleBadgeText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(10),
     fontWeight: "700",
     color: ChickIntelPalette.green1,
-    marginTop: 3,
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
   },
-  /** Real-time date - neutral Gray 2 from ChickIntel palette */
-  headerDateLive: {
+  userNameText: {
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(18),
+    lineHeight: 22,
+    fontWeight: "700",
+    color: ChickIntelPalette.gray1,
+    letterSpacing: -0.3,
+    marginTop: 1,
+  },
+  dateChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: moderateScale(10),
+    paddingVertical: verticalScale(6),
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: ChickIntelPalette.gray2,
+    shadowColor: "#161E1A",
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 1,
+  },
+  dateChipText: {
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(13),
-    lineHeight: 40,
-    fontWeight: "400",
-    textAlign: "right",
-    maxWidth: "58%",
-    color: "#FFFFFF",
+    fontSize: responsiveFontSize(12),
+    fontWeight: "600",
+    color: ChickIntelPalette.gray1,
   },
   kpiCarouselContainer: {
     marginBottom: verticalScale(2),
@@ -1644,7 +1633,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: "rgba(49, 118, 103, 0.22)",
+    backgroundColor: "rgba(27, 73, 56, 0.18)",
   },
   kpiDotActive: {
     width: 18,
@@ -1652,14 +1641,21 @@ const styles = StyleSheet.create({
     backgroundColor: ChickIntelPalette.green1,
   },
   kpiCard: {
-    backgroundColor: "#FBF0E4",
-    borderRadius: 10,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
     minHeight: verticalScale(170),
     paddingHorizontal: moderateScale(14),
     paddingTop: verticalScale(14),
     paddingBottom: verticalScale(12),
     position: "relative",
     overflow: "hidden",
+    borderWidth: 1,
+    borderColor: ChickIntelPalette.gray2,
+    shadowColor: "#161E1A",
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: verticalScale(2) },
+    elevation: 2,
   },
   kpiTint: {
     ...StyleSheet.absoluteFillObject,
@@ -1676,6 +1672,7 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(14),
     fontWeight: "700",
     lineHeight: 18,
+    color: ChickIntelPalette.textMuted,
   },
   /** Prominent KPI title styling */
   kpiLabelCompact: {
@@ -1684,6 +1681,7 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(14),
     fontWeight: "700",
     lineHeight: 18,
+    color: ChickIntelPalette.textMuted,
   },
   periodChip: {
     flexDirection: "row",
@@ -1693,7 +1691,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: moderateScale(8),
     paddingVertical: verticalScale(4),
     borderWidth: 1,
-    borderColor: "transparent",
+    borderColor: ChickIntelPalette.mediumGreen,
+    backgroundColor: ChickIntelPalette.lightGreen,
     flexShrink: 0,
   },
   periodChipText: {
@@ -1701,6 +1700,7 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(12),
     fontWeight: "600",
     letterSpacing: 0.15,
+    color: ChickIntelPalette.green1,
   },
   kpiBody: {
     marginTop: verticalScale(8),
@@ -1713,6 +1713,7 @@ const styles = StyleSheet.create({
     lineHeight: 38,
     fontWeight: "800",
     letterSpacing: -1,
+    color: ChickIntelPalette.gray1,
   },
   kpiTrend: {
     fontFamily: ChickFont.sans,
@@ -1720,6 +1721,7 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     fontWeight: "600",
     marginTop: 2,
+    color: ChickIntelPalette.green1,
   },
   kpiArtworkWrap: {
     position: "absolute",
@@ -1728,8 +1730,15 @@ const styles = StyleSheet.create({
     opacity: 0.95,
   },
   quickActionsCard: {
-    backgroundColor: "#EAF6F3",
-    borderRadius: 10,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: ChickIntelPalette.gray2,
+    shadowColor: "#161E1A",
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: verticalScale(2) },
+    elevation: 2,
     paddingTop: verticalScale(12),
     paddingBottom: verticalScale(12),
     paddingHorizontal: moderateScale(12),
@@ -1754,20 +1763,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: ChickIntelPalette.green1,
   },
-  walkingGifWrap: {
-    position: "absolute",
-    bottom: 1,
-    left: 0,
-    right: 0,
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 2,
-    pointerEvents: "none",
-  },
-  walkingGif: {
-    width: scale(76),
-    height: verticalScale(46),
-  },
+
   quickActionsTint: {
     ...StyleSheet.absoluteFillObject,
   },
@@ -1843,12 +1839,12 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   flockBadgeActive: {
-    backgroundColor: "rgba(22, 101, 52, 0.88)",
+    backgroundColor: ChickIntelPalette.green1,
     borderWidth: 1,
-    borderColor: "rgba(74, 222, 128, 0.45)",
+    borderColor: ChickIntelPalette.green2,
   },
   flockBadgeEmpty: {
-    backgroundColor: "rgba(20, 30, 25, 0.72)",
+    backgroundColor: "rgba(31, 46, 43, 0.72)",
     borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.2)",
   },
@@ -1858,7 +1854,7 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   flockBadgeDotActive: {
-    backgroundColor: "#4ADE80",
+    backgroundColor: ChickIntelPalette.accent,
   },
   flockBadgeDotEmpty: {
     backgroundColor: "rgba(255, 255, 255, 0.5)",
@@ -1872,31 +1868,31 @@ const styles = StyleSheet.create({
   eggYieldBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.65)",
-    paddingHorizontal: moderateScale(7),
+    backgroundColor: ChickIntelPalette.accent,
+    paddingHorizontal: moderateScale(8),
     paddingVertical: verticalScale(3),
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(254, 240, 138, 0.3)",
+    borderColor: "rgba(255, 255, 255, 0.4)",
     gap: 3,
   },
   eggYieldBadgeText: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(9.5),
     fontWeight: "700",
-    color: "#FEF08A",
+    color: ChickIntelPalette.gray1,
   },
   featureCopy: {
     position: "absolute",
     left: 10,
     right: 10,
     bottom: 10,
-    backgroundColor: "rgba(15, 25, 18, 0.82)",
+    backgroundColor: "rgba(31, 46, 43, 0.88)",
     borderRadius: 10,
     paddingHorizontal: moderateScale(10),
     paddingVertical: verticalScale(7),
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.12)",
+    borderColor: "rgba(247, 192, 144, 0.25)",
     gap: 3,
   },
   featureHeaderRow: {
@@ -1912,7 +1908,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   purposePill: {
-    backgroundColor: "rgba(45, 106, 79, 0.75)",
+    backgroundColor: ChickIntelPalette.green2,
     paddingHorizontal: moderateScale(6),
     paddingVertical: verticalScale(1.5),
     borderRadius: 4,
@@ -1921,12 +1917,12 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(8.5),
     fontWeight: "700",
-    color: "#E2FBE8",
+    color: "#FFFFFF",
     textTransform: "uppercase",
   },
   featureTraitsLine: {
     fontFamily: ChickFont.sans,
-    color: "#D1E7DD",
+    color: ChickIntelPalette.accent,
     fontSize: responsiveFontSize(10),
     fontWeight: "600",
   },
@@ -1940,7 +1936,7 @@ const styles = StyleSheet.create({
   triviaText: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(9.5),
-    color: "rgba(255, 255, 255, 0.92)",
+    color: "rgba(255, 255, 255, 0.95)",
     lineHeight: 13,
     fontStyle: "italic",
   },
@@ -2025,21 +2021,21 @@ const styles = StyleSheet.create({
   censusBanner: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#EBF5F0",
+    backgroundColor: ChickIntelPalette.lightGreen,
     marginHorizontal: moderateScale(16),
     marginTop: verticalScale(14),
     paddingHorizontal: moderateScale(14),
     paddingVertical: verticalScale(10),
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(45, 106, 79, 0.2)",
+    borderColor: ChickIntelPalette.mediumGreen,
     gap: 12,
   },
   censusIconWrap: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#D1E7DD",
+    backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -2049,7 +2045,7 @@ const styles = StyleSheet.create({
   censusHeading: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(11),
-    color: "#2D6A4F",
+    color: ChickIntelPalette.green1,
     fontWeight: "600",
     textTransform: "uppercase",
     letterSpacing: 0.5,
@@ -2057,7 +2053,7 @@ const styles = StyleSheet.create({
   censusValue: {
     fontFamily: ChickFont.display,
     fontSize: responsiveFontSize(14),
-    color: "#1B4332",
+    color: ChickIntelPalette.green1,
     fontWeight: "700",
   },
   modalSectionTitle: {
@@ -2077,18 +2073,18 @@ const styles = StyleSheet.create({
   },
   specBox: {
     width: "48%",
-    backgroundColor: "#F7F9F8",
+    backgroundColor: ChickIntelPalette.lightGreen,
     paddingHorizontal: moderateScale(10),
     paddingVertical: verticalScale(8),
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.06)",
+    borderColor: ChickIntelPalette.mediumGreen,
     gap: 2,
   },
   specBoxLabel: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(10),
-    color: "#666",
+    color: ChickIntelPalette.textMuted,
     fontWeight: "500",
   },
   specBoxValue: {
@@ -2100,11 +2096,11 @@ const styles = StyleSheet.create({
   triviaSection: {
     marginHorizontal: moderateScale(16),
     marginTop: verticalScale(12),
-    backgroundColor: "transparent",
+    backgroundColor: ChickIntelPalette.accentSoft,
     borderRadius: 10,
     padding: moderateScale(12),
     borderWidth: 1,
-    borderColor: "#FDE68A",
+    borderColor: "rgba(217, 119, 36, 0.25)",
   },
   triviaHeaderRow: {
     flexDirection: "row",
@@ -2116,22 +2112,22 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.display,
     fontSize: responsiveFontSize(12),
     fontWeight: "700",
-    color: "#92400E",
+    color: ChickIntelPalette.accent,
   },
   triviaSectionContent: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(11),
-    color: "#78350F",
+    color: "#6B3B11",
     lineHeight: 16,
   },
   infoCard: {
     marginHorizontal: moderateScale(16),
     marginTop: verticalScale(10),
-    backgroundColor: "transparent",
+    backgroundColor: ChickIntelPalette.lightGreen,
     borderRadius: 10,
     padding: moderateScale(12),
     borderWidth: 1,
-    borderColor: "#D1E7DD",
+    borderColor: ChickIntelPalette.mediumGreen,
   },
   infoHeaderRow: {
     flexDirection: "row",
@@ -2143,12 +2139,12 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.display,
     fontSize: responsiveFontSize(12),
     fontWeight: "700",
-    color: "#1B4332",
+    color: ChickIntelPalette.green1,
   },
   infoCardBody: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(11),
-    color: "#2D6A4F",
+    color: ChickIntelPalette.textMuted,
     lineHeight: 16,
   },
   healthWatchCard: {
@@ -2180,7 +2176,7 @@ const styles = StyleSheet.create({
   },
   modalScannerBtn: {
     flex: 1.2,
-    backgroundColor: "#2D6A4F",
+    backgroundColor: ChickIntelPalette.green1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -2196,25 +2192,25 @@ const styles = StyleSheet.create({
   },
   modalBatchesBtn: {
     flex: 1,
-    backgroundColor: "#E8F3EE",
+    backgroundColor: ChickIntelPalette.lightGreen,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: verticalScale(12),
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#2D6A4F",
+    borderColor: ChickIntelPalette.mediumGreen,
     gap: 6,
   },
   modalBatchesBtnText: {
     fontFamily: ChickFont.display,
     fontSize: responsiveFontSize(13),
     fontWeight: "700",
-    color: "#2D6A4F",
+    color: ChickIntelPalette.green1,
   },
   periodModalBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(51, 51, 51, 0.4)",
+    backgroundColor: "rgba(22, 30, 26, 0.45)",
     justifyContent: "center",
     padding: moderateScale(24),
   },
@@ -2223,12 +2219,12 @@ const styles = StyleSheet.create({
     padding: moderateScale(16),
     backgroundColor: ChickIntelPalette.light1,
     borderWidth: 1,
-    borderColor: ChickIntelPalette.lightGreen,
+    borderColor: ChickIntelPalette.mediumGreen,
   },
   periodModalTitle: {
     fontFamily: ChickFont.display,
     fontSize: responsiveFontSize(16),
-    fontWeight: "600",
+    fontWeight: "700",
     letterSpacing: -0.15,
     color: ChickIntelPalette.gray1,
     marginBottom: 12,
@@ -2239,7 +2235,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingVertical: verticalScale(12),
     paddingHorizontal: moderateScale(12),
-    borderRadius: 5,
+    borderRadius: 8,
   },
   periodOptionText: {
     fontFamily: ChickFont.sans,

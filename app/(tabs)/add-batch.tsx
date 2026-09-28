@@ -1,4 +1,3 @@
-import BackgroundGradient from "@/assets_imported/background-gradient.svg";
 import {
     moderateScale,
     responsiveFontSize,
@@ -600,15 +599,6 @@ export default function AddBatchScreen() {
 
   return (
     <View style={styles.screen}>
-      <BackgroundGradient
-        width="110%"
-        height="110%"
-        preserveAspectRatio="xMidYMid slice"
-        style={[
-          StyleSheet.absoluteFill,
-          { transform: [{ scale: 1.08 }, { translateY: -14 }] },
-        ]}
-      />
       <StatusBar style="dark" />
       <KeyboardAvoidingView
         style={styles.keyboardArea}
@@ -633,8 +623,8 @@ export default function AddBatchScreen() {
             >
               <MaterialCommunityIcons
                 name="arrow-left"
-                size={22}
-                color="#FFF"
+                size={24}
+                color={ChickIntelPalette.gray1}
               />
             </Pressable>
           </View>
@@ -1747,24 +1737,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   backButton: {
-    width: scale(42),
-    height: verticalScale(42),
-    borderRadius: 14,
-    backgroundColor: ChickIntelPalette.green1,
+    width: scale(38),
+    height: verticalScale(38),
+    backgroundColor: "transparent",
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.25)",
-    shadowColor: "#317667",
-    shadowOpacity: 0.22,
-    shadowRadius: 10,
-    shadowOffset: { width: scale(0), height: verticalScale(4) },
-    elevation: 4,
+    borderWidth: 0,
+    elevation: 0,
+    shadowOpacity: 0,
     flexShrink: 0,
   },
   titleCard: {
     marginTop: verticalScale(10),
-    borderRadius: 10,
+    borderRadius: 14,
     paddingHorizontal: moderateScale(16),
     paddingVertical: verticalScale(14),
     backgroundColor: ChickIntelPalette.green1,
@@ -1781,7 +1766,7 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: 0.55,
     textTransform: "uppercase",
-    color: "#CAE3DD",
+    color: ChickIntelPalette.lightGreen,
   },
   pageTitle: {
     fontFamily: ChickFont.display,
@@ -1813,9 +1798,9 @@ const styles = StyleSheet.create({
     gap: 4,
     borderRadius: 8,
     paddingHorizontal: moderateScale(6),
-    backgroundColor: "rgba(254, 254, 254, 0.72)",
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.16)",
+    borderColor: ChickIntelPalette.gray2,
   },
   summaryChipText: {
     flexShrink: 1,
@@ -1833,21 +1818,21 @@ const styles = StyleSheet.create({
   },
   segmentWrap: {
     flexDirection: "row",
-    borderRadius: 5,
-    backgroundColor: ChickIntelPalette.lightGreen,
+    borderRadius: 10,
+    backgroundColor: "#FFFFFF",
     padding: moderateScale(4),
     borderWidth: 1,
-    borderColor: "rgba(49,118,103,0.2)",
+    borderColor: ChickIntelPalette.gray2,
   },
   segment: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: verticalScale(10),
-    borderRadius: 5,
+    borderRadius: 8,
   },
   segmentActive: {
-    backgroundColor: ChickIntelPalette.gray1,
+    backgroundColor: ChickIntelPalette.green1,
   },
   segmentInactive: {
     backgroundColor: "transparent",
@@ -1855,29 +1840,41 @@ const styles = StyleSheet.create({
   segmentText: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(13),
-    fontWeight: "600",
+    fontWeight: "700",
     letterSpacing: 0.1,
   },
   segmentTextActive: {
-    color: ChickIntelPalette.light1,
+    color: "#FFFFFF",
   },
   segmentTextInactive: {
-    color: ChickIntelPalette.gray1,
+    color: ChickIntelPalette.textMuted,
   },
   formCard: {
-    borderRadius: 20,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: "rgba(49,118,103,0.18)",
-    backgroundColor: "rgba(254, 254, 254, 0.72)",
-    padding: moderateScale(12),
+    borderColor: ChickIntelPalette.gray2,
+    backgroundColor: "#FFFFFF",
+    padding: moderateScale(14),
     gap: 12,
+    shadowColor: "#161E1A",
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: verticalScale(2) },
+    elevation: 2,
   },
   formSection: {
     gap: 10,
-    borderRadius: 10,
+    borderRadius: 14,
     paddingHorizontal: moderateScale(14),
     paddingVertical: verticalScale(14),
-    backgroundColor: "rgba(254, 254, 254, 0.92)",
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: ChickIntelPalette.gray2,
+    shadowColor: "#161E1A",
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: verticalScale(2) },
+    elevation: 2,
   },
   formSectionHeader: {
     flexDirection: "row",
@@ -1903,7 +1900,7 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(12),
     fontWeight: "600",
-    color: "#5E6666",
+    color: ChickIntelPalette.textMuted,
   },
   ageLimitHint: {
     fontFamily: ChickFont.sans,
@@ -1916,8 +1913,8 @@ const styles = StyleSheet.create({
     height: verticalScale(46),
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(67, 139, 123, 0.2)",
-    backgroundColor: "rgba(244, 248, 247, 0.96)",
+    borderColor: ChickIntelPalette.gray2,
+    backgroundColor: "#FFFFFF",
     paddingHorizontal: moderateScale(12),
     paddingVertical: verticalScale(0),
     fontFamily: ChickFont.sans,
@@ -1927,14 +1924,14 @@ const styles = StyleSheet.create({
     textAlignVertical: "center",
   },
   inputDisabled: {
-    backgroundColor: "rgba(255,255,255,0.72)",
+    backgroundColor: ChickIntelPalette.lightGreen,
     color: ChickIntelPalette.textMuted,
   },
   colorPickerRow: {
     minHeight: verticalScale(42),
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "#D5DBDB",
+    borderColor: ChickIntelPalette.gray2,
     backgroundColor: "#FFFFFF",
     paddingHorizontal: moderateScale(10),
     flexDirection: "row",
@@ -1953,7 +1950,7 @@ const styles = StyleSheet.create({
   },
   colorSwatchActive: {
     borderWidth: 2,
-    borderColor: ChickIntelPalette.gray1,
+    borderColor: ChickIntelPalette.green1,
   },
   colorSwatchDisabled: {
     opacity: 0.35,
@@ -1962,15 +1959,15 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(12),
-    color: ChickIntelPalette.gray1,
+    color: ChickIntelPalette.textMuted,
     lineHeight: 18,
   },
   select: {
     height: verticalScale(46),
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(67, 139, 123, 0.2)",
-    backgroundColor: "rgba(244, 248, 247, 0.96)",
+    borderColor: ChickIntelPalette.gray2,
+    backgroundColor: "#FFFFFF",
     paddingHorizontal: moderateScale(12),
     paddingVertical: verticalScale(0),
     flexDirection: "row",
@@ -1994,7 +1991,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: ChickIntelPalette.green1,
     borderWidth: 1,
-    borderColor: "rgba(49,118,103,0.28)",
+    borderColor: ChickIntelPalette.green1,
   },
   selectText: {
     flex: 1,
@@ -2004,7 +2001,7 @@ const styles = StyleSheet.create({
     color: ChickIntelPalette.gray1,
   },
   selectTextPlaceholder: {
-    color: "#8F9696",
+    color: ChickIntelPalette.textMuted,
   },
   sectionGap: {
     height: verticalScale(4),
@@ -2013,7 +2010,7 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(13),
     fontWeight: "700",
-    color: "#5E6666",
+    color: ChickIntelPalette.textMuted,
   },
   sexingRow: {
     flexDirection: "row",
@@ -2027,14 +2024,14 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(12),
     fontWeight: "600",
-    color: "#667171",
+    color: ChickIntelPalette.textMuted,
   },
   radioRow: {
     minHeight: verticalScale(34),
     borderRadius: 9,
-    backgroundColor: "rgba(255,255,255,0.82)",
+    backgroundColor: ChickIntelPalette.lightGreen,
     borderWidth: 1,
-    borderColor: "rgba(49,118,103,0.15)",
+    borderColor: ChickIntelPalette.mediumGreen,
     flexDirection: "row",
     alignItems: "center",
     gap: 7,
@@ -2045,7 +2042,7 @@ const styles = StyleSheet.create({
     height: verticalScale(16),
     borderRadius: 8,
     borderWidth: 1.5,
-    borderColor: "#9AA3A3",
+    borderColor: ChickIntelPalette.mediumGreen,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -2062,7 +2059,7 @@ const styles = StyleSheet.create({
     width: scale(20),
     height: verticalScale(20),
     borderRadius: 5,
-    backgroundColor: "rgba(202,227,221,0.8)",
+    backgroundColor: ChickIntelPalette.mediumGreen,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -2076,7 +2073,7 @@ const styles = StyleSheet.create({
   divider: {
     marginTop: 2,
     borderTopWidth: 1,
-    borderTopColor: "rgba(49,118,103,0.18)",
+    borderTopColor: ChickIntelPalette.gray2,
   },
   resultRow: {
     flexDirection: "row",
@@ -2090,15 +2087,15 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(12),
     fontWeight: "600",
-    color: "#667171",
+    color: ChickIntelPalette.textMuted,
     textAlign: "center",
   },
   resultInput: {
     height: verticalScale(46),
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(67, 139, 123, 0.2)",
-    backgroundColor: "rgba(244, 248, 247, 0.96)",
+    borderColor: ChickIntelPalette.gray2,
+    backgroundColor: "#FFFFFF",
     paddingVertical: verticalScale(0),
     textAlign: "center",
     fontFamily: ChickFont.sans,
@@ -2123,8 +2120,8 @@ const styles = StyleSheet.create({
     gap: 10,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(67, 139, 123, 0.28)",
-    backgroundColor: "rgba(244, 248, 247, 0.96)",
+    borderColor: ChickIntelPalette.mediumGreen,
+    backgroundColor: ChickIntelPalette.lightGreen,
     paddingHorizontal: 14,
   },
   sexScanButtonTextWrap: {
@@ -2145,21 +2142,21 @@ const styles = StyleSheet.create({
   saveButton: {
     marginTop: 8,
     height: verticalScale(52),
-    borderRadius: 999,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: ChickIntelPalette.green1,
-    shadowColor: "#317667",
-    shadowOpacity: 0.18,
+    shadowColor: "#161E1A",
+    shadowOpacity: 0.14,
     shadowRadius: 10,
-    shadowOffset: { width: scale(0), height: verticalScale(5) },
+    shadowOffset: { width: 0, height: verticalScale(4) },
     elevation: 3,
   },
   saveText: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(15),
-    fontWeight: "700",
     color: "#FFFFFF",
+    fontWeight: "700",
     letterSpacing: 0.2,
   },
   modalBackdrop: {

@@ -153,7 +153,7 @@ export function DeleteConfirmationModal({
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.52)",
+    backgroundColor: "rgba(31, 46, 43, 0.55)",
     justifyContent: "center",
     alignItems: "center",
     padding: moderateScale(20),
@@ -162,10 +162,12 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: scale(420),
     backgroundColor: "#FFFFFF",
-    borderRadius: 20,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: ChickIntelPalette.mediumGreen,
     overflow: "hidden",
     shadowColor: "#000",
-    shadowOpacity: 0.22,
+    shadowOpacity: 0.18,
     shadowRadius: 18,
     shadowOffset: { width: 0, height: verticalScale(8) },
     elevation: 10,
@@ -184,7 +186,7 @@ const styles = StyleSheet.create({
     width: scale(36),
     height: verticalScale(36),
     borderRadius: 18,
-    backgroundColor: "rgba(220, 38, 38, 0.85)",
+    backgroundColor: "rgba(200, 75, 70, 0.85)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -209,11 +211,11 @@ const styles = StyleSheet.create({
   },
   itemPreviewCard: {
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.18)",
+    borderColor: ChickIntelPalette.mediumGreen,
     borderRadius: 12,
     paddingHorizontal: moderateScale(14),
     paddingVertical: verticalScale(10),
-    backgroundColor: "rgba(202, 227, 221, 0.25)",
+    backgroundColor: ChickIntelPalette.lightGreen,
     gap: 4,
   },
   badgeRow: {
@@ -221,7 +223,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   badgePill: {
-    backgroundColor: "rgba(22, 89, 76, 0.12)",
+    backgroundColor: ChickIntelPalette.green2,
     paddingHorizontal: moderateScale(8),
     paddingVertical: verticalScale(2),
     borderRadius: 6,
@@ -230,7 +232,7 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(10),
     fontWeight: "700",
-    color: ChickIntelPalette.green1,
+    color: "#FFFFFF",
     letterSpacing: 0.4,
   },
   itemTitleText: {
@@ -242,7 +244,7 @@ const styles = StyleSheet.create({
   itemSubtitleText: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(12),
-    color: "#52615D",
+    color: ChickIntelPalette.textMuted,
     lineHeight: 16,
   },
   messageText: {
@@ -262,9 +264,9 @@ const styles = StyleSheet.create({
     paddingVertical: verticalScale(10),
     paddingHorizontal: moderateScale(16),
     borderRadius: 10,
-    backgroundColor: "#F0F2F2",
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.15)",
+    borderColor: ChickIntelPalette.mediumGreen,
   },
   modalCancelText: {
     fontFamily: ChickFont.sans,

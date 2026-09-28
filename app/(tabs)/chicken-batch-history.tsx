@@ -1,4 +1,3 @@
-import BackgroundGradient from "@/assets_imported/background-gradient.svg";
 import { BlurCard } from "@/components/ui/blur-card";
 import { ChickFont } from "@/constants/chick-fonts";
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
@@ -64,12 +63,6 @@ export default function ChickenBatchHistoryScreen() {
 
   return (
     <View style={styles.screen}>
-      <BackgroundGradient
-        width="110%"
-        height="110%"
-        preserveAspectRatio="xMidYMid slice"
-        style={StyleSheet.absoluteFill}
-      />
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
         <View style={styles.header}>
           <Pressable
@@ -83,9 +76,10 @@ export default function ChickenBatchHistoryScreen() {
             accessibilityRole="button"
             accessibilityLabel="Back to chicken batches"
           >
-            <MaterialCommunityIcons name="arrow-left" size={22} color="#FFF" />
+            <MaterialCommunityIcons name="arrow-left" size={24} color={ChickIntelPalette.gray1} />
           </Pressable>
           <Text style={styles.title}>Chicken Batch History</Text>
+          <View style={{ width: 38 }} />
         </View>
         <ScrollView
           style={styles.scroll}
@@ -106,7 +100,7 @@ export default function ChickenBatchHistoryScreen() {
               key={item.historyId}
               style={styles.card}
               borderRadius={16}
-              intensity={20}
+              intensity={0}
             >
               <View style={styles.cardHeader}>
                 <View style={styles.batchBadge}>
@@ -147,7 +141,7 @@ export default function ChickenBatchHistoryScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: ChickIntelPalette.light1 },
+  screen: { flex: 1, backgroundColor: ChickIntelPalette.canvas },
   safeArea: { flex: 1 },
   header: {
     flexDirection: "row",
@@ -158,10 +152,10 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   headerButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
-    backgroundColor: ChickIntelPalette.green1,
+    width: 38,
+    height: 38,
+    backgroundColor: "transparent",
+    borderWidth: 0,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -174,8 +168,18 @@ const styles = StyleSheet.create({
     color: ChickIntelPalette.gray1,
   },
   scroll: { flex: 1 },
-  content: { padding: 20, gap: 10, paddingBottom: 30 },
-  card: { padding: 16, backgroundColor: "rgba(255,255,255,0.94)" },
+  content: { padding: 20, gap: 12, paddingBottom: 30 },
+  card: {
+    padding: 16,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: ChickIntelPalette.mediumGreen,
+    shadowColor: "#000",
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
   cardHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -186,7 +190,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    backgroundColor: "rgba(49,118,103,0.12)",
+    backgroundColor: ChickIntelPalette.lightGreen,
     paddingHorizontal: 8,
     paddingVertical: 5,
     borderRadius: 8,
@@ -201,7 +205,7 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: "right",
     fontFamily: ChickFont.sans,
-    fontSize: 10,
+    fontSize: 11,
     color: ChickIntelPalette.textMuted,
   },
   breed: {
@@ -214,16 +218,19 @@ const styles = StyleSheet.create({
   meta: {
     marginTop: 2,
     fontFamily: ChickFont.sans,
-    fontSize: 11,
+    fontSize: 12,
     color: ChickIntelPalette.textMuted,
   },
-  metrics: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 12 },
+  metrics: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 12 },
   metric: {
     fontFamily: ChickFont.sans,
-    fontSize: 11,
+    fontSize: 12,
+    fontWeight: "600",
     color: ChickIntelPalette.gray1,
-    backgroundColor: "rgba(244,248,247,0.8)",
-    paddingHorizontal: 8,
+    backgroundColor: ChickIntelPalette.lightGreen,
+    borderWidth: 1,
+    borderColor: ChickIntelPalette.mediumGreen,
+    paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,
   },

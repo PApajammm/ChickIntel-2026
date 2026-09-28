@@ -1,4 +1,3 @@
-import BackgroundGradient from "@/assets_imported/background-gradient.svg";
 import { BlurCard } from "@/components/ui/blur-card";
 import { ChickDatePickerModal } from "@/components/ui/chick-date-picker-modal";
 import { ChickFont } from "@/constants/chick-fonts";
@@ -834,15 +833,6 @@ export default function EggFertilityReportScreen() {
 
   return (
     <View style={styles.screen}>
-      <BackgroundGradient
-        width="110%"
-        height="110%"
-        preserveAspectRatio="xMidYMid slice"
-        style={[
-          StyleSheet.absoluteFill,
-          { transform: [{ scale: 1.08 }, { translateY: -14 }] },
-        ]}
-      />
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
         {/* Pinned Top Header & Controls */}
         <View style={styles.fixedHeader}>
@@ -862,8 +852,8 @@ export default function EggFertilityReportScreen() {
             >
               <MaterialCommunityIcons
                 name="arrow-left"
-                size={22}
-                color="#FFF"
+                size={24}
+                color={ChickIntelPalette.gray1}
               />
             </TouchableOpacity>
             <View style={styles.headerCopy}>
@@ -881,8 +871,8 @@ export default function EggFertilityReportScreen() {
             >
               <MaterialCommunityIcons
                 name="printer-outline"
-                size={22}
-                color="#FFF"
+                size={24}
+                color={ChickIntelPalette.gray1}
               />
             </TouchableOpacity>
           </View>
@@ -1037,16 +1027,12 @@ export default function EggFertilityReportScreen() {
 
           {/* Donut & Breakdown Card */}
           <BlurCard
-            style={[styles.glassCard, isDark && styles.glassCardDark]}
+            style={styles.glassCard}
             borderRadius={20}
-            intensity={18}
-            transparent
+            intensity={0}
           >
             <View
-              style={[
-                styles.cardSurface,
-                { backgroundColor: "transparent", borderColor: glassBorder },
-              ]}
+              style={styles.cardSurface}
             >
               <View style={styles.cardHeaderRow}>
                 <View style={styles.cardIconBadge}>
@@ -1283,48 +1269,38 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   backButton: {
-    width: scale(42),
-    height: verticalScale(42),
-    borderRadius: 14,
-    backgroundColor: ChickIntelPalette.green1,
+    width: scale(38),
+    height: verticalScale(38),
+    backgroundColor: "transparent",
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.25)",
-    shadowColor: "#317667",
-    shadowOpacity: 0.22,
-    shadowRadius: 10,
-    shadowOffset: { width: scale(0), height: verticalScale(4) },
-    elevation: 4,
+    borderWidth: 0,
+    elevation: 0,
+    shadowOpacity: 0,
     flexShrink: 0,
   },
   printButton: {
-    width: scale(42),
-    height: verticalScale(42),
-    borderRadius: 14,
-    backgroundColor: ChickIntelPalette.green1,
+    width: scale(38),
+    height: verticalScale(38),
+    backgroundColor: "transparent",
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.25)",
-    shadowColor: "#317667",
-    shadowOpacity: 0.22,
-    shadowRadius: 10,
-    shadowOffset: { width: scale(0), height: verticalScale(4) },
-    elevation: 4,
+    borderWidth: 0,
+    elevation: 0,
+    shadowOpacity: 0,
   },
   scopeDropdown: {
-    borderRadius: 16,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.16)",
-    backgroundColor: "rgba(255, 255, 255, 0.85)",
+    borderColor: ChickIntelPalette.mediumGreen,
+    backgroundColor: "#FFFFFF",
     paddingHorizontal: moderateScale(14),
     paddingVertical: verticalScale(10),
     gap: 6,
-    shadowColor: "#317667",
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
+    shadowColor: "#000",
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
     elevation: 2,
   },
   scopeDropdownLabel: {
@@ -1359,18 +1335,18 @@ const styles = StyleSheet.create({
     height: verticalScale(14),
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(51, 51, 51, 0.12)",
+    borderColor: ChickIntelPalette.mediumGreen,
   },
   periodBarContainer: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "rgba(255, 255, 255, 0.85)",
+    backgroundColor: "#FFFFFF",
     borderRadius: 14,
     paddingHorizontal: moderateScale(12),
     paddingVertical: verticalScale(8),
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.16)",
+    borderColor: ChickIntelPalette.mediumGreen,
     gap: 8,
   },
   periodLabel: {
@@ -1383,7 +1359,7 @@ const styles = StyleSheet.create({
   },
   periodSegmented: {
     flexDirection: "row",
-    backgroundColor: "rgba(49, 118, 103, 0.08)",
+    backgroundColor: ChickIntelPalette.lightGreen,
     borderRadius: 10,
     padding: 3,
     gap: 3,
@@ -1402,7 +1378,7 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(11),
     fontWeight: "600",
-    color: ChickIntelPalette.gray1,
+    color: ChickIntelPalette.textMuted,
   },
   periodTextActive: {
     color: "#FFFFFF",
@@ -1413,9 +1389,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
     borderRadius: 12,
-    backgroundColor: "rgba(255, 255, 255, 0.85)",
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.16)",
+    borderColor: ChickIntelPalette.mediumGreen,
     paddingHorizontal: moderateScale(12),
     paddingVertical: verticalScale(8),
   },
@@ -1451,16 +1427,22 @@ const styles = StyleSheet.create({
   },
   kpiCard: {
     flex: 1,
-    backgroundColor: "rgba(255, 255, 255, 0.88)",
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: ChickIntelPalette.mediumGreen,
     borderRadius: 16,
     padding: moderateScale(12),
     gap: 2,
+    shadowColor: "#000",
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 1,
   },
   kpiIconWrap: {
     width: scale(28),
     height: verticalScale(28),
     borderRadius: 8,
-    backgroundColor: "rgba(49, 118, 103, 0.12)",
+    backgroundColor: ChickIntelPalette.lightGreen,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 4,
@@ -1489,10 +1471,16 @@ const styles = StyleSheet.create({
   glassCard: {
     overflow: "hidden",
     borderRadius: 20,
-    backgroundColor: "rgba(255, 255, 255, 0.86)",
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: ChickIntelPalette.mediumGreen,
+    shadowColor: "#000",
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
   },
   glassCardDark: {
-    backgroundColor: "rgba(255, 255, 255, 0.18)",
+    backgroundColor: "#FFFFFF",
   },
   cardSurface: {
     borderRadius: ReportsPageTheme.cardInnerRadius,
@@ -1509,7 +1497,7 @@ const styles = StyleSheet.create({
     width: scale(34),
     height: verticalScale(34),
     borderRadius: 10,
-    backgroundColor: "rgba(49, 118, 103, 0.12)",
+    backgroundColor: ChickIntelPalette.lightGreen,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1524,9 +1512,9 @@ const styles = StyleSheet.create({
     paddingVertical: verticalScale(14),
     paddingHorizontal: moderateScale(14),
     borderRadius: 16,
-    backgroundColor: "rgba(244, 248, 247, 0.72)",
+    backgroundColor: ChickIntelPalette.lightGreen,
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.1)",
+    borderColor: ChickIntelPalette.mediumGreen,
   },
   donutContainer: {
     width: "100%",
@@ -1607,11 +1595,11 @@ const styles = StyleSheet.create({
 
   // Smart Insights Card
   insightCard: {
-    backgroundColor: "rgba(49, 118, 103, 0.07)",
+    backgroundColor: ChickIntelPalette.lightGreen,
     borderRadius: 14,
     padding: moderateScale(12),
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.14)",
+    borderColor: ChickIntelPalette.mediumGreen,
     gap: 6,
   },
   insightHeaderRow: {
@@ -1623,7 +1611,7 @@ const styles = StyleSheet.create({
     width: scale(22),
     height: verticalScale(22),
     borderRadius: 6,
-    backgroundColor: "rgba(49, 118, 103, 0.14)",
+    backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1648,11 +1636,11 @@ const styles = StyleSheet.create({
     padding: moderateScale(20),
   },
   scopeModalCard: {
-    backgroundColor: "#F8FCFA",
+    backgroundColor: "#FFFFFF",
     borderRadius: 18,
     padding: moderateScale(14),
     borderWidth: 1,
-    borderColor: "rgba(67, 139, 123, 0.18)",
+    borderColor: ChickIntelPalette.mediumGreen,
     shadowColor: "#000",
     shadowOpacity: 0.14,
     shadowRadius: 18,
@@ -1675,7 +1663,7 @@ const styles = StyleSheet.create({
     width: scale(34),
     height: verticalScale(34),
     borderRadius: 10,
-    backgroundColor: "rgba(49, 118, 103, 0.12)",
+    backgroundColor: ChickIntelPalette.lightGreen,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1687,7 +1675,7 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(12),
     lineHeight: 17,
-    color: "#526660",
+    color: ChickIntelPalette.textMuted,
   },
   scopeModalList: {
     maxHeight: 360,
@@ -1701,12 +1689,12 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: "transparent",
-    backgroundColor: "rgba(255,255,255,0.54)",
-    marginBottom: 4,
+    backgroundColor: ChickIntelPalette.lightGreen,
+    marginBottom: 6,
   },
   scopeOptionRowSelected: {
-    backgroundColor: "rgba(202, 227, 221, 0.82)",
-    borderColor: "rgba(49,118,103,0.18)",
+    backgroundColor: ChickIntelPalette.lightGreen,
+    borderColor: ChickIntelPalette.green1,
   },
   scopeOptionText: {
     fontFamily: ChickFont.sans,
@@ -1722,7 +1710,7 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(12),
     lineHeight: 16,
-    color: "#526660",
+    color: ChickIntelPalette.textMuted,
   },
   scopeOptionTextSelected: {
     color: ChickIntelPalette.green1,
@@ -1733,7 +1721,7 @@ const styles = StyleSheet.create({
     height: verticalScale(14),
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(51, 51, 51, 0.08)",
+    borderColor: ChickIntelPalette.mediumGreen,
   },
   scopeOptionContent: {
     flex: 1,
@@ -1745,7 +1733,7 @@ const styles = StyleSheet.create({
     width: scale(28),
     height: verticalScale(28),
     borderRadius: 8,
-    backgroundColor: "rgba(49, 118, 103, 0.1)",
+    backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
   },
