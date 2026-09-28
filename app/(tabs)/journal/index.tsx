@@ -24,8 +24,6 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import BackgroundGradient from "@/assets_imported/background-gradient.svg";
-
 import { JournalHeader } from "@/components/journal/journal-header";
 import { JournalLogCard } from "@/components/journal/journal-log-card";
 import { DeleteConfirmationModal } from "@/components/ui/delete-confirmation-modal";
@@ -228,15 +226,6 @@ export default function JournalIndexScreen() {
 
   return (
     <View style={styles.screen}>
-      <BackgroundGradient
-        width="110%"
-        height="110%"
-        preserveAspectRatio="xMidYMid slice"
-        style={[
-          StyleSheet.absoluteFill,
-          { transform: [{ scale: 1.08 }, { translateY: -14 }] },
-        ]}
-      />
       <View
         style={[
           styles.safeContent,
@@ -358,7 +347,7 @@ export default function JournalIndexScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: ChickIntelPalette.light1,
+    backgroundColor: ChickIntelPalette.canvas,
   },
   safeContent: {
     flex: 1,
@@ -374,9 +363,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: moderateScale(12),
     paddingVertical: verticalScale(7),
     borderRadius: 999,
-    backgroundColor: "rgba(202, 227, 221, 0.42)",
+    backgroundColor: ChickIntelPalette.lightGreen,
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.18)",
+    borderColor: ChickIntelPalette.gray2,
   },
   filterPillActive: {
     backgroundColor: ChickIntelPalette.green1,
@@ -411,7 +400,7 @@ const styles = StyleSheet.create({
   },
   deleteBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(51,51,51,0.38)",
+    backgroundColor: "rgba(31, 46, 43, 0.45)",
     alignItems: "center",
     justifyContent: "center",
     padding: moderateScale(24),
@@ -419,16 +408,16 @@ const styles = StyleSheet.create({
   deleteCard: {
     width: "100%",
     maxWidth: scale(340),
-    borderRadius: 5,
-    padding: moderateScale(14),
-    backgroundColor: ChickIntelPalette.light1,
+    borderRadius: 16,
+    padding: moderateScale(16),
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "rgba(49,118,103,0.18)",
+    borderColor: ChickIntelPalette.gray2,
     shadowColor: "#000",
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.08,
     shadowRadius: 16,
     shadowOffset: { width: scale(0), height: verticalScale(8) },
-    elevation: 8,
+    elevation: 6,
   },
   deleteIconWrap: {
     width: scale(48),
@@ -488,6 +477,6 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(14),
     fontWeight: "600",
-    color: ChickIntelPalette.light1,
+    color: "#FFFFFF",
   },
 });

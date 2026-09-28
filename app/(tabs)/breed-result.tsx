@@ -172,15 +172,6 @@ export default function BreedResultScreen() {
 
   return (
     <View style={styles.screen}>
-      <BackgroundGradient
-        width="110%"
-        height="110%"
-        preserveAspectRatio="xMidYMid slice"
-        style={[
-          StyleSheet.absoluteFill,
-          { transform: [{ scale: 1.08 }, { translateY: -14 }] },
-        ]}
-      />
       <StatusBar style="dark" />
       <View style={[styles.fixedHeader, { paddingTop: insets.top + 10 }]}>
         <View style={styles.headerRow}>
@@ -191,7 +182,11 @@ export default function BreedResultScreen() {
             accessibilityRole="button"
             accessibilityLabel="Go back"
           >
-            <MaterialCommunityIcons name="arrow-left" size={22} color="#FFF" />
+            <MaterialCommunityIcons
+              name="arrow-left"
+              size={24}
+              color={ChickIntelPalette.gray1}
+            />
           </TouchableOpacity>
           <View style={styles.headerSpacer} />
           <View style={styles.headerRightPlaceholder} />
@@ -379,7 +374,7 @@ export default function BreedResultScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: ChickIntelPalette.light1,
+    backgroundColor: ChickIntelPalette.canvas,
   },
   scroll: {
     paddingHorizontal: moderateScale(16),
@@ -397,30 +392,21 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   headerRightPlaceholder: {
-    width: scale(42),
+    width: scale(40),
   },
   headerSpacer: {
     flex: 1,
   },
   backButton: {
-    width: scale(42),
-    height: verticalScale(42),
-    borderRadius: 14,
-    backgroundColor: ChickIntelPalette.green1,
+    width: scale(40),
+    height: verticalScale(40),
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.25)",
-    shadowColor: "#317667",
-    shadowOpacity: 0.22,
-    shadowRadius: 10,
-    shadowOffset: { width: scale(0), height: verticalScale(4) },
-    elevation: 4,
-    flexShrink: 0,
+    backgroundColor: "transparent",
   },
   titleCard: {
     marginTop: verticalScale(0),
-    borderRadius: 10,
+    borderRadius: 12,
     paddingHorizontal: moderateScale(16),
     paddingVertical: verticalScale(14),
     backgroundColor: ChickIntelPalette.green1,
@@ -454,9 +440,9 @@ const styles = StyleSheet.create({
     gap: 4,
     borderRadius: 8,
     paddingHorizontal: moderateScale(6),
-    backgroundColor: "rgba(254, 254, 254, 0.9)",
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.16)",
+    borderColor: ChickIntelPalette.gray2,
   },
   summaryChipText: {
     flexShrink: 1,
@@ -466,11 +452,16 @@ const styles = StyleSheet.create({
     color: ChickIntelPalette.gray1,
   },
   resultCard: {
-    borderRadius: 20,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(49,118,103,0.18)",
-    backgroundColor: "rgba(254, 254, 254, 0.78)",
+    borderColor: ChickIntelPalette.gray2,
+    backgroundColor: "#FFFFFF",
     padding: moderateScale(12),
+    shadowColor: "#161E1A",
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   cardInner: {
     paddingHorizontal: moderateScale(18),
@@ -489,8 +480,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: "rgba(67, 139, 123, 0.22)",
-    backgroundColor: "rgba(67, 139, 123, 0.08)",
+    borderColor: ChickIntelPalette.gray2,
+    backgroundColor: ChickIntelPalette.lightGreen,
   },
   image: {
     width: "100%",
@@ -529,9 +520,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: moderateScale(8),
     paddingVertical: verticalScale(4),
     borderRadius: 999,
-    backgroundColor: "rgba(202, 227, 221, 0.76)",
+    backgroundColor: ChickIntelPalette.lightGreen,
     borderWidth: 1,
-    borderColor: "rgba(67, 139, 123, 0.22)",
+    borderColor: ChickIntelPalette.mediumGreen,
   },
   badgeText: {
     fontFamily: ChickFont.sans,
@@ -565,22 +556,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: moderateScale(8),
     paddingVertical: verticalScale(4),
     borderRadius: 999,
-    backgroundColor: "rgba(244, 67, 54, 0.12)",
+    backgroundColor: ChickIntelPalette.lightGreen,
     borderWidth: 1,
-    borderColor: "rgba(244, 67, 54, 0.25)",
+    borderColor: ChickIntelPalette.accent,
   },
   warningBadgeText: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(10),
     fontWeight: "700",
-    color: "#D32F2F",
+    color: ChickIntelPalette.gray1,
   },
   warningTitle: {
     fontFamily: ChickFont.display,
     fontSize: responsiveFontSize(18),
     lineHeight: 22,
     fontWeight: "800",
-    color: "#D32F2F",
+    color: ChickIntelPalette.gray1,
   },
   warningDesc: {
     fontFamily: ChickFont.sans,
@@ -590,7 +581,7 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: verticalScale(1),
-    backgroundColor: "rgba(67, 139, 123, 0.22)",
+    backgroundColor: ChickIntelPalette.lightGreen,
     marginVertical: verticalScale(12),
   },
   sectionTitle: {
@@ -613,7 +604,7 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(11),
     lineHeight: 15,
     marginTop: 6,
-    color: "#5E6665",
+    color: ChickIntelPalette.textMuted,
     textAlign: "center",
   },
   guidanceText: {
@@ -626,15 +617,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 8,
     backgroundColor: ChickIntelPalette.green1,
-    height: verticalScale(52),
-    borderRadius: 14,
+    height: verticalScale(50),
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#317667",
-    shadowOpacity: 0.18,
-    shadowRadius: 10,
-    shadowOffset: { width: scale(0), height: verticalScale(5) },
-    elevation: 3,
   },
   doneBtnText: {
     fontFamily: ChickFont.sans,

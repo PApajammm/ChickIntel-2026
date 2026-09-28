@@ -20,6 +20,7 @@ import {
 
 import ChickenLogo from "@/assets_imported/splash-chicken.svg";
 import { AuthFrame, FarmButton, FarmInput } from "@/components/farm-auth";
+import { ChickIntelPalette } from "@/constants/chickintel-palette";
 import { useAuth } from "@/providers/auth-provider";
 import { logStep } from "@/utils/logger";
 
@@ -92,14 +93,14 @@ export default function LoginScreen() {
                         <TouchableOpacity
                             style={styles.backButton}
                             onPress={() => router.replace("/logoscreen")}
-                            activeOpacity={0.8}
+                            activeOpacity={0.7}
                             accessibilityRole="button"
                             accessibilityLabel="Go back"
                         >
                             <MaterialCommunityIcons
                                 name="arrow-left"
-                                size={22}
-                                color="#FFF"
+                                size={24}
+                                color={ChickIntelPalette.gray1}
                             />
                         </TouchableOpacity>
                         <ChickenLogo
@@ -190,19 +191,10 @@ const styles = StyleSheet.create({
         position: "absolute",
         top: 28,
         left: moderateScale(20),
-        width: scale(42),
-        height: verticalScale(42),
-        borderRadius: 14,
-        backgroundColor: "#317667",
+        width: scale(40),
+        height: verticalScale(40),
         justifyContent: "center",
         alignItems: "center",
-        borderWidth: 1,
-        borderColor: "rgba(49, 118, 103, 0.25)",
-        shadowColor: "#317667",
-        shadowOpacity: 0.22,
-        shadowRadius: 10,
-        shadowOffset: { width: 0, height: 4 },
-        elevation: 4,
         zIndex: 3,
     },
     formStack: {

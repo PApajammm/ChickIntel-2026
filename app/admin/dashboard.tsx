@@ -2453,7 +2453,7 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: "rgba(31, 46, 43, 0.45)",
     justifyContent: "flex-end",
   },
   keyboardModalArea: {

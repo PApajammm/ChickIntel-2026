@@ -1433,15 +1433,6 @@ export default function ReportsScreen() {
 
   return (
     <View style={styles.screen}>
-      <BackgroundGradient
-        width="110%"
-        height="110%"
-        preserveAspectRatio="xMidYMid slice"
-        style={[
-          StyleSheet.absoluteFill,
-          { transform: [{ scale: 1.08 }, { translateY: -14 }] },
-        ]}
-      />
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
         <View style={styles.viewShot}>
           {/* Pinned Top Header */}
@@ -1458,8 +1449,8 @@ export default function ReportsScreen() {
               >
                 <MaterialCommunityIcons
                   name="arrow-left"
-                  size={22}
-                  color="#FFF"
+                  size={24}
+                  color={ChickIntelPalette.gray1}
                 />
               </TouchableOpacity>
               <View style={styles.headerTitleWrap}>
@@ -1479,8 +1470,8 @@ export default function ReportsScreen() {
               >
                 <MaterialCommunityIcons
                   name="printer-outline"
-                  size={22}
-                  color="#FFF"
+                  size={23}
+                  color={ChickIntelPalette.gray1}
                 />
               </TouchableOpacity>
             </View>
@@ -1818,19 +1809,11 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   printButton: {
-    width: scale(42),
-    height: verticalScale(42),
-    borderRadius: 14,
-    backgroundColor: ChickIntelPalette.green1,
+    width: scale(40),
+    height: verticalScale(40),
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.25)",
-    shadowColor: "#317667",
-    shadowOpacity: 0.22,
-    shadowRadius: 10,
-    shadowOffset: { width: scale(0), height: verticalScale(4) },
-    elevation: 4,
+    backgroundColor: "transparent",
   },
   timeframeBarContainer: {
     flexDirection: "row",

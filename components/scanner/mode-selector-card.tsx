@@ -112,9 +112,9 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     padding: moderateScale(3),
     gap: 6,
-    backgroundColor: "rgba(202, 227, 221, 0.42)",
+    backgroundColor: "rgba(237, 242, 238, 0.85)",
     borderWidth: 1,
-    borderColor: "rgba(67, 139, 123, 0.28)",
+    borderColor: "rgba(210, 219, 212, 0.6)",
   },
   toggleBtn: {
     flex: 1,
@@ -133,9 +133,9 @@ const styles = StyleSheet.create({
     borderColor: ChickIntelPalette.green1,
   },
   toggleInactive: {
-    backgroundColor: "rgba(254, 254, 254, 0.56)",
+    backgroundColor: "rgba(255, 255, 255, 0.7)",
     borderWidth: 1,
-    borderColor: "rgba(202, 227, 221, 0.34)",
+    borderColor: "rgba(210, 219, 212, 0.4)",
   },
   toggleCopy: {
     alignItems: "flex-start",
@@ -145,13 +145,13 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(13),
     fontWeight: "700",
-    color: ChickIntelPalette.light1,
+    color: "#FFFFFF",
   },
   toggleLabelInactive: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(13),
     fontWeight: "700",
-    color: ChickIntelPalette.textMuted,
+    color: ChickIntelPalette.gray1,
   },
   toggleHint: {
     fontFamily: ChickFont.sans,
@@ -159,6 +159,6 @@ const styles = StyleSheet.create({
     lineHeight: 11,
     fontWeight: "600",
     color: ChickIntelPalette.textMuted,
-    opacity: 0.7,
+    opacity: 0.8,
   },
 });

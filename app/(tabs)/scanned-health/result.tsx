@@ -24,7 +24,6 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import BackgroundGradient from "@/assets_imported/background-gradient.svg";
 import { HealthFlowFooterButton } from "@/components/health-scan/health-flow-footer-button";
 import { HealthInputSummaryCard } from "@/components/health-scan/health-input-summary-card";
 import { HealthResultCard } from "@/components/health-scan/health-result-card";
@@ -558,15 +557,6 @@ export default function ScannedHealthResultScreen() {
 
   return (
     <View style={styles.screen}>
-      <BackgroundGradient
-        width="110%"
-        height="110%"
-        preserveAspectRatio="xMidYMid slice"
-        style={[
-          StyleSheet.absoluteFill,
-          { transform: [{ scale: 1.08 }, { translateY: -14 }] },
-        ]}
-      />
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
         <StatusBar style="dark" />
 
@@ -594,7 +584,7 @@ export default function ScannedHealthResultScreen() {
               <MaterialCommunityIcons
                 name="arrow-left"
                 size={22}
-                color="#FFF"
+                color={ChickIntelPalette.gray1}
               />
             </TouchableOpacity>
             <Text style={styles.pageTitle} numberOfLines={1}>
@@ -974,7 +964,7 @@ export default function ScannedHealthResultScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: ChickIntelPalette.light1,
+    backgroundColor: ChickIntelPalette.canvas,
   },
   safeArea: {
     flex: 1,
@@ -1008,28 +998,21 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   headerRightPlaceholder: {
-    width: scale(42),
+    width: scale(38),
   },
   pageSubtitle: {
     ...HealthTypography.meta,
     textAlign: "center",
     marginBottom: 12,
-    color: ChickIntelPalette.green1,
+    color: ChickIntelPalette.textMuted,
   },
   backButton: {
-    width: scale(42),
-    height: verticalScale(42),
-    borderRadius: 14,
-    backgroundColor: ChickIntelPalette.green1,
+    width: scale(38),
+    height: verticalScale(38),
+    borderRadius: 12,
+    backgroundColor: "transparent",
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.25)",
-    shadowColor: "#317667",
-    shadowOpacity: 0.22,
-    shadowRadius: 10,
-    shadowOffset: { width: scale(0), height: verticalScale(4) },
-    elevation: 4,
     flexShrink: 0,
   },
   cardSpacer: {
@@ -1037,7 +1020,7 @@ const styles = StyleSheet.create({
   },
   modalBg: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.45)",
+    backgroundColor: "rgba(31, 46, 43, 0.45)",
     justifyContent: "center",
     alignItems: "center",
     padding: moderateScale(20),
@@ -1045,14 +1028,16 @@ const styles = StyleSheet.create({
   modalCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: 20,
+    borderWidth: 1,
+    borderColor: ChickIntelPalette.gray2,
     width: "100%",
     maxWidth: scale(420),
     overflow: "hidden",
     shadowColor: "#000",
-    shadowOpacity: 0.18,
+    shadowOpacity: 0.08,
     shadowRadius: 16,
     shadowOffset: { width: scale(0), height: verticalScale(6) },
-    elevation: 8,
+    elevation: 6,
   },
   updateModalCard: {
     padding: moderateScale(16),
@@ -1063,7 +1048,7 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingBottom: verticalScale(12),
     borderBottomWidth: 1,
-    borderBottomColor: "#E6EEEC",
+    borderBottomColor: ChickIntelPalette.gray2,
   },
   updateModalIconBadge: {
     width: scale(48),
@@ -1071,9 +1056,9 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#E5F3EE",
+    backgroundColor: ChickIntelPalette.lightGreen,
     borderWidth: 1,
-    borderColor: "#C5E4DA",
+    borderColor: ChickIntelPalette.gray2,
   },
   updateModalHeaderText: {
     flex: 1,
@@ -1102,7 +1087,7 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(14),
     lineHeight: 20,
-    color: "#4F5D5A",
+    color: ChickIntelPalette.gray1,
   },
   updateModalHistoryRow: {
     flexDirection: "row",
@@ -1110,7 +1095,7 @@ const styles = StyleSheet.create({
     gap: 8,
     padding: moderateScale(9),
     borderRadius: 10,
-    backgroundColor: "#F2F8F6",
+    backgroundColor: ChickIntelPalette.lightGreen,
   },
   updateModalHistoryText: {
     flex: 1,
@@ -1183,7 +1168,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     textAlign: "center",
     marginBottom: 16,
-    color: "#5A6262",
+    color: ChickIntelPalette.textMuted,
   },
   chtFieldWrap: {
     width: "100%",
@@ -1197,8 +1182,8 @@ const styles = StyleSheet.create({
   chtInputCard: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.22)",
-    backgroundColor: "#F9FAFA",
+    borderColor: ChickIntelPalette.gray2,
+    backgroundColor: ChickIntelPalette.lightGreen,
     paddingHorizontal: moderateScale(14),
     paddingVertical: verticalScale(10),
     gap: 4,
@@ -1207,7 +1192,7 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(10),
     fontWeight: "700",
-    color: "#5A6262",
+    color: ChickIntelPalette.textMuted,
     letterSpacing: 0.3,
   },
   chtRow: {
@@ -1315,9 +1300,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: moderateScale(16),
     paddingVertical: verticalScale(14),
     borderRadius: 16,
-    backgroundColor: "rgba(255, 255, 255, 0.88)",
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.22)",
+    borderColor: ChickIntelPalette.gray2,
     marginBottom: 12,
   },
   analysisLoadingTextWrap: {
@@ -1332,7 +1317,7 @@ const styles = StyleSheet.create({
   analysisLoadingSub: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(12),
-    color: "#5E6665",
+    color: ChickIntelPalette.textMuted,
     marginTop: 2,
   },
   guestModeNote: {

@@ -329,7 +329,7 @@ export default function HealthMonitoringIndexScreen() {
                   color={ChickIntelPalette.green1}
                 />
                 <Text style={styles.recoveredButtonText}>
-                  Mark as Recovered
+                  Recovered
                 </Text>
               </Pressable>
               <Pressable
@@ -345,7 +345,7 @@ export default function HealthMonitoringIndexScreen() {
                   size={15}
                   color="#923737"
                 />
-                <Text style={styles.deceasedButtonText}>Mark as Deceased</Text>
+                <Text style={styles.deceasedButtonText}>Deceased</Text>
               </Pressable>
             </View>
           ) : null}
@@ -362,15 +362,6 @@ export default function HealthMonitoringIndexScreen() {
 
   return (
     <View style={styles.screen}>
-      <BackgroundGradient
-        width="110%"
-        height="110%"
-        preserveAspectRatio="xMidYMid slice"
-        style={[
-          StyleSheet.absoluteFill,
-          { transform: [{ scale: 1.08 }, { translateY: -14 }] },
-        ]}
-      />
       <View
         style={[
           styles.safeContent,
@@ -390,8 +381,8 @@ export default function HealthMonitoringIndexScreen() {
           >
             <MaterialCommunityIcons
               name="arrow-left"
-              size={22}
-              color="#FFF"
+              size={24}
+              color={ChickIntelPalette.gray1}
             />
           </TouchableOpacity>
           <Text style={styles.pageTitle} numberOfLines={1}>Health Monitoring</Text>
@@ -520,7 +511,7 @@ export default function HealthMonitoringIndexScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: ChickIntelPalette.light1,
+    backgroundColor: ChickIntelPalette.canvas,
   },
   safeContent: {
     flex: 1,
@@ -544,23 +535,14 @@ const styles = StyleSheet.create({
     color: ChickIntelPalette.gray1,
   },
   headerRightPlaceholder: {
-    width: scale(42),
+    width: scale(40),
   },
   backButton: {
-    width: scale(42),
-    height: verticalScale(42),
-    borderRadius: 14,
-    backgroundColor: ChickIntelPalette.green1,
+    width: scale(40),
+    height: verticalScale(40),
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.25)",
-    shadowColor: "#317667",
-    shadowOpacity: 0.22,
-    shadowRadius: 10,
-    shadowOffset: { width: scale(0), height: verticalScale(4) },
-    elevation: 4,
-    flexShrink: 0,
+    backgroundColor: "transparent",
   },
   tabs: {
     flexDirection: "row",

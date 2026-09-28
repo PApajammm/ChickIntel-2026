@@ -65,8 +65,8 @@ export function ChickTabBar({ onLogoutPress, ..._rest }: ChickTabBarProps) {
       style={[
         styles.wrap,
         {
-          backgroundColor: ChickIntelPalette.light1,
-          borderTopColor: ChickIntelPalette.mediumGreen,
+          backgroundColor: "#FFFFFF",
+          borderTopColor: ChickIntelPalette.gray2,
           paddingBottom:
             Platform.OS === "android" ? 6 : Math.max(insets.bottom, 6),
         },

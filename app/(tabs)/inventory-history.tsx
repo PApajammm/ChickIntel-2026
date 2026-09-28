@@ -59,12 +59,6 @@ export default function InventoryHistoryScreen() {
   );
   return (
     <View style={styles.screen}>
-      <BackgroundGradient
-        width="110%"
-        height="110%"
-        preserveAspectRatio="xMidYMid slice"
-        style={StyleSheet.absoluteFill}
-      />
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
         <View style={styles.header}>
           <Pressable
@@ -73,9 +67,14 @@ export default function InventoryHistoryScreen() {
             accessibilityRole="button"
             accessibilityLabel="Back to inventory"
           >
-            <MaterialCommunityIcons name="arrow-left" size={22} color="#FFF" />
+            <MaterialCommunityIcons
+              name="arrow-left"
+              size={24}
+              color={ChickIntelPalette.gray1}
+            />
           </Pressable>
           <Text style={styles.title}>Inventory History</Text>
+          <View style={{ width: 40 }} />
         </View>
         <ScrollView
           style={styles.scroll}
@@ -134,7 +133,7 @@ export default function InventoryHistoryScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: ChickIntelPalette.light1 },
+  screen: { flex: 1, backgroundColor: ChickIntelPalette.canvas },
   safeArea: { flex: 1 },
   scroll: { flex: 1 },
   header: {
@@ -146,12 +145,11 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   headerButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
-    backgroundColor: ChickIntelPalette.green1,
+    width: 40,
+    height: 40,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: "transparent",
   },
   title: {
     flex: 1,
@@ -162,7 +160,18 @@ const styles = StyleSheet.create({
     color: ChickIntelPalette.gray1,
   },
   content: { padding: 20, gap: 10, paddingBottom: 30 },
-  card: { padding: 16, backgroundColor: "rgba(255,255,255,0.94)" },
+  card: {
+    padding: 16,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: ChickIntelPalette.gray2,
+    shadowColor: "#161E1A",
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
   row: {
     flexDirection: "row",
     alignItems: "center",
@@ -173,13 +182,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    backgroundColor: "rgba(49,118,103,0.12)",
+    backgroundColor: ChickIntelPalette.lightGreen,
     paddingHorizontal: 8,
     paddingVertical: 5,
     borderRadius: 8,
+    borderWidth: 1,
+    borderColor: ChickIntelPalette.mediumGreen,
   },
   badgeText: {
-    fontFamily: ChickFont.display,
+    fontFamily: ChickFont.sans,
     fontSize: 11,
     fontWeight: "800",
     color: ChickIntelPalette.green1,
@@ -209,7 +220,7 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: 11,
     color: ChickIntelPalette.gray1,
-    backgroundColor: "rgba(244,248,247,0.8)",
+    backgroundColor: ChickIntelPalette.lightGreen,
     paddingHorizontal: 8,
     paddingVertical: 6,
     borderRadius: 8,

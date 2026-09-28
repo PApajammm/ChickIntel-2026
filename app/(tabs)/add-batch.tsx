@@ -80,6 +80,7 @@ const DEFAULT_BREED_OPTIONS = [
 const COLOR_OPTIONS = [
   // Reds & Pinks
   { name: "Red", hex: "#D84A49" },
+  { name: "Light Pink", hex: "#F8BBD0" },
 
   // Oranges & Yellows
   { name: "Orange", hex: "#E67E22" },
@@ -94,7 +95,6 @@ const COLOR_OPTIONS = [
   // Browns, Greys & Monochromes
   { name: "Grey", hex: "#808080" },
   { name: "Black", hex: "#323330" },
-  { name: "White", hex: "#F4F5F2" },
 ];
 
 type BatchMode = "chicken" | "egg";
@@ -1532,11 +1532,11 @@ export default function AddBatchScreen() {
                           name="check"
                           size={14}
                           color={
-                            opt.name === "White" ||
+                            opt.name === "Light Pink" ||
                             opt.name === "Lemon" ||
                             opt.name === "Mint" ||
                             opt.name === "Lavender"
-                              ? "#203029"
+                              ? "#1F2E2B"
                               : "#FFFFFF"
                           }
                         />

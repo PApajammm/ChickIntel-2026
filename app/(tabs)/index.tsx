@@ -1299,7 +1299,7 @@ export default function HomeScreen() {
                   <MaterialCommunityIcons
                     name="egg"
                     size={16}
-                    color="#D97706"
+                    color={ChickIntelPalette.accent}
                   />
                   <Text style={styles.specBoxLabel}>Egg Yield</Text>
                   <Text style={styles.specBoxValue} numberOfLines={1}>
@@ -1311,7 +1311,7 @@ export default function HomeScreen() {
                   <MaterialCommunityIcons
                     name="palette-outline"
                     size={16}
-                    color="#8B5CF6"
+                    color={ChickIntelPalette.mediumGreen}
                   />
                   <Text style={styles.specBoxLabel}>Egg Color</Text>
                   <Text style={styles.specBoxValue} numberOfLines={1}>
@@ -1324,7 +1324,7 @@ export default function HomeScreen() {
                   <MaterialCommunityIcons
                     name="weight"
                     size={16}
-                    color="#059669"
+                    color={ChickIntelPalette.green1}
                   />
                   <Text style={styles.specBoxLabel}>Adult Weight</Text>
                   <Text style={styles.specBoxValue} numberOfLines={1}>
@@ -1336,7 +1336,7 @@ export default function HomeScreen() {
                   <MaterialCommunityIcons
                     name="heart-pulse"
                     size={16}
-                    color="#DC2626"
+                    color={ChickIntelPalette.mediumGreen}
                   />
                   <Text style={styles.specBoxLabel}>Temperament</Text>
                   <Text style={styles.specBoxValue} numberOfLines={1}>
@@ -1353,7 +1353,7 @@ export default function HomeScreen() {
                   <MaterialCommunityIcons
                     name="lightbulb-on"
                     size={18}
-                    color="#D97706"
+                    color={ChickIntelPalette.green1}
                   />
                   <Text style={styles.triviaSectionTitle}>Farmer Pro-Tip</Text>
                 </View>
@@ -1368,7 +1368,7 @@ export default function HomeScreen() {
                   <MaterialCommunityIcons
                     name="home-outline"
                     size={18}
-                    color="#2D6A4F"
+                    color={ChickIntelPalette.green1}
                   />
                   <Text style={styles.infoCardTitle}>
                     Housing & Environment
@@ -1386,7 +1386,7 @@ export default function HomeScreen() {
                   <MaterialCommunityIcons
                     name="shield-alert-outline"
                     size={18}
-                    color="#B91C1C"
+                    color={ChickIntelPalette.gray1}
                   />
                   <Text style={styles.healthWatchTitle}>
                     Health Scanner Watch-Out
@@ -1425,7 +1425,7 @@ export default function HomeScreen() {
                   <MaterialCommunityIcons
                     name="clipboard-list-outline"
                     size={18}
-                    color="#2D6A4F"
+                    color={ChickIntelPalette.green1}
                   />
                   <Text style={styles.modalBatchesBtnText}>Batches</Text>
                 </TouchableOpacity>
@@ -2096,11 +2096,11 @@ const styles = StyleSheet.create({
   triviaSection: {
     marginHorizontal: moderateScale(16),
     marginTop: verticalScale(12),
-    backgroundColor: ChickIntelPalette.accentSoft,
+    backgroundColor: ChickIntelPalette.lightGreen,
     borderRadius: 10,
     padding: moderateScale(12),
     borderWidth: 1,
-    borderColor: "rgba(217, 119, 36, 0.25)",
+    borderColor: ChickIntelPalette.mediumGreen,
   },
   triviaHeaderRow: {
     flexDirection: "row",
@@ -2112,12 +2112,12 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.display,
     fontSize: responsiveFontSize(12),
     fontWeight: "700",
-    color: ChickIntelPalette.accent,
+    color: ChickIntelPalette.green1,
   },
   triviaSectionContent: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(11),
-    color: "#6B3B11",
+    color: ChickIntelPalette.gray1,
     lineHeight: 16,
   },
   infoCard: {
@@ -2150,22 +2150,22 @@ const styles = StyleSheet.create({
   healthWatchCard: {
     marginHorizontal: moderateScale(16),
     marginTop: verticalScale(10),
-    backgroundColor: "transparent",
+    backgroundColor: "#FFFFFF",
     borderRadius: 10,
     padding: moderateScale(12),
     borderWidth: 1,
-    borderColor: "#FECACA",
+    borderColor: ChickIntelPalette.gray2,
   },
   healthWatchTitle: {
     fontFamily: ChickFont.display,
     fontSize: responsiveFontSize(12),
     fontWeight: "700",
-    color: "#991B1B",
+    color: ChickIntelPalette.gray1,
   },
   healthWatchBody: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(11),
-    color: "#7F1D1D",
+    color: ChickIntelPalette.textMuted,
     lineHeight: 16,
   },
   modalActionsRow: {

@@ -17,7 +17,6 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import BackgroundGradient from "@/assets_imported/background-gradient.svg";
 import { HealthInputSummaryCard } from "@/components/health-scan/health-input-summary-card";
 import { HealthResultCard } from "@/components/health-scan/health-result-card";
 import { BlurCard } from "@/components/ui/blur-card";
@@ -144,15 +143,6 @@ export default function JournalDetailScreen() {
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top + 8 }]}>
-      <BackgroundGradient
-        width="110%"
-        height="110%"
-        preserveAspectRatio="xMidYMid slice"
-        style={[
-          StyleSheet.absoluteFill,
-          { transform: [{ scale: 1.08 }, { translateY: -14 }] },
-        ]}
-      />
       <StatusBar style="dark" />
       <View style={styles.topBar}>
         <TouchableOpacity
@@ -162,7 +152,11 @@ export default function JournalDetailScreen() {
           accessibilityRole="button"
           accessibilityLabel="Back"
         >
-          <MaterialCommunityIcons name="arrow-left" size={22} color="#FFF" />
+          <MaterialCommunityIcons
+            name="arrow-left"
+            size={22}
+            color={ChickIntelPalette.gray1}
+          />
         </TouchableOpacity>
         <Text style={styles.pageTitle}>Behavior Journal</Text>
         <Text style={styles.savedMeta}>
@@ -290,7 +284,7 @@ export default function JournalDetailScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: ChickIntelPalette.light1,
+    backgroundColor: ChickIntelPalette.canvas,
   },
   topBar: {
     flexDirection: "row",
@@ -301,19 +295,12 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   backBtn: {
-    width: scale(42),
-    height: verticalScale(42),
-    borderRadius: 14,
-    backgroundColor: ChickIntelPalette.green1,
+    width: scale(38),
+    height: verticalScale(38),
+    borderRadius: 12,
+    backgroundColor: "transparent",
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.25)",
-    shadowColor: "#317667",
-    shadowOpacity: 0.22,
-    shadowRadius: 10,
-    shadowOffset: { width: scale(0), height: verticalScale(4) },
-    elevation: 4,
     flexShrink: 0,
   },
   savedMeta: {
@@ -333,17 +320,16 @@ const styles = StyleSheet.create({
     color: ChickIntelPalette.gray1,
     flex: 1,
     textAlign: "center",
-    paddingLeft: 30,
   },
   cardSpacer: {
     height: verticalScale(8),
   },
   observedBehaviorsCard: {
-    borderRadius: 10,
+    borderRadius: 14,
     overflow: "hidden",
-    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.16)",
+    borderColor: ChickIntelPalette.gray2,
     position: "relative",
   },
   observedBehaviorsInner: {
@@ -370,7 +356,7 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   observedCountBadge: {
-    backgroundColor: "rgba(49, 118, 103, 0.12)",
+    backgroundColor: ChickIntelPalette.lightGreen,
     paddingHorizontal: moderateScale(8),
     paddingVertical: verticalScale(2),
     borderRadius: 6,
@@ -391,7 +377,7 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
   },
   behaviorSection: {
-    backgroundColor: "rgba(202, 227, 221, 0.4)",
+    backgroundColor: ChickIntelPalette.lightGreen,
     borderRadius: 12,
     padding: moderateScale(14),
     marginBottom: 12,
@@ -432,7 +418,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: "rgba(49, 118, 103, 0.14)",
+    borderTopColor: ChickIntelPalette.gray2,
   },
   historyTitle: {
     fontFamily: ChickFont.display,
@@ -445,18 +431,18 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(12),
     lineHeight: 16,
-    color: "#5A6161",
+    color: ChickIntelPalette.textMuted,
     marginBottom: 12,
   },
   historyList: {
     gap: 10,
   },
   historyEntryCard: {
-    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    backgroundColor: "#FFFFFF",
     borderRadius: 12,
     padding: moderateScale(12),
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.18)",
+    borderColor: ChickIntelPalette.gray2,
     gap: 4,
   },
   historyEntryHeader: {
@@ -485,6 +471,6 @@ const styles = StyleSheet.create({
   historyEntryValue: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(12),
-    color: "#5A6161",
+    color: ChickIntelPalette.textMuted,
   },
 });

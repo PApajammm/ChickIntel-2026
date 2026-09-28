@@ -321,7 +321,7 @@ export const JournalLogCard = memo(function JournalLogCard({
             >
               <View style={styles.noteIconBadge}>
                 <MaterialCommunityIcons
-                  name="pencil-outline"
+                  name="note-text-outline"
                   size={14}
                   color={ChickIntelPalette.green1}
                 />
@@ -407,7 +407,7 @@ export const JournalLogCard = memo(function JournalLogCard({
               <View style={styles.modalHeaderTitleRow}>
                 <View style={styles.modalHeaderIconBadge}>
                   <MaterialCommunityIcons
-                    name="pencil-outline"
+                    name="note-text-outline"
                     size={20}
                     color="#FFFFFF"
                   />
@@ -468,12 +468,15 @@ const styles = StyleSheet.create({
     paddingRight: moderateScale(16),
     paddingTop: verticalScale(14),
     paddingBottom: verticalScale(12),
-    backgroundColor: "#FFFDF8",
-    borderRadius: 10,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: ChickIntelPalette.gray2,
     overflow: "hidden",
   },
   cardSelected: {
     backgroundColor: "#FFFFFF",
+    borderColor: ChickIntelPalette.green1,
   },
   bodyPress: {
     paddingLeft: moderateScale(2),
@@ -750,7 +753,7 @@ const styles = StyleSheet.create({
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.45)",
+    backgroundColor: "rgba(31, 46, 43, 0.45)",
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: moderateScale(20),

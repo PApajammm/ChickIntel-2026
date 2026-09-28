@@ -1467,12 +1467,6 @@ export default function ScheduleScreen() {
 
   return (
     <View style={styles.screen}>
-      <BackgroundGradient
-        width="100%"
-        height="100%"
-        preserveAspectRatio="xMidYMid slice"
-        style={StyleSheet.absoluteFill}
-      />
       <StatusBar style="dark" />
 
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
@@ -1485,7 +1479,11 @@ export default function ScheduleScreen() {
           accessibilityRole="button"
           accessibilityLabel="Go back"
         >
-          <MaterialCommunityIcons name="arrow-left" size={22} color="#FFF" />
+          <MaterialCommunityIcons
+            name="arrow-left"
+            size={24}
+            color={ChickIntelPalette.gray1}
+          />
         </TouchableOpacity>
         <Text
           style={[styles.headerTitle, { fontSize: responsiveTitleSize }]}
@@ -1500,7 +1498,11 @@ export default function ScheduleScreen() {
           accessibilityRole="button"
           accessibilityLabel="Open schedule history"
         >
-          <MaterialCommunityIcons name="history" size={22} color="#FFF" />
+          <MaterialCommunityIcons
+            name="history"
+            size={23}
+            color={ChickIntelPalette.gray1}
+          />
         </TouchableOpacity>
       </View>
 
@@ -3016,7 +3018,7 @@ const styles = StyleSheet.create({
   },
   screen: {
     flex: 1,
-    backgroundColor: ChickIntelPalette.light1,
+    backgroundColor: ChickIntelPalette.canvas,
   },
   header: {
     flexDirection: "row",
@@ -3037,53 +3039,28 @@ const styles = StyleSheet.create({
     color: ChickIntelPalette.gray1,
   },
   headerRightPlaceholder: {
-    width: scale(42),
+    width: scale(40),
   },
   headerHistoryButton: {
-    width: scale(42),
-    height: verticalScale(42),
-    borderRadius: 14,
-    backgroundColor: ChickIntelPalette.green1,
+    width: scale(40),
+    height: verticalScale(40),
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.25)",
-    shadowColor: "#317667",
-    shadowOpacity: 0.22,
-    shadowRadius: 10,
-    shadowOffset: { width: scale(0), height: verticalScale(4) },
-    elevation: 4,
+    backgroundColor: "transparent",
   },
   backButton: {
-    width: scale(42),
-    height: verticalScale(42),
-    borderRadius: 14,
-    backgroundColor: ChickIntelPalette.green1,
+    width: scale(40),
+    height: verticalScale(40),
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.25)",
-    shadowColor: "#317667",
-    shadowOpacity: 0.22,
-    shadowRadius: 10,
-    shadowOffset: { width: scale(0), height: verticalScale(4) },
-    elevation: 4,
+    backgroundColor: "transparent",
   },
   addButton: {
-    width: scale(42),
-    height: verticalScale(42),
-    borderRadius: 14,
-    backgroundColor: ChickIntelPalette.green1,
+    width: scale(40),
+    height: verticalScale(40),
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.25)",
-    shadowColor: "#317667",
-    shadowOpacity: 0.22,
-    shadowRadius: 10,
-    shadowOffset: { width: scale(0), height: verticalScale(4) },
-    elevation: 4,
-    flexShrink: 0,
+    backgroundColor: "transparent",
   },
   contentShell: {
     width: "100%",

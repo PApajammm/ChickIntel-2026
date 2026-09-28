@@ -1093,15 +1093,6 @@ export default function InventoryScreen() {
 
   return (
     <View style={styles.screen}>
-      <BackgroundGradient
-        width="110%"
-        height="110%"
-        preserveAspectRatio="xMidYMid slice"
-        style={[
-          StyleSheet.absoluteFill,
-          { transform: [{ scale: 1.08 }, { translateY: -14 }] },
-        ]}
-      />
       <StatusBar style="dark" />
       {/* Fixed Top Section: Header, Expired Notification Alert, Category Tabs & Pagination */}
       <View
@@ -1120,7 +1111,11 @@ export default function InventoryScreen() {
             accessibilityRole="button"
             accessibilityLabel="Go back"
           >
-            <MaterialCommunityIcons name="arrow-left" size={22} color="#FFF" />
+            <MaterialCommunityIcons
+              name="arrow-left"
+              size={24}
+              color={ChickIntelPalette.gray1}
+            />
           </TouchableOpacity>
           <Text style={styles.screenTitle} numberOfLines={1}>
             Inventory
@@ -1133,7 +1128,11 @@ export default function InventoryScreen() {
               accessibilityRole="button"
               accessibilityLabel="Open inventory history"
             >
-              <MaterialCommunityIcons name="history" size={22} color="#FFF" />
+              <MaterialCommunityIcons
+                name="history"
+                size={23}
+                color={ChickIntelPalette.gray1}
+              />
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.addButton}
@@ -1148,7 +1147,11 @@ export default function InventoryScreen() {
               accessibilityRole="button"
               accessibilityLabel="Add inventory item"
             >
-              <MaterialCommunityIcons name="plus" size={24} color="#FFF" />
+              <MaterialCommunityIcons
+                name="plus"
+                size={25}
+                color={ChickIntelPalette.gray1}
+              />
             </TouchableOpacity>
           </View>
         </View>
@@ -2085,7 +2088,7 @@ export default function InventoryScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: ChickIntelPalette.light1,
+    backgroundColor: ChickIntelPalette.canvas,
   },
   fixedHeaderArea: {
     width: "100%",
@@ -2254,50 +2257,25 @@ const styles = StyleSheet.create({
     color: ChickIntelPalette.gray1,
   },
   addButton: {
-    width: scale(42),
-    height: verticalScale(42),
-    borderRadius: 14,
-    backgroundColor: ChickIntelPalette.green1,
+    width: scale(40),
+    height: verticalScale(40),
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.25)",
-    shadowColor: "#317667",
-    shadowOpacity: 0.22,
-    shadowRadius: 10,
-    shadowOffset: { width: scale(0), height: verticalScale(4) },
-    elevation: 4,
-    flexShrink: 0,
+    backgroundColor: "transparent",
   },
   headerHistoryButton: {
-    width: scale(42),
-    height: verticalScale(42),
-    borderRadius: 14,
-    backgroundColor: ChickIntelPalette.green1,
+    width: scale(40),
+    height: verticalScale(40),
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.25)",
-    shadowColor: "#317667",
-    shadowOpacity: 0.22,
-    shadowRadius: 10,
-    shadowOffset: { width: scale(0), height: verticalScale(4) },
-    elevation: 4,
+    backgroundColor: "transparent",
   },
   backButton: {
-    width: scale(42),
-    height: verticalScale(42),
-    borderRadius: 14,
-    backgroundColor: ChickIntelPalette.green1,
+    width: scale(40),
+    height: verticalScale(40),
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.25)",
-    shadowColor: "#317667",
-    shadowOpacity: 0.22,
-    shadowRadius: 10,
-    shadowOffset: { width: scale(0), height: verticalScale(4) },
-    elevation: 4,
+    backgroundColor: "transparent",
   },
   content: {
     paddingHorizontal: moderateScale(16),

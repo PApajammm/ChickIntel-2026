@@ -19,8 +19,6 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import BackgroundGradient from "@/assets_imported/background-gradient.svg";
-
 import { JournalLogCard } from "@/components/journal/journal-log-card";
 import { ChickFont } from "@/constants/chick-fonts";
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
@@ -92,15 +90,6 @@ export default function ArchivesScreen() {
 
   return (
     <View style={styles.screen}>
-      <BackgroundGradient
-        width="110%"
-        height="110%"
-        preserveAspectRatio="xMidYMid slice"
-        style={[
-          StyleSheet.absoluteFill,
-          { transform: [{ scale: 1.08 }, { translateY: -14 }] },
-        ]}
-      />
       <View
         style={[
           styles.safeContent,
@@ -116,7 +105,11 @@ export default function ArchivesScreen() {
             accessibilityRole="button"
             accessibilityLabel="Back"
           >
-            <MaterialCommunityIcons name="arrow-left" size={22} color="#FFF" />
+            <MaterialCommunityIcons
+              name="arrow-left"
+              size={22}
+              color={ChickIntelPalette.gray1}
+            />
           </TouchableOpacity>
           <Text style={styles.title} numberOfLines={1}>
             Archives
@@ -219,7 +212,7 @@ export default function ArchivesScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: ChickIntelPalette.light1 },
+  screen: { flex: 1, backgroundColor: ChickIntelPalette.canvas },
   safeContent: { flex: 1 },
   headerRow: {
     flexDirection: "row",
@@ -229,19 +222,12 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   backBtn: {
-    width: scale(42),
-    height: verticalScale(42),
-    borderRadius: 14,
-    backgroundColor: ChickIntelPalette.green1,
+    width: scale(38),
+    height: verticalScale(38),
+    borderRadius: 12,
+    backgroundColor: "transparent",
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.25)",
-    shadowColor: "#317667",
-    shadowOpacity: 0.22,
-    shadowRadius: 10,
-    shadowOffset: { width: scale(0), height: verticalScale(4) },
-    elevation: 4,
     flexShrink: 0,
   },
   title: {
@@ -255,22 +241,15 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   headerRightPlaceholder: {
-    width: scale(42),
+    width: scale(38),
   },
   clearHeaderBtn: {
-    width: scale(42),
-    height: verticalScale(42),
-    borderRadius: 14,
-    backgroundColor: "#DC2626",
+    width: scale(38),
+    height: verticalScale(38),
+    borderRadius: 12,
+    backgroundColor: "transparent",
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(220, 38, 38, 0.35)",
-    shadowColor: "#DC2626",
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    shadowOffset: { width: scale(0), height: verticalScale(4) },
-    elevation: 4,
     flexShrink: 0,
   },
   sep: { height: verticalScale(10) },
@@ -293,9 +272,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: moderateScale(12),
     paddingVertical: verticalScale(7),
     borderRadius: 999,
-    backgroundColor: "rgba(202, 227, 221, 0.42)",
+    backgroundColor: ChickIntelPalette.lightGreen,
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.18)",
+    borderColor: ChickIntelPalette.gray2,
   },
   filterPillActive: {
     backgroundColor: ChickIntelPalette.green1,
