@@ -28,13 +28,11 @@ export default function LogoScreen() {
         <View style={styles.buttonStack}>
           <FarmButton
             title="Log in"
-            icon="account-outline"
             onPress={() => router.push("/loginscreen")}
             style={styles.button}
           />
           <FarmButton
             title="Guest Mode"
-            icon="camera-outline"
             variant="secondary"
             onPress={() => router.push("/guest-mode")}
             style={styles.button}

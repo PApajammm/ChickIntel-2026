@@ -3,6 +3,7 @@ import {
     ChickTimePickerModal,
 } from "@/components/ui/chick-date-picker-modal";
 import { DeleteConfirmationModal } from "@/components/ui/delete-confirmation-modal";
+import { PrimaryFab } from "@/components/ui/primary-fab";
 import {
     moderateScale,
     responsiveFontSize,
@@ -1515,14 +1516,7 @@ export default function ScheduleScreen() {
       >
         <View style={styles.contentShell}>
           <BlurCard style={styles.glassCard} borderRadius={10} intensity={16}>
-            <View
-              style={[
-                styles.cardSurface,
-                {
-                  backgroundColor: "rgba(255, 255, 255, 0.95)",
-                },
-              ]}
-            >
+            <View style={styles.cardSurface}>
               <View style={styles.monthCol}>
                 {/* Mode Selector Tab: Today / Week / Month */}
                 <View style={styles.calendarModeSelectorWrap}>
@@ -1557,7 +1551,7 @@ export default function ScheduleScreen() {
                         color={
                           calendarViewMode === "today"
                             ? "#FFFFFF"
-                            : ChickIntelPalette.gray2
+                            : ChickIntelPalette.textMuted
                         }
                       />
                       <Text
@@ -1590,7 +1584,7 @@ export default function ScheduleScreen() {
                         color={
                           calendarViewMode === "week"
                             ? "#FFFFFF"
-                            : ChickIntelPalette.gray2
+                            : ChickIntelPalette.textMuted
                         }
                       />
                       <Text
@@ -1632,7 +1626,7 @@ export default function ScheduleScreen() {
                         color={
                           calendarViewMode === "month"
                             ? "#FFFFFF"
-                            : ChickIntelPalette.gray2
+                            : ChickIntelPalette.textMuted
                         }
                       />
                       <Text
@@ -1901,19 +1895,6 @@ export default function ScheduleScreen() {
                   >
                     {taskPreviewTitle}
                   </Text>
-                  <TouchableOpacity
-                    onPress={() => openAddTaskModal(selectedDate)}
-                    style={styles.quickAddBtn}
-                    activeOpacity={0.8}
-                    accessibilityRole="button"
-                    accessibilityLabel="Add scheduled task"
-                  >
-                    <MaterialCommunityIcons
-                      name="plus"
-                      size={20}
-                      color="#FFF"
-                    />
-                  </TouchableOpacity>
                 </View>
                 <View style={styles.taskList}>
                   {loadingTasks ? (
@@ -2950,6 +2931,15 @@ export default function ScheduleScreen() {
           if (!isDeletingTask) setTaskToDelete(null);
         }}
       />
+
+      <PrimaryFab
+        iconName="plus"
+        variant="green"
+        onPress={() => openAddTaskModal(selectedDate)}
+        draggable
+        bottom={moderateScale(16)}
+        accessibilityLabel="Add scheduled task"
+      />
     </View>
   );
 }
@@ -3074,7 +3064,15 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   cardSurface: {
-    borderRadius: 10,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: ChickIntelPalette.gray2,
+    shadowColor: "#161E1A",
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: verticalScale(2) },
+    elevation: 2,
     paddingTop: 12,
     paddingBottom: 16,
     overflow: "hidden",
@@ -3088,35 +3086,36 @@ const styles = StyleSheet.create({
   },
   calendarModeSelector: {
     flexDirection: "row",
-    backgroundColor: "rgba(49, 118, 103, 0.08)",
-    borderRadius: 12,
-    padding: 3,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 10,
+    padding: 4,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: ChickIntelPalette.gray2,
   },
   calendarModeTab: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    paddingVertical: verticalScale(6),
+    minHeight: verticalScale(36),
+    paddingVertical: verticalScale(4),
     paddingHorizontal: moderateScale(16),
-    borderRadius: 9,
+    borderRadius: 8,
+    backgroundColor: "transparent",
   },
   calendarModeTabActive: {
     backgroundColor: ChickIntelPalette.green1,
-    shadowColor: ChickIntelPalette.green1,
-    shadowOpacity: 0.22,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
   },
   calendarModeTabText: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(12),
-    fontWeight: "600",
+    fontWeight: "700",
+    lineHeight: 16,
     color: ChickIntelPalette.textMuted,
   },
   calendarModeTabTextActive: {
     color: "#FFFFFF",
-    fontWeight: "800",
+    fontWeight: "700",
   },
   todayHeroContainer: {
     width: "100%",
@@ -3125,10 +3124,15 @@ const styles = StyleSheet.create({
   },
   todayHeroCard: {
     width: "100%",
-    backgroundColor: "rgba(49, 118, 103, 0.07)",
+    backgroundColor: "#FFFFFF",
     borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: "rgba(49, 118, 103, 0.22)",
+    borderWidth: 1,
+    borderColor: ChickIntelPalette.gray2,
+    shadowColor: "#161E1A",
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: verticalScale(2) },
+    elevation: 2,
     paddingHorizontal: moderateScale(16),
     paddingVertical: verticalScale(14),
     gap: verticalScale(10),
@@ -3142,10 +3146,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "rgba(49, 118, 103, 0.12)",
+    backgroundColor: ChickIntelPalette.lightGreen,
     paddingHorizontal: moderateScale(8),
     paddingVertical: verticalScale(3),
-    borderRadius: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: ChickIntelPalette.mediumGreen,
   },
   todayBadgeText: {
     fontFamily: ChickFont.sans,

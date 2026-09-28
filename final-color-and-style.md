@@ -35,10 +35,23 @@ ChickIntel uses a radical, minimalist, modern-agricultural color system with **z
 - **Flock & Egg Batch Colors:** Dynamic `colorHex` values assigned to batches (e.g., Red, Blue, Amber, Emerald, Violet) are **preserved exclusively** on batch indicator dots and small batch identification chips to allow farmers to quickly distinguish physical pens/batches.
 - These colors must **never leak** into page backgrounds, headers, or global button styling.
 
-### B. Status Indicators (Health & Alerts)
-- **Normal / Healthy:** `#40534D` (Main Green) or `#677C69` (Secondary Green).
-- **Warning / Attention:** `#F7C090` (Accent Peach) with `#1F2E2B` text.
-- **Critical / Danger:** `#B91C1C` (used strictly for destructive confirm prompts like delete batch).
+### B. Status Indicators & Chips (Health & Alerts)
+- **Recovered:**
+  - Background: `#EDF2EE` (`ChickIntelPalette.lightGreen`) or `rgba(64, 83, 77, 0.12)`
+  - Text & Accent: `#40534D` (`ChickIntelPalette.green1`)
+  - Border: `rgba(64, 83, 77, 0.25)`
+- **Deceased / Dead:**
+  - Background: `rgba(146, 55, 55, 0.10)`
+  - Text & Accent: `#923737` (or `#B91C1C` alert tone)
+  - Border: `rgba(146, 55, 55, 0.25)`
+- **Isolated / Isolation:**
+  - Background: `rgba(247, 192, 144, 0.25)` (`ChickIntelPalette.accent` tint)
+  - Text & Accent: `#1F2E2B` (`ChickIntelPalette.gray1`)
+  - Border: `rgba(247, 192, 144, 0.6)`
+- **Monitoring / Monitored / Active:**
+  - Background: `#EDF2EE` (`ChickIntelPalette.lightGreen`)
+  - Text: `#1F2E2B` (`ChickIntelPalette.gray1`)
+  - Accent / Border: `#677C69` (`ChickIntelPalette.mediumGreen`)
 
 ---
 
@@ -59,27 +72,24 @@ ChickIntel uses a radical, minimalist, modern-agricultural color system with **z
 - **Border:** `1px solid #EDF2EE` or `#D2DBD4`.
 - **Shadow:** Minimal, clean mobile elevation (`shadowColor: "#161E1A"`, `shadowOpacity: 0.04`, `shadowRadius: 8`, `elevation: 2`).
 
-### D. Buttons & Action Elements
-- **Primary Action Button:**
-  - Background: `#40534D` (Main Green)
-  - Text: `#FFFFFF` (Bold, Sans)
-  - Radius: `12px`
-- **Secondary Action Button / Outline:**
-  - Background: `#EDF2EE` or `#FFFFFF`
-  - Border: `1px solid #677C69`
-  - Text: `#40534D` / `#677C69`
-- **Active Filter / Segment Tab:**
-  - Active: Background `#40534D`, Text `#FFFFFF`
-  - Inactive: Background `#EDF2EE` or `#FFFFFF`, Text `#6B7F78`
+### D. Final Default Button Style (Based on Logout Button Style)
+All primary, secondary, dialog, modal, and confirmation action buttons across the entire system must strictly implement this uniform geometry, font styling, and color mapping:
 
-### E. Modals & Dialogs
-- **Backdrop:** `rgba(31, 46, 43, 0.45)` (Dark grey with soft blur/dim).
-- **Modal Card / Bottom Sheet:** Solid `#FFFFFF`, rounded top corners `20px` to `24px` (for bottom sheets) or `18px` (for center dialogs).
-- **Header:** Title in `#1F2E2B` (Display/Sans, bold), frameless close icon in `#1F2E2B`.
-- **Dividers:** `1px solid #EDF2EE`.
-- **Footer Buttons:**
-  - Confirm / Save: Primary button in `#40534D`.
-  - Cancel / Dismiss: Frameless text or light outline in `#677C69` / `#EDF2EE`.
+- **Primary Button (Save, Submit, OK, Confirm, Log in):**
+  - Container: `minHeight: 42px` (or `44px`), `borderRadius: 10px` (or `12px`), `paddingHorizontal: 16px`, `backgroundColor: #40534D` (`ChickIntelPalette.green1`), `alignItems: "center"`, `justifyContent: "center"`.
+  - Typography: `fontFamily: ChickFont.sans`, `fontSize: 14px`, `fontWeight: "600"`, `color: "#FFFFFF"`.
+- **Secondary Button (Cancel, Back, Dismiss):**
+  - Container: `minHeight: 42px`, `borderRadius: 10px`, `paddingHorizontal: 16px`, `backgroundColor: #EDF2EE` (`ChickIntelPalette.lightGreen`), `borderWidth: 1px`, `borderColor: #677C69` (`ChickIntelPalette.mediumGreen`), `alignItems: "center"`, `justifyContent: "center"`.
+  - Typography: `fontFamily: ChickFont.sans`, `fontSize: 14px`, `fontWeight: "600"`, `color: #1F2E2B` (`ChickIntelPalette.gray1`).
+- **Destructive Button (Delete Confirm):**
+  - Container: `minHeight: 42px`, `borderRadius: 10px`, `paddingHorizontal: 16px`, `backgroundColor: #923737` (or `#B91C1C`), `alignItems: "center"`, `justifyContent: "center"`.
+  - Typography: `fontFamily: ChickFont.sans`, `fontSize: 14px`, `fontWeight: "600"`, `color: "#FFFFFF"`.
+
+### E. Modals & Dialogs (Delete, Confirmation, Logout)
+- **Backdrop:** `rgba(31, 46, 43, 0.45)` (Dark grey with soft dim).
+- **Modal Card / Bottom Sheet:** Solid `#FFFFFF`, rounded corners `16px` to `20px`, border `1px solid #D2DBD4`, shadow elevation `8`.
+- **Header:** Title in `#1F2E2B` (Display/Sans, `700`/`800`, `18px`), message in `#6B7F78` (`14px`).
+- **Action Buttons:** Standard 2-column or row button stack matching the **Final Default Button Style** (Secondary Cancel on left, Primary/Destructive Confirm on right with `gap: 12px`).
 
 ---
 

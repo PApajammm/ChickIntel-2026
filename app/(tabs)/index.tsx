@@ -185,24 +185,28 @@ export default function HomeScreen() {
   const { width } = useWindowDimensions();
   const { scale: rs, moderateScale: rms } = useResponsiveMetrics();
 
-  /** Quick-action SVG size: approximately 1.8x the previous 34px icon size, scaled */
-  const QUICK_ACTION_ICON_SIZE = Math.round(rms(45) * 1.8);
+  /** Quick-action SVG size for 3x2 view */
+  const QUICK_ACTION_ICON_SIZE = Math.round(rms(45) * 1.6);
+  const [quickActionRowWidth, setQuickActionRowWidth] = useState(0);
+  const [activeQuickActionIndex, setActiveQuickActionIndex] = useState(0);
+  const quickActionScrollRef = useRef<ScrollView>(null);
+  const row1Actions = useMemo(() => quickActions.slice(0, 3), []);
+  const row2Actions = useMemo(() => quickActions.slice(3), []);
 
   const featureCardWidth = Math.min(width * 0.65, rs(252));
   const featureCardGap = rms(12);
   const snapInterval = featureCardWidth + featureCardGap;
   const sideInset = Math.max((width - featureCardWidth) / 2, rms(18));
   const scrollX = useRef(new Animated.Value(0)).current;
-  const [isQuickActionsExpanded, setIsQuickActionsExpanded] = useState(false);
 
   const dynamicKpiCardWidth = useMemo(() => {
-    if (width < 360) return Math.floor(width * 0.5);
-    if (width < 430) return Math.floor(width * 0.48);
-    return Math.min(Math.floor(width * 0.44), rs(240));
+    if (width < 360) return Math.floor(width * 0.44);
+    if (width < 430) return Math.floor(width * 0.42);
+    return Math.min(Math.floor(width * 0.38), rs(190));
   }, [width, rs]);
 
   const dynamicKpiArtworkSize = useMemo(() => {
-    return Math.min(rs(110), Math.floor(dynamicKpiCardWidth * 0.5));
+    return Math.min(rs(64), Math.floor(dynamicKpiCardWidth * 0.45));
   }, [rs, dynamicKpiCardWidth]);
   const [kpiCards, setKpiCards] = useState<KpiCardData[]>(initialKpiCards);
   const [featuredCards, setFeaturedCards] = useState<FeaturedBreedCard[]>(() =>
@@ -284,45 +288,6 @@ export default function HomeScreen() {
 
     animationFrameRef.current = requestAnimationFrame(animate);
   }, []);
-
-  useEffect(() => {
-    if (!isScreenFocused || periodPickerFor) return;
-
-    kpiTimerRef.current = setInterval(() => {
-      if (isUserInteractingRef.current) return;
-      if (loopCountRef.current >= 3) {
-        if (kpiTimerRef.current) clearInterval(kpiTimerRef.current);
-        return;
-      }
-
-      setActiveKpiIndex((prevIndex) => {
-        let nextIndex = prevIndex + directionRef.current;
-        const maxIndex = (kpiCards.length || 3) - 1;
-
-        if (nextIndex >= maxIndex) {
-          nextIndex = maxIndex;
-          directionRef.current = -1;
-        } else if (nextIndex <= 0) {
-          nextIndex = 0;
-          directionRef.current = 1;
-          loopCountRef.current += 1;
-        }
-
-        smoothScrollTo(nextIndex * kpiStep, 650);
-        return nextIndex;
-      });
-    }, 2800);
-
-    return () => {
-      if (kpiTimerRef.current) clearInterval(kpiTimerRef.current);
-    };
-  }, [
-    isScreenFocused,
-    periodPickerFor,
-    kpiCards.length,
-    kpiStep,
-    smoothScrollTo,
-  ]);
 
   useEffect(() => {
     return () => {
@@ -846,10 +811,7 @@ export default function HomeScreen() {
                 >
                   <View style={styles.kpiTopRow}>
                     <Text
-                      style={[
-                        styles.kpiLabelCompact,
-                        { color: colors.textMuted },
-                      ]}
+                      style={styles.kpiLabelCompact}
                       numberOfLines={1}
                       adjustsFontSizeToFit
                       minimumFontScale={0.8}
@@ -859,19 +821,10 @@ export default function HomeScreen() {
                     </Text>
                     <Pressable
                       onPress={() => setPeriodPickerFor(item.title)}
-                      style={[
-                        styles.periodChip,
-                        {
-                          backgroundColor: withAlpha(colors.surface, 0.38),
-                          borderColor: withAlpha(colors.border, 0.3),
-                        },
-                      ]}
+                      style={styles.periodChip}
                     >
                       <Text
-                        style={[
-                          styles.periodChipText,
-                          { color: colors.textMuted },
-                        ]}
+                        style={styles.periodChipText}
                         numberOfLines={1}
                         adjustsFontSizeToFit
                         minimumFontScale={0.8}
@@ -882,7 +835,7 @@ export default function HomeScreen() {
                       <MaterialCommunityIcons
                         name="chevron-down"
                         size={14}
-                        color={colors.textMuted}
+                        color="#FFFFFF"
                       />
                     </Pressable>
                   </View>
@@ -896,7 +849,7 @@ export default function HomeScreen() {
                     ]}
                   >
                     <Text
-                      style={[styles.kpiValue, { color: colors.text }]}
+                      style={styles.kpiValue}
                       numberOfLines={1}
                       adjustsFontSizeToFit
                       minimumFontScale={0.6}
@@ -905,7 +858,7 @@ export default function HomeScreen() {
                       {item.value}
                     </Text>
                     <Text
-                      style={[styles.kpiTrend, { color: colors.textMuted }]}
+                      style={styles.kpiTrend}
                       numberOfLines={1}
                       adjustsFontSizeToFit
                       minimumFontScale={0.8}
@@ -926,7 +879,7 @@ export default function HomeScreen() {
             })}
           </ScrollView>
 
-          {/* Animated Carousel Pagination Dots */}
+          {/* Carousel Pagination Dots */}
           <View style={styles.kpiPaginationRow}>
             {displayKpis.map((item, index) => {
               const isActive = index === activeKpiIndex;
@@ -944,80 +897,130 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        <View style={styles.quickActionsCard}>
-          <View style={styles.quickActionsHeader}>
-            <Pressable
-              style={styles.viewAllBtn}
-              onPress={() => setIsQuickActionsExpanded(!isQuickActionsExpanded)}
-              accessibilityLabel={
-                isQuickActionsExpanded ? "View Less" : "View All"
-              }
-            >
-              <Text style={styles.viewAllText}>
-                {isQuickActionsExpanded ? "View Less" : "View All"}
-              </Text>
-              <MaterialCommunityIcons
-                name={
-                  isQuickActionsExpanded
-                    ? "arrow-down-circle-outline"
-                    : "arrow-right-circle-outline"
-                }
-                size={22}
-                color={ChickIntelPalette.green1}
-              />
-            </Pressable>
-          </View>
-
-          <View style={styles.quickActionsGrid}>
-            {(isQuickActionsExpanded
-              ? quickActions
-              : quickActions.slice(0, 6)
-            ).map((item) => {
+        <View
+          style={styles.quickActionsCard}
+          onLayout={(e) => {
+            const w = e.nativeEvent.layout.width;
+            if (w > 0 && Math.abs(w - quickActionRowWidth) > 1) {
+              setQuickActionRowWidth(w);
+            }
+          }}
+        >
+          {/* Row 1: Fixed 3 items */}
+          <View style={styles.quickActionsRow1}>
+            {row1Actions.map((item) => {
               const Icon = item.Icon;
               return (
                 <Pressable
                   key={item.title}
                   onPress={() => handleQuickActionPress(item.title)}
                   style={({ pressed }) => [
-                    styles.quickActionIconOnly,
-                    { opacity: pressed ? 0.88 : 1 },
+                    styles.quickActionItem3Col,
+                    { opacity: pressed ? 0.82 : 1 },
                   ]}
                   accessibilityLabel={item.title}
                 >
-                  <View style={{ alignItems: "center" }}>
-                    <View style={{ alignItems: "center" }}>
-                      <Icon
-                        width={
-                          item.title === "Health Monitoring"
-                            ? QUICK_ACTION_ICON_SIZE - 10
-                            : QUICK_ACTION_ICON_SIZE
-                        }
-                        height={
-                          item.title === "Health Monitoring"
-                            ? QUICK_ACTION_ICON_SIZE - 20
-                            : QUICK_ACTION_ICON_SIZE
-                        }
-                      />
-                    </View>
-                    {item.title === "Health Monitoring" && (
-                      <Text
-                        style={{
-                          marginTop: 2,
-                          fontFamily: ChickFont.sans,
-                          fontSize: responsiveFontSize(11),
-                          fontWeight: "700",
-                          color: ChickIntelPalette.green1,
-                          textAlign: "center",
-                          lineHeight: 13,
-                        }}
-                      >
-                        Health{"\n"}Monitoring
-                      </Text>
-                    )}
+                  <View style={styles.quickActionIconWrap}>
+                    <Icon
+                      width={QUICK_ACTION_ICON_SIZE}
+                      height={QUICK_ACTION_ICON_SIZE}
+                    />
                   </View>
+                  <Text style={styles.quickActionLabel} numberOfLines={2}>
+                    {item.title}
+                  </Text>
                 </Pressable>
               );
             })}
+          </View>
+
+          {/* Row 2: Swipeable items (left-to-right) */}
+          <View style={styles.quickActionsRow2Wrap}>
+            <ScrollView
+              ref={quickActionScrollRef}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.quickActionsRow2Scroll}
+              scrollEventThrottle={16}
+              onScroll={(e) => {
+                const offsetX = e.nativeEvent.contentOffset.x;
+                const itemWidth =
+                  quickActionRowWidth > 0
+                    ? Math.floor(quickActionRowWidth / 3)
+                    : Math.floor((width - rms(32) - 16) / 3);
+                const maxPage = Math.max(0, row2Actions.length - 3);
+                const index = Math.min(
+                  Math.max(0, Math.round(offsetX / (itemWidth || 1))),
+                  maxPage,
+                );
+                if (index !== activeQuickActionIndex) {
+                  setActiveQuickActionIndex(index);
+                }
+              }}
+            >
+              {row2Actions.map((item) => {
+                const Icon = item.Icon;
+                const itemWidth =
+                  quickActionRowWidth > 0
+                    ? Math.floor(quickActionRowWidth / 3)
+                    : Math.floor((width - rms(32) - 16) / 3);
+                return (
+                  <Pressable
+                    key={item.title}
+                    onPress={() => handleQuickActionPress(item.title)}
+                    style={({ pressed }) => [
+                      styles.quickActionItem3Col,
+                      { width: itemWidth, opacity: pressed ? 0.82 : 1 },
+                    ]}
+                    accessibilityLabel={item.title}
+                  >
+                    <View style={styles.quickActionIconWrap}>
+                      <Icon
+                        width={QUICK_ACTION_ICON_SIZE}
+                        height={QUICK_ACTION_ICON_SIZE}
+                      />
+                    </View>
+                    <Text style={styles.quickActionLabel} numberOfLines={2}>
+                      {item.title}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+
+            {/* Pagination Dots for swipeable row */}
+            {row2Actions.length > 3 ? (
+              <View style={styles.quickActionPaginationRow}>
+                {Array.from({
+                  length: Math.max(1, row2Actions.length - 3 + 1),
+                }).map((_, idx) => {
+                  const isActive = idx === activeQuickActionIndex;
+                  return (
+                    <Pressable
+                      key={idx}
+                      onPress={() => {
+                        const itemWidth =
+                          quickActionRowWidth > 0
+                            ? Math.floor(quickActionRowWidth / 3)
+                            : Math.floor((width - rms(32) - 16) / 3);
+                        setActiveQuickActionIndex(idx);
+                        quickActionScrollRef.current?.scrollTo({
+                          x: idx * itemWidth,
+                          animated: true,
+                        });
+                      }}
+                      hitSlop={8}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Page ${idx + 1}`}
+                      style={[
+                        styles.kpiDot,
+                        isActive && styles.kpiDotActive,
+                      ]}
+                    />
+                  );
+                })}
+              </View>
+            ) : null}
           </View>
         </View>
 
@@ -1641,21 +1644,21 @@ const styles = StyleSheet.create({
     backgroundColor: ChickIntelPalette.green1,
   },
   kpiCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: ChickIntelPalette.green1,
     borderRadius: 14,
-    minHeight: verticalScale(170),
-    paddingHorizontal: moderateScale(14),
-    paddingTop: verticalScale(14),
-    paddingBottom: verticalScale(12),
+    minHeight: verticalScale(125),
+    paddingHorizontal: moderateScale(12),
+    paddingTop: verticalScale(10),
+    paddingBottom: verticalScale(10),
     position: "relative",
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: ChickIntelPalette.gray2,
+    borderColor: "rgba(64, 83, 77, 0.4)",
     shadowColor: "#161E1A",
-    shadowOpacity: 0.04,
+    shadowOpacity: 0.08,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: verticalScale(2) },
-    elevation: 2,
+    elevation: 3,
   },
   kpiTint: {
     ...StyleSheet.absoluteFillObject,
@@ -1669,64 +1672,64 @@ const styles = StyleSheet.create({
   kpiLabel: {
     fontFamily: ChickFont.sans,
     flex: 1,
-    fontSize: responsiveFontSize(14),
+    fontSize: responsiveFontSize(13),
     fontWeight: "700",
-    lineHeight: 18,
-    color: ChickIntelPalette.textMuted,
+    lineHeight: 16,
+    color: "rgba(255, 255, 255, 0.9)",
   },
   /** Prominent KPI title styling */
   kpiLabelCompact: {
     fontFamily: ChickFont.sans,
     flex: 1,
-    fontSize: responsiveFontSize(14),
+    fontSize: responsiveFontSize(13),
     fontWeight: "700",
-    lineHeight: 18,
-    color: ChickIntelPalette.textMuted,
+    lineHeight: 16,
+    color: "rgba(255, 255, 255, 0.9)",
   },
   periodChip: {
     flexDirection: "row",
     alignItems: "center",
     gap: 3,
     borderRadius: 6,
-    paddingHorizontal: moderateScale(8),
-    paddingVertical: verticalScale(4),
+    paddingHorizontal: moderateScale(6),
+    paddingVertical: verticalScale(3),
     borderWidth: 1,
-    borderColor: ChickIntelPalette.mediumGreen,
-    backgroundColor: ChickIntelPalette.lightGreen,
+    borderColor: "rgba(255, 255, 255, 0.35)",
+    backgroundColor: "rgba(255, 255, 255, 0.18)",
     flexShrink: 0,
   },
   periodChipText: {
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(12),
+    fontSize: responsiveFontSize(11),
     fontWeight: "600",
     letterSpacing: 0.15,
-    color: ChickIntelPalette.green1,
+    color: "#FFFFFF",
   },
   kpiBody: {
-    marginTop: verticalScale(8),
+    marginTop: verticalScale(6),
     gap: 2,
     justifyContent: "flex-start",
   },
   kpiValue: {
     fontFamily: ChickFont.display,
-    fontSize: responsiveFontSize(34),
-    lineHeight: 38,
+    fontSize: responsiveFontSize(26),
+    lineHeight: 30,
     fontWeight: "800",
-    letterSpacing: -1,
-    color: ChickIntelPalette.gray1,
+    letterSpacing: -0.5,
+    color: "#FFFFFF",
   },
   kpiTrend: {
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(12),
-    lineHeight: 16,
+    fontSize: responsiveFontSize(11),
+    lineHeight: 15,
     fontWeight: "600",
     marginTop: 2,
-    color: ChickIntelPalette.green1,
+    color: ChickIntelPalette.accent,
   },
   kpiArtworkWrap: {
     position: "absolute",
-    right: moderateScale(22),
-    bottom: verticalScale(18),
+    right: moderateScale(12),
+    bottom: verticalScale(10),
     opacity: 0.95,
   },
   quickActionsCard: {
@@ -1739,54 +1742,50 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     shadowOffset: { width: 0, height: verticalScale(2) },
     elevation: 2,
-    paddingTop: verticalScale(12),
-    paddingBottom: verticalScale(12),
-    paddingHorizontal: moderateScale(12),
+    paddingVertical: verticalScale(12),
+    paddingHorizontal: moderateScale(6),
     position: "relative",
     overflow: "hidden",
   },
-  quickActionsHeader: {
+  quickActionsRow1: {
     flexDirection: "row",
-    justifyContent: "flex-end",
-    paddingTop: verticalScale(8),
-    paddingRight: moderateScale(8),
-    zIndex: 10,
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: verticalScale(8),
   },
-  viewAllBtn: {
+  quickActionsRow2Wrap: {
+    width: "100%",
+  },
+  quickActionsRow2Scroll: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
+    alignItems: "flex-start",
   },
-  viewAllText: {
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(16),
-    fontWeight: "700",
-    color: ChickIntelPalette.green1,
-  },
-
-  quickActionsTint: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  quickActionsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-around",
-    paddingVertical: verticalScale(8),
-  },
-  quickActionIconOnly: {
-    width: "33.33%",
+  quickActionItem3Col: {
+    width: "33.333%",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: verticalScale(12),
+    paddingVertical: verticalScale(6),
+    paddingHorizontal: moderateScale(4),
+  },
+  quickActionPaginationRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    marginTop: verticalScale(8),
+  },
+  quickActionIconWrap: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: verticalScale(4),
   },
   quickActionLabel: {
-    marginTop: 0,
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(10),
+    fontSize: responsiveFontSize(11),
     fontWeight: "600",
-    color: ChickIntelPalette.green1,
+    color: ChickIntelPalette.gray1,
     textAlign: "center",
-    lineHeight: 12,
+    lineHeight: 14,
   },
   carouselContent: {
     paddingTop: 2,

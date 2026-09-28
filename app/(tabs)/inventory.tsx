@@ -7,6 +7,7 @@ import {
     ChickSelectRow,
     ChickTextInput,
 } from "@/components/ui/chick-form";
+import { PrimaryFab } from "@/components/ui/primary-fab";
 import { ChickFont } from "@/constants/chick-fonts";
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
 import { useColorScheme } from "@/hooks/use-color-scheme";
@@ -1076,7 +1077,7 @@ export default function InventoryScreen() {
                           <MaterialCommunityIcons
                             name="trash-can-outline"
                             size={23}
-                            color="#DC2626"
+                            color="#923737"
                           />
                         </TouchableOpacity>
                       </View>
@@ -1131,25 +1132,6 @@ export default function InventoryScreen() {
               <MaterialCommunityIcons
                 name="history"
                 size={23}
-                color={ChickIntelPalette.gray1}
-              />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.addButton}
-              onPress={() => {
-                setNewItemType(
-                  inventoryTabs.find((tab) => tab.id === selectedTab)?.label ||
-                    "Select Category",
-                );
-                setAddModalVisible(true);
-              }}
-              activeOpacity={0.8}
-              accessibilityRole="button"
-              accessibilityLabel="Add inventory item"
-            >
-              <MaterialCommunityIcons
-                name="plus"
-                size={25}
                 color={ChickIntelPalette.gray1}
               />
             </TouchableOpacity>
@@ -2081,6 +2063,21 @@ export default function InventoryScreen() {
           if (!isDeletingItem) setItemToDelete(null);
         }}
       />
+
+      <PrimaryFab
+        iconName="plus"
+        variant="green"
+        onPress={() => {
+          setNewItemType(
+            inventoryTabs.find((tab) => tab.id === selectedTab)?.label ||
+              "Select Category",
+          );
+          setAddModalVisible(true);
+        }}
+        draggable
+        bottom={moderateScale(16)}
+        accessibilityLabel="Add inventory item"
+      />
     </View>
   );
 }
@@ -2122,16 +2119,18 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   segmentWrap: {
-    backgroundColor: "rgba(255, 255, 255, 0.85)",
-    borderRadius: 12,
-    padding: 3,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 10,
+    padding: 4,
     width: "100%",
     overflow: "hidden",
+    borderWidth: 1,
+    borderColor: ChickIntelPalette.gray2,
   },
   segmentScrollContent: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 3,
+    gap: 4,
   },
   segmentScrollContentGrow: {
     flexGrow: 1,
@@ -2141,9 +2140,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     minHeight: verticalScale(38),
-    borderRadius: 9,
-    paddingHorizontal: moderateScale(2),
-    gap: 2,
+    borderRadius: 8,
+    paddingHorizontal: moderateScale(4),
+    gap: 4,
   },
   segmentFlex: {
     flex: 1,
@@ -2170,21 +2169,21 @@ const styles = StyleSheet.create({
   paginationDotActive: {
     width: 16,
     borderRadius: 3,
-    backgroundColor: ChickIntelPalette.gray1,
+    backgroundColor: ChickIntelPalette.green1,
   },
   segmentText: {
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(11),
+    fontSize: responsiveFontSize(11.5),
     fontWeight: "700",
-    lineHeight: 15,
-    color: "#4A5452",
+    lineHeight: 16,
+    color: ChickIntelPalette.textMuted,
     flexShrink: 1,
   },
   segmentTextActive: {
     color: "#FFFFFF",
   },
   segmentTextInactive: {
-    color: "#4A5452",
+    color: ChickIntelPalette.textMuted,
   },
   segmentAlertDot: {
     width: scale(6),
@@ -2201,8 +2200,10 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   tabEmptyInner: {
-    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    backgroundColor: "#FFFFFF",
     borderRadius: 14,
+    borderWidth: 1,
+    borderColor: ChickIntelPalette.gray2,
     paddingVertical: verticalScale(28),
     paddingHorizontal: moderateScale(20),
     alignItems: "center",
@@ -2213,7 +2214,7 @@ const styles = StyleSheet.create({
     width: scale(52),
     height: verticalScale(52),
     borderRadius: 26,
-    backgroundColor: "rgba(49, 118, 103, 0.12)",
+    backgroundColor: ChickIntelPalette.lightGreen,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 4,
@@ -2286,12 +2287,12 @@ const styles = StyleSheet.create({
     marginBottom: verticalScale(2),
     borderRadius: 14,
     overflow: "hidden",
-    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.2)",
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
+    borderColor: ChickIntelPalette.gray2,
+    shadowColor: "#161E1A",
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
   },
@@ -2309,13 +2310,13 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: moderateScale(14),
     paddingVertical: verticalScale(8),
-    backgroundColor: "rgba(49, 118, 103, 0.08)",
+    backgroundColor: ChickIntelPalette.lightGreen,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(49, 118, 103, 0.12)",
+    borderBottomColor: ChickIntelPalette.gray2,
   },
   subGroupHeaderExpired: {
-    backgroundColor: "rgba(220, 38, 38, 0.08)",
-    borderBottomColor: "rgba(220, 38, 38, 0.14)",
+    backgroundColor: "rgba(146, 55, 55, 0.10)",
+    borderBottomColor: "rgba(146, 55, 55, 0.25)",
   },
   subGroupTitle: {
     fontFamily: ChickFont.display,
@@ -2332,12 +2333,16 @@ const styles = StyleSheet.create({
   tableSurface: {
     borderRadius: 14,
     overflow: "hidden",
-    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: ChickIntelPalette.gray2,
   },
   tableSurfaceExpired: {
     borderRadius: 14,
     overflow: "hidden",
-    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: ChickIntelPalette.gray2,
   },
   tableSectionHeader: {
     flexDirection: "row",
@@ -2346,11 +2351,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: moderateScale(14),
     paddingVertical: verticalScale(10),
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(45, 106, 79, 0.12)",
-    backgroundColor: "rgba(156, 213, 201, 0.28)",
+    borderBottomColor: ChickIntelPalette.gray2,
+    backgroundColor: ChickIntelPalette.lightGreen,
   },
   tableSectionHeaderExpired: {
-    backgroundColor: "rgba(156, 213, 201, 0.28)",
+    backgroundColor: ChickIntelPalette.lightGreen,
+    borderBottomColor: ChickIntelPalette.gray2,
     paddingVertical: verticalScale(10),
   },
   expiredBadgeIcon: {
@@ -2372,14 +2378,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: moderateScale(9),
     paddingVertical: verticalScale(3),
     borderRadius: 8,
-    backgroundColor: "rgba(49, 118, 103, 0.12)",
+    backgroundColor: ChickIntelPalette.lightGreen,
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.22)",
+    borderColor: ChickIntelPalette.mediumGreen,
   },
   tableMetaPillExpired: {
-    backgroundColor: "rgba(220, 38, 38, 0.12)",
+    backgroundColor: "rgba(146, 55, 55, 0.12)",
     borderWidth: 1,
-    borderColor: "rgba(220, 38, 38, 0.25)",
+    borderColor: "rgba(146, 55, 55, 0.25)",
   },
   tableSectionTitle: {
     fontFamily: ChickFont.display,
@@ -2388,16 +2394,16 @@ const styles = StyleSheet.create({
     color: ChickIntelPalette.gray1,
   },
   tableSectionTitleExpired: {
-    color: "#B91C1C",
+    color: "#923737",
   },
   tableSectionMeta: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(12),
     fontWeight: "700",
-    color: "#2C3333",
+    color: ChickIntelPalette.gray1,
   },
   tableSectionMetaExpired: {
-    color: "#991B1B",
+    color: "#923737",
     fontWeight: "700",
   },
   tableScrollContent: {
@@ -2410,14 +2416,14 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#2D6A4F",
+    backgroundColor: ChickIntelPalette.green1,
     paddingVertical: verticalScale(9),
-    borderTopLeftRadius: 5,
-    borderTopRightRadius: 5,
+    borderTopLeftRadius: 10,
+    borderTopRightRadius: 10,
     width: "100%",
   },
   headerRowExpired: {
-    backgroundColor: "#2D6A4F",
+    backgroundColor: ChickIntelPalette.green1,
   },
   headerCell: {
     justifyContent: "flex-start",

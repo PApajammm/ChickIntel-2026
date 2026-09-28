@@ -57,36 +57,47 @@ function getMonitoringStatusTheme(status?: string, illness?: string) {
   // 1. Recovered -> GREEN
   if (normStatus === "recovered") {
     return {
-      accentColor: "#10B981",
-      badgeBg: "rgba(16, 185, 129, 0.12)",
-      badgeText: "#059669",
-      badgeBorder: "rgba(16, 185, 129, 0.25)",
+      accentColor: ChickIntelPalette.green1,
+      badgeBg: ChickIntelPalette.lightGreen,
+      badgeText: ChickIntelPalette.green1,
+      badgeBorder: "rgba(64, 83, 77, 0.25)",
       label: "Recovered",
     };
   }
 
-  // 2. Dead / Deceased -> RED
+  // 2. Dead / Deceased -> MAROON ALERT
   if (normStatus === "deceased" || normStatus === "dead") {
     return {
-      accentColor: "#EF4444",
-      badgeBg: "rgba(239, 68, 68, 0.12)",
-      badgeText: "#DC2626",
-      badgeBorder: "rgba(239, 68, 68, 0.25)",
+      accentColor: "#923737",
+      badgeBg: "rgba(146, 55, 55, 0.10)",
+      badgeText: "#923737",
+      badgeBorder: "rgba(146, 55, 55, 0.25)",
       label: "Deceased",
     };
   }
 
-  // 3. Isolated / Monitored / Active -> YELLOW (AMBER)
+  // 3. Isolated / Isolation -> ACCENT PEACH
+  if (normStatus === "isolated" || normStatus === "isolation") {
+    return {
+      accentColor: ChickIntelPalette.accent,
+      badgeBg: "rgba(247, 192, 144, 0.25)",
+      badgeText: ChickIntelPalette.gray1,
+      badgeBorder: "rgba(247, 192, 144, 0.6)",
+      label: "Isolated",
+    };
+  }
+
+  // 4. Monitored / Monitoring / Active -> SAGE / NEUTRAL
   let displayLabel = status?.trim();
   if (!displayLabel || displayLabel.toLowerCase() === "unknown") {
     displayLabel = "Active";
   }
 
   return {
-    accentColor: "#F59E0B",
-    badgeBg: "rgba(245, 158, 11, 0.12)",
-    badgeText: "#D97706",
-    badgeBorder: "rgba(245, 158, 11, 0.25)",
+    accentColor: ChickIntelPalette.mediumGreen,
+    badgeBg: ChickIntelPalette.lightGreen,
+    badgeText: ChickIntelPalette.gray1,
+    badgeBorder: ChickIntelPalette.mediumGreen,
     label: displayLabel,
   };
 }
@@ -546,10 +557,12 @@ const styles = StyleSheet.create({
   },
   tabs: {
     flexDirection: "row",
-    backgroundColor: "rgba(255, 255, 255, 0.85)",
+    backgroundColor: "#FFFFFF",
     borderRadius: 10,
     padding: 4,
     gap: 4,
+    borderWidth: 1,
+    borderColor: ChickIntelPalette.gray2,
   },
   tab: {
     flex: 1,
@@ -557,9 +570,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     minHeight: verticalScale(38),
-    borderRadius: 10,
+    borderRadius: 8,
     paddingHorizontal: moderateScale(10),
     gap: 6,
+    backgroundColor: "transparent",
   },
   tabActive: {
     backgroundColor: ChickIntelPalette.green1,
@@ -568,7 +582,7 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(13),
     fontWeight: "700",
-    color: "#4A5452",
+    color: ChickIntelPalette.textMuted,
   },
   tabTextActive: {
     color: "#FFFFFF",
@@ -600,8 +614,15 @@ const styles = StyleSheet.create({
     paddingRight: 16,
     paddingTop: 14,
     paddingBottom: 14,
-    backgroundColor: "rgba(255, 255, 255, 0.94)",
-    borderRadius: 10,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: ChickIntelPalette.gray2,
+    shadowColor: "#161E1A",
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: verticalScale(2) },
+    elevation: 2,
     overflow: "hidden",
   },
   cardPressable: {
@@ -625,12 +646,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "rgba(49, 118, 103, 0.12)",
+    backgroundColor: ChickIntelPalette.lightGreen,
     paddingHorizontal: moderateScale(8),
     paddingVertical: verticalScale(3),
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.22)",
+    borderColor: ChickIntelPalette.mediumGreen,
   },
   chtTag: {
     fontFamily: ChickFont.display,
@@ -685,17 +706,17 @@ const styles = StyleSheet.create({
     width: scale(72),
     height: verticalScale(72),
     borderRadius: 14,
-    backgroundColor: "rgba(49, 118, 103, 0.08)",
+    backgroundColor: ChickIntelPalette.lightGreen,
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.16)",
+    borderColor: ChickIntelPalette.gray2,
   },
   cardThumbPlaceholder: {
     width: scale(72),
     height: verticalScale(72),
     borderRadius: 14,
-    backgroundColor: "rgba(49, 118, 103, 0.1)",
+    backgroundColor: ChickIntelPalette.lightGreen,
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.16)",
+    borderColor: ChickIntelPalette.gray2,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -722,18 +743,18 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "rgba(244, 248, 247, 0.9)",
+    backgroundColor: ChickIntelPalette.lightGreen,
     paddingHorizontal: moderateScale(8),
     paddingVertical: verticalScale(3),
-    borderRadius: 6,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.16)",
+    borderColor: ChickIntelPalette.mediumGreen,
   },
   batchText: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(11),
     fontWeight: "600",
-    color: "#4A5252",
+    color: ChickIntelPalette.gray1,
   },
   actionRow: {
     flexDirection: "row",
@@ -741,7 +762,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: "rgba(49, 118, 103, 0.12)",
+    borderTopColor: ChickIntelPalette.gray2,
   },
   actionButton: {
     flex: 1,
@@ -814,24 +835,24 @@ const styles = StyleSheet.create({
   },
   modalRow: {
     flexDirection: "row",
-    gap: 10,
+    gap: moderateScale(12),
   },
   modalBtn: {
     flex: 1,
-    minHeight: verticalScale(40),
+    minHeight: verticalScale(42),
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 10,
-    paddingHorizontal: moderateScale(12),
+    borderRadius: scale(10),
+    paddingHorizontal: moderateScale(16),
   },
   modalBtnFull: {
     flex: 0,
     width: "100%",
   },
   modalBtnSecondary: {
-    backgroundColor: "rgba(49, 118, 103, 0.1)",
+    backgroundColor: ChickIntelPalette.lightGreen,
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.24)",
+    borderColor: ChickIntelPalette.mediumGreen,
   },
   modalBtnPrimary: {
     backgroundColor: ChickIntelPalette.green1,
@@ -839,13 +860,13 @@ const styles = StyleSheet.create({
   modalBtnSecondaryText: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(14),
-    fontWeight: "700",
-    color: ChickIntelPalette.green1,
+    fontWeight: "600",
+    color: ChickIntelPalette.gray1,
   },
   modalBtnPrimaryText: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(14),
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#FFFFFF",
   },
 });

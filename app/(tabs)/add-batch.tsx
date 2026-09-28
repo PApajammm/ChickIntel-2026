@@ -635,10 +635,6 @@ export default function AddBatchScreen() {
               <Text style={styles.kickerText}>Chicken profile</Text>
             </View>
             <Text style={styles.pageTitle}>{pageTitle}</Text>
-            <Text style={styles.createHeroSubtitle}>
-              Register a flock group with its tag color, age, breed, and sex
-              count.
-            </Text>
           </View>
 
           <View style={styles.summaryChipRow}>
