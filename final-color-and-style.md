@@ -91,6 +91,33 @@ All primary, secondary, dialog, modal, and confirmation action buttons across th
 - **Header:** Title in `#1F2E2B` (Display/Sans, `700`/`800`, `18px`), message in `#6B7F78` (`14px`).
 - **Action Buttons:** Standard 2-column or row button stack matching the **Final Default Button Style** (Secondary Cancel on left, Primary/Destructive Confirm on right with `gap: 12px`).
 
+### F. Final Confirmation & Notice Modal Style (`final-confirmattion-notice-style`)
+All confirmation dialogs, delete confirmation modals, camera retake prompts, and status notices across the app must strictly follow the **Logout Modal** visual design:
+- **Backdrop:** `rgba(31, 46, 43, 0.45)` with centered layout and `padding: 24px`.
+- **Card Surface:** Pure white `#FFFFFF`, `borderRadius: 16px`, `borderWidth: 1px`, `borderColor: #D2DBD4`, `maxWidth: 360px`, `padding: 18px to 20px`, shadow elevation `8`.
+- **Typography:**
+  - **Title:** `ChickFont.display`, `fontSize: 18px`, `fontWeight: "700"`, `color: #1F2E2B`, `textAlign: "center"`, `marginBottom: 8px`.
+  - **Message / Body:** `ChickFont.sans`, `fontSize: 14px`, `lineHeight: 20px`, `fontWeight: "500"`, `color: #6B7F78`, `textAlign: "center"`, `marginBottom: 16px`.
+- **Button Row:** `flexDirection: "row"`, `gap: 12px`, `justifyContent: "center"`.
+  - **Cancel / Dismiss Button (Left):** `backgroundColor: #EDF2EE`, `borderWidth: 1px`, `borderColor: #677C69`, `borderRadius: 10px`, `minHeight: 42px`, text `color: #1F2E2B`, `fontWeight: "600"`, `fontSize: 14px`.
+  - **Confirm / Action Button (Right):**
+    - Standard / Retake / Done: `backgroundColor: #40534D` (`ChickIntelPalette.green1`), `borderRadius: 10px`, `minHeight: 42px`, text `color: "#FFFFFF"`, `fontWeight: "600"`, `fontSize: 14px`.
+    - Delete / Destructive: `backgroundColor: #923737`, `borderRadius: 10px`, `minHeight: 42px`, text `color: "#FFFFFF"`, `fontWeight: "600"`, `fontSize: 14px`.
+
+### G. Final Dual Button Style (`final-dual-button-style`)
+For side-by-side or dual operational action buttons (such as "Deceased" vs. "Recovered" in Health Monitoring or primary/secondary bottom pairs, directly matching the Logout dialog buttons):
+- **Layout & Geometry:**
+  - `flexDirection: "row"`, `gap: 8px` to `12px`.
+  - Each button: `flex: 1`, `minHeight: 42px`, `borderRadius: 10px`, `alignItems: "center"`, `justifyContent: "center"`, `paddingHorizontal: 12px`.
+  - **No icons inside dual buttons** — clean, modern typography only.
+  - **No red color** — use consistent primary green and secondary sage palette.
+- **Secondary / Left CTA (e.g. "Deceased" / "Cancel"):**
+  - Container: `backgroundColor: #EDF2EE` (`ChickIntelPalette.lightGreen`), `borderWidth: 1px`, `borderColor: #677C69` (`ChickIntelPalette.mediumGreen`).
+  - Typography: `fontFamily: ChickFont.sans`, `fontSize: 13.5px`, `fontWeight: "600"`, `color: #1F2E2B` (`ChickIntelPalette.gray1`), `textAlign: "center"`.
+- **Primary / Right CTA (e.g. "Recovered" / "Ok"):**
+  - Container: `backgroundColor: #40534D` (`ChickIntelPalette.green1`).
+  - Typography: `fontFamily: ChickFont.sans`, `fontSize: 13.5px`, `fontWeight: "600"`, `color: "#FFFFFF"`, `textAlign: "center"`.
+
 ---
 
 ## 4. Typography Standards

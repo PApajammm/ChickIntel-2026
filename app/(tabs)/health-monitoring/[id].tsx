@@ -523,7 +523,7 @@ export default function HealthMonitoringDetailScreen() {
             accessibilityLabel={`Add note for ${task.title}`}
           >
             <MaterialCommunityIcons
-              name="note-text-outline"
+              name="note-edit-outline"
               size={17}
               color={ChickIntelPalette.green1}
             />
@@ -532,7 +532,7 @@ export default function HealthMonitoringDetailScreen() {
         {occurrence.treatmentNote?.trim() ? (
           <View style={styles.protocolNotePreview}>
             <MaterialCommunityIcons
-              name="note-text-outline"
+              name="note-edit-outline"
               size={16}
               color={ChickIntelPalette.green1}
             />

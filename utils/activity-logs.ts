@@ -45,7 +45,7 @@ const TABLE_META: Record<
   },
   batches: {
     label: "chicken batch",
-    icon: "cow",
+    icon: "bird",
     iconColor: "#FFF",
     iconBg: "#B76E3E",
     targetField: "batch_no",

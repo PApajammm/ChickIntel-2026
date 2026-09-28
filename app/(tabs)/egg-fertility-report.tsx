@@ -28,6 +28,7 @@ import {
     ScrollView,
     StyleSheet,
     Text,
+    TextInput,
     TouchableOpacity,
     View,
 } from "react-native";
@@ -613,11 +614,56 @@ export default function EggFertilityReportScreen() {
     },
   ]);
   const [selectedScopeKey, setSelectedScopeKey] = useState("overall");
+  const [scopeSortOrder, setScopeSortOrder] = useState<"asc" | "desc">("asc");
+  const [scopeSearchQuery, setScopeSearchQuery] = useState("");
   const [scopeModalVisible, setScopeModalVisible] = useState(false);
   const [report, setReport] =
     useState<EggFertilityReportSnapshot>(EMPTY_REPORT);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const displayedScopeOptions = useMemo(() => {
+    const overallOption = scopeOptions.find((o) => o.key === "overall");
+    let batchOptions = scopeOptions.filter((o) => o.key !== "overall");
+
+    const query = scopeSearchQuery.trim().toLowerCase();
+    if (query) {
+      batchOptions = batchOptions.filter((opt) => {
+        return (
+          opt.label.toLowerCase().includes(query) ||
+          (opt.colorName || "").toLowerCase().includes(query) ||
+          (opt.originBatchNo || "").toLowerCase().includes(query) ||
+          `c${(opt.originBatchNo || "").toLowerCase()}`.includes(query)
+        );
+      });
+    }
+
+    batchOptions.sort((left, right) => {
+      const leftDigits = (left.originBatchNo || "").replace(/\D/g, "");
+      const rightDigits = (right.originBatchNo || "").replace(/\D/g, "");
+      const leftNum = leftDigits ? parseInt(leftDigits, 10) : -1;
+      const rightNum = rightDigits ? parseInt(rightDigits, 10) : -1;
+
+      if (leftNum !== -1 && rightNum !== -1 && leftNum !== rightNum) {
+        return scopeSortOrder === "asc" ? leftNum - rightNum : rightNum - leftNum;
+      }
+      return scopeSortOrder === "asc"
+        ? left.label.localeCompare(right.label, undefined, { numeric: true })
+        : right.label.localeCompare(left.label, undefined, { numeric: true });
+    });
+
+    const result: ScopeOption[] = [];
+    if (
+      overallOption &&
+      (!query ||
+        overallOption.label.toLowerCase().includes(query) ||
+        query === "all" ||
+        query === "overall")
+    ) {
+      result.push(overallOption);
+    }
+    return result.concat(batchOptions);
+  }, [scopeOptions, scopeSearchQuery, scopeSortOrder]);
 
   const generatedBy = profile?.display_name || profile?.email || "Farm User";
   const generatedDate = new Intl.DateTimeFormat("en-US", {
@@ -901,11 +947,27 @@ export default function EggFertilityReportScreen() {
                   </Text>
                 </View>
               )}
-              <MaterialCommunityIcons
-                name="chevron-down"
-                size={20}
-                color={ChickIntelPalette.gray1}
-              />
+              <View style={styles.scopeDropdownRight}>
+                <View style={styles.scopeSortIndicator}>
+                  <MaterialCommunityIcons
+                    name={
+                      scopeSortOrder === "asc"
+                        ? "sort-numeric-ascending"
+                        : "sort-numeric-descending"
+                    }
+                    size={13}
+                    color={ChickIntelPalette.green1}
+                  />
+                  <Text style={styles.scopeSortIndicatorText}>
+                    {scopeSortOrder === "asc" ? "Asc" : "Desc"}
+                  </Text>
+                </View>
+                <MaterialCommunityIcons
+                  name="chevron-down"
+                  size={20}
+                  color={ChickIntelPalette.gray1}
+                />
+              </View>
             </View>
           </Pressable>
 
@@ -1105,11 +1167,117 @@ export default function EggFertilityReportScreen() {
                   </Text>
                 </View>
               </View>
+
+              {/* Scope Modal Search & Sort Controls */}
+              <View style={styles.scopeSearchSortContainer}>
+                <View style={styles.scopeSearchBar}>
+                  <MaterialCommunityIcons
+                    name="magnify"
+                    size={18}
+                    color={ChickIntelPalette.gray1}
+                  />
+                  <TextInput
+                    style={styles.scopeSearchInput}
+                    placeholder="Search color or batch #..."
+                    placeholderTextColor={ChickIntelPalette.gray2}
+                    value={scopeSearchQuery}
+                    onChangeText={setScopeSearchQuery}
+                  />
+                  {scopeSearchQuery.length > 0 ? (
+                    <Pressable
+                      onPress={() => setScopeSearchQuery("")}
+                      hitSlop={8}
+                    >
+                      <MaterialCommunityIcons
+                        name="close-circle"
+                        size={16}
+                        color={ChickIntelPalette.gray2}
+                      />
+                    </Pressable>
+                  ) : null}
+                </View>
+
+                {/* Sort Toggle Row */}
+                <View style={styles.scopeSortRow}>
+                  <Text style={styles.scopeSortLabel}>Sort Batches:</Text>
+                  <View style={styles.scopeSortToggleGroup}>
+                    <TouchableOpacity
+                      style={[
+                        styles.scopeSortBtn,
+                        scopeSortOrder === "asc" && styles.scopeSortBtnActive,
+                      ]}
+                      onPress={() => setScopeSortOrder("asc")}
+                      activeOpacity={0.8}
+                    >
+                      <MaterialCommunityIcons
+                        name="sort-numeric-ascending"
+                        size={14}
+                        color={
+                          scopeSortOrder === "asc"
+                            ? "#FFFFFF"
+                            : ChickIntelPalette.gray1
+                        }
+                      />
+                      <Text
+                        style={[
+                          styles.scopeSortBtnText,
+                          scopeSortOrder === "asc" &&
+                            styles.scopeSortBtnTextActive,
+                        ]}
+                      >
+                        Ascending
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[
+                        styles.scopeSortBtn,
+                        scopeSortOrder === "desc" && styles.scopeSortBtnActive,
+                      ]}
+                      onPress={() => setScopeSortOrder("desc")}
+                      activeOpacity={0.8}
+                    >
+                      <MaterialCommunityIcons
+                        name="sort-numeric-descending"
+                        size={14}
+                        color={
+                          scopeSortOrder === "desc"
+                            ? "#FFFFFF"
+                            : ChickIntelPalette.gray1
+                        }
+                      />
+                      <Text
+                        style={[
+                          styles.scopeSortBtnText,
+                          scopeSortOrder === "desc" &&
+                            styles.scopeSortBtnTextActive,
+                        ]}
+                      >
+                        Descending
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+
               <ScrollView
                 style={styles.scopeModalList}
                 showsVerticalScrollIndicator={false}
               >
-                {scopeOptions.map((option) => {
+                {displayedScopeOptions.length === 0 ? (
+                  <View style={styles.scopeEmptyBox}>
+                    <MaterialCommunityIcons
+                      name="filter-off-outline"
+                      size={24}
+                      color={ChickIntelPalette.gray2}
+                    />
+                    <Text style={styles.scopeEmptyText}>
+                      No batch scopes match "{scopeSearchQuery}".
+                    </Text>
+                  </View>
+                ) : null}
+
+                {displayedScopeOptions.map((option) => {
                   const isSelected = option.key === selectedScopeKey;
 
                   return (
@@ -1736,5 +1904,103 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
+  },
+  scopeDropdownRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  scopeSortIndicator: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: ChickIntelPalette.lightGreen,
+    borderWidth: 1,
+    borderColor: ChickIntelPalette.mediumGreen,
+    borderRadius: 8,
+    paddingHorizontal: moderateScale(6),
+    paddingVertical: verticalScale(2),
+  },
+  scopeSortIndicatorText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(11),
+    fontWeight: "700",
+    color: ChickIntelPalette.green1,
+  },
+  scopeSearchSortContainer: {
+    marginBottom: verticalScale(10),
+    gap: 8,
+  },
+  scopeSearchBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: ChickIntelPalette.lightGreen,
+    borderWidth: 1,
+    borderColor: ChickIntelPalette.mediumGreen,
+    borderRadius: 10,
+    paddingHorizontal: moderateScale(10),
+    height: verticalScale(38),
+    gap: 8,
+  },
+  scopeSearchInput: {
+    flex: 1,
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(13),
+    color: ChickIntelPalette.gray1,
+    paddingVertical: 0,
+  },
+  scopeSortRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  scopeSortLabel: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12),
+    fontWeight: "700",
+    color: ChickIntelPalette.gray1,
+  },
+  scopeSortToggleGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: ChickIntelPalette.lightGreen,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: ChickIntelPalette.mediumGreen,
+    padding: 2,
+    gap: 2,
+  },
+  scopeSortBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: moderateScale(8),
+    paddingVertical: verticalScale(4),
+    borderRadius: 6,
+  },
+  scopeSortBtnActive: {
+    backgroundColor: ChickIntelPalette.green1,
+  },
+  scopeSortBtnText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(11),
+    fontWeight: "600",
+    color: ChickIntelPalette.gray1,
+  },
+  scopeSortBtnTextActive: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+  },
+  scopeEmptyBox: {
+    paddingVertical: verticalScale(24),
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  scopeEmptyText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12),
+    color: ChickIntelPalette.textMuted,
+    textAlign: "center",
   },
 });

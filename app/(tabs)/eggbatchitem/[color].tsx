@@ -748,11 +748,6 @@ export default function EggBatchColorScreen() {
               </Pressable>
             </View>
           ) : null}
-          <Text style={styles.selectionHint}>
-            {activeSection === "eggs"
-              ? "Egg records from this chicken batch. Transfer hatched eggs, sell unhatched eggs, or dispose damaged eggs."
-              : "Chick batches created from this chicken batch appear here."}
-          </Text>
           {activeSection === "eggs" && archivedBatches.length > 0 ? (
             <View style={styles.statusPillBar}>
               <Pressable
@@ -1499,9 +1494,6 @@ export default function EggBatchColorScreen() {
                     <Text style={styles.readonlyMetricValue}>
                       {totalRecordedEggs} eggs
                     </Text>
-                    <Text style={styles.readonlyMetricHint}>
-                      Total recorded quantity for this egg batch.
-                    </Text>
                   </View>
 
                   {/* Discrepancy Warning Banner */}
@@ -1715,7 +1707,7 @@ export default function EggBatchColorScreen() {
         itemTitle={eggToDelete ? `Batch ${eggToDelete.batchNo}` : undefined}
         itemSubtitle={
           eggToDelete
-            ? `${eggToDelete.eggQty} eggs • ${formatBatchDateStamp(eggToDelete.createdAt, eggToDelete.updatedAt)}`
+            ? `${eggToDelete.eggQty} ${eggToDelete.eggQty === 1 ? "egg" : "eggs"} • ${formatBatchDateStamp(eggToDelete.createdAt, eggToDelete.updatedAt)}`
             : undefined
         }
         message="Are you sure you want to delete this egg batch? This batch will be moved to deleted egg history."

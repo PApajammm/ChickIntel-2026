@@ -61,7 +61,7 @@ import { fetchBreedOptions } from "@/utils/supabase-lookups";
 
 const MAX_SCAN_ZOOM = 0.7;
 
-const AGE_UNIT_OPTIONS = ["Weeks old"] as const;
+const AGE_UNIT_OPTIONS = ["Weeks", "Days"] as const;
 
 const DEFAULT_BREED_OPTIONS = [
   "Bielefelder",
@@ -172,6 +172,7 @@ export default function AddBatchScreen() {
   const [ageUnit, setAgeUnit] = useState<(typeof AGE_UNIT_OPTIONS)[number]>(
     AGE_UNIT_OPTIONS[0],
   );
+  const [ageUnitModalOpen, setAgeUnitModalOpen] = useState(false);
   // Total chickens (keeps previous behavior for male/female auto-split)
   const [totalCount, setTotalCount] = useState("");
   const [breed, setBreed] = useState("");
@@ -183,7 +184,8 @@ export default function AddBatchScreen() {
   ]);
 
   useEffect(() => {
-    const ageInDays = parseCount(durationCount) * 7;
+    const ageInDays =
+      parseCount(durationCount) * (ageUnit === "Days" ? 1 : 7);
     if (ageInDays < SEXING_START_AGE_WEEKS * 7 && totalCount) {
       setMaleCount("0");
       setFemaleCount("0");
@@ -199,6 +201,7 @@ export default function AddBatchScreen() {
     setSelectedColor(chickColor ?? COLOR_OPTIONS[0]);
     setDurationCount(isChickBatch ? "0" : "");
     setAgeUnit(AGE_UNIT_OPTIONS[0]);
+    setAgeUnitModalOpen(false);
     setTotalCount(isChickBatch ? hatchedQtyParam || "0" : "");
     setBreed("");
     setMaleCount("");
@@ -301,7 +304,7 @@ export default function AddBatchScreen() {
 
     const n = Number.parseInt(clean, 10);
     const enteredAge =
-      parseCount(durationCount) * (ageUnit === "Weeks old" ? 7 : 1);
+      parseCount(durationCount) * (ageUnit === "Days" ? 1 : 7);
     if (enteredAge < SEXING_START_AGE_WEEKS * 7) {
       setMaleCount("0");
       setFemaleCount("0");
@@ -748,25 +751,37 @@ export default function AddBatchScreen() {
 
             <View style={styles.gridRow}>
               <View style={styles.halfField}>
-                <Text style={styles.fieldLabel}>No.</Text>
+                <Text style={styles.fieldLabel}>Age</Text>
                 <TextInput
                   value={durationCount}
                   onChangeText={(v) =>
                     setDurationCount(v.replace(/[^0-9]/g, ""))
                   }
-                  placeholder="2"
+                  placeholder={ageUnit === "Days" ? "14" : "2"}
                   keyboardType="number-pad"
                   style={styles.input}
                   textAlignVertical="center"
                   placeholderTextColor="#8F9696"
                 />
-                <Text style={styles.ageLimitHint}>Minimum: 2 weeks</Text>
+                <Text style={styles.ageLimitHint}>
+                  {ageUnit === "Days" ? "Minimum: 14 days" : "Minimum: 2 weeks"}
+                </Text>
               </View>
               <View style={styles.halfField}>
-                <Text style={styles.fieldLabel}>Age unit</Text>
-                <View style={styles.select} accessibilityLabel="Age unit">
-                  <Text style={styles.selectText}>{ageUnit}</Text>
-                </View>
+                <View style={styles.fieldLabelSpacer} />
+                <Pressable
+                  onPress={() => setAgeUnitModalOpen(true)}
+                  style={styles.ageUnitDropdown}
+                  accessibilityRole="button"
+                  accessibilityLabel="Select age unit"
+                >
+                  <Text style={styles.ageUnitDropdownText}>{ageUnit}</Text>
+                  <MaterialCommunityIcons
+                    name="chevron-down"
+                    size={20}
+                    color={ChickIntelPalette.gray1}
+                  />
+                </Pressable>
               </View>
             </View>
 
@@ -847,7 +862,7 @@ export default function AddBatchScreen() {
             </View>
 
             <View style={styles.resultRow}>
-              {parseCount(durationCount) * (ageUnit === "Weeks old" ? 7 : 1) >=
+              {parseCount(durationCount) * (ageUnit === "Days" ? 1 : 7) >=
               SEXING_START_AGE_WEEKS * 7 ? (
                 <>
                   <View style={styles.resultField}>
@@ -877,7 +892,8 @@ export default function AddBatchScreen() {
                 </>
               ) : null}
             </View>
-            {parseCount(durationCount) * 7 >= SEXING_START_AGE_WEEKS * 7 ? (
+            {parseCount(durationCount) * (ageUnit === "Days" ? 1 : 7) >=
+            SEXING_START_AGE_WEEKS * 7 ? (
               <Pressable
                 onPress={() => setSexScannerOpen(true)}
                 style={({ pressed }) => [
@@ -911,7 +927,8 @@ export default function AddBatchScreen() {
 
               const enteredAge = Number.parseInt(durationCount || "0", 10);
               const ageInDays =
-                (Number.isFinite(enteredAge) ? enteredAge : 0) * 7;
+                (Number.isFinite(enteredAge) ? enteredAge : 0) *
+                (ageUnit === "Days" ? 1 : 7);
 
               if (
                 !isChickBatch &&
@@ -919,7 +936,9 @@ export default function AddBatchScreen() {
               ) {
                 Alert.alert(
                   "Chicken is too young",
-                  `Chicken batches must be at least ${MIN_CHICKEN_BATCH_AGE_WEEKS} weeks old.`,
+                  ageUnit === "Days"
+                    ? "Chicken batches must be at least 14 days old (2 weeks)."
+                    : `Chicken batches must be at least ${MIN_CHICKEN_BATCH_AGE_WEEKS} weeks old.`,
                 );
                 return;
               }
@@ -950,7 +969,7 @@ export default function AddBatchScreen() {
                 maleCount: parsedMale,
                 unknownCount: parsedUnknown,
                 ageLabel: isChickBatch
-                  ? "0 days old"
+                  ? "0 days"
                   : `${durationCount || "0"} ${ageUnit.toLowerCase()}`,
                 isolatedCount: 0,
                 killedCount: 0,
@@ -1555,6 +1574,87 @@ export default function AddBatchScreen() {
           </Pressable>
         </Pressable>
       </Modal>
+
+      <Modal
+        visible={ageUnitModalOpen}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setAgeUnitModalOpen(false)}
+      >
+        <Pressable
+          style={styles.colorModalBackdrop}
+          onPress={() => setAgeUnitModalOpen(false)}
+        >
+          <Pressable
+            style={styles.ageUnitModalCard}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <View style={styles.colorModalHeader}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.colorModalTitle}>Select Age Unit</Text>
+                <Text style={styles.colorModalSubtitle}>
+                  Choose days or weeks for batch age
+                </Text>
+              </View>
+              <Pressable
+                onPress={() => setAgeUnitModalOpen(false)}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Close age unit picker"
+              >
+                <MaterialCommunityIcons
+                  name="close"
+                  size={20}
+                  color={ChickIntelPalette.gray1}
+                />
+              </Pressable>
+            </View>
+
+            <View style={styles.ageUnitOptionsList}>
+              {AGE_UNIT_OPTIONS.map((option) => {
+                const isSelected = ageUnit === option;
+                return (
+                  <Pressable
+                    key={option}
+                    onPress={() => {
+                      setAgeUnit(option);
+                      setAgeUnitModalOpen(false);
+                    }}
+                    style={({ pressed }) => [
+                      styles.ageUnitOptionItem,
+                      isSelected && styles.ageUnitOptionItemSelected,
+                      { opacity: pressed ? 0.8 : 1 },
+                    ]}
+                    accessibilityRole="button"
+                  >
+                    <Text
+                      style={[
+                        styles.ageUnitOptionText,
+                        isSelected && styles.ageUnitOptionTextSelected,
+                      ]}
+                    >
+                      {option}
+                    </Text>
+                    {isSelected ? (
+                      <MaterialCommunityIcons
+                        name="check-circle"
+                        size={20}
+                        color={ChickIntelPalette.green1}
+                      />
+                    ) : (
+                      <MaterialCommunityIcons
+                        name="circle-outline"
+                        size={20}
+                        color={ChickIntelPalette.gray2}
+                      />
+                    )}
+                  </Pressable>
+                );
+              })}
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -1574,6 +1674,69 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+  },
+  ageUnitDropdown: {
+    height: verticalScale(46),
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: ChickIntelPalette.gray2,
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: moderateScale(12),
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  ageUnitDropdownText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(14),
+    fontWeight: "600",
+    color: ChickIntelPalette.gray1,
+  },
+  fieldLabelSpacer: {
+    height: responsiveFontSize(12),
+  },
+  ageUnitModalCard: {
+    width: "100%",
+    maxWidth: scale(320),
+    borderRadius: 16,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: ChickIntelPalette.gray2,
+    padding: moderateScale(18),
+    shadowColor: "#161E1A",
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: verticalScale(6) },
+    elevation: 8,
+  },
+  ageUnitOptionsList: {
+    gap: 8,
+    marginTop: verticalScale(14),
+  },
+  ageUnitOptionItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: verticalScale(12),
+    paddingHorizontal: moderateScale(14),
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: ChickIntelPalette.gray2,
+    backgroundColor: "#FFFFFF",
+  },
+  ageUnitOptionItemSelected: {
+    borderColor: ChickIntelPalette.green1,
+    backgroundColor: ChickIntelPalette.lightGreen,
+  },
+  ageUnitOptionText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(14),
+    fontWeight: "600",
+    color: ChickIntelPalette.gray1,
+  },
+  ageUnitOptionTextSelected: {
+    fontWeight: "700",
+    color: ChickIntelPalette.green1,
   },
   colorDropdownLeft: {
     flexDirection: "row",

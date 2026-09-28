@@ -29,21 +29,23 @@ export function JournalHeader({
 }: JournalHeaderProps) {
   return (
     <View style={styles.row}>
-      {onBackPress ? (
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={onBackPress}
-          activeOpacity={0.8}
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-        >
-          <MaterialCommunityIcons
-            name="arrow-left"
-            size={22}
-            color={ChickIntelPalette.gray1}
-          />
-        </TouchableOpacity>
-      ) : null}
+      <View style={styles.headerSideLeft}>
+        {onBackPress ? (
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={onBackPress}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+          >
+            <MaterialCommunityIcons
+              name="arrow-left"
+              size={22}
+              color={ChickIntelPalette.gray1}
+            />
+          </TouchableOpacity>
+        ) : null}
+      </View>
       <Text style={styles.title} numberOfLines={1}>
         {isSelecting
           ? selectedCount > 0
@@ -51,7 +53,7 @@ export function JournalHeader({
             : "Select Logs to Archive"
           : "Behavior Journal"}
       </Text>
-      <View style={styles.headerIcons}>
+      <View style={styles.headerSideRight}>
         {!isSelecting ? (
           <>
             <TouchableOpacity
@@ -125,9 +127,21 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 12,
     marginTop: verticalScale(10),
     marginBottom: verticalScale(8),
+  },
+  headerSideLeft: {
+    minWidth: scale(80),
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-start",
+  },
+  headerSideRight: {
+    minWidth: scale(80),
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: 4,
   },
   titleLeftRow: {
     flex: 1,

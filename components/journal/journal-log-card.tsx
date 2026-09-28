@@ -15,7 +15,6 @@ import {
     View,
 } from "react-native";
 
-import { BlurCard } from "@/components/ui/blur-card";
 import { ChickFont } from "@/constants/chick-fonts";
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
 import {
@@ -54,10 +53,10 @@ function getStatusTheme(status?: string, illness?: string) {
   // 1. Recovered -> GREEN
   if (normStatus === "recovered") {
     return {
-      accentColor: ChickIntelPalette.green1,
-      badgeBg: ChickIntelPalette.lightGreen,
-      badgeText: ChickIntelPalette.green1,
-      badgeBorder: "rgba(64, 83, 77, 0.25)",
+      accentColor: "#A7F3D0",
+      badgeBg: "rgba(255, 255, 255, 0.20)",
+      badgeText: "#FFFFFF",
+      badgeBorder: "rgba(255, 255, 255, 0.40)",
       label: "Recovered",
     };
   }
@@ -65,10 +64,10 @@ function getStatusTheme(status?: string, illness?: string) {
   // 2. Dead / Deceased -> MAROON ALERT
   if (normStatus === "deceased" || normStatus === "dead") {
     return {
-      accentColor: "#923737",
-      badgeBg: "rgba(146, 55, 55, 0.10)",
-      badgeText: "#923737",
-      badgeBorder: "rgba(146, 55, 55, 0.25)",
+      accentColor: "#F87171",
+      badgeBg: "rgba(146, 55, 55, 0.45)",
+      badgeText: "#FECACA",
+      badgeBorder: "rgba(248, 113, 113, 0.50)",
       label: "Deceased",
     };
   }
@@ -78,8 +77,8 @@ function getStatusTheme(status?: string, illness?: string) {
     return {
       accentColor: ChickIntelPalette.accent,
       badgeBg: "rgba(247, 192, 144, 0.25)",
-      badgeText: ChickIntelPalette.gray1,
-      badgeBorder: "rgba(247, 192, 144, 0.6)",
+      badgeText: ChickIntelPalette.accent,
+      badgeBorder: "rgba(247, 192, 144, 0.55)",
       label: "Isolated",
     };
   }
@@ -91,10 +90,10 @@ function getStatusTheme(status?: string, illness?: string) {
   }
 
   return {
-    accentColor: ChickIntelPalette.mediumGreen,
-    badgeBg: ChickIntelPalette.lightGreen,
-    badgeText: ChickIntelPalette.gray1,
-    badgeBorder: ChickIntelPalette.mediumGreen,
+    accentColor: ChickIntelPalette.accent,
+    badgeBg: "rgba(255, 255, 255, 0.18)",
+    badgeText: "#FFFFFF",
+    badgeBorder: "rgba(255, 255, 255, 0.35)",
     label: displayLabel,
   };
 }
@@ -124,7 +123,7 @@ export const JournalLogCard = memo(function JournalLogCard({
   const [modalVisible, setModalVisible] = useState(false);
   const [modalNoteText, setModalNoteText] = useState(noteValue);
   const [isSaving, setIsSaving] = useState(false);
-  const animatedOpacity = useRef(new Animated.Value(0.85)).current;
+  const animatedOpacity = useRef(new Animated.Value(1)).current;
   const animatedTranslateY = useRef(new Animated.Value(8)).current;
   const animatedScale = useRef(new Animated.Value(0.99)).current;
 
@@ -196,11 +195,7 @@ export const JournalLogCard = memo(function JournalLogCard({
           ],
         }}
       >
-        <BlurCard
-          style={[styles.card, selected ? styles.cardSelected : null]}
-          borderRadius={10}
-          intensity={20}
-        >
+        <View style={[styles.card, selected ? styles.cardSelected : null]}>
           <Pressable
             onPress={onOpen}
             style={({ pressed }) => [
@@ -217,7 +212,7 @@ export const JournalLogCard = memo(function JournalLogCard({
                   <MaterialCommunityIcons
                     name="book-open-page-variant-outline"
                     size={13}
-                    color={ChickIntelPalette.green1}
+                    color={ChickIntelPalette.accent}
                   />
                   <Text style={styles.journalKicker}>FIELD NOTE</Text>
                   {chtTag ? (
@@ -268,7 +263,7 @@ export const JournalLogCard = memo(function JournalLogCard({
                     <MaterialCommunityIcons
                       name="bird"
                       size={28}
-                      color={ChickIntelPalette.green1}
+                      color="#FFFFFF"
                     />
                   </View>
                 )}
@@ -334,7 +329,7 @@ export const JournalLogCard = memo(function JournalLogCard({
                 <MaterialCommunityIcons
                   name="note-text-outline"
                   size={14}
-                  color={ChickIntelPalette.green1}
+                  color="#FFFFFF"
                 />
               </View>
 
@@ -389,13 +384,13 @@ export const JournalLogCard = memo(function JournalLogCard({
                   <MaterialCommunityIcons
                     name="check"
                     size={14}
-                    color="#FFFFFF"
+                    color="#1F2E2B"
                   />
                 ) : null}
               </View>
             </Pressable>
           ) : null}
-        </BlurCard>
+        </View>
       </Animated.View>
 
       {/* Modal for adding/editing chicken note */}
@@ -479,20 +474,20 @@ const styles = StyleSheet.create({
     paddingRight: moderateScale(16),
     paddingTop: verticalScale(14),
     paddingBottom: verticalScale(12),
-    backgroundColor: "#FFFFFF",
+    backgroundColor: ChickIntelPalette.green1,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: ChickIntelPalette.gray2,
+    borderColor: "rgba(64, 83, 77, 0.4)",
     shadowColor: "#161E1A",
-    shadowOpacity: 0.04,
+    shadowOpacity: 0.1,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: verticalScale(2) },
-    elevation: 2,
+    elevation: 3,
     overflow: "hidden",
   },
   cardSelected: {
-    backgroundColor: "#FFFFFF",
-    borderColor: ChickIntelPalette.green1,
+    backgroundColor: ChickIntelPalette.green1,
+    borderColor: ChickIntelPalette.accent,
   },
   bodyPress: {
     paddingLeft: moderateScale(2),
@@ -502,7 +497,7 @@ const styles = StyleSheet.create({
     marginBottom: verticalScale(12),
     gap: 3,
     borderBottomWidth: 1,
-    borderBottomColor: ChickIntelPalette.gray2,
+    borderBottomColor: "rgba(255, 255, 255, 0.16)",
   },
   headerTopRow: {
     flexDirection: "row",
@@ -525,18 +520,20 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(10),
     fontWeight: "800",
     letterSpacing: 1,
-    color: ChickIntelPalette.green1,
+    color: ChickIntelPalette.accent,
   },
   entryTag: {
     marginLeft: 3,
     paddingHorizontal: moderateScale(6),
     paddingVertical: verticalScale(2),
-    borderRadius: 5,
-    backgroundColor: ChickIntelPalette.lightGreen,
+    borderRadius: 6,
+    backgroundColor: "rgba(255, 255, 255, 0.18)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.35)",
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(10),
     fontWeight: "700",
-    color: ChickIntelPalette.green1,
+    color: "#FFFFFF",
   },
   leftTagWrap: {
     flexDirection: "row",
@@ -569,8 +566,8 @@ const styles = StyleSheet.create({
   dateLine: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(11.5),
-    fontWeight: "700",
-    color: ChickIntelPalette.gray1,
+    fontWeight: "600",
+    color: "rgba(255, 255, 255, 0.72)",
     marginTop: verticalScale(1),
   },
   statusPill: {
@@ -609,17 +606,17 @@ const styles = StyleSheet.create({
     width: scale(72),
     height: verticalScale(72),
     borderRadius: 14,
-    backgroundColor: ChickIntelPalette.lightGreen,
+    backgroundColor: "rgba(0, 0, 0, 0.2)",
     borderWidth: 1,
-    borderColor: ChickIntelPalette.gray2,
+    borderColor: "rgba(255, 255, 255, 0.2)",
   },
   cardThumbPlaceholder: {
     width: scale(72),
     height: verticalScale(72),
     borderRadius: 14,
-    backgroundColor: ChickIntelPalette.lightGreen,
+    backgroundColor: "rgba(255, 255, 255, 0.12)",
     borderWidth: 1,
-    borderColor: ChickIntelPalette.gray2,
+    borderColor: "rgba(255, 255, 255, 0.2)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -635,16 +632,16 @@ const styles = StyleSheet.create({
     lineHeight: 23,
     fontWeight: "800",
     letterSpacing: -0.2,
-    color: ChickIntelPalette.gray1,
+    color: "#FFFFFF",
     marginBottom: verticalScale(4),
   },
   contextLabel: {
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(10),
+    fontSize: responsiveFontSize(10.5),
     fontWeight: "700",
-    color: ChickIntelPalette.green1,
+    color: ChickIntelPalette.accent,
     textTransform: "uppercase",
-    letterSpacing: 0.3,
+    letterSpacing: 0.4,
     marginBottom: verticalScale(2),
   },
   behaviorPreview: {
@@ -661,9 +658,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: moderateScale(7),
     paddingVertical: verticalScale(4),
     borderRadius: 7,
-    backgroundColor: ChickIntelPalette.lightGreen,
+    backgroundColor: "rgba(255, 255, 255, 0.18)",
     borderWidth: 1,
-    borderColor: ChickIntelPalette.mediumGreen,
+    borderColor: "rgba(255, 255, 255, 0.35)",
   },
   behaviorChipText: {
     flexShrink: 1,
@@ -671,23 +668,23 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(10),
     lineHeight: 13,
     fontWeight: "700",
-    color: ChickIntelPalette.green1,
+    color: "#FFFFFF",
   },
   behaviorMoreChip: {
     flexShrink: 0,
     paddingHorizontal: moderateScale(7),
     paddingVertical: verticalScale(4),
     borderRadius: 7,
-    backgroundColor: ChickIntelPalette.lightGreen,
+    backgroundColor: "rgba(255, 255, 255, 0.12)",
     borderWidth: 1,
-    borderColor: ChickIntelPalette.gray2,
+    borderColor: "rgba(255, 255, 255, 0.25)",
   },
   behaviorMoreText: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(10),
     lineHeight: 13,
     fontWeight: "800",
-    color: ChickIntelPalette.textMuted,
+    color: "rgba(255, 255, 255, 0.85)",
   },
   observationBox: {
     marginTop: verticalScale(6),
@@ -697,11 +694,14 @@ const styles = StyleSheet.create({
     paddingVertical: verticalScale(4),
   },
   journalNote: {
-    marginTop: verticalScale(12),
-    paddingTop: verticalScale(9),
+    marginTop: verticalScale(10),
+    paddingTop: verticalScale(8),
     paddingHorizontal: moderateScale(10),
-    paddingBottom: verticalScale(10),
-    backgroundColor: "rgba(255, 248, 229, 0.72)",
+    paddingBottom: verticalScale(8),
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.14)",
+    backgroundColor: "rgba(255, 255, 255, 0.08)",
   },
   journalNoteLabel: {
     marginBottom: verticalScale(4),
@@ -709,38 +709,38 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(10),
     fontWeight: "800",
     letterSpacing: 0.8,
-    color: "#9A6B2F",
+    color: ChickIntelPalette.accent,
   },
   observationText: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(12),
     lineHeight: 18,
     fontWeight: "600",
-    color: "#554A3A",
+    color: "#FFFFFF",
     fontStyle: "italic",
   },
   noteActionBar: {
     marginTop: verticalScale(10),
     paddingTop: verticalScale(8),
     borderTopWidth: 1,
-    borderTopColor: "rgba(49, 118, 103, 0.12)",
+    borderTopColor: "rgba(255, 255, 255, 0.16)",
   },
   notePressRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "rgba(244, 248, 247, 0.85)",
+    backgroundColor: "rgba(255, 255, 255, 0.12)",
     borderRadius: 10,
     paddingHorizontal: moderateScale(10),
     paddingVertical: verticalScale(6),
     borderWidth: 1,
-    borderColor: "rgba(49, 118, 103, 0.15)",
+    borderColor: "rgba(255, 255, 255, 0.22)",
   },
   noteIconBadge: {
     width: scale(24),
     height: verticalScale(24),
     borderRadius: 12,
-    backgroundColor: "rgba(49, 118, 103, 0.12)",
+    backgroundColor: "rgba(255, 255, 255, 0.18)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -751,23 +751,23 @@ const styles = StyleSheet.create({
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(12),
     lineHeight: 16,
-    color: ChickIntelPalette.gray1,
+    color: "#FFFFFF",
   },
   noteTimestamp: {
     marginTop: 2,
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(10),
-    color: ChickIntelPalette.textMuted,
+    color: "rgba(255, 255, 255, 0.7)",
   },
   notePrefix: {
     fontWeight: "700",
-    color: ChickIntelPalette.green1,
+    color: ChickIntelPalette.accent,
   },
   addNotePlaceholder: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(12),
     fontWeight: "600",
-    color: ChickIntelPalette.green1,
+    color: "rgba(255, 255, 255, 0.85)",
   },
   modalBackdrop: {
     flex: 1,
@@ -886,13 +886,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   checkBoxOn: {
-    backgroundColor: ChickIntelPalette.green1,
+    backgroundColor: ChickIntelPalette.accent,
     borderWidth: 1.5,
-    borderColor: ChickIntelPalette.green1,
+    borderColor: ChickIntelPalette.accent,
   },
   checkBoxOff: {
     borderWidth: 1.5,
-    borderColor: "rgba(49, 118, 103, 0.35)",
-    backgroundColor: "#FFFFFF",
+    borderColor: "rgba(255, 255, 255, 0.5)",
+    backgroundColor: "rgba(0, 0, 0, 0.2)",
   },
 });

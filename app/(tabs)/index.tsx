@@ -185,8 +185,8 @@ export default function HomeScreen() {
   const { width } = useWindowDimensions();
   const { scale: rs, moderateScale: rms } = useResponsiveMetrics();
 
-  /** Quick-action SVG size for 3x2 view */
-  const QUICK_ACTION_ICON_SIZE = Math.round(rms(45) * 1.6);
+  /** Quick-action SVG icon artwork size for consistent 3x2 view (increased by 15%) */
+  const QUICK_ACTION_ICON_SIZE = Math.round(rms(55));
   const [quickActionRowWidth, setQuickActionRowWidth] = useState(0);
   const [activeQuickActionIndex, setActiveQuickActionIndex] = useState(0);
   const quickActionScrollRef = useRef<ScrollView>(null);
@@ -611,7 +611,7 @@ export default function HomeScreen() {
       return;
     }
 
-    if (title === "Behavior Journal") {
+    if (title === "Journal" || title === "Behavior Journal") {
       router.push("/(tabs)/journal" as import("expo-router").Href);
       return;
     }
@@ -1294,7 +1294,11 @@ export default function HomeScreen() {
                     {(selectedBreedForModal &&
                       flockCountsByBreed[selectedBreedForModal.breedName]) ||
                       0}{" "}
-                    Chickens Recorded in Batches
+                    {((selectedBreedForModal &&
+                      flockCountsByBreed[selectedBreedForModal.breedName]) ||
+                      0) === 1
+                      ? "Chicken Recorded in Batches"
+                      : "Chickens Recorded in Batches"}
                   </Text>
                 </View>
               </View>
@@ -1779,6 +1783,8 @@ const styles = StyleSheet.create({
     marginTop: verticalScale(8),
   },
   quickActionIconWrap: {
+    width: moderateScale(58),
+    height: moderateScale(58),
     alignItems: "center",
     justifyContent: "center",
     marginBottom: verticalScale(4),
@@ -1822,7 +1828,7 @@ const styles = StyleSheet.create({
   },
   featureOverlayGradient: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(10, 20, 14, 0.40)",
+    backgroundColor: "rgba(6, 14, 10, 0.78)",
   },
   featureTopRow: {
     position: "absolute",

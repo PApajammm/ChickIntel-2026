@@ -8,6 +8,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from "react-native";
 
 import { ChickFont } from "@/constants/chick-fonts";
@@ -36,116 +37,114 @@ export interface DeleteConfirmationModalProps {
   onCancel: () => void;
 }
 
+/**
+ * Standard confirmation and delete modal matching the Logout Modal visual style.
+ */
 export function DeleteConfirmationModal({
   visible,
   title = "Delete Confirmation",
-  subtitle = "This action cannot be undone.",
+  subtitle,
   itemTitle,
   itemSubtitle,
   itemBadge,
-  message = "Are you sure you want to proceed with deletion?",
+  message = "Are you sure you want to delete this item? This action cannot be undone.",
   confirmLabel = "Delete",
   cancelLabel = "Cancel",
-  confirmColor = "#DC2626",
+  confirmColor = "#923737",
   iconName = "trash-can-outline",
   isDeleting = false,
   onConfirm,
   onCancel,
 }: DeleteConfirmationModalProps) {
+  const { width } = useWindowDimensions();
+  const maxW = Math.min(width - moderateScale(48), scale(360));
+
   return (
     <Modal
       visible={visible}
       transparent
       animationType="fade"
       statusBarTranslucent
-      onRequestClose={onCancel}
+      onRequestClose={isDeleting ? undefined : onCancel}
     >
-      <View style={styles.modalOverlay}>
+      <Pressable
+        style={styles.modalOverlay}
+        onPress={isDeleting ? undefined : onCancel}
+      >
         <Pressable
-          style={StyleSheet.absoluteFill}
-          onPress={isDeleting ? undefined : onCancel}
-        />
-        <View style={styles.modalCard}>
-          <View style={styles.modalHeader}>
-            <View style={styles.modalHeaderTitleRow}>
-              <View style={styles.modalHeaderIconBadge}>
-                <MaterialCommunityIcons
-                  name={iconName}
-                  size={moderateScale(20)}
-                  color="#FFFFFF"
-                />
-              </View>
-              <View style={styles.modalHeaderTexts}>
-                <Text style={styles.modalTitle}>{title}</Text>
-                {subtitle ? (
-                  <Text style={styles.modalSubtitle}>{subtitle}</Text>
-                ) : null}
-              </View>
-            </View>
-          </View>
+          style={[styles.modalCard, { maxWidth: maxW }]}
+          onPress={(e) => e.stopPropagation()}
+        >
+          <Text style={styles.modalTitle}>{title}</Text>
 
-          <View style={styles.modalBody}>
-            {(itemTitle || itemBadge || itemSubtitle) && (
-              <View style={styles.itemPreviewCard}>
-                {itemBadge ? (
-                  <View style={styles.badgeRow}>
-                    <View style={styles.badgePill}>
-                      <Text style={styles.badgePillText}>{itemBadge}</Text>
-                    </View>
+          {(itemTitle || itemBadge || itemSubtitle) && (
+            <View style={styles.itemPreviewCard}>
+              {itemBadge ? (
+                <View style={styles.badgeRow}>
+                  <View style={styles.badgePill}>
+                    <Text style={styles.badgePillText}>{itemBadge}</Text>
                   </View>
-                ) : null}
-                {itemTitle ? (
-                  <Text style={styles.itemTitleText} numberOfLines={2}>
-                    {itemTitle}
-                  </Text>
-                ) : null}
-                {itemSubtitle ? (
-                  <Text style={styles.itemSubtitleText} numberOfLines={2}>
-                    {itemSubtitle}
-                  </Text>
-                ) : null}
-              </View>
-            )}
+                </View>
+              ) : null}
+              {itemTitle ? (
+                <Text style={styles.itemTitleText} numberOfLines={2}>
+                  {itemTitle}
+                </Text>
+              ) : null}
+              {itemSubtitle ? (
+                <Text style={styles.itemSubtitleText} numberOfLines={2}>
+                  {itemSubtitle}
+                </Text>
+              ) : null}
+            </View>
+          )}
 
-            {message ? <Text style={styles.messageText}>{message}</Text> : null}
+          <Text style={styles.messageText}>
+            {subtitle || message}
+          </Text>
 
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={styles.modalCancel}
-                onPress={onCancel}
-                disabled={isDeleting}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.modalCancelText}>{cancelLabel}</Text>
-              </TouchableOpacity>
+          <View style={styles.modalActions}>
+            <TouchableOpacity
+              style={styles.modalCancel}
+              onPress={onCancel}
+              disabled={isDeleting}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.modalCancelText} numberOfLines={1}>
+                {cancelLabel}
+              </Text>
+            </TouchableOpacity>
 
-              <TouchableOpacity
-                style={[
-                  styles.modalDelete,
-                  { backgroundColor: confirmColor },
-                  isDeleting && styles.disabledBtn,
-                ]}
-                onPress={() => void onConfirm()}
-                disabled={isDeleting}
-                activeOpacity={0.85}
-              >
-                {isDeleting ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <>
+            <TouchableOpacity
+              style={[
+                styles.modalDelete,
+                { backgroundColor: confirmColor },
+                isDeleting && styles.disabledBtn,
+              ]}
+              onPress={() => void onConfirm()}
+              disabled={isDeleting}
+              activeOpacity={0.88}
+            >
+              {isDeleting ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <>
+                  {iconName ? (
                     <MaterialCommunityIcons
                       name={iconName}
                       size={moderateScale(16)}
                       color="#FFFFFF"
                     />
-                    <Text style={styles.modalDeleteText}>{confirmLabel}</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            </View>
+                  ) : null}
+                  <Text style={styles.modalDeleteText} numberOfLines={1}>
+                    {confirmLabel}
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
           </View>
-        </View>
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }
@@ -153,70 +152,42 @@ export function DeleteConfirmationModal({
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(31, 46, 43, 0.55)",
+    backgroundColor: "rgba(31, 46, 43, 0.45)",
     justifyContent: "center",
     alignItems: "center",
-    padding: moderateScale(20),
+    padding: moderateScale(24),
   },
   modalCard: {
     width: "100%",
-    maxWidth: scale(420),
+    borderRadius: scale(16),
+    padding: moderateScale(18),
     backgroundColor: "#FFFFFF",
-    borderRadius: 18,
     borderWidth: 1,
-    borderColor: ChickIntelPalette.mediumGreen,
-    overflow: "hidden",
-    shadowColor: "#000",
-    shadowOpacity: 0.18,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: verticalScale(8) },
-    elevation: 10,
-  },
-  modalHeader: {
-    backgroundColor: ChickIntelPalette.green1,
-    paddingHorizontal: moderateScale(18),
-    paddingVertical: verticalScale(14),
-  },
-  modalHeaderTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  modalHeaderIconBadge: {
-    width: scale(36),
-    height: verticalScale(36),
-    borderRadius: 18,
-    backgroundColor: "rgba(200, 75, 70, 0.85)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  modalHeaderTexts: {
-    flex: 1,
+    borderColor: ChickIntelPalette.gray2,
+    shadowColor: "#161E1A",
+    shadowOpacity: 0.12,
+    shadowRadius: scale(16),
+    shadowOffset: { width: 0, height: verticalScale(6) },
+    elevation: 8,
   },
   modalTitle: {
     fontFamily: ChickFont.display,
-    fontSize: responsiveFontSize(16),
-    fontWeight: "800",
-    color: "#FFFFFF",
-  },
-  modalSubtitle: {
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(11.5),
-    color: "rgba(255, 255, 255, 0.85)",
-    marginTop: 2,
-  },
-  modalBody: {
-    padding: moderateScale(18),
-    gap: 12,
+    fontSize: responsiveFontSize(18),
+    fontWeight: "700",
+    color: ChickIntelPalette.gray1,
+    textAlign: "center",
+    marginBottom: verticalScale(8),
   },
   itemPreviewCard: {
     borderWidth: 1,
-    borderColor: ChickIntelPalette.mediumGreen,
-    borderRadius: 12,
-    paddingHorizontal: moderateScale(14),
-    paddingVertical: verticalScale(10),
+    borderColor: ChickIntelPalette.gray2,
+    borderRadius: 10,
+    paddingHorizontal: moderateScale(12),
+    paddingVertical: verticalScale(8),
     backgroundColor: ChickIntelPalette.lightGreen,
-    gap: 4,
+    gap: 2,
+    marginVertical: verticalScale(6),
+    alignItems: "center",
   },
   badgeRow: {
     flexDirection: "row",
@@ -237,27 +208,31 @@ const styles = StyleSheet.create({
   },
   itemTitleText: {
     fontFamily: ChickFont.display,
-    fontSize: responsiveFontSize(15),
+    fontSize: responsiveFontSize(14),
     fontWeight: "700",
     color: ChickIntelPalette.gray1,
+    textAlign: "center",
   },
   itemSubtitleText: {
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(12),
+    fontSize: responsiveFontSize(11.5),
     color: ChickIntelPalette.textMuted,
-    lineHeight: 16,
+    lineHeight: 15,
+    textAlign: "center",
   },
   messageText: {
     fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(13),
-    lineHeight: 19,
-    color: ChickIntelPalette.gray1,
+    fontSize: responsiveFontSize(14),
+    lineHeight: responsiveFontSize(20),
+    fontWeight: "500",
+    color: ChickIntelPalette.textMuted,
+    textAlign: "center",
+    marginBottom: verticalScale(16),
   },
   modalActions: {
     flexDirection: "row",
     gap: moderateScale(12),
     justifyContent: "center",
-    marginTop: verticalScale(12),
   },
   modalCancel: {
     flex: 1,
@@ -285,6 +260,7 @@ const styles = StyleSheet.create({
     minHeight: verticalScale(42),
     borderRadius: scale(10),
     paddingHorizontal: moderateScale(16),
+    backgroundColor: "#923737",
   },
   modalDeleteText: {
     fontFamily: ChickFont.sans,

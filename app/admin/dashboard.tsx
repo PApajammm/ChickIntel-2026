@@ -782,20 +782,14 @@ export default function AdminDashboardScreen() {
                         styles.actionButton,
                         pressed && styles.pressedOpacity,
                       ]}
+                      accessibilityRole="button"
+                      accessibilityLabel="Edit farmer details"
                     >
                       <MaterialCommunityIcons
                         name="pencil-outline"
-                        size={16}
+                        size={18}
                         color={colors.primary}
                       />
-                      <Text
-                        style={[
-                          styles.actionButtonText,
-                          { color: colors.primary },
-                        ]}
-                      >
-                        Edit Details
-                      </Text>
                     </Pressable>
                     <Pressable
                       onPress={() =>
@@ -805,6 +799,10 @@ export default function AdminDashboardScreen() {
                         styles.actionButton,
                         pressed && styles.pressedOpacity,
                       ]}
+                      accessibilityRole="button"
+                      accessibilityLabel={
+                        item.isActive ? "Deactivate farmer" : "Reactivate farmer"
+                      }
                     >
                       <MaterialCommunityIcons
                         name={
@@ -812,21 +810,9 @@ export default function AdminDashboardScreen() {
                             ? "account-off-outline"
                             : "account-check-outline"
                         }
-                        size={16}
+                        size={18}
                         color={item.isActive ? colors.danger : colors.success}
                       />
-                      <Text
-                        style={[
-                          styles.actionButtonText,
-                          {
-                            color: item.isActive
-                              ? colors.danger
-                              : colors.success,
-                          },
-                        ]}
-                      >
-                        {item.isActive ? "Deactivate" : "Reactivate"}
-                      </Text>
                     </Pressable>
                   </View>
                 </BlurCard>
