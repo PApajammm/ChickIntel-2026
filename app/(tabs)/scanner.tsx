@@ -53,7 +53,7 @@ import { logError, logStep } from "@/utils/logger";
 import {
     inferSexFromImage,
     resolveSexDetails,
-} from "@/utils/sexing-image-inference";
+} from "@/services/inference/sexing-image-inference";
 
 import {
     optimizePhotoForInference

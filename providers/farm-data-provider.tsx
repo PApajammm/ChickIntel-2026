@@ -23,8 +23,8 @@ import {
     isExpirationBatchType,
     updateInventoryItem,
     type SupabaseInventoryItem,
-} from "@/utils/supabase-inventory";
-import { recordDeletedInventoryItem } from "@/utils/supabase-inventory-history";
+} from "@/services/inventory/supabase-inventory";
+import { recordDeletedInventoryItem } from "@/services/inventory/supabase-inventory-history";
 import {
     completeScheduleTask,
     createScheduleTask,
@@ -33,7 +33,7 @@ import {
     fetchScheduleTasks,
     type SupabaseScheduleTask,
     type SupabaseScheduleTaskCompletion,
-} from "@/utils/supabase-schedule";
+} from "@/services/schedule/supabase-schedule";
 
 type FarmDataContextType = {
   rawItems: SupabaseInventoryItem[];

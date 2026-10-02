@@ -52,7 +52,7 @@ import {
     formatConsumptionTrend,
     formatKpiTrend,
     type HomeKpiPeriod,
-} from "@/utils/home-kpis";
+} from "@/services/shared/home-kpis";
 import { logError, logStep } from "@/utils/logger";
 import {
     getFeaturedBreedCards,
@@ -65,7 +65,7 @@ import {
     useResponsiveMetrics,
     verticalScale,
 } from "@/utils/responsive";
-import { fetchFarmBatches } from "@/utils/supabase-batches";
+import { fetchFarmBatches } from "@/services/chicken/supabase-batches";
 
 type KpiCardData = {
   title: string;

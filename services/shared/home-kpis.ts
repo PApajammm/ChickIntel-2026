@@ -8,7 +8,7 @@ import {
     countScheduleTaskOccurrencesThroughDateTime,
     fetchScheduleTasks,
     type SupabaseScheduleTask,
-} from "@/utils/supabase-schedule";
+} from "@/services/schedule/supabase-schedule";
 
 export type HomeKpiPeriod = "7 days" | "30 days" | "12 months";
 

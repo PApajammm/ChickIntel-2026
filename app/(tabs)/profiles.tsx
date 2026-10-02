@@ -60,17 +60,17 @@ import { logError, logStep } from "@/utils/logger";
 import {
     inferSexFromImage,
     resolveSexDetails,
-} from "@/utils/sexing-image-inference";
+} from "@/services/inference/sexing-image-inference";
 import {
     deleteFarmBatch,
     fetchFarmBatches,
     updateFarmBatch,
-} from "@/utils/supabase-batches";
-import { recordDeletedChickenBatch } from "@/utils/supabase-chicken-batch-history";
+} from "@/services/chicken/supabase-batches";
+import { recordDeletedChickenBatch } from "@/services/chicken/supabase-chicken-batch-history";
 import {
     fetchFarmEggBatches,
     updateFarmEggBatch,
-} from "@/utils/supabase-egg-batches";
+} from "@/services/eggs/supabase-egg-batches";
 
 const TAB_BAR_OFFSET = 55;
 const FAB_OFFSET_FROM_TAB_TOP = 50;

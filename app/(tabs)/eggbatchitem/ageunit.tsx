@@ -34,11 +34,11 @@ import {
     isEggProductionReady,
 } from "@/utils/chicken-batch-rules";
 import { logError } from "@/utils/logger";
-import { fetchFarmBatches } from "@/utils/supabase-batches";
+import { fetchFarmBatches } from "@/services/chicken/supabase-batches";
 import {
     createFarmEggBatch,
     fetchFarmEggBatches,
-} from "@/utils/supabase-egg-batches";
+} from "@/services/eggs/supabase-egg-batches";
 
 type BatchColorOption = {
   id: string;

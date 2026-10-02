@@ -44,23 +44,23 @@ import {
     inferDiseaseFromImage,
     normalizeHealthClassifierLabel,
     type HealthImageInferenceResult,
-} from "@/utils/health-image-inference";
+} from "@/services/inference/health-image-inference";
 import { evaluateHealthAssessment } from "@/utils/health-rule-engine";
 import { logError, logStep } from "@/utils/logger";
-import { fetchFarmBatches } from "@/utils/supabase-batches";
-import { mapBehaviorIdsToLabels } from "@/utils/supabase-behaviors";
+import { fetchFarmBatches } from "@/services/chicken/supabase-batches";
+import { mapBehaviorIdsToLabels } from "@/services/health/supabase-behaviors";
 import {
     detectDiseaseFromClassifierLabel,
     type MatchedDisease,
-} from "@/utils/supabase-diseases";
-import { createHealthJournalEntry } from "@/utils/supabase-health-journal";
+} from "@/services/health/supabase-diseases";
+import { createHealthJournalEntry } from "@/services/health/supabase-health-journal";
 import {
     appendHealthLogToMonitoring,
     createHealthMonitoringRecord,
     doesChtTagExist,
     formatChtTag,
     getNextChtNumber,
-} from "@/utils/supabase-health-monitoring";
+} from "@/services/health/supabase-health-monitoring";
 
 const MONITORABLE_DISEASES = [
   "Infectious Coryza",

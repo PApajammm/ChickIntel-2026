@@ -45,14 +45,14 @@ import {
     fetchFarmBatches,
     promoteFarmChickBatch,
     updateFarmBatch,
-} from "@/utils/supabase-batches";
-import { recordDeletedEggBatch } from "@/utils/supabase-egg-batch-history";
+} from "@/services/chicken/supabase-batches";
+import { recordDeletedEggBatch } from "@/services/eggs/supabase-egg-batch-history";
 import {
     deleteFarmEggBatch,
     fetchFarmEggBatches,
     updateFarmEggBatch,
-} from "@/utils/supabase-egg-batches";
-import { recordEggDisposition } from "@/utils/supabase-egg-dispositions";
+} from "@/services/eggs/supabase-egg-batches";
+import { recordEggDisposition } from "@/services/eggs/supabase-egg-dispositions";
 
 const TAB_BAR_OFFSET = 55;
 const FAB_OFFSET_FROM_TAB_TOP = 50;

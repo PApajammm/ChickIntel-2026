@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
-import { adjustFarmBatchHealthCounters } from "@/utils/supabase-batches";
-import { formatScheduleDateKey } from "@/utils/supabase-schedule";
+import { adjustFarmBatchHealthCounters } from "@/services/chicken/supabase-batches";
+import { formatScheduleDateKey } from "@/services/schedule/supabase-schedule";
 import { type HealthJournalSavedScan } from "./supabase-health-journal";
 
 export type HealthMonitoringRecord = {

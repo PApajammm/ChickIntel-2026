@@ -18,7 +18,7 @@ import {
     scale,
     verticalScale,
 } from "@/utils/responsive";
-import type { BehaviorCategory } from "@/utils/supabase-behaviors";
+import type { BehaviorCategory } from "@/services/health/supabase-behaviors";
 
 type BehaviorChecklistProps = {
   items: HealthBehaviorItem[];

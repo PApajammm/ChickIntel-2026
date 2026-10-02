@@ -8,7 +8,7 @@ import {
     scheduleTaskMatchesDate,
     type SupabaseScheduleTask,
     type SupabaseScheduleTaskCompletion,
-} from "@/utils/supabase-schedule";
+} from "@/services/schedule/supabase-schedule";
 
 export type ReportOverview = "Weekly" | "Monthly" | "Annually";
 export type ReportProductionType = "Eggs" | "Chickens";

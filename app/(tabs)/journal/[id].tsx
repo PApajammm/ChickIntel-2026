@@ -25,17 +25,17 @@ import { ChickIntelPalette } from "@/constants/chickintel-palette";
 import { useBehaviors } from "@/hooks/use-behaviors";
 import { useAuth } from "@/providers/auth-provider";
 import { logError } from "@/utils/logger";
-import { mapBehaviorIdsToLabels } from "@/utils/supabase-behaviors";
+import { mapBehaviorIdsToLabels } from "@/services/health/supabase-behaviors";
 import {
     fetchDiseaseDetails,
     type DiseaseDetails,
-} from "@/utils/supabase-diseases";
+} from "@/services/health/supabase-diseases";
 import {
     fetchHealthJournalEntryById,
     formatJournalDateTime,
     type HealthJournalSavedScan,
-} from "@/utils/supabase-health-journal";
-import { fetchHealthMonitoringScanHistory } from "@/utils/supabase-health-monitoring";
+} from "@/services/health/supabase-health-journal";
+import { fetchHealthMonitoringScanHistory } from "@/services/health/supabase-health-monitoring";
 
 export default function JournalDetailScreen() {
     const router = useRouter();

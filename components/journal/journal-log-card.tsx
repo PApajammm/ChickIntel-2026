@@ -26,7 +26,7 @@ import {
 import {
     formatJournalDateTime,
     type JournalNote,
-} from "@/utils/supabase-health-journal";
+} from "@/services/health/supabase-health-journal";
 type JournalLogCardProps = {
   chtTag?: string;
   detectedIllness: string;

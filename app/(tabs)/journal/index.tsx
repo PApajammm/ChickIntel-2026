@@ -36,7 +36,7 @@ import { HealthTypography } from "@/constants/health-typography";
 import { useBehaviors } from "@/hooks/use-behaviors";
 import { useAuth } from "@/providers/auth-provider";
 import { logError, logStep } from "@/utils/logger";
-import { mapBehaviorIdsToLabels } from "@/utils/supabase-behaviors";
+import { mapBehaviorIdsToLabels } from "@/services/health/supabase-behaviors";
 import {
     fetchHealthJournalEntries,
     formatJournalDateTime,
@@ -45,7 +45,7 @@ import {
     matchesJournalStatus,
     removeHealthJournalEntries,
     updateHealthJournalEntryNote,
-} from "@/utils/supabase-health-journal";
+} from "@/services/health/supabase-health-journal";
 
 const TAB_BAR_OFFSET = 55;
 const FAB_OFFSET_FROM_TAB_TOP = 50;

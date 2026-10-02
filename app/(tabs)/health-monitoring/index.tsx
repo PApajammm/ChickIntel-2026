@@ -35,7 +35,7 @@ import {
     type HealthMonitoringRecord,
     type HealthMonitoringStatus,
     updateHealthMonitoringStatus,
-} from "@/utils/supabase-health-monitoring";
+} from "@/services/health/supabase-health-monitoring";
 
 type HealthMonitoringTab = "Active" | "History";
 type PendingStatusChange = {

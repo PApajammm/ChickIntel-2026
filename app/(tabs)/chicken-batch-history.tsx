@@ -6,7 +6,7 @@ import { getCurrentBatchAgeLabel } from "@/utils/batch-store";
 import {
     fetchDeletedChickenBatches,
     type ChickenBatchHistoryItem,
-} from "@/utils/supabase-chicken-batch-history";
+} from "@/services/chicken/supabase-chicken-batch-history";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";

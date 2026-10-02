@@ -14,7 +14,7 @@ import {
     excludeScheduleTaskOccurrence,
     fetchScheduleOccurrenceExclusions,
     type ScheduleOccurrenceExclusion,
-} from "@/utils/supabase-schedule-occurrences";
+} from "@/services/schedule/supabase-schedule-occurrences";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { Image } from "expo-image";
@@ -60,17 +60,17 @@ import { logError } from "@/utils/logger";
 import {
     cancelTaskNotifications,
     scheduleTasksNotifications,
-} from "@/utils/schedule-notifications";
+} from "@/services/schedule/schedule-notifications";
 import { computeEffectiveInventoryItems } from "@/utils/stock-alerts";
-import { fetchFarmBatches } from "@/utils/supabase-batches";
+import { fetchFarmBatches } from "@/services/chicken/supabase-batches";
 import {
     fetchInventoryItems,
     type SupabaseInventoryItem,
-} from "@/utils/supabase-inventory";
+} from "@/services/inventory/supabase-inventory";
 import {
     fetchMedicationOptions,
     fetchVitaminOptions,
-} from "@/utils/supabase-lookups";
+} from "@/services/shared/supabase-lookups";
 import {
     computeTaskStatus,
     createScheduleTask,
@@ -81,8 +81,8 @@ import {
     scheduleTaskMatchesDate,
     type SupabaseScheduleTask,
     type SupabaseScheduleTaskCompletion,
-} from "@/utils/supabase-schedule";
-import { recordDeletedScheduleTask } from "@/utils/supabase-schedule-history";
+} from "@/services/schedule/supabase-schedule";
+import { recordDeletedScheduleTask } from "@/services/schedule/supabase-schedule-history";
 
 const DAYS_OF_WEEK = [...SCHEDULE_DAYS_OF_WEEK];
 const MONTHS = [

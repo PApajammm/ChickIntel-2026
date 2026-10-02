@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase";
-import { fetchInventoryCategoryOptions } from "./supabase-lookups";
+import { fetchInventoryCategoryOptions } from "@/services/shared/supabase-lookups";
 
 export type SupabaseInventoryItem = {
   id: string;

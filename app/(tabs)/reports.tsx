@@ -19,7 +19,7 @@ import {
     type ReportOverview,
     type ReportProductionType,
     type ReportSupplyType,
-} from "@/utils/supabase-reports";
+} from "@/services/shared/supabase-reports";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Print from "expo-print";
 import { useRouter } from "expo-router";

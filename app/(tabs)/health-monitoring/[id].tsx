@@ -31,12 +31,12 @@ import { HealthTypography } from "@/constants/health-typography";
 import { useBehaviors } from "@/hooks/use-behaviors";
 import { useAuth } from "@/providers/auth-provider";
 import { logError } from "@/utils/logger";
-import { mapBehaviorIdsToLabels } from "@/utils/supabase-behaviors";
+import { mapBehaviorIdsToLabels } from "@/services/health/supabase-behaviors";
 import {
     fetchDiseaseDetails,
     type DiseaseDetails,
-} from "@/utils/supabase-diseases";
-import type { HealthJournalSavedScan } from "@/utils/supabase-health-journal";
+} from "@/services/health/supabase-diseases";
+import type { HealthJournalSavedScan } from "@/services/health/supabase-health-journal";
 import {
     fetchHealthMonitoringRecordById,
     fetchHealthMonitoringScanHistory,
@@ -45,7 +45,7 @@ import {
     type HealthMonitoringRecord,
     type HealthMonitoringTask,
     type HealthMonitoringTaskOccurrence,
-} from "@/utils/supabase-health-monitoring";
+} from "@/services/health/supabase-health-monitoring";
 
 type TreatmentOccurrenceEntry = {
   task: HealthMonitoringTask;
