@@ -25,14 +25,14 @@ import { ChickIntelPalette } from "@/constants/chickintel-palette";
 import { HealthTypography } from "@/constants/health-typography";
 import { useBehaviors } from "@/hooks/use-behaviors";
 import { useAuth } from "@/providers/auth-provider";
-import { mapBehaviorIdsToLabels } from "@/utils/supabase-behaviors";
+import { mapBehaviorIdsToLabels } from "@/services/health/supabase-behaviors";
 import {
     fetchArchivedHealthJournalEntries,
     formatJournalDateTime,
     matchesJournalStatus,
     type HealthJournalSavedScan,
     type JournalStatusFilter,
-} from "@/utils/supabase-health-journal";
+} from "@/services/health/supabase-health-journal";
 
 export default function ArchivesScreen() {
   const router = useRouter();

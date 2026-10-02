@@ -8,7 +8,7 @@ import {
     getStockSeverityMeta,
     type EffectiveInventoryItem,
     type StockSeverity,
-} from "@/utils/stock-alerts";
+} from "@/domain/stock-alerts";
 import Constants, { ExecutionEnvironment } from "expo-constants";
 import {
     createContext,

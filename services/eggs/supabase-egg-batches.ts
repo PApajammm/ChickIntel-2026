@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase";
-import type { EggBatchItem } from "@/utils/batch-store";
+import type { EggBatchItem } from "@/domain/batch-store";
 
 type EggBatchRow = {
   id: string;

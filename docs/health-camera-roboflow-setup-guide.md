@@ -179,7 +179,7 @@ Done: deployed function version verified as 9
 Create or restore this app helper:
 
 ```text
-utils/health-image-inference.ts
+services/inference/health-image-inference.ts
 ```
 
 It should:

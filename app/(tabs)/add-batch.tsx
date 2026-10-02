@@ -43,21 +43,21 @@ import {
     mapBreedPredictionToAttributes,
     matchBreedToAvailableOptions,
     resolveBestBreedPrediction,
-} from "@/utils/breed-image-inference";
+} from "@/services/inference/breed-image-inference";
 import {
     MIN_CHICKEN_BATCH_AGE_WEEKS,
     SEXING_START_AGE_WEEKS,
-} from "@/utils/chicken-batch-rules";
+} from "@/domain/chicken-batch-rules";
 import { optimizePhotoForInference } from "@/utils/image-crop-helper";
 import { logError, logStep, logWarn } from "@/utils/logger";
 import { addRecentBreedScan } from "@/utils/recent-breed-scans";
 import {
     inferSexFromImage,
     resolveSexDetails,
-} from "@/utils/sexing-image-inference";
-import { createFarmBatch, fetchFarmBatches } from "@/utils/supabase-batches";
-import { updateFarmEggBatch } from "@/utils/supabase-egg-batches";
-import { fetchBreedOptions } from "@/utils/supabase-lookups";
+} from "@/services/inference/sexing-image-inference";
+import { createFarmBatch, fetchFarmBatches } from "@/services/chicken/supabase-batches";
+import { updateFarmEggBatch } from "@/services/eggs/supabase-egg-batches";
+import { fetchBreedOptions } from "@/services/shared/supabase-lookups";
 
 const MAX_SCAN_ZOOM = 0.7;
 

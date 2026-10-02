@@ -1,6 +1,6 @@
 import type { BreedScanAttributes } from "@/constants/breed-scan";
 import { dashboardHeroImage } from "@/constants/farm-demo";
-import { ensurePersistentImageUri } from "@/utils/persistent-image-storage";
+import { ensurePersistentImageUri } from "@/services/shared/persistent-image-storage";
 import type { ImageSourcePropType } from "react-native";
 
 export type BreedMetadata = {

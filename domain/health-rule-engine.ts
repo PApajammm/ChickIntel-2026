@@ -1,5 +1,5 @@
 import type { HealthBehaviorItem } from "@/constants/health-scan-behaviors";
-import type { HealthImageInferenceResult, HealthImagePrediction } from "@/utils/health-image-inference";
+import type { HealthImageInferenceResult, HealthImagePrediction } from "@/services/inference/health-image-inference";
 
 export type DiseaseSlug =
   | "bumblefoot"

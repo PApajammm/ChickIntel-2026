@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase";
-import { ensurePersistentImageUri } from "@/utils/persistent-image-storage";
+import { ensurePersistentImageUri } from "@/services/shared/persistent-image-storage";
 
 export type HealthJournalSavedScan = {
   id: string;

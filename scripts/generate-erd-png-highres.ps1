@@ -1,8 +1,8 @@
 # Run this from the project root: PowerShell -ExecutionPolicy Bypass -File .\scripts\generate-erd-png-highres.ps1
 # Generates a higher-resolution PNG for the ERD diagram.
 
-$input = "docs/ERD_COMPARISON.mmd"
-$output = "docs/ERD_COMPARISON.png"
+$input = "docs/archive/ERD_COMPARISON.mmd"
+$output = "docs/archive/ERD_COMPARISON.png"
 $width = 3840
 $height = 2160
 

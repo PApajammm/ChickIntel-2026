@@ -5,7 +5,7 @@ import { useAuth } from "@/providers/auth-provider";
 import {
     fetchDeletedInventoryItems,
     type InventoryHistoryItem,
-} from "@/utils/supabase-inventory-history";
+} from "@/services/inventory/supabase-inventory-history";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";

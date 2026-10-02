@@ -37,7 +37,7 @@ import {
   inferBreedFromImage,
   mapBreedPredictionToAttributes,
   resolveBestBreedPrediction,
-} from "@/utils/breed-image-inference";
+} from "@/services/inference/breed-image-inference";
 
 export default function BreedResultScreen() {
   const router = useRouter();

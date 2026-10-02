@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase";
-import type { SupabaseInventoryItem } from "@/utils/supabase-inventory";
+import type { SupabaseInventoryItem } from "@/services/inventory/supabase-inventory";
 
 export type InventoryHistoryItem = SupabaseInventoryItem & {
   historyId: string;

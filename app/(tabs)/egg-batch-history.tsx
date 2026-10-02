@@ -26,19 +26,19 @@ import {
     formatEggFertilityPercent,
     isEggBatchCompleted,
     type EggBatchItem,
-} from "@/utils/batch-store";
+} from "@/domain/batch-store";
 import {
     fetchFarmEggBatches,
-} from "@/utils/supabase-egg-batches";
+} from "@/services/eggs/supabase-egg-batches";
 import {
     fetchDeletedEggBatches,
     type EggBatchHistoryItem,
-} from "@/utils/supabase-egg-batch-history";
+} from "@/services/eggs/supabase-egg-batch-history";
 import {
     fetchEggDispositions,
     type EggDispositionLog,
     type EggDispositionType,
-} from "@/utils/supabase-egg-dispositions";
+} from "@/services/eggs/supabase-egg-dispositions";
 
 type TabMode = "all" | "transfer" | "sell" | "dispose" | "archived" | "deleted";
 type TimeFilter = "all" | "today" | "week" | "month";

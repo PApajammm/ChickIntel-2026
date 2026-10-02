@@ -5,7 +5,7 @@ import {
     fetchBehaviorCategories,
     fetchBehaviors,
     type BehaviorCategory,
-} from "@/utils/supabase-behaviors";
+} from "@/services/health/supabase-behaviors";
 
 export function useBehaviors() {
     const [behaviors, setBehaviors] = useState<HealthBehaviorItem[]>([]);

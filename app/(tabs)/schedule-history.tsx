@@ -5,7 +5,7 @@ import { useAuth } from "@/providers/auth-provider";
 import {
     fetchDeletedScheduleTasks,
     type ScheduleHistoryItem,
-} from "@/utils/supabase-schedule-history";
+} from "@/services/schedule/supabase-schedule-history";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";

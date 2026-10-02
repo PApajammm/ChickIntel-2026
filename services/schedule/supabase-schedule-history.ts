@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase";
-import type { SupabaseScheduleTask } from "@/utils/supabase-schedule";
+import type { SupabaseScheduleTask } from "@/services/schedule/supabase-schedule";
 
 export type ScheduleHistoryItem = SupabaseScheduleTask & {
   historyId: string;

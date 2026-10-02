@@ -1,7 +1,7 @@
 @echo off
 REM Run this from the project root: generate-erd-png.cmd
-SET "INPUT=docs\ERD_COMPARISON.mmd"
-SET "OUTPUT=docs\ERD_COMPARISON.png"
+SET "INPUT=docs\archive\ERD_COMPARISON.mmd"
+SET "OUTPUT=docs\archive\ERD_COMPARISON.png"
 SET "WIDTH=3840"
 SET "HEIGHT=2160"
 

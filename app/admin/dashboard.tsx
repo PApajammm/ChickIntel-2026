@@ -4,7 +4,7 @@ import {
     filterActivityLogs,
     getActivityLogStats,
     type ActivityLogFilter,
-} from "@/utils/activity-logs";
+} from "@/services/admin/activity-logs";
 import {
     createBreed,
     createFarmer,
@@ -21,7 +21,7 @@ import {
     type BreedData,
     type FarmerData,
     type ItemTypeData,
-} from "@/utils/supabase-admin";
+} from "@/services/admin/supabase-admin";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";

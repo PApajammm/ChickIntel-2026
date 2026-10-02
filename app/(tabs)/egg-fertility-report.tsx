@@ -10,13 +10,13 @@ import {
     scale,
     verticalScale,
 } from "@/utils/responsive";
-import { fetchFarmEggBatches } from "@/utils/supabase-egg-batches";
+import { fetchFarmEggBatches } from "@/services/eggs/supabase-egg-batches";
 import {
     fetchEggFertilityReportSnapshot,
     type EggFertilityReportSnapshot,
     type ReportDonutSlice,
     type ReportOverview,
-} from "@/utils/supabase-reports";
+} from "@/services/shared/supabase-reports";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Print from "expo-print";
 import { useLocalSearchParams, useRouter } from "expo-router";

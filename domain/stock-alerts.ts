@@ -1,10 +1,10 @@
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
-import type { SupabaseInventoryItem } from "@/utils/supabase-inventory";
+import type { SupabaseInventoryItem } from "@/services/inventory/supabase-inventory";
 import {
     formatScheduleDateKey,
     type SupabaseScheduleTask,
     type SupabaseScheduleTaskCompletion,
-} from "@/utils/supabase-schedule";
+} from "@/services/schedule/supabase-schedule";
 
 export type EffectiveInventoryItem = SupabaseInventoryItem & {
   baseQty: number;

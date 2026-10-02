@@ -1,8 +1,8 @@
-import type { SupabaseScheduleTask } from "@/utils/supabase-schedule";
+import type { SupabaseScheduleTask } from "@/services/schedule/supabase-schedule";
 import {
     formatScheduleDateKey,
     scheduleTaskMatchesDate,
-} from "@/utils/supabase-schedule";
+} from "@/services/schedule/supabase-schedule";
 import * as Notifications from "expo-notifications";
 
 const NotificationsModule: typeof Notifications = Notifications;

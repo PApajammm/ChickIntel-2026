@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
-import { getEggMetricWindow } from "@/utils/egg-metric-windows";
-import { isTaskLinkedToInventoryItem } from "@/utils/stock-alerts";
+import { getEggMetricWindow } from "@/domain/egg-metric-windows";
+import { isTaskLinkedToInventoryItem } from "@/domain/stock-alerts";
 import {
     fetchScheduleTaskCompletions,
     fetchScheduleTasks,
@@ -8,7 +8,7 @@ import {
     scheduleTaskMatchesDate,
     type SupabaseScheduleTask,
     type SupabaseScheduleTaskCompletion,
-} from "@/utils/supabase-schedule";
+} from "@/services/schedule/supabase-schedule";
 
 export type ReportOverview = "Weekly" | "Monthly" | "Annually";
 export type ReportProductionType = "Eggs" | "Chickens";

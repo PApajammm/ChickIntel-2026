@@ -3,12 +3,12 @@ import {
     getEggMetricWindow,
     shiftDate,
     startOfDay,
-} from "@/utils/egg-metric-windows";
+} from "@/domain/egg-metric-windows";
 import {
     countScheduleTaskOccurrencesThroughDateTime,
     fetchScheduleTasks,
     type SupabaseScheduleTask,
-} from "@/utils/supabase-schedule";
+} from "@/services/schedule/supabase-schedule";
 
 export type HomeKpiPeriod = "7 days" | "30 days" | "12 months";
 
