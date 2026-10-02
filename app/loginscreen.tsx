@@ -20,6 +20,7 @@ import {
 
 import ChickenLogo from "@/assets_imported/splash-chicken.svg";
 import { AuthFrame, FarmButton, FarmInput } from "@/components/farm-auth";
+import { ChickFont } from "@/constants/chick-fonts";
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
 import { useAuth } from "@/providers/auth-provider";
 import { logStep } from "@/utils/logger";
@@ -89,23 +90,24 @@ export default function LoginScreen() {
                     keyboardDismissMode="on-drag"
                     showsVerticalScrollIndicator={false}
                 >
-                    <View style={styles.container}>
+                    <View style={[styles.container, { paddingTop: insets.top + 16 }]}>
                         <TouchableOpacity
-                            style={styles.backButton}
-                            onPress={() => router.replace("/logoscreen")}
+                            style={styles.infoButton}
+                            onPress={() => router.push("/developers")}
                             activeOpacity={0.7}
                             accessibilityRole="button"
-                            accessibilityLabel="Go back"
+                            accessibilityLabel="About ChickIntel"
                         >
                             <MaterialCommunityIcons
-                                name="arrow-left"
-                                size={24}
+                                name="information-outline"
+                                size={26}
                                 color={ChickIntelPalette.gray1}
                             />
                         </TouchableOpacity>
+
                         <ChickenLogo
-                            width={420}
-                            height={420}
+                            width={380}
+                            height={380}
                             style={styles.chickenBg}
                         />
 
@@ -114,20 +116,34 @@ export default function LoginScreen() {
                                 label="Email"
                                 value={email}
                                 onChangeText={handleEmailChange}
-                                placeholder="Email"
+                                placeholder="Email address"
                                 autoCapitalize="none"
                                 keyboardType="email-address"
                                 style={{ width: "100%" }}
                             />
-                            <FarmInput
-                                label="Password"
-                                value={password}
-                                onChangeText={handlePasswordChange}
-                                placeholder={undefined}
-                                secureTextEntry
-                                hint=""
-                                style={{ width: "100%" }}
-                            />
+                            <View style={styles.passwordFieldWrap}>
+                                <FarmInput
+                                    label="Password"
+                                    value={password}
+                                    onChangeText={handlePasswordChange}
+                                    placeholder="Password"
+                                    secureTextEntry
+                                    hint=""
+                                    style={{ width: "100%" }}
+                                />
+                                <TouchableOpacity
+                                    onPress={() => router.push("/forgot-password")}
+                                    style={styles.forgotPasswordTouch}
+                                    activeOpacity={0.7}
+                                    accessibilityRole="button"
+                                    accessibilityLabel="Forgot Password"
+                                >
+                                    <Text style={styles.forgotPasswordText}>
+                                        Forgot Password?
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+
                             {!configured ? (
                                 <Text style={styles.errorText}>
                                     Add your Supabase URL and anon key in `.env`
@@ -145,6 +161,20 @@ export default function LoginScreen() {
                                     title={loading ? "Signing in..." : "Log in"}
                                     onPress={handleLogin}
                                     disabled={loading}
+                                    style={{ width: "100%" }}
+                                />
+                                <FarmButton
+                                    title="Register as Farmer"
+                                    variant="secondary"
+                                    icon="account-plus-outline"
+                                    onPress={() => router.push("/register")}
+                                    style={{ width: "100%" }}
+                                />
+                                <FarmButton
+                                    title="Guest Mode"
+                                    variant="secondary"
+                                    icon="incognito"
+                                    onPress={() => router.push("/guest-mode")}
                                     style={{ width: "100%" }}
                                 />
                             </View>
@@ -166,16 +196,15 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         paddingHorizontal: moderateScale(20),
-        paddingTop: 28,
-        paddingBottom: 72,
+        paddingBottom: verticalScale(40),
         justifyContent: "flex-end",
-        gap: 20,
+        gap: 16,
     },
     chickenBg: {
         position: "absolute",
-        top: "20%",
+        top: "10%",
         alignSelf: "center",
-        opacity: 0.5,
+        opacity: 0.45,
         zIndex: 0,
     },
     formWrap: {
@@ -183,30 +212,44 @@ const styles = StyleSheet.create({
         maxWidth: scale(420),
         alignSelf: "center",
         paddingHorizontal: moderateScale(8),
-        gap: 18,
-        marginBottom: 48,
+        gap: 14,
+        marginBottom: verticalScale(20),
         zIndex: 1,
     },
-    backButton: {
+    passwordFieldWrap: {
+        width: "100%",
+        gap: 6,
+    },
+    forgotPasswordTouch: {
+        alignSelf: "flex-end",
+        paddingVertical: 4,
+        paddingHorizontal: 2,
+    },
+    forgotPasswordText: {
+        fontFamily: ChickFont.sans,
+        fontSize: responsiveFontSize(13),
+        fontWeight: "600",
+        color: ChickIntelPalette.green1,
+    },
+    infoButton: {
         position: "absolute",
-        top: 28,
-        left: moderateScale(20),
-        width: scale(40),
-        height: verticalScale(40),
+        top: 24,
+        right: moderateScale(20),
+        width: scale(44),
+        height: verticalScale(44),
         justifyContent: "center",
         alignItems: "center",
         zIndex: 3,
     },
-    formStack: {
-        gap: 16,
-    },
     buttonStack: {
-        gap: 12,
-        marginTop: 8,
+        gap: 10,
+        marginTop: 6,
     },
     errorText: {
         color: "#A94A45",
         fontSize: responsiveFontSize(13),
         lineHeight: 18,
+        fontFamily: ChickFont.sans,
+        fontWeight: "500",
     },
 });

@@ -1,8 +1,8 @@
 import {
-    moderateScale,
-    responsiveFontSize,
-    scale,
-    verticalScale,
+  moderateScale,
+  responsiveFontSize,
+  scale,
+  verticalScale,
 } from "@/utils/responsive";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useCameraPermissions } from "expo-camera";
@@ -10,16 +10,16 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -33,18 +33,19 @@ import { useAuth } from "@/providers/auth-provider";
 import { logError } from "@/utils/logger";
 import { mapBehaviorIdsToLabels } from "@/services/health/supabase-behaviors";
 import {
-    fetchDiseaseDetails,
-    type DiseaseDetails,
+  fetchDiseaseDetails,
+  type DiseaseDetails,
 } from "@/services/health/supabase-diseases";
 import type { HealthJournalSavedScan } from "@/services/health/supabase-health-journal";
 import {
-    fetchHealthMonitoringRecordById,
-    fetchHealthMonitoringScanHistory,
-    fetchHealthMonitoringTasks,
-    updateHealthMonitoringTaskOccurrence,
-    type HealthMonitoringRecord,
-    type HealthMonitoringTask,
-    type HealthMonitoringTaskOccurrence,
+  fetchHealthMonitoringRecordById,
+  fetchHealthMonitoringScanHistory,
+  fetchHealthMonitoringTasks,
+  updateDiseaseRecordStatus,
+  updateHealthMonitoringTaskOccurrence,
+  type HealthMonitoringRecord,
+  type HealthMonitoringTask,
+  type HealthMonitoringTaskOccurrence,
 } from "@/services/health/supabase-health-monitoring";
 
 type TreatmentOccurrenceEntry = {
@@ -128,6 +129,9 @@ export default function HealthMonitoringDetailScreen() {
   const id = Array.isArray(idParam) ? idParam[0] : idParam;
   const [record, setRecord] = useState<HealthMonitoringRecord | undefined>();
   const [scanHistory, setScanHistory] = useState<HealthJournalSavedScan[]>([]);
+  const [selectedDiseaseId, setSelectedDiseaseId] = useState<string | null>(
+    null,
+  );
   const [treatmentTasks, setTreatmentTasks] = useState<HealthMonitoringTask[]>(
     [],
   );
@@ -142,6 +146,7 @@ export default function HealthMonitoringDetailScreen() {
     task: HealthMonitoringTask;
     occurrence: HealthMonitoringTaskOccurrence;
   } | null>(null);
+  const [resolveModalVisible, setResolveModalVisible] = useState(false);
   const [isProtocolExpanded, setIsProtocolExpanded] = useState(true);
   const [protocolTaskFilter, setProtocolTaskFilter] = useState<
     "All" | "Pending" | "Overdue" | "Completed"
@@ -151,6 +156,7 @@ export default function HealthMonitoringDetailScreen() {
   );
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const { behaviors: behaviorItems } = useBehaviors();
+
   const refresh = useCallback(async () => {
     if (typeof id !== "string" || !id || !configured || !activeFarm?.id) {
       setRecord(undefined);
@@ -194,12 +200,47 @@ export default function HealthMonitoringDetailScreen() {
     }
   }, [refreshParam, refresh]);
 
-  const currentHealthLog = scanHistory[0] ?? record?.healthLog;
+  // All disease records associated with this chicken
+  const allDiseaseRecords = useMemo(() => {
+    if (scanHistory.length > 0) return scanHistory;
+    if (record?.healthLog) return [record.healthLog];
+    return [];
+  }, [scanHistory, record?.healthLog]);
 
+  // Active diseases vs Resolved/History diseases
+  const activeDiseaseRecords = useMemo(() => {
+    return allDiseaseRecords.filter((item) => {
+      const status = (item.actionStatus || "").toLowerCase();
+      return status !== "recovered" && status !== "deceased" && status !== "resolved";
+    });
+  }, [allDiseaseRecords]);
+
+  const resolvedDiseaseRecords = useMemo(() => {
+    return allDiseaseRecords.filter((item) => {
+      const status = (item.actionStatus || "").toLowerCase();
+      return status === "recovered" || status === "deceased" || status === "resolved";
+    });
+  }, [allDiseaseRecords]);
+
+  // Active health log / disease currently selected for view
+  const currentHealthLog = useMemo(() => {
+    if (selectedDiseaseId) {
+      const found = allDiseaseRecords.find((d) => d.id === selectedDiseaseId);
+      if (found) return found;
+    }
+    return (
+      activeDiseaseRecords[0] ??
+      allDiseaseRecords[0] ??
+      record?.healthLog
+    );
+  }, [selectedDiseaseId, allDiseaseRecords, activeDiseaseRecords, record?.healthLog]);
+
+  // Health history entries are all other scans/diseases not currently active in primary view
   const historyEntries = useMemo(() => {
-    if (scanHistory.length <= 1) return [];
-    return scanHistory.slice(1);
-  }, [scanHistory]);
+    return allDiseaseRecords.filter(
+      (scan) => scan.id !== currentHealthLog?.id,
+    );
+  }, [allDiseaseRecords, currentHealthLog?.id]);
 
   const behaviorLabels = useMemo(
     () =>
@@ -208,6 +249,16 @@ export default function HealthMonitoringDetailScreen() {
         : [],
     [currentHealthLog, behaviorItems],
   );
+
+  // Tasks belonging specifically to the currently selected disease
+  const currentDiseaseTasks = useMemo(() => {
+    if (!currentHealthLog) return treatmentTasks;
+    const tagged = treatmentTasks.filter(
+      (task) => task.healthLogId === currentHealthLog.id,
+    );
+    // If tasks were not tagged with healthLogId (e.g. single/legacy disease), return all monitoring tasks
+    return tagged.length > 0 ? tagged : treatmentTasks;
+  }, [currentHealthLog, treatmentTasks]);
 
   useEffect(() => {
     if (!currentHealthLog?.diseaseId) {
@@ -230,7 +281,7 @@ export default function HealthMonitoringDetailScreen() {
     };
   }, [currentHealthLog?.diseaseId]);
 
-  const openRescan = useCallback(async () => {
+  const openAddDisease = useCallback(async () => {
     if (!record) return;
 
     if (Platform.OS !== "web" && !cameraPermission?.granted) {
@@ -247,6 +298,7 @@ export default function HealthMonitoringDetailScreen() {
         monitoringId: record.id,
         chtTag: record.chtTag,
         initialMode: "health",
+        flowAction: "add_disease",
       },
     } as never);
   }, [cameraPermission?.granted, record, requestCameraPermission, router]);
@@ -256,7 +308,7 @@ export default function HealthMonitoringDetailScreen() {
       task: HealthMonitoringTask,
       occurrence: HealthMonitoringTaskOccurrence,
     ) => {
-      const allOccurrences = treatmentTasks.flatMap(
+      const allOccurrences = currentDiseaseTasks.flatMap(
         (entry) => entry.occurrences,
       );
       if (
@@ -268,7 +320,7 @@ export default function HealthMonitoringDetailScreen() {
       }
       setPendingTreatmentCompletion({ task, occurrence });
     },
-    [activeFarm?.id, treatmentTasks],
+    [activeFarm?.id, currentDiseaseTasks],
   );
 
   const confirmTreatmentCompletion = useCallback(async () => {
@@ -364,6 +416,21 @@ export default function HealthMonitoringDetailScreen() {
     [],
   );
 
+  const confirmResolveDisease = useCallback(async () => {
+    if (!activeFarm?.id || !currentHealthLog) return;
+    setResolveModalVisible(false);
+    try {
+      await updateDiseaseRecordStatus(
+        activeFarm.id,
+        currentHealthLog.id,
+        "Recovered",
+      );
+      void refresh();
+    } catch (error) {
+      logError("Failed to mark disease as recovered", error);
+    }
+  }, [activeFarm?.id, currentHealthLog, refresh]);
+
   if (!record) {
     return null;
   }
@@ -373,17 +440,20 @@ export default function HealthMonitoringDetailScreen() {
     healthLog?.actionStatus === "Isolation" ||
     diseaseDetails?.severity === "high" ||
     diseaseDetails?.severity === "critical";
-  const canRescan = record.monitoringStatus === "Active";
+  const canAddDisease = record.monitoringStatus === "Active";
   const monitoringDays = getMonitoringDays(
-    record.createdAt,
+    healthLog?.savedAt ?? record.createdAt,
     record.monitoringCompletedAt,
   );
-  const treatmentOccurrences = treatmentTasks.flatMap((task) =>
+  const diseaseStartDate = healthLog?.savedAt ?? record.createdAt;
+
+  const treatmentOccurrences = currentDiseaseTasks.flatMap((task) =>
     task.occurrences.map((occurrence) => ({ task, occurrence })),
   );
   const completedOccurrenceCount = treatmentOccurrences.filter(
     ({ occurrence }) => occurrence.completed,
   ).length;
+
   const filteredTreatmentOccurrences = treatmentOccurrences
     .filter(
       ({ occurrence }) =>
@@ -396,6 +466,7 @@ export default function HealthMonitoringDetailScreen() {
           new Date(right.occurrence.dueAt).getTime() ||
         left.task.sortOrder - right.task.sortOrder,
     );
+
   const treatmentDayGroups = filteredTreatmentOccurrences.reduce<
     {
       dateKey: string;
@@ -415,13 +486,19 @@ export default function HealthMonitoringDetailScreen() {
       {
         dateKey,
         dayNumber: getTreatmentDayNumber(
-          record.createdAt,
+          diseaseStartDate,
           item.occurrence.dueAt,
         ),
         items: [item],
       },
     ];
   }, []);
+
+  const isCurrentDiseaseActive =
+    healthLog &&
+    healthLog.actionStatus !== "Recovered" &&
+    healthLog.actionStatus !== "Deceased" &&
+    healthLog.actionStatus !== "Resolved";
 
   const renderTreatmentOccurrence = ({
     task,
@@ -548,13 +625,15 @@ export default function HealthMonitoringDetailScreen() {
     );
   };
 
-  const dateAdded = record.createdAt
-    ? new Date(record.createdAt).toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      })
-    : "";
+  const detectionDateFormatted = healthLog?.savedAt
+    ? formatScanDate(healthLog.savedAt)
+    : record.createdAt
+      ? new Date(record.createdAt).toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+        })
+      : "";
 
   const handleBack = () => {
     if (router.canGoBack()) {
@@ -589,7 +668,7 @@ export default function HealthMonitoringDetailScreen() {
       </View>
 
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingBottom: 15 }]}
+        contentContainerStyle={[styles.scroll, { paddingBottom: 25 }]}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.metaRow}>
@@ -598,8 +677,8 @@ export default function HealthMonitoringDetailScreen() {
             <Text style={styles.metaValue}>{record.batchNo ?? "-"}</Text>
           </View>
           <View style={styles.metaItem}>
-            <Text style={styles.metaLabel}>Date Added</Text>
-            <Text style={styles.metaValue}>{dateAdded}</Text>
+            <Text style={styles.metaLabel}>Detected Date</Text>
+            <Text style={styles.metaValue}>{detectionDateFormatted}</Text>
           </View>
           <View style={styles.metaItem}>
             <Text style={styles.metaLabel}>Monitoring Days</Text>
@@ -607,21 +686,77 @@ export default function HealthMonitoringDetailScreen() {
           </View>
         </View>
 
-        {canRescan ? (
+        {/* Action: Add New Disease to this chicken */}
+        {canAddDisease ? (
           <Pressable
-            onPress={() => void openRescan()}
+            onPress={() => void openAddDisease()}
             style={({ pressed }) => [
-              styles.retakeButton,
+              styles.addDiseaseButton,
               { opacity: pressed ? 0.88 : 1 },
             ]}
+            accessibilityRole="button"
+            accessibilityLabel="Add New Disease"
           >
             <MaterialCommunityIcons
-              name="camera-outline"
-              size={18}
+              name="plus-circle-outline"
+              size={19}
               color="#FFFFFF"
             />
-            <Text style={styles.retakeButtonText}>Re-take Picture</Text>
+            <Text style={styles.addDiseaseButtonText}>Add New Disease</Text>
           </Pressable>
+        ) : null}
+
+        {/* Multiple Disease Switcher Tabs if chicken has multiple active disease records */}
+        {activeDiseaseRecords.length > 1 ? (
+          <View style={styles.diseaseSelectorCard}>
+            <View style={styles.diseaseSelectorHeader}>
+              <MaterialCommunityIcons
+                name="format-list-bulleted"
+                size={16}
+                color={ChickIntelPalette.green1}
+              />
+              <Text style={styles.diseaseSelectorLabel}>
+                Active Disease Records ({activeDiseaseRecords.length})
+              </Text>
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.diseasePillRow}
+            >
+              {activeDiseaseRecords.map((item) => {
+                const isSelected = item.id === currentHealthLog?.id;
+                return (
+                  <TouchableOpacity
+                    key={item.id}
+                    onPress={() => setSelectedDiseaseId(item.id)}
+                    style={[
+                      styles.diseasePill,
+                      isSelected && styles.diseasePillActive,
+                    ]}
+                    activeOpacity={0.8}
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected: isSelected }}
+                  >
+                    <View
+                      style={[
+                        styles.diseasePillDot,
+                        isSelected && styles.diseasePillDotActive,
+                      ]}
+                    />
+                    <Text
+                      style={[
+                        styles.diseasePillText,
+                        isSelected && styles.diseasePillTextActive,
+                      ]}
+                    >
+                      {item.detectedIllness}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
         ) : null}
 
         {healthLog && (
@@ -648,6 +783,8 @@ export default function HealthMonitoringDetailScreen() {
               actionStatus={healthLog.actionStatus || record.monitoringStatus}
               durationValue={healthLog.durationValue}
             />
+
+            {/* Treatment Protocol Section (Independent per disease) */}
             <View style={styles.protocolSection}>
               <TouchableOpacity
                 style={styles.protocolHeader}
@@ -661,12 +798,19 @@ export default function HealthMonitoringDetailScreen() {
                 }
                 accessibilityState={{ expanded: isProtocolExpanded }}
               >
-                <View>
-                  <Text style={styles.protocolTitle}>Treatment Protocol</Text>
+                <View style={{ flex: 1 }}>
+                  <View style={styles.protocolTitleRow}>
+                    <Text style={styles.protocolTitle}>Treatment Protocol</Text>
+                    <View style={styles.diseaseBadge}>
+                      <Text style={styles.diseaseBadgeText}>
+                        {healthLog.detectedIllness}
+                      </Text>
+                    </View>
+                  </View>
                   <Text style={styles.protocolSubtitle}>
                     {treatmentOccurrences.length > 0
-                      ? `${completedOccurrenceCount}/${treatmentOccurrences.length} occurrences completed`
-                      : "No treatment tasks were provided for this result."}
+                      ? `${completedOccurrenceCount}/${treatmentOccurrences.length} tasks completed`
+                      : "No treatment tasks were provided for this disease."}
                   </Text>
                 </View>
                 <View style={styles.protocolHeaderActions}>
@@ -682,6 +826,7 @@ export default function HealthMonitoringDetailScreen() {
                   />
                 </View>
               </TouchableOpacity>
+
               {isProtocolExpanded ? (
                 <>
                   <View style={styles.protocolFilterRow}>
@@ -711,13 +856,21 @@ export default function HealthMonitoringDetailScreen() {
                       ),
                     )}
                   </View>
+
                   {treatmentDayGroups.length > 0 ? (
                     treatmentDayGroups.map((group) => (
                       <View key={group.dateKey} style={styles.protocolDayGroup}>
                         <View style={styles.protocolDayHeader}>
-                          <Text style={styles.protocolGroupTitle}>
-                            Day {group.dayNumber}
-                          </Text>
+                          <View style={styles.protocolDayTag}>
+                            <MaterialCommunityIcons
+                              name="calendar-clock-outline"
+                              size={13}
+                              color="#8F4800"
+                            />
+                            <Text style={styles.protocolGroupTitle}>
+                              Day {group.dayNumber}
+                            </Text>
+                          </View>
                           <Text style={styles.protocolDayDate}>
                             {formatTreatmentDayDate(group.dateKey)}
                           </Text>
@@ -730,15 +883,42 @@ export default function HealthMonitoringDetailScreen() {
                       No tasks match this filter.
                     </Text>
                   )}
+
+                  {/* Individual Disease Resolution Action */}
+                  {isCurrentDiseaseActive ? (
+                    <TouchableOpacity
+                      style={styles.resolveDiseaseBtn}
+                      onPress={() => setResolveModalVisible(true)}
+                      activeOpacity={0.85}
+                    >
+                      <MaterialCommunityIcons
+                        name="checkbox-marked-circle-outline"
+                        size={18}
+                        color={ChickIntelPalette.green1}
+                      />
+                      <Text style={styles.resolveDiseaseBtnText}>
+                        Mark {healthLog.detectedIllness} as Recovered
+                      </Text>
+                    </TouchableOpacity>
+                  ) : null}
                 </>
               ) : null}
             </View>
+
+            {/* Health History Section: Preserves all previous & resolved disease records */}
             <View style={styles.historySection}>
-              <Text style={styles.historyTitle}>Health History</Text>
+              <View style={styles.historyHeaderRow}>
+                <MaterialCommunityIcons
+                  name="history"
+                  size={20}
+                  color={ChickIntelPalette.green1}
+                />
+                <Text style={styles.historyTitle}>Health History</Text>
+              </View>
               <Text style={styles.historySubtitle}>
                 {historyEntries.length > 0
-                  ? "Prior scans and retakes for this chicken are listed below in reverse chronological order."
-                  : "Initial assessment recorded above. Previous retake and update scans for this chicken will appear here."}
+                  ? "Previous disease records and scans for this chicken are preserved in reverse chronological order."
+                  : "All current and past disease records for this chicken will be preserved here."}
               </Text>
 
               {historyEntries.length > 0 ? (
@@ -748,16 +928,40 @@ export default function HealthMonitoringDetailScreen() {
                       scan.behaviorIds,
                       behaviorItems,
                     );
+                    const isScanRecovered =
+                      scan.actionStatus === "Recovered" ||
+                      scan.actionStatus === "Resolved";
 
                     return (
-                      <View key={scan.id} style={styles.historyEntryCard}>
+                      <TouchableOpacity
+                        key={scan.id}
+                        style={styles.historyEntryCard}
+                        onPress={() => setSelectedDiseaseId(scan.id)}
+                        activeOpacity={0.85}
+                      >
                         <View style={styles.historyEntryHeader}>
                           <Text style={styles.historyEntryTitle}>
                             {formatScanDate(scan.savedAt)}
                           </Text>
-                          <Text style={styles.historyEntryStatus}>
-                            {scan.actionStatus || "Monitoring"}
-                          </Text>
+                          <View
+                            style={[
+                              styles.historyStatusBadge,
+                              isScanRecovered
+                                ? styles.historyStatusRecovered
+                                : styles.historyStatusActive,
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.historyStatusBadgeText,
+                                isScanRecovered
+                                  ? styles.historyStatusRecoveredText
+                                  : styles.historyStatusActiveText,
+                              ]}
+                            >
+                              {scan.actionStatus || "Active"}
+                            </Text>
+                          </View>
                         </View>
                         <Text style={styles.historyEntryDisease}>
                           {scan.detectedIllness}
@@ -765,13 +969,24 @@ export default function HealthMonitoringDetailScreen() {
                         <Text style={styles.historyEntryValue}>
                           {historyBehaviorLabels.length > 0
                             ? historyBehaviorLabels.join(", ")
-                            : "No behaviors recorded"}
+                            : "No specific behaviors recorded"}
                         </Text>
-                        <Text style={styles.historyEntryValue}>
-                          {scan.additionalObservation?.trim() ||
-                            "No observation added"}
-                        </Text>
-                      </View>
+                        {scan.additionalObservation?.trim() ? (
+                          <Text style={styles.historyEntryValue}>
+                            Note: {scan.additionalObservation.trim()}
+                          </Text>
+                        ) : null}
+                        <View style={styles.historyViewDetailsRow}>
+                          <Text style={styles.historyViewDetailsText}>
+                            View protocol & tasks
+                          </Text>
+                          <MaterialCommunityIcons
+                            name="chevron-right"
+                            size={16}
+                            color={ChickIntelPalette.green1}
+                          />
+                        </View>
+                      </TouchableOpacity>
                     );
                   })}
                 </View>
@@ -781,6 +996,7 @@ export default function HealthMonitoringDetailScreen() {
         )}
       </ScrollView>
 
+      {/* Task Completion Confirmation Modal */}
       <Modal
         visible={pendingTreatmentCompletion !== null}
         transparent
@@ -818,6 +1034,12 @@ export default function HealthMonitoringDetailScreen() {
               <View style={styles.confirmDetailRow}>
                 <Text style={styles.confirmDetailLabel}>Chicken</Text>
                 <Text style={styles.confirmDetailValue}>{record.chtTag}</Text>
+              </View>
+              <View style={styles.confirmDetailRow}>
+                <Text style={styles.confirmDetailLabel}>Disease</Text>
+                <Text style={styles.confirmDetailValue}>
+                  {currentHealthLog?.detectedIllness}
+                </Text>
               </View>
               <View style={styles.confirmDetailRow}>
                 <Text style={styles.confirmDetailLabel}>Task</Text>
@@ -861,6 +1083,64 @@ export default function HealthMonitoringDetailScreen() {
         </View>
       </Modal>
 
+      {/* Resolve Disease Confirmation Modal */}
+      <Modal
+        visible={resolveModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setResolveModalVisible(false)}
+      >
+        <View style={styles.confirmModalBackdrop}>
+          <View style={styles.confirmModalCard}>
+            <View style={styles.confirmModalTopRow}>
+              <View style={styles.confirmIconBadge}>
+                <MaterialCommunityIcons
+                  name="checkbox-marked-circle-outline"
+                  size={24}
+                  color={ChickIntelPalette.green1}
+                />
+              </View>
+              <TouchableOpacity
+                onPress={() => setResolveModalVisible(false)}
+                hitSlop={10}
+              >
+                <MaterialCommunityIcons
+                  name="close"
+                  size={20}
+                  color={ChickIntelPalette.gray2}
+                />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.confirmModalTitle}>Mark as Recovered?</Text>
+            <Text style={styles.confirmModalBody}>
+              {`Are you sure ${currentHealthLog?.detectedIllness} has fully resolved for ${record.chtTag}? This disease record will be saved in Health History.`}
+            </Text>
+            <View style={styles.confirmModalActions}>
+              <TouchableOpacity
+                style={styles.confirmCancelButton}
+                onPress={() => setResolveModalVisible(false)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.confirmCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.confirmDoneButton}
+                onPress={() => void confirmResolveDisease()}
+                activeOpacity={0.8}
+              >
+                <MaterialCommunityIcons
+                  name="check"
+                  size={17}
+                  color="#FFFFFF"
+                />
+                <Text style={styles.confirmDoneText}>Confirm</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Treatment Note Editor Modal */}
       <Modal
         visible={noteModalContext !== null}
         transparent
@@ -963,11 +1243,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flexShrink: 0,
   },
-  savedMeta: {
-    ...HealthTypography.meta,
-    fontSize: responsiveFontSize(12),
-    marginTop: 8,
-  },
   scroll: {
     paddingHorizontal: moderateScale(16),
   },
@@ -1025,7 +1300,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: ChickIntelPalette.gray1,
   },
-  retakeButton: {
+  addDiseaseButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -1041,10 +1316,70 @@ const styles = StyleSheet.create({
     shadowOffset: { width: scale(0), height: verticalScale(4) },
     elevation: 3,
   },
-  retakeButtonText: {
+  addDiseaseButtonText: {
     fontFamily: ChickFont.sans,
     fontSize: responsiveFontSize(14),
     fontWeight: "700",
+    color: "#FFFFFF",
+  },
+  diseaseSelectorCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: ChickIntelPalette.gray2,
+    padding: moderateScale(12),
+    marginBottom: 14,
+    gap: 8,
+  },
+  diseaseSelectorHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  diseaseSelectorLabel: {
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(12),
+    fontWeight: "800",
+    color: "#9A4D00",
+    textTransform: "uppercase",
+    letterSpacing: 0.3,
+  },
+  diseasePillRow: {
+    flexDirection: "row",
+    gap: 8,
+    paddingVertical: 2,
+  },
+  diseasePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: moderateScale(12),
+    paddingVertical: verticalScale(7),
+    borderRadius: 20,
+    backgroundColor: "rgba(247, 192, 144, 0.14)",
+    borderWidth: 1,
+    borderColor: "rgba(247, 192, 144, 0.45)",
+  },
+  diseasePillActive: {
+    backgroundColor: ChickIntelPalette.green1,
+    borderColor: ChickIntelPalette.green1,
+  },
+  diseasePillDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#C17B31",
+  },
+  diseasePillDotActive: {
+    backgroundColor: ChickIntelPalette.accent,
+  },
+  diseasePillText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12),
+    fontWeight: "700",
+    color: ChickIntelPalette.gray1,
+  },
+  diseasePillTextActive: {
     color: "#FFFFFF",
   },
   protocolSection: {
@@ -1062,10 +1397,30 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
+  protocolTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flexWrap: "wrap",
+  },
   protocolHeaderActions: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+  },
+  diseaseBadge: {
+    backgroundColor: "rgba(247, 192, 144, 0.22)",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "rgba(247, 192, 144, 0.65)",
+  },
+  diseaseBadgeText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(11),
+    fontWeight: "800",
+    color: "#9A4D00",
   },
   protocolFilterRow: {
     flexDirection: "row",
@@ -1209,13 +1564,24 @@ const styles = StyleSheet.create({
     lineHeight: 17,
     color: ChickIntelPalette.gray1,
   },
+  protocolDayTag: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: "rgba(247, 192, 144, 0.18)",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "rgba(247, 192, 144, 0.5)",
+  },
   protocolGroupTitle: {
-    marginTop: 6,
     fontFamily: ChickFont.display,
-    fontSize: responsiveFontSize(12),
+    fontSize: responsiveFontSize(11.5),
     fontWeight: "800",
-    color: ChickIntelPalette.gray1,
+    color: "#8F4800",
     textTransform: "uppercase",
+    letterSpacing: 0.25,
   },
   protocolEmptyText: {
     marginTop: 10,
@@ -1223,37 +1589,6 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(12),
     color: ChickIntelPalette.textMuted,
     textAlign: "center",
-  },
-  protocolNoteInput: {
-    minHeight: 38,
-    borderWidth: 1,
-    borderColor: ChickIntelPalette.gray2,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(12),
-    color: ChickIntelPalette.gray1,
-    backgroundColor: "#FFFFFF",
-  },
-  protocolNoteButton: {
-    alignSelf: "flex-end",
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 7,
-    backgroundColor: ChickIntelPalette.green1,
-  },
-  protocolNoteButtonText: {
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(10),
-    fontWeight: "700",
-    color: "#FFFFFF",
-  },
-  protocolSavedNote: {
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(11),
-    lineHeight: 16,
-    color: ChickIntelPalette.gray1,
   },
   protocolNoteIconButton: {
     width: 32,
@@ -1264,6 +1599,25 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: ChickIntelPalette.lightGreen,
+  },
+  resolveDiseaseBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginTop: 12,
+    paddingVertical: verticalScale(10),
+    paddingHorizontal: moderateScale(14),
+    borderRadius: 10,
+    backgroundColor: ChickIntelPalette.lightGreen,
+    borderWidth: 1,
+    borderColor: ChickIntelPalette.mediumGreen,
+  },
+  resolveDiseaseBtnText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12.5),
+    fontWeight: "700",
+    color: ChickIntelPalette.green1,
   },
   noteModalBackdrop: {
     flex: 1,
@@ -1336,12 +1690,17 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: ChickIntelPalette.gray2,
   },
+  historyHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+    marginBottom: 4,
+  },
   historyTitle: {
     fontFamily: ChickFont.display,
     fontSize: responsiveFontSize(16),
     fontWeight: "800",
     color: ChickIntelPalette.green1,
-    marginBottom: 4,
   },
   historySubtitle: {
     fontFamily: ChickFont.sans,
@@ -1371,6 +1730,56 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(11),
     fontWeight: "700",
     color: ChickIntelPalette.textMuted,
+  },
+  historyStatusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  historyStatusRecovered: {
+    backgroundColor: ChickIntelPalette.lightGreen,
+    borderColor: ChickIntelPalette.mediumGreen,
+  },
+  historyStatusActive: {
+    backgroundColor: "rgba(247, 192, 144, 0.22)",
+    borderColor: "rgba(247, 192, 144, 0.65)",
+  },
+  historyStatusBadgeText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(10),
+    fontWeight: "800",
+    textTransform: "uppercase",
+  },
+  historyStatusRecoveredText: {
+    color: ChickIntelPalette.green1,
+  },
+  historyStatusActiveText: {
+    color: "#9A4D00",
+  },
+  historyEntryDisease: {
+    fontFamily: ChickFont.display,
+    fontSize: responsiveFontSize(14),
+    fontWeight: "700",
+    color: ChickIntelPalette.gray1,
+  },
+  historyEntryValue: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(12),
+    color: "#5A6161",
+  },
+  historyViewDetailsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: 2,
+    marginTop: 4,
+  },
+  historyViewDetailsText: {
+    fontFamily: ChickFont.sans,
+    fontSize: responsiveFontSize(11),
+    fontWeight: "700",
+    color: ChickIntelPalette.green1,
   },
   confirmModalBackdrop: {
     flex: 1,
@@ -1482,23 +1891,6 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(13),
     fontWeight: "800",
     color: "#FFFFFF",
-  },
-  historyEntryStatus: {
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(11),
-    fontWeight: "800",
-    color: ChickIntelPalette.green1,
-  },
-  historyEntryDisease: {
-    fontFamily: ChickFont.display,
-    fontSize: responsiveFontSize(14),
-    fontWeight: "700",
-    color: ChickIntelPalette.gray1,
-  },
-  historyEntryValue: {
-    fontFamily: ChickFont.sans,
-    fontSize: responsiveFontSize(12),
-    color: "#5A6161",
   },
   cardSpacer: {
     height: verticalScale(8),

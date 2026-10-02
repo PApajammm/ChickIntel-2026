@@ -12,9 +12,13 @@ export default function LogoScreen() {
   const { initialized, session } = useAuth();
 
   useEffect(() => {
-    if (initialized && session) {
-      logStep("LogoScreen authenticated redirect", { target: "/(tabs)" });
-      router.replace("/(tabs)");
+    if (initialized) {
+      if (session) {
+        logStep("LogoScreen authenticated redirect", { target: "/(tabs)" });
+        router.replace("/(tabs)");
+      } else {
+        router.replace("/loginscreen");
+      }
     }
   }, [initialized, session]);
 

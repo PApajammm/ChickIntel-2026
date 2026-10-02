@@ -12,7 +12,7 @@ const SPLASH_DURATION_MS = 3500;
 export default function SplashScreen() {
   const { destination } = useLocalSearchParams<{ destination?: string }>();
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const nextRoute = destination === "home" ? "/(tabs)" : "/logoscreen";
+  const nextRoute = destination === "home" ? "/(tabs)" : "/loginscreen";
 
   useEffect(() => {
     timerRef.current = setTimeout(() => {

@@ -242,7 +242,7 @@ export default function JournalDetailScreen() {
                     <View style={styles.historySection}>
                         <Text style={styles.historyTitle}>Health History</Text>
                         <Text style={styles.historySubtitle}>
-                            Prior scans and retakes for this chicken are listed
+                            Prior disease records and health scans for this chicken are listed
                             below in reverse chronological order.
                         </Text>
 

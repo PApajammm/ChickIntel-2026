@@ -140,9 +140,9 @@ export default function ScannerScreen() {
 
   const modeCopy = isMonitoringRescan
     ? {
-        title: `Re-scan ${chtTag || "chicken"}`,
+        title: `Add disease: ${chtTag || "chicken"}`,
         subtitle:
-          "Take a new photo to update this chicken's health record. Previous scans are kept.",
+          "Capture a photo to detect and record a new disease. Existing disease records and treatment history are preserved.",
         captureTip:
           "Use bright light and keep the chicken centered inside the guide before capture.",
       }

@@ -62,7 +62,7 @@ export default function GuestModeScreen() {
           style={styles.backButton}
           onPress={() => {
             exitGuestMode();
-            router.replace("/logoscreen");
+            router.replace("/loginscreen");
           }}
           activeOpacity={0.7}
           accessibilityRole="button"

@@ -180,14 +180,14 @@ export default function ScannedHealthInputScreen() {
               </TouchableOpacity>
               <Text style={styles.pageTitle} numberOfLines={1}>
                 {isMonitoringRescan
-                  ? "Update Behavior Check"
+                  ? "Add Disease Observation"
                   : "Behavior Check"}
               </Text>
               <View style={styles.headerRightPlaceholder} />
             </View>
             <Text style={styles.pageSubtitle}>
               {isMonitoringRescan
-                ? `Confirm behaviors for ${chtTag || "this chicken"}. The same monitoring record will be updated.`
+                ? `Confirm behaviors for ${chtTag || "this chicken"}. This will be recorded with the new disease.`
                 : "Track the chicken's behavior and add notes before saving the journal entry."}
             </Text>
           </View>

@@ -55,6 +55,7 @@ import {
 } from "@/services/health/supabase-diseases";
 import { createHealthJournalEntry } from "@/services/health/supabase-health-journal";
 import {
+    addNewDiseaseToMonitoringRecord,
     appendHealthLogToMonitoring,
     createHealthMonitoringRecord,
     doesChtTagExist,
@@ -410,10 +411,11 @@ export default function ScannedHealthResultScreen() {
         }
 
         if (isMonitoringRescan) {
-          await appendHealthLogToMonitoring(
+          await addNewDiseaseToMonitoringRecord(
             activeFarm.id,
             monitoringId,
             saved.id,
+            imageMatchedDisease?.treatmentProtocol ?? treatmentSteps,
           );
           setUpdateSuccessVisible(true);
           return;
@@ -435,7 +437,7 @@ export default function ScannedHealthResultScreen() {
 
         if (isMonitoringRescan) {
           setUpdateError(
-            `Could not update this chicken's health record. Error: ${errorMessage}`,
+            `Could not add this disease record to ${chtTag || "chicken"}. Error: ${errorMessage}`,
           );
           return;
         }
@@ -582,7 +584,7 @@ export default function ScannedHealthResultScreen() {
             </TouchableOpacity>
             <Text style={styles.pageTitle} numberOfLines={1}>
               {isMonitoringRescan
-                ? "Update Behavior Check"
+                ? "Add New Disease"
                 : "Health Check Result"}
             </Text>
             <View style={styles.headerRightPlaceholder} />
@@ -593,7 +595,7 @@ export default function ScannedHealthResultScreen() {
               : isGuestExperience
                 ? "Review the health detection and scan another chicken when ready."
                 : isMonitoringRescan
-                  ? `This update will be added to ${chtTag || "this chicken"}'s record. Previous notes are kept.`
+                  ? `This disease will be saved as a separate health record for ${chtTag || "this chicken"}. Previous disease history is kept.`
                   : "This report will be saved to your Behavior Journal."}
           </Text>
         </View>
@@ -677,7 +679,7 @@ export default function ScannedHealthResultScreen() {
           ) : (
             <HealthFlowFooterButton
               variant="save"
-              label={isMonitoringRescan ? "Update record" : undefined}
+              label={isMonitoringRescan ? "Add disease record" : undefined}
               onPress={onSave}
               disabled={isAnalyzingImage || isSaving}
             />
@@ -895,15 +897,15 @@ export default function ScannedHealthResultScreen() {
               <View style={styles.updateModalHeader}>
                 <View style={styles.updateModalIconBadge}>
                   <MaterialCommunityIcons
-                    name="check"
+                    name="medical-bag"
                     size={24}
                     color={ChickIntelPalette.green1}
                   />
                 </View>
                 <View style={styles.updateModalHeaderText}>
-                  <Text style={styles.updateModalEyebrow}>SCAN SAVED</Text>
+                  <Text style={styles.updateModalEyebrow}>NEW DISEASE ADDED</Text>
                   <Text style={styles.updateModalTitle}>
-                    Health scan updated
+                    Disease record saved
                   </Text>
                 </View>
               </View>
@@ -911,17 +913,17 @@ export default function ScannedHealthResultScreen() {
               <View style={styles.updateModalBody}>
                 <Text style={styles.updateModalBodyText}>
                   {chtTag
-                    ? `${chtTag}'s monitoring record now shows this latest scan.`
-                    : "This chicken's monitoring record now shows the latest scan."}
+                    ? `Added ${resolvedDetectedIllness} as a separate disease record for ${chtTag}.`
+                    : `Added ${resolvedDetectedIllness} as a separate disease record.`}
                 </Text>
                 <View style={styles.updateModalHistoryRow}>
                   <MaterialCommunityIcons
-                    name="history"
+                    name="checkbox-marked-circle-outline"
                     size={18}
                     color={ChickIntelPalette.green1}
                   />
                   <Text style={styles.updateModalHistoryText}>
-                    Earlier scans are still saved in the history.
+                    An independent treatment protocol and daily tasks were created. Previous disease history is kept intact.
                   </Text>
                 </View>
               </View>
@@ -940,7 +942,7 @@ export default function ScannedHealthResultScreen() {
                 }}
               >
                 <Text style={styles.updateModalButtonText}>
-                  Back to Health Monitoring
+                  Go to Health Monitoring
                 </Text>
                 <MaterialCommunityIcons
                   name="arrow-right"

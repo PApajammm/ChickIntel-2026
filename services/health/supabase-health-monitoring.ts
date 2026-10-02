@@ -15,6 +15,8 @@ export type HealthMonitoringRecord = {
   updatedAt: string;
   /** Joined health_log data (latest scan) */
   healthLog?: HealthJournalSavedScan;
+  /** All disease records for this chicken */
+  diseaseRecords?: HealthJournalSavedScan[];
   /** All scans for this chicken, newest first (detail view) */
   scanHistory?: HealthJournalSavedScan[];
 };
@@ -24,6 +26,7 @@ export type HealthMonitoringStatus = "Active" | "Recovered" | "Deceased";
 export type HealthMonitoringTask = {
   id: string;
   monitoringId: string;
+  healthLogId?: string;
   title: string;
   description?: string;
   taskType?: string;
@@ -53,7 +56,7 @@ export type HealthMonitoringTaskOccurrence = {
   treatmentNote?: string;
 };
 
-type TreatmentPlanStep = {
+export type TreatmentPlanStep = {
   title: string;
   description?: string;
 };
@@ -79,6 +82,7 @@ type HealthMonitoringRow = {
 type HealthMonitoringTaskRow = {
   id: string;
   health_monitoring_id: string;
+  health_log_id?: string | null;
   title: string;
   description?: string | null;
   task_type?: string | null;
@@ -364,26 +368,18 @@ function mergeHealthLogIntoHistory(
   return [currentHealthLog, ...history];
 }
 
-export async function appendHealthLogToMonitoring(
+export async function addNewDiseaseToMonitoringRecord(
   farmId: string,
   monitoringId: string,
   healthLogId: string,
+  treatmentSteps: (string | TreatmentPlanStep)[] = [],
 ): Promise<void> {
   const existing = await fetchHealthMonitoringRecordById(farmId, monitoringId);
   if (!existing) {
     throw new Error("Health monitoring record not found.");
   }
 
-  // Ensure previous primary health_log is also linked to health_monitoring_id if unlinked
-  if (existing.healthLogId && existing.healthLogId !== healthLogId) {
-    await supabase
-      .from("health_logs")
-      .update({ health_monitoring_id: monitoringId })
-      .eq("farm_id", farmId)
-      .eq("id", existing.healthLogId);
-  }
-
-  // 1. Update the new health_log to link directly to this health_monitoring record
+  // 1. Link this new health_log directly to this health_monitoring record
   const { error: logLinkError } = await supabase
     .from("health_logs")
     .update({ health_monitoring_id: monitoringId })
@@ -392,53 +388,121 @@ export async function appendHealthLogToMonitoring(
 
   if (logLinkError) {
     console.warn(
-      "[health-monitoring] Linking health_log failed/skipped (non-fatal):",
+      "[health-monitoring] Linking new health_log failed/skipped (non-fatal):",
       logLinkError.message,
     );
   }
 
-  // 2. Update health_monitoring.health_log_id to point to this new scan as primary
-  const { error: updateError } = await supabase
-    .from("health_monitoring")
-    .update({ health_log_id: healthLogId })
-    .eq("farm_id", farmId)
-    .eq("id", monitoringId);
+  // 2. Also register in health_monitoring_scans if available
+  try {
+    await supabase.from("health_monitoring_scans").insert({
+      farm_id: farmId,
+      health_monitoring_id: monitoringId,
+      health_log_id: healthLogId,
+    });
+  } catch {
+    // Non-fatal if table does not exist
+  }
 
-  if (updateError) throw updateError;
+  // 3. Create independent daily treatment protocol tasks for this newly detected disease
+  await createMonitoringTasksForDisease(
+    farmId,
+    monitoringId,
+    healthLogId,
+    existing.chtTag,
+    treatmentSteps,
+  );
+
+  invalidateHealthMonitoringCache(farmId);
+}
+
+export async function appendHealthLogToMonitoring(
+  farmId: string,
+  monitoringId: string,
+  healthLogId: string,
+  treatmentSteps: (string | TreatmentPlanStep)[] = [],
+): Promise<void> {
+  await addNewDiseaseToMonitoringRecord(
+    farmId,
+    monitoringId,
+    healthLogId,
+    treatmentSteps,
+  );
+}
+
+export async function updateDiseaseRecordStatus(
+  farmId: string,
+  healthLogId: string,
+  status: string,
+): Promise<void> {
+  const isResolved =
+    status === "Recovered" || status === "Resolved" || status === "Deceased";
+
+  const { error } = await supabase
+    .from("health_logs")
+    .update({
+      action_status: status,
+      ...(isResolved ? { archived_at: new Date().toISOString() } : {}),
+    })
+    .eq("farm_id", farmId)
+    .eq("id", healthLogId);
+
+  if (error) {
+    console.warn(
+      "[health-monitoring] Failed to update disease record status:",
+      error.message,
+    );
+  }
 }
 
 export async function fetchHealthMonitoringScanHistory(
   farmId: string,
   monitoringId: string,
 ): Promise<HealthJournalSavedScan[]> {
-  const record = await fetchHealthMonitoringRecordById(farmId, monitoringId);
-  if (!record) return [];
-
-  // Query all health_logs directly linked to this health_monitoring_id OR matching the primary health_log_id
+  // 1. Query all health_logs linked to this health_monitoring_id
   const { data, error } = await supabase
     .from("health_logs")
     .select(HEALTH_LOG_SELECT)
     .eq("farm_id", farmId)
-    .or(`health_monitoring_id.eq.${monitoringId},id.eq.${record.healthLogId}`)
+    .eq("health_monitoring_id", monitoringId)
     .order("saved_at", { ascending: false });
 
   if (error) {
     console.warn(
-      "[health-monitoring-history] Fetch failed/skipped (fallback to primary):",
+      "[health-monitoring-history] Direct query failed/skipped:",
       error.message,
     );
-    return record.healthLog ? [record.healthLog] : [];
   }
 
-  const mapped = (data ?? []).map((row: any) => mapHealthLogRow(row));
+  const directLogs = (data ?? []).map((row: any) => mapHealthLogRow(row));
 
-  const merged = mergeHealthLogIntoHistory(mapped, record.healthLog);
+  // 2. Also check if the health_monitoring row has a primary health_log_id that might not be tagged yet
+  const { data: monRow } = await supabase
+    .from("health_monitoring")
+    .select("health_log_id")
+    .eq("farm_id", farmId)
+    .eq("id", monitoringId)
+    .maybeSingle();
+
+  if (monRow?.health_log_id && !directLogs.some((l) => l.id === monRow.health_log_id)) {
+    const { data: primaryData } = await supabase
+      .from("health_logs")
+      .select(HEALTH_LOG_SELECT)
+      .eq("farm_id", farmId)
+      .eq("id", monRow.health_log_id)
+      .maybeSingle();
+
+    if (primaryData) {
+      directLogs.push(mapHealthLogRow(primaryData));
+    }
+  }
+
   // Sort reverse-chronological (newest scan first)
-  merged.sort(
+  directLogs.sort(
     (a, b) => new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime(),
   );
 
-  return merged;
+  return directLogs;
 }
 
 async function createOutcomeAssessmentForMonitoring(
@@ -609,81 +673,13 @@ export async function createHealthMonitoringRecord(
     );
   }
 
-  const protocolSteps = buildMonitoringProtocolSteps(treatmentSteps);
-
-  if (protocolSteps.length > 0) {
-    const now = new Date();
-
-    for (const [index, step] of protocolSteps.entries()) {
-      const title = step.title.trim();
-      if (!title) continue;
-
-      const reminderConfig = getTreatmentReminderConfig(title, now);
-
-      const taskRow = {
-        farm_id: farmId,
-        health_monitoring_id: record.id,
-        title,
-        description:
-          step.description?.trim() ||
-          `Follow the validated treatment protocol for ${record.chtTag}.`,
-        task_type: "Treatment",
-        due_at: new Date(
-          `${reminderConfig.startDate}T${reminderConfig.times[0]}:00`,
-        ).toISOString(),
-        status: "Pending",
-        completed: false,
-        schedule_task_id: null,
-        frequency: reminderConfig.repeat,
-        start_date: reminderConfig.startDate,
-        end_date: reminderConfig.endDate,
-        scheduled_times: reminderConfig.times,
-        sort_order: index,
-      };
-      const { data: taskData, error: taskError } = await supabase
-        .from("health_monitoring_tasks")
-        .insert(taskRow)
-        .select("id")
-        .single();
-
-      if (taskError || !taskData) {
-        console.warn(
-          "[health-monitoring] Treatment task could not be saved:",
-          taskError?.message,
-        );
-        continue;
-      }
-
-      const occurrenceRows = [];
-      const start = new Date(`${reminderConfig.startDate}T00:00:00`);
-      const end = new Date(`${reminderConfig.endDate}T00:00:00`);
-      for (
-        const date = new Date(start);
-        date <= end;
-        date.setDate(date.getDate() + reminderConfig.dayStep)
-      ) {
-        for (const time of reminderConfig.times) {
-          occurrenceRows.push({
-            farm_id: farmId,
-            health_monitoring_task_id: taskData.id,
-            due_at: new Date(
-              `${formatScheduleDateKey(date)}T${time}:00`,
-            ).toISOString(),
-          });
-        }
-      }
-
-      const { error: occurrenceError } = await supabase
-        .from("health_monitoring_task_occurrences")
-        .insert(occurrenceRows);
-      if (occurrenceError) {
-        console.warn(
-          "[health-monitoring] Treatment occurrences could not be saved:",
-          occurrenceError.message,
-        );
-      }
-    }
-  }
+  await createMonitoringTasksForDisease(
+    farmId,
+    record.id,
+    healthLogId,
+    record.chtTag,
+    treatmentSteps,
+  );
 
   invalidateHealthMonitoringCache(farmId);
 
@@ -693,12 +689,112 @@ export async function createHealthMonitoringRecord(
   };
 }
 
+export async function createMonitoringTasksForDisease(
+  farmId: string,
+  monitoringId: string,
+  healthLogId: string,
+  chtTag: string,
+  treatmentSteps: (string | TreatmentPlanStep)[] = [],
+): Promise<void> {
+  const protocolSteps = buildMonitoringProtocolSteps(treatmentSteps);
+  if (protocolSteps.length === 0) return;
+
+  const now = new Date();
+
+  for (const [index, step] of protocolSteps.entries()) {
+    const title = step.title.trim();
+    if (!title) continue;
+
+    const reminderConfig = getTreatmentReminderConfig(title, now);
+
+    const taskRowWithLogId = {
+      farm_id: farmId,
+      health_monitoring_id: monitoringId,
+      health_log_id: healthLogId,
+      title,
+      description:
+        step.description?.trim() ||
+        `Follow the validated treatment protocol for ${chtTag}.`,
+      task_type: "Treatment",
+      due_at: new Date(
+        `${reminderConfig.startDate}T${reminderConfig.times[0]}:00`,
+      ).toISOString(),
+      status: "Pending",
+      completed: false,
+      schedule_task_id: null,
+      frequency: reminderConfig.repeat,
+      start_date: reminderConfig.startDate,
+      end_date: reminderConfig.endDate,
+      scheduled_times: reminderConfig.times,
+      sort_order: index,
+    };
+
+    let taskData: { id: string } | null = null;
+    const { data: primaryData, error: primaryError } = await supabase
+      .from("health_monitoring_tasks")
+      .insert(taskRowWithLogId)
+      .select("id")
+      .single();
+
+    if (!primaryError && primaryData) {
+      taskData = primaryData;
+    } else {
+      // Fallback without health_log_id column if not yet present
+      const { health_log_id: _, ...taskRowWithoutLogId } = taskRowWithLogId;
+      const { data: fallbackData, error: fallbackError } = await supabase
+        .from("health_monitoring_tasks")
+        .insert(taskRowWithoutLogId)
+        .select("id")
+        .single();
+      if (!fallbackError && fallbackData) {
+        taskData = fallbackData;
+      } else {
+        console.warn(
+          "[health-monitoring] Treatment task could not be saved:",
+          primaryError?.message || fallbackError?.message,
+        );
+        continue;
+      }
+    }
+
+    const occurrenceRows = [];
+    const start = new Date(`${reminderConfig.startDate}T00:00:00`);
+    const end = new Date(`${reminderConfig.endDate}T00:00:00`);
+    for (
+      const date = new Date(start);
+      date <= end;
+      date.setDate(date.getDate() + reminderConfig.dayStep)
+    ) {
+      for (const time of reminderConfig.times) {
+        occurrenceRows.push({
+          farm_id: farmId,
+          health_monitoring_task_id: taskData.id,
+          due_at: new Date(
+            `${formatScheduleDateKey(date)}T${time}:00`,
+          ).toISOString(),
+        });
+      }
+    }
+
+    const { error: occurrenceError } = await supabase
+      .from("health_monitoring_task_occurrences")
+      .insert(occurrenceRows);
+    if (occurrenceError) {
+      console.warn(
+        "[health-monitoring] Treatment occurrences could not be saved:",
+        occurrenceError.message,
+      );
+    }
+  }
+}
+
 function mapMonitoringTaskRow(
   row: HealthMonitoringTaskRow,
 ): HealthMonitoringTask {
   return {
     id: row.id,
     monitoringId: row.health_monitoring_id,
+    healthLogId: row.health_log_id ?? undefined,
     title: row.title,
     description: row.description ?? undefined,
     taskType: row.task_type ?? undefined,
@@ -738,45 +834,55 @@ function mapMonitoringTaskOccurrenceRow(
 export async function fetchHealthMonitoringTasks(
   farmId: string,
   monitoringId: string,
+  healthLogId?: string,
 ): Promise<HealthMonitoringTask[]> {
   const { data, error } = await supabase
     .from("health_monitoring_tasks")
     .select(
-      "id, health_monitoring_id, title, description, task_type, due_at, status, completed, completed_at, completed_by, treatment_note, schedule_task_id, frequency, start_date, end_date, scheduled_times, sort_order",
+      "id, health_monitoring_id, health_log_id, title, description, task_type, due_at, status, completed, completed_at, completed_by, treatment_note, schedule_task_id, frequency, start_date, end_date, scheduled_times, sort_order",
     )
     .eq("farm_id", farmId)
     .eq("health_monitoring_id", monitoringId)
     .order("sort_order", { ascending: true });
 
-  if (error) {
-    if (!isMissingTreatmentTaskColumnError(error)) {
-      console.warn(
-        "[health-monitoring] Treatment task fetch skipped:",
-        error.message,
-      );
-      return [];
-    }
+  let rawTasks: HealthMonitoringTask[] = [];
 
+  if (error) {
     const fallback = await supabase
       .from("health_monitoring_tasks")
       .select(
-        "id, health_monitoring_id, title, completed, completed_at, sort_order",
+        "id, health_monitoring_id, title, description, task_type, due_at, status, completed, completed_at, completed_by, treatment_note, schedule_task_id, frequency, start_date, end_date, scheduled_times, sort_order",
       )
       .eq("farm_id", farmId)
       .eq("health_monitoring_id", monitoringId)
       .order("sort_order", { ascending: true });
 
-    if (fallback.error) throw fallback.error;
-    const legacyTasks = (fallback.data ?? []).map((row) =>
+    if (fallback.error) {
+      const ultraFallback = await supabase
+        .from("health_monitoring_tasks")
+        .select(
+          "id, health_monitoring_id, title, completed, completed_at, sort_order",
+        )
+        .eq("farm_id", farmId)
+        .eq("health_monitoring_id", monitoringId)
+        .order("sort_order", { ascending: true });
+
+      if (ultraFallback.error) return [];
+      rawTasks = (ultraFallback.data ?? []).map((row) =>
+        mapMonitoringTaskRow(row as HealthMonitoringTaskRow),
+      );
+    } else {
+      rawTasks = (fallback.data ?? []).map((row) =>
+        mapMonitoringTaskRow(row as HealthMonitoringTaskRow),
+      );
+    }
+  } else {
+    rawTasks = (data ?? []).map((row) =>
       mapMonitoringTaskRow(row as HealthMonitoringTaskRow),
     );
-    return legacyTasks;
   }
 
-  const tasks = (data ?? []).map((row) =>
-    mapMonitoringTaskRow(row as HealthMonitoringTaskRow),
-  );
-  if (tasks.length === 0) return tasks;
+  if (rawTasks.length === 0) return rawTasks;
 
   const { data: occurrenceRows, error: occurrenceError } = await supabase
     .from("health_monitoring_task_occurrences")
@@ -786,20 +892,28 @@ export async function fetchHealthMonitoringTasks(
     .eq("farm_id", farmId)
     .in(
       "health_monitoring_task_id",
-      tasks.map((task) => task.id),
+      rawTasks.map((task) => task.id),
     )
     .order("due_at", { ascending: true });
 
-  if (occurrenceError) return tasks;
   const occurrences = (occurrenceRows ?? []).map((row) =>
     mapMonitoringTaskOccurrenceRow(row as HealthMonitoringTaskOccurrenceRow),
   );
-  return tasks.map((task) => ({
+
+  const populated = rawTasks.map((task) => ({
     ...task,
     occurrences: occurrences.filter(
       (occurrence) => occurrence.taskId === task.id,
     ),
   }));
+
+  if (healthLogId) {
+    return populated.filter(
+      (task) => !task.healthLogId || task.healthLogId === healthLogId,
+    );
+  }
+
+  return populated;
 }
 
 export async function updateHealthMonitoringTask(
@@ -975,10 +1089,28 @@ export async function fetchHealthMonitoringRecordById(
     .eq("id", id)
     .maybeSingle();
 
-  if (!error && data) return mapSingleRow(farmId, data);
+  let baseRecord: HealthMonitoringRecord | null = null;
 
-  const fallback = await fetchHealthMonitoringRecordsWithManualJoin(farmId, id);
-  return fallback[0] ?? null;
+  if (!error && data) {
+    baseRecord = mapSingleRow(farmId, data);
+  } else {
+    const fallback = await fetchHealthMonitoringRecordsWithManualJoin(
+      farmId,
+      id,
+    );
+    baseRecord = fallback[0] ?? null;
+  }
+
+  if (!baseRecord) return null;
+
+  // Fetch all disease records for this chicken
+  const history = await fetchHealthMonitoringScanHistory(farmId, id);
+  return {
+    ...baseRecord,
+    diseaseRecords: history,
+    scanHistory: history,
+    healthLog: history[0] ?? baseRecord.healthLog,
+  };
 }
 
 /**

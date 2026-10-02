@@ -11,6 +11,10 @@ import {
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import { logError, logStep, logWarn } from "@/utils/logger";
 
+import * as Linking from "expo-linking";
+import { router } from "expo-router";
+import { Platform } from "react-native";
+
 export type AppProfile = {
   id: string;
   email: string | null;
@@ -51,6 +55,25 @@ type AuthContextValue = {
   signIn: (
     email: string,
     password: string,
+  ) => Promise<{ success: boolean; error: string | null }>;
+  registerFarmer: (
+    email: string,
+    password: string,
+    displayName: string,
+  ) => Promise<{
+    success: boolean;
+    error: string | null;
+    needsEmailVerification?: boolean;
+  }>;
+  sendPasswordResetEmail: (
+    email: string,
+  ) => Promise<{
+    success: boolean;
+    error: string | null;
+    isRateLimited?: boolean;
+  }>;
+  resetPassword: (
+    newPassword: string,
   ) => Promise<{ success: boolean; error: string | null }>;
   enterGuestMode: () => void;
   exitGuestMode: () => void;
@@ -295,6 +318,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      if (event === "PASSWORD_RECOVERY") {
+        logStep("Supabase password recovery event detected");
+        setSession(nextSession);
+        setError(null);
+        router.push("/reset-password");
+        return;
+      }
+
       if (event === "SIGNED_OUT") {
         setSession(null);
         setProfile(null);
@@ -326,8 +357,38 @@ export function AuthProvider({ children }: PropsWithChildren) {
       });
     });
 
+    async function handleUrl(url: string | null) {
+      if (!url) return;
+      if (url.includes("reset-password") || url.includes("type=recovery")) {
+        try {
+          const hashIndex = url.indexOf("#");
+          if (hashIndex !== -1) {
+            const hash = url.substring(hashIndex + 1);
+            const params = new URLSearchParams(hash);
+            const accessToken = params.get("access_token");
+            const refreshToken = params.get("refresh_token");
+            if (accessToken && refreshToken) {
+              await supabase.auth.setSession({
+                access_token: accessToken,
+                refresh_token: refreshToken,
+              });
+            }
+          }
+          router.push("/reset-password");
+        } catch (err) {
+          logError("Failed to handle recovery URL", err);
+        }
+      }
+    }
+
+    Linking.getInitialURL().then(handleUrl).catch(() => null);
+    const linkingSub = Linking.addEventListener("url", ({ url }) => {
+      void handleUrl(url);
+    });
+
     return () => {
       subscription.unsubscribe();
+      linkingSub.remove();
     };
   }, []);
 
@@ -342,6 +403,291 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   function exitGuestMode() {
     setGuestMode(false);
+  }
+
+  async function registerFarmer(
+    email: string,
+    password: string,
+    displayName: string,
+  ): Promise<{
+    success: boolean;
+    error: string | null;
+    needsEmailVerification?: boolean;
+  }> {
+    if (!isSupabaseConfigured) {
+      const msg =
+        "Supabase is not configured. Add your project URL and anon key first.";
+      setError(msg);
+      return { success: false, error: msg };
+    }
+
+    setLoading(true);
+    setError(null);
+    setGuestMode(false);
+
+    try {
+      const normalizedEmail = email.trim().toLowerCase();
+      const normalizedName = displayName.trim();
+
+      if (!normalizedName) {
+        throw new Error("Please enter your full name.");
+      }
+      if (!normalizedEmail) {
+        throw new Error("Please enter your email address.");
+      }
+      if (!password || password.length < 6) {
+        throw new Error("Password must be at least 6 characters.");
+      }
+
+      // Check if profile exists with this email
+      const { data: existingProfile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("email", normalizedEmail)
+        .maybeSingle();
+
+      if (existingProfile) {
+        throw new Error("An account already uses this email address.");
+      }
+
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email: normalizedEmail,
+        password,
+        options: {
+          data: {
+            display_name: normalizedName,
+          },
+        },
+      });
+
+      if (signUpError) {
+        throw signUpError;
+      }
+
+      if (!data.user) {
+        throw new Error("Failed to create farmer account.");
+      }
+
+      if (data.user.identities && data.user.identities.length === 0) {
+        throw new Error("An account already uses this email address.");
+      }
+
+      const newUserId = data.user.id;
+
+      // 1. Fetch active farm ID
+      const { data: farmData } = await supabase
+        .from("farms")
+        .select("id")
+        .limit(1);
+
+      const farmId = farmData?.[0]?.id ?? null;
+
+      // 2. Ensure public.profiles record exists
+      try {
+        await supabase.from("profiles").upsert(
+          {
+            id: newUserId,
+            email: data.user.email ?? normalizedEmail,
+            display_name: normalizedName,
+            is_active: true,
+            default_farm_id: farmId,
+          },
+          { onConflict: "id" },
+        );
+      } catch (upsertErr) {
+        logError("Profile upsert after farmer register failed", upsertErr);
+      }
+
+      // 3. Connect farmer to the farm
+      if (farmId) {
+        try {
+          await supabase.from("farm_members").upsert(
+            {
+              farm_id: farmId,
+              user_id: newUserId,
+              role: "worker",
+            },
+            { onConflict: "farm_id,user_id", ignoreDuplicates: true },
+          );
+        } catch (memberErr) {
+          logError("Farm member link after farmer register failed", memberErr);
+        }
+      }
+
+      logStep("Farmer account registered successfully", {
+        email: normalizedEmail,
+      });
+
+      if (data.session) {
+        setSession(data.session);
+        await refreshOwnership(newUserId);
+        return { success: true, error: null, needsEmailVerification: false };
+      }
+
+      return { success: true, error: null, needsEmailVerification: true };
+    } catch (signUpError) {
+      const rawMessage =
+        signUpError instanceof Error
+          ? signUpError.message
+          : "Registration failed.";
+      let formattedMessage = rawMessage;
+      if (rawMessage.toLowerCase().includes("user already registered")) {
+        formattedMessage = "An account with this email address already exists.";
+      } else if (
+        rawMessage.toLowerCase().includes("fetch failed") ||
+        rawMessage.toLowerCase().includes("network")
+      ) {
+        formattedMessage =
+          "Network error. Please check your internet connection.";
+      }
+
+      setError(formattedMessage);
+      logStep("Farmer registration failed", {
+        email,
+        reason: formattedMessage,
+      });
+      return { success: false, error: formattedMessage };
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function sendPasswordResetEmail(
+    email: string,
+  ): Promise<{
+    success: boolean;
+    error: string | null;
+    isRateLimited?: boolean;
+  }> {
+    if (!isSupabaseConfigured) {
+      const msg =
+        "Supabase is not configured. Add your project URL and anon key first.";
+      setError(msg);
+      return { success: false, error: msg };
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const normalizedEmail = email.trim().toLowerCase();
+      if (!normalizedEmail) {
+        throw new Error("Please enter your registered email address.");
+      }
+
+      const redirectUrl =
+        Platform.OS === "web" && typeof window !== "undefined" && window.location?.origin
+          ? `${window.location.origin}/reset-password`
+          : "chickintel2026://reset-password";
+
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+        normalizedEmail,
+        {
+          redirectTo: redirectUrl,
+        },
+      );
+
+      if (resetError) {
+        throw resetError;
+      }
+
+      logStep("Password reset email sent", { email: normalizedEmail });
+      return { success: true, error: null };
+    } catch (resetError) {
+      const rawMessage =
+        resetError instanceof Error
+          ? resetError.message
+          : "Failed to send reset email.";
+
+      if (
+        rawMessage.toLowerCase().includes("over_email_send_rate_limit") ||
+        rawMessage.toLowerCase().includes("rate limit") ||
+        rawMessage.toLowerCase().includes("security purposes")
+      ) {
+        setError(null);
+        logStep("Password reset request rate-limited by Supabase email quota", { email });
+        return {
+          success: false,
+          error: "Supabase email rate limit reached (free tier allows ~3-4 emails/hour). Please wait a few minutes before trying again.",
+          isRateLimited: true,
+        };
+      }
+
+      let formattedMessage = rawMessage;
+      if (
+        rawMessage.toLowerCase().includes("fetch failed") ||
+        rawMessage.toLowerCase().includes("network")
+      ) {
+        formattedMessage =
+          "Network error. Please check your internet connection.";
+      }
+
+      setError(formattedMessage);
+      logStep("Password reset request failed", {
+        email,
+        reason: formattedMessage,
+      });
+      return { success: false, error: formattedMessage };
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function resetPassword(
+    newPassword: string,
+  ): Promise<{ success: boolean; error: string | null }> {
+    if (!isSupabaseConfigured) {
+      const msg =
+        "Supabase is not configured. Add your project URL and anon key first.";
+      setError(msg);
+      return { success: false, error: msg };
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      if (!newPassword || newPassword.length < 6) {
+        throw new Error("New password must be at least 6 characters.");
+      }
+
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      logStep("Supabase password reset completed successfully");
+
+      // Sign out any temporary recovery session
+      await supabase.auth.signOut({ scope: "local" });
+      setSession(null);
+      setProfile(null);
+      setMemberships([]);
+
+      return { success: true, error: null };
+    } catch (updateError) {
+      const rawMessage =
+        updateError instanceof Error
+          ? updateError.message
+          : "Password reset failed.";
+      let formattedMessage = rawMessage;
+      if (
+        rawMessage.toLowerCase().includes("fetch failed") ||
+        rawMessage.toLowerCase().includes("network")
+      ) {
+        formattedMessage =
+          "Network error. Please check your internet connection.";
+      }
+
+      setError(formattedMessage);
+      logStep("Password reset failed", { reason: formattedMessage });
+      return { success: false, error: formattedMessage };
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function signIn(
@@ -489,6 +835,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
       error,
       configured: isSupabaseConfigured,
       signIn,
+      registerFarmer,
+      sendPasswordResetEmail,
+      resetPassword,
       enterGuestMode,
       exitGuestMode,
       signOut,
