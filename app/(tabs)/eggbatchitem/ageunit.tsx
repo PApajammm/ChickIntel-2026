@@ -28,11 +28,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ChickFont } from "@/constants/chick-fonts";
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
 import { useAuth } from "@/providers/auth-provider";
-import { getCurrentBatchAgeLabel, type BatchItem } from "@/utils/batch-store";
+import { getCurrentBatchAgeLabel, type BatchItem } from "@/domain/batch-store";
 import {
     EGG_PRODUCTION_AGE_WEEKS,
     isEggProductionReady,
-} from "@/utils/chicken-batch-rules";
+} from "@/domain/chicken-batch-rules";
 import { logError } from "@/utils/logger";
 import { fetchFarmBatches } from "@/services/chicken/supabase-batches";
 import {

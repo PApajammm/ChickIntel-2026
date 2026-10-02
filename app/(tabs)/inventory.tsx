@@ -23,7 +23,7 @@ import {
     getExpirationStatus,
     getStockSeverityMeta,
     type EffectiveInventoryItem,
-} from "@/utils/stock-alerts";
+} from "@/domain/stock-alerts";
 import type { SupabaseInventoryItem } from "@/services/inventory/supabase-inventory";
 import { fetchInventoryCategoryOptions } from "@/services/shared/supabase-lookups";
 import { MaterialCommunityIcons } from "@expo/vector-icons";

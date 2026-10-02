@@ -47,7 +47,7 @@ import {
 import {
     MIN_CHICKEN_BATCH_AGE_WEEKS,
     SEXING_START_AGE_WEEKS,
-} from "@/utils/chicken-batch-rules";
+} from "@/domain/chicken-batch-rules";
 import { optimizePhotoForInference } from "@/utils/image-crop-helper";
 import { logError, logStep, logWarn } from "@/utils/logger";
 import { addRecentBreedScan } from "@/utils/recent-breed-scans";

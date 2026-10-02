@@ -13,7 +13,7 @@ import { logError, logStep } from "@/utils/logger";
 import {
     computeEffectiveInventoryItems,
     type EffectiveInventoryItem,
-} from "@/utils/stock-alerts";
+} from "@/domain/stock-alerts";
 import {
     calculateRestockedTotal,
     createInventoryItem,

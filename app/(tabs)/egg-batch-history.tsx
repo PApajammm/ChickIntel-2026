@@ -26,7 +26,7 @@ import {
     formatEggFertilityPercent,
     isEggBatchCompleted,
     type EggBatchItem,
-} from "@/utils/batch-store";
+} from "@/domain/batch-store";
 import {
     fetchFarmEggBatches,
 } from "@/services/eggs/supabase-egg-batches";

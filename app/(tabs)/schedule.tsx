@@ -61,7 +61,7 @@ import {
     cancelTaskNotifications,
     scheduleTasksNotifications,
 } from "@/services/schedule/schedule-notifications";
-import { computeEffectiveInventoryItems } from "@/utils/stock-alerts";
+import { computeEffectiveInventoryItems } from "@/domain/stock-alerts";
 import { fetchFarmBatches } from "@/services/chicken/supabase-batches";
 import {
     fetchInventoryItems,

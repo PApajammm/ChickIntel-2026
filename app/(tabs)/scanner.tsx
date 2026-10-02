@@ -48,7 +48,7 @@ import { useAuth } from "@/providers/auth-provider";
 import {
     assessHealthCapture,
     buildHealthCaptureGuidance,
-} from "@/utils/health-capture-quality";
+} from "@/domain/health-capture-quality";
 import { logError, logStep } from "@/utils/logger";
 import {
     inferSexFromImage,

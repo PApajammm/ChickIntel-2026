@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase";
-import type { BatchItem } from "@/utils/batch-store";
+import type { BatchItem } from "@/domain/batch-store";
 
 export type ChickenBatchHistoryItem = BatchItem & {
   historyId: string;

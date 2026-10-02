@@ -37,8 +37,8 @@ import {
     isEggBatchCompleted,
     type BatchItem,
     type EggBatchItem,
-} from "@/utils/batch-store";
-import { getCurrentBatchAgeDays } from "@/utils/chicken-batch-rules";
+} from "@/domain/batch-store";
+import { getCurrentBatchAgeDays } from "@/domain/chicken-batch-rules";
 import { logError } from "@/utils/logger";
 import {
     createFarmChickBatch,

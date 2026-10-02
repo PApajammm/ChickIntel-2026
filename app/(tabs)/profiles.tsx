@@ -49,12 +49,12 @@ import {
     formatBatchDateStamp,
     formatEggFertilityPercent,
     getCurrentBatchAgeLabel,
-} from "@/utils/batch-store";
+} from "@/domain/batch-store";
 import {
     MIN_CHICKEN_BATCH_AGE_WEEKS,
     SEXING_START_AGE_WEEKS,
     getCurrentBatchAgeDays,
-} from "@/utils/chicken-batch-rules";
+} from "@/domain/chicken-batch-rules";
 import { optimizePhotoForInference } from "@/utils/image-crop-helper";
 import { logError, logStep } from "@/utils/logger";
 import {

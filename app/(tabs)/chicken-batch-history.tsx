@@ -2,7 +2,7 @@ import { BlurCard } from "@/components/ui/blur-card";
 import { ChickFont } from "@/constants/chick-fonts";
 import { ChickIntelPalette } from "@/constants/chickintel-palette";
 import { useAuth } from "@/providers/auth-provider";
-import { getCurrentBatchAgeLabel } from "@/utils/batch-store";
+import { getCurrentBatchAgeLabel } from "@/domain/batch-store";
 import {
     fetchDeletedChickenBatches,
     type ChickenBatchHistoryItem,

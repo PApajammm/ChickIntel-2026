@@ -38,14 +38,14 @@ import { DEFAULT_IMAGE_BASED_DETECTION } from "@/constants/health-scan-behaviors
 import { HealthTypography } from "@/constants/health-typography";
 import { useBehaviors } from "@/hooks/use-behaviors";
 import { useAuth } from "@/providers/auth-provider";
-import type { BatchItem } from "@/utils/batch-store";
+import type { BatchItem } from "@/domain/batch-store";
 import {
     getHealthClassifierDisplayName,
     inferDiseaseFromImage,
     normalizeHealthClassifierLabel,
     type HealthImageInferenceResult,
 } from "@/services/inference/health-image-inference";
-import { evaluateHealthAssessment } from "@/utils/health-rule-engine";
+import { evaluateHealthAssessment } from "@/domain/health-rule-engine";
 import { logError, logStep } from "@/utils/logger";
 import { fetchFarmBatches } from "@/services/chicken/supabase-batches";
 import { mapBehaviorIdsToLabels } from "@/services/health/supabase-behaviors";

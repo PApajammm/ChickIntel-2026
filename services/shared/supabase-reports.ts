@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
-import { getEggMetricWindow } from "@/utils/egg-metric-windows";
-import { isTaskLinkedToInventoryItem } from "@/utils/stock-alerts";
+import { getEggMetricWindow } from "@/domain/egg-metric-windows";
+import { isTaskLinkedToInventoryItem } from "@/domain/stock-alerts";
 import {
     fetchScheduleTaskCompletions,
     fetchScheduleTasks,
