@@ -239,8 +239,9 @@ app/
     breeds-tab.tsx        (breeds management)
     item-types-tab.tsx    (item types management)
 
-utils/
+services/admin/
   supabase-admin.ts       (admin-specific queries & mutations)
+  activity-logs.ts        (audit log fetching & filtering)
 
 components/
   admin/

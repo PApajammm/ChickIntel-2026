@@ -53,11 +53,11 @@ Supabase PostgreSQL stores the application's structured farm data, including:
 
 Examples of database access are implemented in files such as:
 
-- `utils/supabase-batches.ts`
-- `utils/supabase-egg-batches.ts`
-- `utils/supabase-health-journal.ts`
-- `utils/supabase-inventory.ts`
-- `utils/supabase-schedule.ts`
+- `services/chicken/supabase-batches.ts`
+- `services/eggs/supabase-egg-batches.ts`
+- `services/health/supabase-health-journal.ts`
+- `services/inventory/supabase-inventory.ts`
+- `services/schedule/supabase-schedule.ts`
 
 ### 3.2 Authentication
 

@@ -1,8 +1,8 @@
 # Run this from the project root: .\scripts\generate-erd-png.ps1
 # Requires Node.js/npm installed.
 
-$input = "docs/ERD_COMPARISON.mmd"
-$output = "docs/ERD_COMPARISON.png"
+$input = "docs/archive/ERD_COMPARISON.mmd"
+$output = "docs/archive/ERD_COMPARISON.png"
 
 if (-Not (Test-Path $input)) {
     Write-Error "Mermaid source file not found: $input"

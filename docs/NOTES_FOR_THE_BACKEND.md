@@ -41,14 +41,13 @@ The backend is already partially implemented using Supabase schema, Row Level Se
 
 ## Implemented App Query Layers
 
-- `utils/supabase-batches.ts`
-- `utils/supabase-egg-batches.ts`
-- `utils/supabase-inventory.ts`
-- `utils/supabase-health-journal.ts`
-- `utils/supabase-schedule.ts`
-- `utils/supabase-lookups.ts`
-- `utils/supabase-symptoms.ts`
-- `utils/home-kpis.ts`
+- `services/chicken/supabase-batches.ts`
+- `services/eggs/supabase-egg-batches.ts`
+- `services/inventory/supabase-inventory.ts`
+- `services/health/supabase-health-journal.ts`
+- `services/schedule/supabase-schedule.ts`
+- `services/shared/supabase-lookups.ts`
+- `services/shared/home-kpis.ts`
 
 ## What Is Already Working End-To-End
 

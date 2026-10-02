@@ -34,7 +34,11 @@ yarn-error.*
 *.pem
 
 # local env files
+.env
 .env*.local
+
+# local agent / assistant files
+.kilo/
 
 # typescript
 *.tsbuildinfo
