@@ -1,11 +1,11 @@
 import type { Session, User } from "@supabase/supabase-js";
 import {
-    createContext,
-    useContext,
-    useEffect,
-    useMemo,
-    useState,
-    type PropsWithChildren,
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type PropsWithChildren,
 } from "react";
 
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
@@ -65,9 +65,7 @@ type AuthContextValue = {
     error: string | null;
     needsEmailVerification?: boolean;
   }>;
-  sendPasswordResetEmail: (
-    email: string,
-  ) => Promise<{
+  sendPasswordResetEmail: (email: string) => Promise<{
     success: boolean;
     error: string | null;
     isRateLimited?: boolean;
@@ -322,7 +320,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         logStep("Supabase password recovery event detected");
         setSession(nextSession);
         setError(null);
-        router.push("/reset-password");
+        router.replace("/reset-password");
         return;
       }
 
@@ -374,14 +372,16 @@ export function AuthProvider({ children }: PropsWithChildren) {
               });
             }
           }
-          router.push("/reset-password");
+          router.replace("/reset-password");
         } catch (err) {
           logError("Failed to handle recovery URL", err);
         }
       }
     }
 
-    Linking.getInitialURL().then(handleUrl).catch(() => null);
+    Linking.getInitialURL()
+      .then(handleUrl)
+      .catch(() => null);
     const linkingSub = Linking.addEventListener("url", ({ url }) => {
       void handleUrl(url);
     });
@@ -552,9 +552,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
   }
 
-  async function sendPasswordResetEmail(
-    email: string,
-  ): Promise<{
+  async function sendPasswordResetEmail(email: string): Promise<{
     success: boolean;
     error: string | null;
     isRateLimited?: boolean;
@@ -576,7 +574,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
       }
 
       const redirectUrl =
-        Platform.OS === "web" && typeof window !== "undefined" && window.location?.origin
+        Platform.OS === "web" &&
+        typeof window !== "undefined" &&
+        window.location?.origin
           ? `${window.location.origin}/reset-password`
           : "chickintel2026://reset-password";
 
@@ -605,10 +605,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
         rawMessage.toLowerCase().includes("security purposes")
       ) {
         setError(null);
-        logStep("Password reset request rate-limited by Supabase email quota", { email });
+        logStep("Password reset request rate-limited by Supabase email quota", {
+          email,
+        });
         return {
           success: false,
-          error: "Supabase email rate limit reached (free tier allows ~3-4 emails/hour). Please wait a few minutes before trying again.",
+          error:
+            "Supabase email rate limit reached (free tier allows ~3-4 emails/hour). Please wait a few minutes before trying again.",
           isRateLimited: true,
         };
       }
