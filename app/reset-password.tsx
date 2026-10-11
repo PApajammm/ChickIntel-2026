@@ -28,20 +28,28 @@ import { logStep } from "@/utils/logger";
 
 export default function ResetPasswordScreen() {
   const insets = useSafeAreaInsets();
-  const { configured, error, loading, resetPassword, clearError } = useAuth();
+  const {
+    cancelPasswordRecovery,
+    configured,
+    error,
+    loading,
+    resetPassword,
+    clearError,
+  } = useAuth();
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [localError, setLocalError] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  function handleBackToLogin() {
+  async function handleBackToLogin() {
+    await cancelPasswordRecovery();
     router.replace("/loginscreen");
   }
 
   useEffect(() => {
     const backAction = () => {
-      handleBackToLogin();
+      void cancelPasswordRecovery().then(() => router.replace("/loginscreen"));
       return true;
     };
 
@@ -51,7 +59,7 @@ export default function ResetPasswordScreen() {
     );
 
     return () => subscription.remove();
-  }, []);
+  }, [cancelPasswordRecovery]);
 
   function handlePasswordChange(text: string) {
     setPassword(text);

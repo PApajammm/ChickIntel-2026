@@ -1,11 +1,11 @@
 import type { Session, User } from "@supabase/supabase-js";
 import {
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  type PropsWithChildren,
+    createContext,
+    useContext,
+    useEffect,
+    useMemo,
+    useState,
+    type PropsWithChildren,
 } from "react";
 
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
@@ -44,6 +44,7 @@ export type FarmMembership = {
 type AuthContextValue = {
   initialized: boolean;
   session: Session | null;
+  isPasswordRecovery: boolean;
   guestMode: boolean;
   user: User | null;
   profile: AppProfile | null;
@@ -73,6 +74,7 @@ type AuthContextValue = {
   resetPassword: (
     newPassword: string,
   ) => Promise<{ success: boolean; error: string | null }>;
+  cancelPasswordRecovery: () => Promise<void>;
   enterGuestMode: () => void;
   exitGuestMode: () => void;
   signOut: () => Promise<void>;
@@ -116,6 +118,7 @@ function pickActiveFarm(
 export function AuthProvider({ children }: PropsWithChildren) {
   const [initialized, setInitialized] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
   const [guestMode, setGuestMode] = useState(false);
   const [profile, setProfile] = useState<AppProfile | null>(null);
   const [memberships, setMemberships] = useState<FarmMembership[]>([]);
@@ -130,6 +133,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
 
     setSession(null);
+    setIsPasswordRecovery(false);
     setProfile(null);
     setMemberships([]);
     setError(null);
@@ -318,6 +322,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     } = supabase.auth.onAuthStateChange((event, nextSession) => {
       if (event === "PASSWORD_RECOVERY") {
         logStep("Supabase password recovery event detected");
+        setIsPasswordRecovery(true);
         setSession(nextSession);
         setError(null);
         router.replace("/reset-password");
@@ -326,6 +331,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
       if (event === "SIGNED_OUT") {
         setSession(null);
+        setIsPasswordRecovery(false);
         setProfile(null);
         setMemberships([]);
         setError(null);
@@ -358,6 +364,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     async function handleUrl(url: string | null) {
       if (!url) return;
       if (url.includes("reset-password") || url.includes("type=recovery")) {
+        setIsPasswordRecovery(true);
         try {
           const hashIndex = url.indexOf("#");
           if (hashIndex !== -1) {
@@ -403,6 +410,26 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   function exitGuestMode() {
     setGuestMode(false);
+  }
+
+  async function cancelPasswordRecovery() {
+    try {
+      if (isSupabaseConfigured) {
+        const { error: signOutError } = await supabase.auth.signOut({
+          scope: "local",
+        });
+        if (signOutError) {
+          logError("Failed to clear password recovery session", signOutError);
+        }
+      }
+    } catch (cancelError) {
+      logError("Failed to clear password recovery session", cancelError);
+    } finally {
+      setSession(null);
+      setIsPasswordRecovery(false);
+      setProfile(null);
+      setMemberships([]);
+    }
   }
 
   async function registerFarmer(
@@ -664,11 +691,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
       logStep("Supabase password reset completed successfully");
 
-      // Sign out any temporary recovery session
-      await supabase.auth.signOut({ scope: "local" });
-      setSession(null);
-      setProfile(null);
-      setMemberships([]);
+      await cancelPasswordRecovery();
 
       return { success: true, error: null };
     } catch (updateError) {
@@ -829,6 +852,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     () => ({
       initialized,
       session,
+      isPasswordRecovery,
       guestMode,
       user: session?.user ?? null,
       profile,
@@ -841,6 +865,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       registerFarmer,
       sendPasswordResetEmail,
       resetPassword,
+      cancelPasswordRecovery,
       enterGuestMode,
       exitGuestMode,
       signOut,
@@ -848,7 +873,17 @@ export function AuthProvider({ children }: PropsWithChildren) {
       refreshOwnership,
       clearError,
     }),
-    [error, guestMode, initialized, loading, memberships, profile, session],
+    [
+      error,
+      guestMode,
+      initialized,
+      isPasswordRecovery,
+      loading,
+      memberships,
+      profile,
+      session,
+      cancelPasswordRecovery,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

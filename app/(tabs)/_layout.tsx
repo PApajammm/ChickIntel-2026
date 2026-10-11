@@ -12,7 +12,14 @@ import { pushPath } from "@/utils/nav-history";
 export default function TabLayout() {
   const router = useRouter();
   const pathname = usePathname();
-  const { initialized, session, guestMode, signOut, exitGuestMode } = useAuth();
+  const {
+    initialized,
+    isPasswordRecovery,
+    session,
+    guestMode,
+    signOut,
+    exitGuestMode,
+  } = useAuth();
   const [logoutOpen, setLogoutOpen] = useState(false);
 
   useEffect(() => {
@@ -44,6 +51,10 @@ export default function TabLayout() {
 
   if (initialized && !session && !guestMode) {
     return <Redirect href="/loginscreen" />;
+  }
+
+  if (isPasswordRecovery) {
+    return <Redirect href="/reset-password" />;
   }
 
   if (initialized && guestMode && !isGuestAllowedRoute) {
